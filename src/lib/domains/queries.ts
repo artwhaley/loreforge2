@@ -46,5 +46,18 @@ export async function getDomainMemberRows(domain: Domain): Promise<DomainMemberR
 export async function getSubdomainMemberships(subdomainId: number | string): Promise<SubdomainMembership[]> {
   const payload = await getLorePayload()
   const result = await payload.find({ collection: 'subdomain-memberships', where: { and: [{ subdomain: { equals: subdomainId } }, { status: { equals: 'active' } }] }, depth: 1, limit: 500 })
-  return result.docs
+  if (result.docs.length === 0) return []
+  const subdomain = await payload.findByID({ collection: 'subdomains', id: subdomainId, depth: 0 }).catch(() => null)
+  const domainId = relationId(subdomain?.domain)
+  if (!domainId) return []
+  const characterIds = result.docs.map((membership) => relationId(membership.character)).filter((id): id is number => id !== null)
+  if (characterIds.length === 0) return []
+  const domainMembers = await payload.find({
+    collection: 'domain-memberships',
+    where: { and: [{ domain: { equals: domainId } }, { character: { in: characterIds } }, { status: { equals: 'active' } }] },
+    depth: 0,
+    limit: 500,
+  })
+  const activeCharacterIds = new Set(domainMembers.docs.map((membership) => String(relationId(membership.character))))
+  return result.docs.filter((membership) => activeCharacterIds.has(String(relationId(membership.character))))
 }

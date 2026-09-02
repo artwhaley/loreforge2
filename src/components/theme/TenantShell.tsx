@@ -104,12 +104,21 @@ export async function TenantShell({
           </form>
         ) : null}
         {role === 'admin' ? (
-          <form action="/api/switch-administration" method="post" className={styles.adminModeForm}>
-            <input type="hidden" name="domainSlug" value={tenant.slug} />
+          <form action="/api/switch-character" method="post" className={styles.adminModeForm}>
+            <input type="hidden" name="characterId" value="" />
             <button type="submit" className={styles.adminMode}>
-            Administration
+              Exit Administration
             </button>
           </form>
+        ) : null}
+        {context.user ? (
+          <div className={styles.accountControls}>
+            <a href="/" className={styles.accountLink}>Account</a>
+            <span>{context.user.name ?? context.user.email}</span>{role === 'member' ? <span className={styles.readOnlyLabel}>Read-only Character view</span> : null}
+            <form action="/api/logout" method="post">
+              <button type="submit" className={styles.logoutButton}>Log out</button>
+            </form>
+          </div>
         ) : null}
       </div>
       <header className={styles.header}>

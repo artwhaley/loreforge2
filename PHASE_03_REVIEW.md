@@ -31,6 +31,7 @@ Implemented contract points:
 - Subdomains are first-class Domain-owned records with Character heads/admins and app-owned landing pages.
 - Every Domain has a protected system root; every seeded/new Document is filed to a Folder, and folder parent writes reject cross-Domain parents/cycles.
 - Roles are Domain/Subdomain-owned, acyclic, and assignable to the same Character multiple times; `scopeFolder` is rendered as a full branch path. Interim mutations use `authorizeInterimOperation` and emit audit log entries.
+- Post-gate hardening adds explicit Subdomain-member removal, cascaded deactivation of Subdomain memberships and Role assignments when Domain membership is removed, active-parent checks on narrower grants, multi-folder Role assignment entry, and visible Account/Log out controls.
 
 Owner-only acceptance still required:
 
@@ -40,6 +41,9 @@ Owner-only acceptance still required:
 4. Role pass: inspect the seeded hierarchy, verify the same Captain Role is scoped to First Platoon and Second Platoon, and verify Aren appears with both Warrior and Magistrate assignments.
 5. Authorization pass: as `officer@example.test`, confirm no Administration or mutation controls and confirm a direct forged POST to `/api/roles` or `/api/role-assignments` creates nothing; as `admin@example.test` in Administration mode, confirm mutations succeed without an acting Character.
 6. Canonical route pass: use `/domain/ar` links and verify no customer-facing Payload/CMS terminology appears.
+7. Lifecycle pass: remove a Character from the Domain and confirm Subdomain memberships and Role assignments disappear; re-add the Domain and confirm both remain inactive until explicitly re-added.
+8. Multi-scope pass: assign one Character/Role to at least two Folder scopes; confirm two independent rows and remove one without affecting the other.
+9. Account/navigation pass: confirm Character view is visibly read-only, Administration is explicit, Account returns home, and Log out returns to the login prompt.
 
 Known environment caveat: the existing local SQLite file was created before the new collections. Its compatibility schema was migrated in place for this run; the dev command intentionally uses `PAYLOAD_PUSH=false` because Payload's dev-push currently attempts to recreate already-existing indexes. A fresh database may run the seed with schema push enabled once; the existing fixture should use the command in the test instructions below.
 

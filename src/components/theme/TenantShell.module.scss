@@ -12,7 +12,7 @@
   margin: 0 auto;
   padding: 0.65rem 1.5rem;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto;
   gap: 1rem;
   background: var(--tenant-surface-bg, #fff);
   border-bottom: 1px solid var(--tenant-accent);
@@ -77,6 +77,41 @@
 .adminModeForm {
   align-self: center;
   justify-self: end;
+}
+
+.accountControls {
+  align-self: center;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--tenant-primary);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.accountLink {
+  color: var(--tenant-primary);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.readOnlyLabel {
+  color: #6b5a3b;
+  font-size: 0.72rem;
+}
+
+.logoutButton {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--tenant-primary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 @media (max-width: 680px) {

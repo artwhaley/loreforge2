@@ -23,6 +23,8 @@ export default async function RolesPage({ params }: Props) {
   const assignments = roles.docs.length
     ? await payload.find({ collection: 'role-assignments', where: { and: [{ role: { in: roles.docs.map((r) => r.id) } }, { status: { equals: 'active' } }] }, depth: 2, limit: 500, sort: 'createdAt' })
     : { docs: [] }
+  const domainMemberships = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: tenant.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 500 })
+  const domainCharacterIds = new Set(domainMemberships.docs.map((membership) => String(relationId(membership.character))))
   const characters = await payload.find({ collection: 'characters', where: { status: { equals: 'active' } }, depth: 0, limit: 500, sort: 'name' })
   const folders = await payload.find({ collection: 'folders', where: { domain: { equals: tenant.id } }, depth: 0, limit: 500, sort: 'name' })
   const subdomains = await payload.find({ collection: 'subdomains', where: { domain: { equals: tenant.id } }, depth: 0, limit: 100, sort: 'name' })
@@ -42,12 +44,14 @@ export default async function RolesPage({ params }: Props) {
     return names.join(' / ')
   }
   const isAdmin = contextRole === 'admin'
+  const activeAssignments = assignments.docs.filter((assignment) => domainCharacterIds.has(String(relationId(assignment.character))))
+  const assignableCharacters = characters.docs.filter((character) => domainCharacterIds.has(String(character.id)))
   return (
     <TenantShell tenant={tenant} cssVars={themeTokensToCssVars(resolveThemeTokens(tenant))} role={contextRole} switcherTenants={domains}>
       <section>
         <p><a href={`/domain/${slug}`}>← Domain home</a></p>
         <h1>Roles</h1>
-        <p>Roles are Character assignments. Membership, Subdomain membership, and Role assignment remain separate records.</p>
+        <p>Roles are Character assignments. Membership, Subdomain membership, and Role assignment remain separate records. Each active assignment row is one independent grant; a Character may have the same Role across many folder scopes.</p>
         {roles.docs.length === 0 ? <p>No Roles have been configured.</p> : <ul>
           {roles.docs.map((item) => {
             const parent = relationId(item.parentRole)
@@ -67,14 +71,16 @@ export default async function RolesPage({ params }: Props) {
           <h2>Assign Role</h2>
           <form action="/api/role-assignments" method="post">
             <input type="hidden" name="domainSlug" value={slug} />
-            <select name="characterId" aria-label="Character" required><option value="">Choose Character</option>{characters.docs.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{' '}
+            <input type="hidden" name="scopeInputMode" value="multi" />
+            <select name="characterId" aria-label="Character" required><option value="">Choose Character</option>{assignableCharacters.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{' '}
             <select name="roleId" aria-label="Role" required><option value="">Choose Role</option>{roles.docs.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{' '}
-            <select name="scopeFolderId" aria-label="Folder scope" defaultValue=""><option value="">Domain-wide</option>{folders.docs.filter((item) => !item.systemManaged).map((item) => <option key={item.id} value={item.id}>{folderLabel(Number(item.id))}</option>)}</select>{' '}
+            <label>Folder scopes (select any number){' '}<select name="scopeFolderIds" aria-label="Folder scopes" multiple size={6}>{folders.docs.filter((item) => !item.systemManaged).map((item) => <option key={item.id} value={item.id}>{folderLabel(Number(item.id))}</option>)}</select></label>{' '}
+            <label><input type="checkbox" name="domainWide" value="1" /> Domain-wide</label>{' '}
             <button type="submit">Assign Role</button>
           </form>
         </> : <p>Role management is available only in account-level Administration mode.</p>}
         <h2>Active assignments</h2>
-        {assignments.docs.length === 0 ? <p>No active Role assignments.</p> : <table><thead><tr><th>Character</th><th>Role</th><th>Folder scope</th>{isAdmin ? <th>Actions</th> : null}</tr></thead><tbody>{assignments.docs.map((assignment) => { const character = relationId(assignment.character); const roleId = relationId(assignment.role); const scope = relationId(assignment.scopeFolder); return <tr key={assignment.id}><td>{characterName.get(character ?? -1) ?? `Character ${character ?? ''}`}</td><td>{roleName.get(roleId ?? -1) ?? `Role ${roleId ?? ''}`}</td><td>{scope ? folderLabel(scope) : 'Domain-wide'}</td>{isAdmin ? <td><form action="/api/role-assignments" method="post"><input type="hidden" name="domainSlug" value={slug} /><input type="hidden" name="characterId" value={character ?? ''} /><input type="hidden" name="roleId" value={roleId ?? ''} /><input type="hidden" name="scopeFolderId" value={scope ?? ''} /><input type="hidden" name="action" value="remove" /><button type="submit">Remove</button></form></td> : null}</tr> })}</tbody></table>}
+        {activeAssignments.length === 0 ? <p>No active Role assignments.</p> : <table><thead><tr><th>Character</th><th>Role</th><th>Folder scope</th>{isAdmin ? <th>Actions</th> : null}</tr></thead><tbody>{activeAssignments.map((assignment) => { const character = relationId(assignment.character); const roleId = relationId(assignment.role); const scope = relationId(assignment.scopeFolder); return <tr key={assignment.id}><td>{characterName.get(character ?? -1) ?? `Character ${character ?? ''}`}</td><td>{roleName.get(roleId ?? -1) ?? `Role ${roleId ?? ''}`}</td><td>{scope ? folderLabel(scope) : 'Domain-wide'}</td>{isAdmin ? <td><form action="/api/role-assignments" method="post"><input type="hidden" name="domainSlug" value={slug} /><input type="hidden" name="characterId" value={character ?? ''} /><input type="hidden" name="roleId" value={roleId ?? ''} /><input type="hidden" name="scopeFolderId" value={scope ?? ''} /><input type="hidden" name="action" value="remove" /><button type="submit">Remove</button></form></td> : null}</tr> })}</tbody></table>}
         <p><a href={`/domain/${slug}/members`}>Open Domain member roster</a></p>
       </section>
     </TenantShell>

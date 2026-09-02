@@ -26,7 +26,7 @@ export default async function SubdomainLandingPage({ params }: Props) {
         <h2>Landing page</h2>
         <p>Folders, templates, and recent records for this Subdomain will appear here as they are configured.</p>
         <h2>Members</h2>
-        {memberships.length === 0 ? <p>No active Subdomain members yet.</p> : <ul>{memberships.map((membership) => { const character = typeof membership.character === 'object' ? membership.character : null; return <li key={membership.id}>{character ? character.name : 'Unknown Character'}</li> })}</ul>}
+        {memberships.length === 0 ? <p>No active Subdomain members yet.</p> : <ul>{memberships.map((membership) => { const character = typeof membership.character === 'object' ? membership.character : null; return <li key={membership.id}>{character ? character.name : 'Unknown Character'}{role === 'admin' && character ? <> <form action="/api/subdomain-memberships" method="post" style={{ display: 'inline' }}><input type="hidden" name="domainSlug" value={slug} /><input type="hidden" name="subdomainId" value={subdomain.id} /><input type="hidden" name="characterId" value={character.id} /><input type="hidden" name="action" value="remove" /><button type="submit">Remove from {subdomain.name}</button></form></> : null}</li> })}</ul>}
         {role === 'admin' ? (
           <form action="/api/subdomain-memberships" method="post">
             <input type="hidden" name="domainSlug" value={slug} /><input type="hidden" name="subdomainId" value={subdomain.id} />

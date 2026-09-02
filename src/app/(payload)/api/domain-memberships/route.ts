@@ -4,6 +4,7 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { deactivateDomainParticipation } from '@/lib/domains/deactivateDomainParticipation'
 import { getLorePayload } from '@/lib/payload'
 
 export async function POST(request: Request) {
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
   const existing = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domain.id } }, { character: { equals: character.id } }] }, depth: 0, limit: 1 })
   if (existing.docs[0]) {
     await payload.update({ collection: 'domain-memberships', id: existing.docs[0].id, data: { domain: domain.id, status: action === 'remove' ? 'inactive' : 'active', addedBy: user.id } })
+    if (action === 'remove') await deactivateDomainParticipation(payload, domain.id, character.id)
   } else if (action !== 'remove') {
     await payload.create({ collection: 'domain-memberships', data: { domain: domain.id, character: character.id, status: 'active', addedBy: user.id, note: 'Added through the Domain member roster.' } })
   }

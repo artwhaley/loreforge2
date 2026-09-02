@@ -14,8 +14,19 @@ export const RoleAssignments: CollectionConfig = {
       const roleId = relationId(data?.role ?? originalDoc?.role)
       const characterId = relationId(data?.character ?? originalDoc?.character)
       const scopeFolderId = relationId(data?.scopeFolder ?? originalDoc?.scopeFolder)
+      const status = String(data?.status ?? originalDoc?.status ?? 'active')
       if (!roleId || !characterId) throw new Error('Character and Role are required for an assignment.')
       const role = await req.payload.findByID({ collection: 'roles', id: roleId, depth: 0 })
+      if (status === 'active') {
+        const domainId = relationId(role.domain)
+        const membership = domainId ? await req.payload.find({
+          collection: 'domain-memberships',
+          where: { and: [{ domain: { equals: domainId } }, { character: { equals: characterId } }, { status: { equals: 'active' } }] },
+          depth: 0,
+          limit: 1,
+        }) : { docs: [] }
+        if (!membership.docs[0]) throw new Error('A Character must be an active Domain member before receiving a Role assignment.')
+      }
       const folder = scopeFolderId ? await req.payload.findByID({ collection: 'folders', id: scopeFolderId, depth: 0 }) : null
       assertRoleAssignment(
         { characterId, roleId, scopeFolderId },

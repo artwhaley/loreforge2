@@ -34,6 +34,7 @@ export default async function HomePage() {
 
       {user ? (
         <section>
+          <div><strong>{user.name ?? user.email}</strong>{' '}<form action="/api/logout" method="post" style={{ display: 'inline' }}><button type="submit">Log out</button></form></div>
           <h2>Choose your Character</h2>
           <p>
             {context.activeCharacter

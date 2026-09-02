@@ -19,6 +19,7 @@ export async function POST(request: Request) {
   if (!rawCharacterId) {
     response.cookies.delete(ACTIVE_CHARACTER_COOKIE)
     response.cookies.delete(ACTIVE_TENANT_COOKIE)
+    response.cookies.delete(ADMINISTRATION_CONTEXT_COOKIE)
     return response
   }
 

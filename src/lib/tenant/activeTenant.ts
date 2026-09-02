@@ -106,20 +106,12 @@ export async function getActiveContext(): Promise<ActiveContext> {
     return { tenant: null, role: null, user: contextUser, activeCharacter, characters }
   }
 
-  // Legacy membership is retained only as a read fallback for records created before migration.
-  const legacyMemberships = await payload.find({
-    collection: 'memberships',
-    where: {
-      and: [{ user: { equals: user.id } }, { tenant: { equals: tenant.id } }],
-    },
-    depth: 0,
-    limit: 1,
-  })
-  const legacyRole = legacyMemberships.docs[0]?.role
-
+  // An active Character Domain membership grants the read-only member view.
+  // User-level owner/admin authority is exposed only after an explicit
+  // Administration context switch above.
   return {
     tenant,
-    role: isDomainAdmin ? 'admin' : legacyRole === 'member' ? 'member' : null,
+    role: 'member',
     user: contextUser,
     activeCharacter,
     characters,

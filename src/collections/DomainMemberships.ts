@@ -1,5 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
+import { deactivateDomainParticipation, relationId } from '@/lib/domains/deactivateDomainParticipation'
+
 /** Character participation in a Domain. This replaces spike User Memberships. */
 export const DomainMemberships: CollectionConfig = {
   slug: 'domain-memberships',
@@ -8,6 +10,16 @@ export const DomainMemberships: CollectionConfig = {
     defaultColumns: ['tenant', 'character', 'status', 'updatedAt'],
   },
   timestamps: true,
+  hooks: {
+    afterChange: [async ({ doc, previousDoc, req }) => {
+      const domainId = relationId(doc.domain)
+      const characterId = relationId(doc.character)
+      if (doc.status === 'inactive' && previousDoc?.status !== 'inactive' && domainId && characterId) {
+        await deactivateDomainParticipation(req.payload, domainId, characterId)
+      }
+      return doc
+    }],
+  },
   indexes: [{ unique: true, fields: ['tenant', 'character'] }],
   fields: [
     {

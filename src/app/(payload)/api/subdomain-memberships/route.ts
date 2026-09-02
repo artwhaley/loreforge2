@@ -25,5 +25,5 @@ export async function POST(request: Request) {
   const existing = await payload.find({ collection: 'subdomain-memberships', where: { and: [{ subdomain: { equals: subdomain.id } }, { character: { equals: characterId } }] }, depth: 0, limit: 1 })
   if (existing.docs[0]) await payload.update({ collection: 'subdomain-memberships', id: existing.docs[0].id, data: { status: action === 'remove' ? 'inactive' : 'active', addedBy: user.id } })
   else if (action !== 'remove') await payload.create({ collection: 'subdomain-memberships', data: { subdomain: subdomain.id, character: characterId, status: 'active', addedBy: user.id } })
-  return NextResponse.redirect(new URL(`/domain/${domainSlug}/members`, request.url), 303)
+  return NextResponse.redirect(new URL(`/domain/${domainSlug}/subdomains/${subdomain.slug}`, request.url), 303)
 }
