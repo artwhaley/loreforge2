@@ -1,8 +1,49 @@
 .actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 0.6rem;
+  flex-wrap: wrap;
   margin-bottom: 0.75rem;
+}
+
+.moveForm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.moveLabel {
+  font-size: 0.8rem;
+  color: var(--tenant-muted-text);
+}
+
+.moveSelect {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--tenant-accent);
+  border-radius: 3px;
+  background: var(--tenant-surface-bg);
+}
+
+.deleteForm {
+  display: inline-flex;
+}
+
+.deleteBtn {
+  font-family: var(--tenant-body-font);
+  font-size: 0.85rem;
+  color: var(--tenant-primary);
+  border: 1px solid var(--tenant-accent);
+  padding: 0.25rem 0.75rem;
+  border-radius: 3px;
+  background: var(--tenant-surface-bg);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tenant-page-bg);
+  }
 }
 
 .action {

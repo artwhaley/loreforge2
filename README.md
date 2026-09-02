@@ -63,11 +63,20 @@ city buttons on the home page.
 ## Ticket 04 scope
 
 Each tenant site is now a small believable city website built from a `Pages` collection (Home
-welcome prose + About), a fixture department directory, and the archive's Records route. Prose
-pages use the same Markdown editor as documents (WYSIWYG + safe source mode) and store canonical
+welcome prose + About), a fixture department directory, and the archive's Records route.Prose pages use the same Markdown editor as documents (WYSIWYG + safe source mode) and store canonical
 Markdown. Home is an application-owned layout: editable welcome prose (a `home` page) plus fixed
 quick-link modules and recent records. Routes: `/tenant/[slug]`, `.../about`, `.../departments`,
 `.../records`, `.../documents/:id`, and `.../pages/[pageSlug]/edit`.
+
+## Ticket 05 scope
+
+The archive is now a usable records system. A tenant-owned `Folders` collection (nullable parent)
+drives an understandable folder tree, and every document belongs to a folder (or the root). The
+`/tenant/[slug]/records` route is the archive browser: folder tree sidebar with counts, a
+current-folder document list with breadcrumb, a basic search box, and create/folder + create/record
+flows. Document viewers support Edit, a Move-to-folder selector, Delete, and Markdown source.
+Server actions re-verifies the session user is a member of the tenant for every create/move/delete.
+Delete folder refuses a non-empty folder. Search is tenant-scoped over title and body (spec §7.5).
 
 ## Tests
 

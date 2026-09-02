@@ -7,6 +7,7 @@ import { buildConfig } from 'payload'
 import sharp from 'sharp'
 
 import { Documents } from './collections/Documents'
+import { Folders } from './collections/Folders'
 import { Media } from './collections/Media'
 import { Memberships } from './collections/Memberships'
 import { Pages } from './collections/Pages'
@@ -30,7 +31,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Tenants, Memberships, Documents, Pages, Media],
+  collections: [Users, Tenants, Memberships, Documents, Folders, Pages, Media],
   editor: lexicalEditor(),
   db: sqliteAdapter({
     client: {

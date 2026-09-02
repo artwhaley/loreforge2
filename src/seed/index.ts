@@ -111,6 +111,25 @@ This archive gives residents and staff a shared home for public records, departm
 - Harbor authority
 - Public records`
 
+// --- Ticket 05: archive folder trees ---
+const FOLDER_TREES: Record<string, Array<{ name: string; path: string; parentPath?: string }>> = {
+  ravenhurst: [
+    { name: 'City Records', path: 'city-records' },
+    { name: 'Police', path: 'city-records/police', parentPath: 'city-records' },
+    { name: 'Reports', path: 'city-records/police/reports', parentPath: 'city-records/police' },
+    { name: 'Court', path: 'city-records/court', parentPath: 'city-records' },
+    { name: 'Filings', path: 'city-records/court/filings', parentPath: 'city-records/court' },
+    { name: 'Ordinances', path: 'city-records/ordinances', parentPath: 'city-records' },
+  ],
+  'port-victoria': [
+    { name: 'Public Records', path: 'public-records' },
+    { name: 'Public Safety', path: 'public-records/public-safety', parentPath: 'public-records' },
+    { name: 'Reports', path: 'public-records/public-safety/reports', parentPath: 'public-records/public-safety' },
+    { name: 'Harbor Authority', path: 'public-records/harbor-authority', parentPath: 'public-records' },
+    { name: 'Council', path: 'public-records/council', parentPath: 'public-records' },
+  ],
+}
+
 const TENANTS: Array<{
   slug: string
   name: string
@@ -314,7 +333,49 @@ for (const membership of MEMBERSHIPS) {
   payload.logger.info(`Created membership ${membership.userEmail}->${membership.tenantSlug}`)
 }
 
+// --- Archive folders (Ticket 05) ---
+const folderIds: Record<string, Record<string, number>> = {}
+for (const [tenantSlug, files] of Object.entries(FOLDER_TREES)) {
+  folderIds[tenantSlug] = {}
+  for (const file of files) {
+    const parentCond: { parent: { equals: number | null } } = file.parentPath
+      ? { parent: { equals: folderIds[tenantSlug][file.parentPath] } }
+      : { parent: { equals: null } }
+    const existing = await payload.find({
+      collection: 'folders',
+      where: {
+        and: [
+          { tenant: { equals: tenantsBySlug[tenantSlug].id } },
+          { name: { equals: file.name } },
+          parentCond,
+        ],
+      },
+      depth: 0,
+      limit: 1,
+    })
+    if (existing.docs[0]) {
+      folderIds[tenantSlug][file.path] = existing.docs[0].id
+      payload.logger.info(`Folder ${tenantSlug}/${file.path} exists — skipping`)
+      continue
+    }
+    const created = await payload.create({
+      collection: 'folders',
+      data: {
+        tenant: tenantsBySlug[tenantSlug].id,
+        name: file.name,
+        parent: file.parentPath ? (folderIds[tenantSlug][file.parentPath] ?? null) : null,
+      },
+    })
+    folderIds[tenantSlug][file.path] = created.id
+    payload.logger.info(`Created folder ${tenantSlug}/${file.path}`)
+  }
+}
+
 // --- Shared fixture document (once per tenant) ---
+const DOC_FOLDER_PATH: Record<string, string> = {
+  ravenhurst: 'city-records/police/reports',
+  'port-victoria': 'public-records/public-safety/reports',
+}
 for (const tenant of TENANTS) {
   const existing = await payload.find({
     collection: 'documents',
@@ -327,8 +388,19 @@ for (const tenant of TENANTS) {
     depth: 0,
     limit: 1,
   })
+  const folderId = folderIds[tenant.slug]?.[DOC_FOLDER_PATH[tenant.slug]] ?? null
   if (existing.docs[0]) {
-    payload.logger.info(`Fixture document for ${tenant.slug} exists — skipping`)
+    if (folderId !== null && existing.docs[0].folder !== folderId) {
+      await payload.update({
+        collection: 'documents',
+        id: existing.docs[0].id,
+        data: { folder: folderId },
+        depth: 0,
+      })
+      payload.logger.info(`Filed existing fixture document for ${tenant.slug}`)
+    } else {
+      payload.logger.info(`Fixture document for ${tenant.slug} exists — skipping`)
+    }
     continue
   }
   await payload.create({
@@ -339,6 +411,7 @@ for (const tenant of TENANTS) {
       body: SHARED_INCIDENT_REPORT,
       origin: 'web-editor',
       createdBy: usersByEmail['officer@example.test'].id,
+      folder: folderId,
     },
   })
   payload.logger.info(`Created fixture document for ${tenant.slug}`)

@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation'
 
 import { TenantShell } from '@/components/theme/TenantShell'
+import { deleteDocumentAction, moveDocumentAction } from '@/lib/actions/archive'
+import { buildFolderTree, flattenFolderTree } from '@/lib/archive/folderTree'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
-import { getDocumentForTenant } from '@/lib/tenant/queries'
+import { getDocumentForTenant, getFoldersForTenant } from '@/lib/tenant/queries'
 import { renderMarkdown } from '@/lib/markdown/render'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 
@@ -29,21 +31,60 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
     notFound()
   }
 
+  const folders = await getFoldersForTenant(tenant)
+  const flatFolders = flattenFolderTree(buildFolderTree(folders))
+  const folderIdValue = typeof doc.folder === 'object' ? doc.folder?.id ?? '' : doc.folder ?? ''
+
   const tokens = resolveThemeTokens(tenant)
   const html = renderMarkdown(doc.body)
+  const base = `/tenant/${tenant.slug}/documents/${doc.id}`
 
   return (
     <TenantShell tenant={tenant} cssVars={themeTokensToCssVars(tokens)} role={role}>
       <article className={styles.record}>
         <div className={styles.actions}>
           {user ? (
-            <a className={styles.action} href={`/tenant/${tenant.slug}/documents/${doc.id}/edit`}>
+            <a className={styles.action} href={`${base}/edit`}>
               Edit
             </a>
           ) : null}
+
+          <form action={moveDocumentAction} className={styles.moveForm}>
+            <input type="hidden" name="tenantSlug" value={tenant.slug} />
+            <input type="hidden" name="documentId" value={doc.id} />
+            <label className={styles.moveLabel} htmlFor="move-folder">
+              Move to:
+            </label>
+            <select
+              id="move-folder"
+              name="folderId"
+              defaultValue={String(folderIdValue)}
+              className={styles.moveSelect}
+            >
+              <option value="">No folder</option>
+              {flatFolders.map(({ folder, depth }) => (
+                <option key={folder.id} value={folder.id}>
+                  {'\u00A0'.repeat(depth * 2)}
+                  {folder.name}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className={styles.action}>
+              Move
+            </button>
+          </form>
+
+          <form action={deleteDocumentAction} className={styles.deleteForm}>
+            <input type="hidden" name="tenantSlug" value={tenant.slug} />
+            <input type="hidden" name="documentId" value={doc.id} />
+            <button type="submit" className={styles.deleteBtn}>
+              Delete
+            </button>
+          </form>
+
           <a
             className={styles.action}
-            href={source === '1' ? `/tenant/${tenant.slug}/documents/${doc.id}` : `${`/tenant/${tenant.slug}/documents/${doc.id}`}?source=1`}
+            href={source === '1' ? base : `${base}?source=1`}
           >
             {source === '1' ? 'Rendered view' : 'Markdown source'}
           </a>

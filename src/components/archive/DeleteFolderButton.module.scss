@@ -1,0 +1,28 @@
+.form {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+
+.btn {
+  border: none;
+  background: transparent;
+  color: var(--tenant-muted-text);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+
+  &:hover {
+    color: var(--tenant-primary);
+    background: var(--tenant-page-bg);
+  }
+}
+
+.msg {
+  font-size: 0.72rem;
+  color: var(--tenant-primary);
+  white-space: nowrap;
+}

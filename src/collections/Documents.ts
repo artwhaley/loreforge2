@@ -16,6 +16,15 @@ export const Documents: CollectionConfig = {
       index: true,
     },
     {
+      name: 'folder',
+      type: 'relationship',
+      relationTo: 'folders',
+      index: true,
+      admin: {
+        description: 'Archive folder. Leave empty to file at the root.',
+      },
+    },
+    {
       name: 'title',
       type: 'text',
       required: true,

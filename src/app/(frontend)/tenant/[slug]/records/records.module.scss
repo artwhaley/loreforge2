@@ -1,10 +1,188 @@
+.browser {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.sidebar {
+  position: sticky;
+  top: 1rem;
+}
+
+.sidebarHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.sidebarTitle {
+  font-family: var(--tenant-heading-font);
+  color: var(--tenant-primary);
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.inlineForm {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.inlineInput {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--tenant-accent);
+  border-radius: 4px;
+  min-width: 0;
+  width: 130px;
+  background: var(--tenant-surface-bg);
+}
+
+.inlineSubmit {
+  font: inherit;
+  font-size: 0.8rem;
+  background: var(--tenant-primary);
+  color: var(--tenant-text-on-primary);
+  border: none;
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    opacity: 0.92;
+  }
+}
+
+.tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.treeItem {
+  display: flex;
+  align-items: center;
+}
+
+.treeLink,
+.treeLinkActive {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  color: var(--tenant-primary);
+  border: 1px solid transparent;
+
+  &:hover {
+    background: var(--tenant-surface-bg);
+    border-color: var(--tenant-accent);
+  }
+}
+
+.treeLinkActive {
+  background: var(--tenant-surface-bg);
+  border-color: var(--tenant-accent);
+  font-weight: 700;
+}
+
+.treeName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.treeCount {
+  font-size: 0.72rem;
+  color: var(--tenant-muted-text);
+  background: var(--tenant-page-bg);
+  border-radius: 8px;
+  padding: 0.05rem 0.4rem;
+}
+
+.content {
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.searchForm {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.searchInput {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--tenant-accent);
+  border-radius: 4px;
+  min-width: 220px;
+  background: var(--tenant-surface-bg);
+}
+
+.searchSubmit {
+  font: inherit;
+  font-size: 0.85rem;
+  background: var(--tenant-primary);
+  color: var(--tenant-text-on-primary);
+  border: none;
+  border-radius: 4px;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+}
+
+.clearSearch {
+  font-size: 0.85rem;
+  color: var(--tenant-primary);
+  text-decoration: underline;
+  text-decoration-color: var(--tenant-accent);
+  align-self: center;
+}
+
+.crumbs {
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  color: var(--tenant-muted-text);
+}
+
+.crumb {
+  color: var(--tenant-primary);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+    text-decoration-color: var(--tenant-accent);
+  }
+}
+
+.crumbSep {
+  color: var(--tenant-muted-text);
+}
+
 .pageTitle {
   font-family: var(--tenant-heading-font);
   color: var(--tenant-primary);
-}
-
-.pageIntro {
-  color: var(--tenant-muted-text);
+  font-size: 1.5rem;
+  margin: 0 0 1rem;
 }
 
 .list {
@@ -58,4 +236,13 @@
 .empty {
   color: var(--tenant-muted-text);
   font-style: italic;
+}
+
+@media (max-width: 780px) {
+  .browser {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    position: static;
+  }
 }

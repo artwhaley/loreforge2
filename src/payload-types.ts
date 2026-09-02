@@ -71,6 +71,7 @@ export interface Config {
     tenants: Tenant;
     memberships: Membership;
     documents: Document;
+    folders: Folder;
     pages: Page;
     media: Media;
     'payload-kv': PayloadKv;
@@ -84,6 +85,7 @@ export interface Config {
     tenants: TenantsSelect<false> | TenantsSelect<true>;
     memberships: MembershipsSelect<false> | MembershipsSelect<true>;
     documents: DocumentsSelect<false> | DocumentsSelect<true>;
+    folders: FoldersSelect<false> | FoldersSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -237,6 +239,10 @@ export interface Membership {
 export interface Document {
   id: number;
   tenant: number | Tenant;
+  /**
+   * Archive folder. Leave empty to file at the root.
+   */
+  folder?: (number | null) | Folder;
   title: string;
   /**
    * Canonical Markdown body. Presentation (theme) is applied by the tenant, never stored here.
@@ -247,6 +253,19 @@ export interface Document {
    * Author, if known
    */
   createdBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "folders".
+ */
+export interface Folder {
+  id: number;
+  tenant: number | Tenant;
+  name: string;
+  parent?: (number | null) | Folder;
+  sortOrder?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -309,6 +328,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'documents';
         value: number | Document;
+      } | null)
+    | ({
+        relationTo: 'folders';
+        value: number | Folder;
       } | null)
     | ({
         relationTo: 'pages';
@@ -420,10 +443,23 @@ export interface MembershipsSelect<T extends boolean = true> {
  */
 export interface DocumentsSelect<T extends boolean = true> {
   tenant?: T;
+  folder?: T;
   title?: T;
   body?: T;
   origin?: T;
   createdBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "folders_select".
+ */
+export interface FoldersSelect<T extends boolean = true> {
+  tenant?: T;
+  name?: T;
+  parent?: T;
+  sortOrder?: T;
   updatedAt?: T;
   createdAt?: T;
 }

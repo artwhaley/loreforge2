@@ -1,8 +1,9 @@
 import { getPayload } from 'payload'
+import type { Where } from 'payload'
 
 import config from '@/payload.config'
 
-import type { Document, Page, Tenant } from '@/payload-types'
+import type { Document, Folder, Page, Tenant } from '@/payload-types'
 
 import { tenantAndIdWhere, tenantWhere } from './scope'
 
@@ -36,6 +37,71 @@ export async function getDocumentForTenant(
     limit: 1,
   })
   return result.docs[0] ?? null
+}
+
+export async function getFoldersForTenant(tenant: Tenant): Promise<Folder[]> {
+  const payload = await getPayload({ config })
+  const result = await payload.find({
+    collection: 'folders',
+    where: tenantWhere(tenant.id),
+    depth: 1,
+    limit: 200,
+    sort: 'name',
+  })
+  return result.docs
+}
+
+export async function getFolderForTenant(
+  tenant: Tenant,
+  folderId: number | string,
+): Promise<Folder | null> {
+  const payload = await getPayload({ config })
+  const result = await payload.find({
+    collection: 'folders',
+    where: tenantAndIdWhere(tenant.id, folderId),
+    depth: 1,
+    limit: 1,
+  })
+  return result.docs[0] ?? null
+}
+
+/** Documents filed directly in a folder (folderId null = archive root). */
+export async function getDocumentsForFolder(
+  tenant: Tenant,
+  folderId: number | string | null,
+): Promise<Document[]> {
+  const payload = await getPayload({ config })
+  const folderWhere: Where =
+    folderId === null
+      ? {
+          or: [{ folder: { equals: null } }, { folder: { exists: false } }],
+        }
+      : { folder: { equals: folderId } }
+  const result = await payload.find({
+    collection: 'documents',
+    where: tenantWhere(tenant.id, folderWhere),
+    depth: 0,
+    limit: 100,
+    sort: '-updatedAt',
+  })
+  return result.docs
+}
+
+/** Tenant-scoped search over title and Markdown body (spec §7.5). */
+export async function searchDocumentsForTenant(tenant: Tenant, query: string): Promise<Document[]> {
+  const q = query.trim()
+  if (!q) return []
+  const payload = await getPayload({ config })
+  const result = await payload.find({
+    collection: 'documents',
+    where: tenantWhere(tenant.id, {
+      or: [{ title: { like: q } }, { body: { like: q } }],
+    }),
+    depth: 0,
+    limit: 100,
+    sort: '-updatedAt',
+  })
+  return result.docs
 }
 
 export async function getPageForTenant(tenant: Tenant, slug: string): Promise<Page | null> {
