@@ -114,6 +114,57 @@ const TENANTS: Array<{
   },
 ]
 
+// --- Theme Studio media fixtures (Ticket 03) ---
+// Clearly different civic identities: Ravenhurst = heraldic navy/gold seal;
+// Port Victoria = modern flat teal mark. Generated as SVG text so the seed
+// stays dependency-free; Payload/sharp handle SVG uploads like any image.
+const RAVENHURST_SEAL_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <circle cx="100" cy="100" r="96" fill="#F3EFE6" stroke="#B9975B" stroke-width="6"/>
+  <circle cx="100" cy="100" r="78" fill="none" stroke="#243145" stroke-width="4"/>
+  <path d="M70 130 V85 L100 60 L130 85 V130 H112 V100 H88 V130 Z" fill="#243145" stroke="#B9975B" stroke-width="2"/>
+  <path d="M60 140 H140" stroke="#B9975B" stroke-width="4"/>
+  <text x="100" y="165" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#243145">RAVENHURST</text>
+</svg>`
+
+const RAVENHURST_BANNER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid slice">
+  <rect width="1200" height="400" fill="#243145"/>
+  <rect y="330" width="1200" height="70" fill="#8A6A3C"/>
+  <rect y="322" width="1200" height="8" fill="#B9975B"/>
+  <circle cx="980" cy="120" r="70" fill="none" stroke="#B9975B" stroke-width="6"/>
+  <text x="80" y="210" font-family="Georgia, serif" font-size="64" fill="#F3EFE6">City of Ravenhurst</text>
+  <text x="80" y="260" font-family="Georgia, serif" font-size="28" fill="#B9975B">Order · Service · Community</text>
+</svg>`
+
+const PORT_VICTORIA_SEAL_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <circle cx="100" cy="100" r="96" fill="#FFFFFF" stroke="#21A4B8" stroke-width="8"/>
+  <circle cx="100" cy="100" r="74" fill="#123C5A"/>
+  <path d="M40 115 Q70 95 100 115 T160 115" fill="none" stroke="#21A4B8" stroke-width="10" stroke-linecap="round"/>
+  <path d="M52 138 Q76 122 100 138 T148 138" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+  <text x="100" y="70" text-anchor="middle" font-family="Trebuchet MS, sans-serif" font-size="30" font-weight="bold" fill="#FFFFFF">PV</text>
+</svg>`
+
+const PORT_VICTORIA_BANNER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid slice">
+  <rect width="1200" height="400" fill="#F8FAFC"/>
+  <rect width="1200" height="260" fill="#123C5A"/>
+  <path d="M0 260 Q300 220 600 260 T1200 260 V400 H0 Z" fill="#21A4B8"/>
+  <path d="M0 300 Q300 270 600 300 T1200 300 V400 H0 Z" fill="#123C5A" opacity="0.35"/>
+  <text x="80" y="150" font-family="Trebuchet MS, sans-serif" font-size="64" font-weight="bold" fill="#FFFFFF">Port Victoria</text>
+  <text x="80" y="200" font-family="Trebuchet MS, sans-serif" font-size="28" fill="#9BD8E0">Forward Together</text>
+</svg>`
+
+const MEDIA_ASSETS: Array<{
+  filename: string
+  alt: string
+  svg: string
+  tenantSlug: string
+  field: 'logo' | 'banner'
+}> = [
+  { filename: 'ravenhurst-seal.svg', alt: 'City of Ravenhurst civic seal', svg: RAVENHURST_SEAL_SVG, tenantSlug: 'ravenhurst', field: 'logo' },
+  { filename: 'ravenhurst-banner.svg', alt: 'City of Ravenhurst banner', svg: RAVENHURST_BANNER_SVG, tenantSlug: 'ravenhurst', field: 'banner' },
+  { filename: 'port-victoria-seal.svg', alt: 'Port Victoria civic mark', svg: PORT_VICTORIA_SEAL_SVG, tenantSlug: 'port-victoria', field: 'logo' },
+  { filename: 'port-victoria-banner.svg', alt: 'Port Victoria banner', svg: PORT_VICTORIA_BANNER_SVG, tenantSlug: 'port-victoria', field: 'banner' },
+]
+
 const payload = await getPayload({ config })
 
 // --- Users ---
@@ -152,6 +203,46 @@ for (const tenant of TENANTS) {
   const created = await payload.create({ collection: 'tenants', data: tenant })
   tenantsBySlug[tenant.slug] = created
   payload.logger.info(`Created tenant ${tenant.slug}`)
+}
+
+// --- Theme media assets + tenant attachment ---
+for (const asset of MEDIA_ASSETS) {
+  const existing = await payload.find({
+    collection: 'media',
+    where: { filename: { equals: asset.filename } },
+    depth: 0,
+    limit: 1,
+  })
+  let mediaId: number
+  if (existing.docs[0]) {
+    mediaId = existing.docs[0].id
+    payload.logger.info(`Media ${asset.filename} already exists — skipping`)
+  } else {
+    const created = await payload.create({
+      collection: 'media',
+      data: { alt: asset.alt },
+      file: {
+        data: Buffer.from(asset.svg, 'utf8'),
+        mimetype: 'image/svg+xml',
+        name: asset.filename,
+        size: Buffer.byteLength(asset.svg, 'utf8'),
+      },
+    })
+    mediaId = created.id
+    payload.logger.info(`Created media ${asset.filename}`)
+  }
+
+  const tenant = tenantsBySlug[asset.tenantSlug]
+  const current = await payload.findByID({ collection: 'tenants', id: tenant.id, depth: 0 })
+  if (!current[asset.field]) {
+    await payload.update({
+      collection: 'tenants',
+      id: tenant.id,
+      data: { [asset.field]: mediaId },
+      depth: 0,
+    })
+    payload.logger.info(`Attached ${asset.filename} as ${asset.field} for ${asset.tenantSlug}`)
+  }
 }
 
 // --- Memberships ---

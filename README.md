@@ -18,6 +18,14 @@ roleplay communities. Spec and tickets live in `../sl-civic-archive-mvp-packet/`
 
 ```bash
 npm install
+npm run dev        # pinned to http://localhost:3055
+npm run seed       # fixture users, tenants, memberships, documents, theme media
+npm test           # unit tests (tenant scoping + theme resolution)
+```
+
+Dev server port is pinned to **3055**; if it's taken, `npm run dev` fails loudly rather than silently picking another port.
+
+Reset: delete the SQLite file (see `payload.config.ts` for its path) and `public/media/*`, then re-run `npm run seed`.
 copy .env.example .env
 npm run dev
 ```

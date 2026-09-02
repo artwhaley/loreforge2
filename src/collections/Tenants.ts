@@ -102,5 +102,23 @@ export const Tenants: CollectionConfig = {
       defaultValue: 'verdana',
       required: true,
     },
+    {
+      name: 'logo',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Seal / logo',
+      admin: {
+        description: 'Optional city seal or logo (image).',
+      },
+    },
+    {
+      name: 'banner',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Banner image',
+      admin: {
+        description: 'Optional header banner (image).',
+      },
+    },
   ],
 }

@@ -71,6 +71,7 @@ export interface Config {
     tenants: Tenant;
     memberships: Membership;
     documents: Document;
+    media: Media;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -82,6 +83,7 @@ export interface Config {
     tenants: TenantsSelect<false> | TenantsSelect<true>;
     memberships: MembershipsSelect<false> | MembershipsSelect<true>;
     documents: DocumentsSelect<false> | DocumentsSelect<true>;
+    media: MediaSelect<false> | MediaSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -166,8 +168,53 @@ export interface Tenant {
   backgroundColor: string;
   headingFontKey: 'georgia' | 'palatino' | 'verdana' | 'trebuchet';
   bodyFontKey: 'verdana' | 'georgia' | 'trebuchet' | 'tahoma';
+  /**
+   * Optional city seal or logo (image).
+   */
+  logo?: (number | null) | Media;
+  /**
+   * Optional header banner (image).
+   */
+  banner?: (number | null) | Media;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: number;
+  alt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+  sizes?: {
+    thumbnail?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+    banner?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+  };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -240,6 +287,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'documents';
         value: number | Document;
+      } | null)
+    | ({
+        relationTo: 'media';
+        value: number | Media;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -321,6 +372,8 @@ export interface TenantsSelect<T extends boolean = true> {
   backgroundColor?: T;
   headingFontKey?: T;
   bodyFontKey?: T;
+  logo?: T;
+  banner?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -347,6 +400,48 @@ export interface DocumentsSelect<T extends boolean = true> {
   createdBy?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media_select".
+ */
+export interface MediaSelect<T extends boolean = true> {
+  alt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+  sizes?:
+    | T
+    | {
+        thumbnail?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        banner?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+      };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

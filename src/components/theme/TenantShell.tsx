@@ -1,5 +1,7 @@
 import type { Tenant } from '@/payload-types'
 
+import { mediaSrc } from '@/lib/theme/fonts'
+
 import styles from './TenantShell.module.scss'
 
 type Props = {
@@ -50,11 +52,18 @@ export function TenantShell({ tenant, cssVars, role, switcherTenants, children }
       ) : null}
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <div>
-            <a href={base} className={styles.cityName}>
-              {tenant.name}
-            </a>
-            {tenant.motto ? <div className={styles.motto}>{tenant.motto}</div> : null}
+          <div className={styles.identity}>
+            {mediaSrc(tenant.logo) ? (
+              <img className={styles.seal} src={mediaSrc(tenant.logo)} alt={tenant.name} />
+            ) : (
+              <div className={styles.sealFallback}>{tenant.name.charAt(0)}</div>
+            )}
+            <div>
+              <a href={base} className={styles.cityName}>
+                {tenant.name}
+              </a>
+              {tenant.motto ? <div className={styles.motto}>{tenant.motto}</div> : null}
+            </div>
           </div>
           <nav className={styles.nav}>
             {NAV.map((item) => (
@@ -66,10 +75,19 @@ export function TenantShell({ tenant, cssVars, role, switcherTenants, children }
                 {item.label}
               </a>
             ))}
-            {/* Theme Studio (Customize) arrives in Ticket 03. */}
+            {role === 'admin' ? (
+              <a className={styles.navLink} href={`${base}/customize`}>
+                Customize
+              </a>
+            ) : null}
           </nav>
         </div>
         <div className={styles.rule} />
+        {mediaSrc(tenant.banner) ? (
+          <div className={styles.bannerWrap}>
+            <img className={styles.banner} src={mediaSrc(tenant.banner)} alt="Banner" />
+          </div>
+        ) : null}
       </header>
       <main className={styles.main}>{children}</main>
       <footer className={styles.footer}>

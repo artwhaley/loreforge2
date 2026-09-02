@@ -12,6 +12,44 @@
   color: var(--tenant-text-on-primary);
 }
 
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.seal {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.sealFallback {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  background: var(--tenant-accent);
+  color: var(--tenant-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--tenant-heading-font);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.bannerWrap {
+  line-height: 0;
+  background: var(--tenant-primary);
+}
+
+.banner {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+}
+
 .headerInner {
   max-width: 980px;
   margin: 0 auto;

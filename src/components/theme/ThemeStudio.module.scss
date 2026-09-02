@@ -1,0 +1,248 @@
+.studio {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.sectionTitle {
+  font-family: var(--tenant-heading-font, serif);
+  color: var(--tenant-primary, #243145);
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+}
+
+.controls {
+  background: var(--tenant-surface-bg, #fff);
+  border: 1px solid var(--tenant-accent, #999);
+  border-radius: 6px;
+  padding: 1.25rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.select,
+.colorInput {
+  font: inherit;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--tenant-accent, #aaa);
+  border-radius: 4px;
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.swatch {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.colorInput {
+  height: 38px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.uploads {
+  margin-top: 1rem;
+}
+
+.logoPreview {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border: 1px solid var(--tenant-accent);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.bannerPreview {
+  width: 100%;
+  max-height: 80px;
+  object-fit: cover;
+  border: 1px solid var(--tenant-accent);
+  border-radius: 4px;
+}
+
+.saveRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.status {
+  font-size: 0.85rem;
+  color: var(--tenant-muted-text, #777);
+}
+
+.saveButton {
+  font-family: var(--tenant-body-font);
+  font-size: 0.95rem;
+  background: var(--tenant-primary, #243145);
+  color: var(--tenant-text-on-primary, #fff);
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1.1rem;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+/* ---- Live preview scaffolding ---- */
+.preview {
+  min-width: 0;
+}
+
+.previewScaffold {
+  border: 1px solid var(--tenant-accent);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--tenant-page-bg);
+}
+
+.siteHeader {
+  background: var(--tenant-primary);
+  color: var(--tenant-text-on-primary);
+}
+
+.siteHeaderInner {
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.seal {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.sealFallback {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  background: var(--tenant-accent);
+  color: var(--tenant-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--tenant-heading-font);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.cityName {
+  font-family: var(--tenant-heading-font);
+  font-size: 1.3rem;
+  line-height: 1.1;
+}
+
+.motto {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.nav {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.headRule {
+  height: 4px;
+  background: var(--tenant-accent);
+}
+
+.banner {
+  width: 100%;
+  max-height: 120px;
+  object-fit: cover;
+  display: block;
+}
+
+/* Document preview card */
+.record {
+  margin: 1.5rem;
+  background: var(--tenant-surface-bg);
+  border: 1px solid var(--tenant-accent);
+  border-top: 6px solid var(--tenant-primary);
+  border-radius: 4px;
+  padding: 1.75rem 2rem;
+}
+
+.recordTitle {
+  font-family: var(--tenant-heading-font);
+  color: var(--tenant-primary);
+  font-size: 1.6rem;
+  border-bottom: 2px solid var(--tenant-accent);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.recordMeta {
+  font-size: 0.8rem;
+  color: var(--tenant-muted-text);
+  margin-bottom: 1rem;
+}
+
+.recordBody {
+  font-family: var(--tenant-body-font);
+  font-size: 0.95rem;
+  line-height: 1.6;
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--tenant-heading-font);
+    color: var(--tenant-primary);
+  }
+
+  blockquote {
+    border-left: 4px solid var(--tenant-accent);
+    background: var(--tenant-page-bg);
+    color: var(--tenant-primary);
+    padding: 0.5rem 1rem;
+    font-style: italic;
+    margin: 1rem 0;
+  }
+
+  a {
+    color: var(--tenant-primary);
+  }
+
+  hr {
+    border: none;
+    border-top: 2px solid var(--tenant-accent);
+  }
+}

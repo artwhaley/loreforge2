@@ -36,7 +36,7 @@ export async function getActiveTenant(): Promise<{
   const tenants = await payload.find({
     collection: 'tenants',
     where: { slug: { equals: cookieValue } },
-    depth: 0,
+    depth: 1,
     limit: 1,
   })
   const tenant = tenants.docs[0]
