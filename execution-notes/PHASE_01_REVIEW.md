@@ -1,8 +1,8 @@
 # Phase 1 review — editor, theme, and safety foundation
 
-**Review status: BLOCKED_PENDING_OWNER**
+**Review status: APPROVED_BY_OWNER**
 
-This is an inspection report, not a self-approval. The owner must perform the manual GS-01/GS-02 review and decide whether the MDXEditor foundation is acceptable before Phase 2 can start.
+This is an inspection report, not a self-approval. The owner confirmed GS-01 and GS-02 were good and approved the documented Phase 1 caveats in chat on 2026-09-02.
 
 ## Revision under review
 
@@ -49,4 +49,4 @@ See [`P01-FORM-BUILDER-OBSERVATIONS.md`](P01-FORM-BUILDER-OBSERVATIONS.md). Gene
 
 ## Gate decision
 
-The implementation evidence is strong enough for owner review, but this gate cannot approve itself. Phase 2 remains blocked until the owner supplies GS-01/GS-02 manual evidence, resolves or accepts the two P1 items above, and explicitly approves the gate.
+The owner approved GS-01 and GS-02 and accepted the documented caveats on 2026-09-02. Phase 1 is complete; the P1 navigation note remains a follow-up constraint for any future programmatic router transition.
