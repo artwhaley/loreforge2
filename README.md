@@ -24,8 +24,8 @@ npm run dev
 
 Then:
 
-- App: http://localhost:3000
-- Payload admin: http://localhost:3000/admin
+- App: http://localhost:3000 (or the port Next prints if 3000 is busy)
+- Payload admin login: http://localhost:3000/admin/login
 
 ## Local test credentials (fixtures, not secrets)
 

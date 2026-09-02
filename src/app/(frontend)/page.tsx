@@ -23,12 +23,18 @@ export default async function HomePage() {
       <p>Local MVP spike — Ticket 00 bootstrap.</p>
       <ul>
         <li>Next.js: running</li>
-        <li>Payload: running (admin at <code>/admin</code>)</li>
+        <li>
+          Payload: running — <a href="/admin/login">log in to the admin</a>
+        </li>
         <li>
           SQLite: {dbOk ? 'connected' : 'ERROR querying database'} (users in DB:{' '}
           {userCount ?? 'unknown'})
         </li>
       </ul>
+      <p>
+        <strong>Test login:</strong> <code>admin@example.test</code> /{' '}
+        <code>test-password-123</code>
+      </p>
     </main>
   )
 }

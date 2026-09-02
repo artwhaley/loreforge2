@@ -1,18 +1,7 @@
-import type { Metadata } from 'next'
 import React from 'react'
 
-import './custom.scss'
-
-export const metadata: Metadata = {
-  title: 'SL Civic Archive',
-  description:
-    'Local proof of concept: civic records archive for Second Life roleplay communities.',
-}
-
+// Pass-through root layout: each route group owns its own <html>/<body> so the
+// Payload admin and the site chrome don't nest document tags.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  )
+  return children
 }
