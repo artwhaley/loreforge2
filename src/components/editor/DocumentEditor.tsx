@@ -182,6 +182,7 @@ export function DocumentEditor({
           <button
             type="button"
             className={mode === 'edit' ? styles.modeActive : styles.modeBtn}
+            aria-pressed={mode === 'edit'}
             onClick={() => switchMode('edit')}
           >
             Edit
@@ -189,6 +190,7 @@ export function DocumentEditor({
           <button
             type="button"
             className={mode === 'source' ? styles.modeActive : styles.modeBtn}
+            aria-pressed={mode === 'source'}
             onClick={() => switchMode('source')}
           >
             Source (advanced)
@@ -202,7 +204,7 @@ export function DocumentEditor({
         </button>
       </div>
 
-      <div className={styles.bodyEditor}>
+      <div className={styles.bodyEditor} role="region" aria-label="Document editor content">
         <div className={mode === 'edit' ? styles.paneActive : styles.paneHidden}>
           <ForwardRefEditor
             markdown={initialMarkdown}

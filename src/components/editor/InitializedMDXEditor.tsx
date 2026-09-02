@@ -44,7 +44,7 @@ const plugins = [
       <>
         <UndoRedo />
         <Separator />
-        <BoldItalicUnderlineToggles />
+        <BoldItalicUnderlineToggles options={['Bold', 'Italic']} />
         <Separator />
         <BlockTypeSelect />
         <Separator />

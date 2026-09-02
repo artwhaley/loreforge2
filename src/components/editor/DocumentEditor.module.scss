@@ -30,6 +30,11 @@
   padding: 0.35rem 0.6rem;
   border: 1px solid var(--tenant-accent);
   border-radius: 4px;
+
+  &:focus-visible {
+    outline: 3px solid var(--tenant-text-on-primary);
+    outline-offset: 2px;
+  }
 }
 
 .spacer {
@@ -58,6 +63,11 @@
     opacity: 0.6;
     cursor: default;
   }
+
+  &:focus-visible {
+    outline: 3px solid var(--tenant-text-on-primary);
+    outline-offset: 2px;
+  }
 }
 
 .modeToggle {
@@ -76,6 +86,11 @@
   background: transparent;
   color: var(--tenant-text-on-primary);
   cursor: pointer;
+
+  &:focus-visible {
+    outline: 3px solid var(--tenant-text-on-primary);
+    outline-offset: -3px;
+  }
 }
 
 .modeActive {
@@ -113,4 +128,9 @@
   resize: vertical;
   background: #fbfbfb;
   color: #1a1a1a;
+
+  &:focus-visible {
+    outline: 3px solid var(--tenant-primary);
+    outline-offset: 2px;
+  }
 }
