@@ -1,0 +1,38 @@
+{
+  "name": "sl-civic-archive",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "cross-env NODE_OPTIONS=--no-experimental-require-module next build",
+    "dev": "cross-env NODE_OPTIONS=--no-experimental-require-module next dev",
+    "start": "next start",
+    "generate:types": "payload generate:types",
+    "payload": "payload",
+    "seed": "payload run ./src/seed/index.ts"
+  },
+  "dependencies": {
+    "@payloadcms/db-sqlite": "3.88.0",
+    "@payloadcms/next": "3.88.0",
+    "@payloadcms/richtext-lexical": "3.88.0",
+    "@payloadcms/translations": "3.88.0",
+    "@payloadcms/ui": "3.88.0",
+    "cross-env": "^10.0.0",
+    "next": "16.3.4",
+    "payload": "3.88.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "sharp": "^0.34.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}
