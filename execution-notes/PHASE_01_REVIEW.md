@@ -8,7 +8,7 @@ This is an inspection report, not a self-approval. The owner must perform the ma
 
 - Branch: `phase-01-editor-theme-safety`
 - Approved starting point/tag: `mvp-baseline` at `b92b6f054f22c6ad28e23f00de7926603fb383d7`
-- Phase commits: `5eeabe9`/`4a643c4` (P01-T01), `f951432`/`3a5415e` (P01-T02), `e179122`/`bb232b0` (P01-T03), `e36c5b6`/`13f9008` (P01-T04)
+- Phase commits: `5eeabe9`/`4a643c4` (P01-T01), `f951432`/`3a5415e` (P01-T02), `e179122`/`bb232b0` (P01-T03), `e36c5b6`/`13f9008` plus scoped fixture repair `c0221d2` (P01-T04)
 - Working tree: clean at review time.
 
 ## Automated evidence
@@ -16,6 +16,7 @@ This is an inspection report, not a self-approval. The owner must perform the ma
 - `npm test`: **32 passed**.
 - `npx tsc --noEmit`: **passed**.
 - `npm run build`: **passed**.
+- `npm run seed`: **passed** after the scoped P01-T04 fixture repair; clean reset media now rasterizes to PNG.
 - `npx eslint src --max-warnings=0`: **blocked by pre-existing repository configuration**. ESLint 9 fails while loading `eslint.config.mjs` because `core-web-vitals` is undefined; no lint source finding was produced and the config was not changed.
 - Malicious Markdown corpus: **no active payload** in the regression suite. Raw script/HTML/event attributes are escaped or removed; encoded/obfuscated `javascript:`, `vbscript:`, `data:`, and protocol-relative links are rejected; benign angle-bracket prose remains visible.
 - Theme media corpus: valid JPEG/PNG/WebP accepted and re-encoded; SVG, malformed data, declared MIME/extension spoofing, >5 MiB, >4096 dimension, and trailing-polyglot inputs rejected. Multi-page metadata is rejected by the validator; a dedicated animated fixture is deferred because the non-browser test harness cannot produce one without adding a new image fixture dependency.

@@ -1,9 +1,9 @@
 # P01-GATE execution note
 
-- Review commit: recorded with the `P01-GATE:` commit that adds `PHASE_01_REVIEW.md` and this note.
+- Review commit: updated with the `P01-GATE:` evidence commit after scoped P01-T04 fixture repair `c0221d2`.
 - Branch: `phase-01-editor-theme-safety`.
 - Product source changed by this gate: none; this gate only inspects and reports.
-- Automated result: `npm test` 32 passed; `npx tsc --noEmit` passed; `npm run build` passed; malicious Markdown and media corpora passed.
+- Automated result: `npm test` 32 passed; `npx tsc --noEmit` passed; `npm run build` passed; `npm run seed` passed; malicious Markdown and media corpora passed.
 - Lint result: blocked by the pre-existing ESLint 9/config error (`core-web-vitals` undefined while loading `eslint.config.mjs`).
 - Manual result: **not performed**. No live browser session or owner screenshots were available.
 - Supported Markdown corruption: not reproduced by the automated canonical/render fixtures; runtime WYSIWYG corruption is not proven absent without GS-01.
