@@ -177,7 +177,7 @@ export interface Tenant {
   headingFontKey: 'georgia' | 'palatino' | 'verdana' | 'trebuchet';
   bodyFontKey: 'verdana' | 'georgia' | 'trebuchet' | 'tahoma';
   /**
-   * Optional city seal or logo (image).
+   * Optional Domain seal or logo (image).
    */
   logo?: (number | null) | Media;
   /**
