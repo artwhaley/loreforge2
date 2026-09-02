@@ -69,6 +69,8 @@ export interface Config {
   collections: {
     users: User;
     characters: Character;
+    'character-claim-requests': CharacterClaimRequest;
+    'character-merge-requests': CharacterMergeRequest;
     'domain-character-contexts': DomainCharacterContext;
     'domain-memberships': DomainMembership;
     tenants: Tenant;
@@ -88,6 +90,8 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     characters: CharactersSelect<false> | CharactersSelect<true>;
+    'character-claim-requests': CharacterClaimRequestsSelect<false> | CharacterClaimRequestsSelect<true>;
+    'character-merge-requests': CharacterMergeRequestsSelect<false> | CharacterMergeRequestsSelect<true>;
     'domain-character-contexts': DomainCharacterContextsSelect<false> | DomainCharacterContextsSelect<true>;
     'domain-memberships': DomainMembershipsSelect<false> | DomainMembershipsSelect<true>;
     tenants: TenantsSelect<false> | TenantsSelect<true>;
@@ -234,14 +238,19 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "domain-character-contexts".
+ * via the `definition` "character-claim-requests".
  */
-export interface DomainCharacterContext {
+export interface CharacterClaimRequest {
   id: number;
-  tenant: number | Tenant;
   character: number | Character;
-  localDisplayName: string;
-  localNote?: string | null;
+  claimant: number | User;
+  tenant: number | Tenant;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  requestedAt: string;
+  decidedAt?: string | null;
+  decidedBy?: (number | null) | User;
+  decidingCharacter?: (number | null) | Character;
+  decisionNote?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -272,6 +281,44 @@ export interface Tenant {
    * Optional header banner (image).
    */
   banner?: (number | null) | Media;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "character-merge-requests".
+ */
+export interface CharacterMergeRequest {
+  id: number;
+  source: number | Character;
+  /**
+   * Optional at request time; required before approval.
+   */
+  target?: (number | null) | Character;
+  tenant: number | Tenant;
+  requestingUser: number | User;
+  requestingCharacter?: (number | null) | Character;
+  evidence: string;
+  note: string;
+  status: 'pending' | 'approved' | 'rejected' | 'blocked';
+  decidingPlatformAdmin?: (number | null) | User;
+  decisionReason?: string | null;
+  requestedAt: string;
+  decidedAt?: string | null;
+  impactPreviewHash?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "domain-character-contexts".
+ */
+export interface DomainCharacterContext {
+  id: number;
+  tenant: number | Tenant;
+  character: number | Character;
+  localDisplayName: string;
+  localNote?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -541,6 +588,14 @@ export interface PayloadLockedDocument {
         value: number | Character;
       } | null)
     | ({
+        relationTo: 'character-claim-requests';
+        value: number | CharacterClaimRequest;
+      } | null)
+    | ({
+        relationTo: 'character-merge-requests';
+        value: number | CharacterMergeRequest;
+      } | null)
+    | ({
         relationTo: 'domain-character-contexts';
         value: number | DomainCharacterContext;
       } | null)
@@ -667,6 +722,44 @@ export interface CharactersSelect<T extends boolean = true> {
         id?: T;
       };
   createdBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "character-claim-requests_select".
+ */
+export interface CharacterClaimRequestsSelect<T extends boolean = true> {
+  character?: T;
+  claimant?: T;
+  tenant?: T;
+  status?: T;
+  requestedAt?: T;
+  decidedAt?: T;
+  decidedBy?: T;
+  decidingCharacter?: T;
+  decisionNote?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "character-merge-requests_select".
+ */
+export interface CharacterMergeRequestsSelect<T extends boolean = true> {
+  source?: T;
+  target?: T;
+  tenant?: T;
+  requestingUser?: T;
+  requestingCharacter?: T;
+  evidence?: T;
+  note?: T;
+  status?: T;
+  decidingPlatformAdmin?: T;
+  decisionReason?: T;
+  requestedAt?: T;
+  decidedAt?: T;
+  impactPreviewHash?: T;
   updatedAt?: T;
   createdAt?: T;
 }

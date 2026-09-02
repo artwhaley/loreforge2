@@ -57,6 +57,16 @@ export default async function HomePage() {
             </select>{' '}
             <button type="submit">Set Character</button>
           </form>
+          {context.characters.length > 0 ? (
+            <ul>
+              {context.characters.map((character) => (
+                <li key={character.id}>
+                  <a href={`/characters/${character.id}`}>{character.name}</a>
+                  {character.id === context.activeCharacter?.id ? ' (active)' : ''}
+                </li>
+              ))}
+            </ul>
+          ) : null}
 
           <h2>Your Domains</h2>
           {!context.activeCharacter ? (

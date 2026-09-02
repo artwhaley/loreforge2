@@ -9,6 +9,8 @@ import sharp from 'sharp'
 
 import { Documents } from './collections/Documents'
 import { Characters } from './collections/Characters'
+import { CharacterClaimRequests } from './collections/CharacterClaimRequests'
+import { CharacterMergeRequests } from './collections/CharacterMergeRequests'
 import { DomainCharacterContexts } from './collections/DomainCharacterContexts'
 import { DomainMemberships } from './collections/DomainMemberships'
 import { Folders } from './collections/Folders'
@@ -118,7 +120,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Characters, DomainCharacterContexts, DomainMemberships, Tenants, Memberships, Documents, Folders, Pages, Media],
+  collections: [Users, Characters, CharacterClaimRequests, CharacterMergeRequests, DomainCharacterContexts, DomainMemberships, Tenants, Memberships, Documents, Folders, Pages, Media],
   plugins: [formBuilder],
   editor: lexicalEditor(),
   db: sqliteAdapter({
