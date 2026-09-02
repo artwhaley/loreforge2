@@ -1,16 +1,13 @@
-import { getPayload } from 'payload'
-
-import config from '@/payload.config'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
+import { getLorePayload } from '@/lib/payload'
 import { getTenantsForUser } from '@/lib/tenant/queries'
 
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
-  const payload = await getPayload({ config })
-  const headers = await import('next/headers.js').then((m) => m.headers())
-  const { user } = await payload.auth({ headers })
   const context = await getActiveContext()
+  const user = context.user
+  const payload = await getLorePayload()
 
   let userCount: number | null = null
   let dbOk = true

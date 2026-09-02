@@ -1,7 +1,5 @@
 import { cookies } from 'next/headers.js'
-import { getPayload } from 'payload'
-
-import config from '@/payload.config'
+import { getLorePayload } from '@/lib/payload'
 
 import type { Character, Tenant } from '@/payload-types'
 
@@ -29,7 +27,7 @@ export type ActiveContext = {
  * arbitrary cookie value cannot expose another city's content.
  */
 export async function getActiveContext(): Promise<ActiveContext> {
-  const payload = await getPayload({ config })
+  const payload = await getLorePayload()
   const headers = await import('next/headers.js').then((m) => m.headers())
   const { user } = await payload.auth({ headers })
   const contextUser = user ? { id: Number(user.id), name: user.name, email: user.email } : null

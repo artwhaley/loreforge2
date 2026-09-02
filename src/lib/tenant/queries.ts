@@ -1,7 +1,6 @@
-import { getPayload } from 'payload'
 import type { Where } from 'payload'
 
-import config from '@/payload.config'
+import { getLorePayload } from '@/lib/payload'
 
 import type { Character, Document, DomainMembership, Folder, Form, Page, Tenant } from '@/payload-types'
 
@@ -14,7 +13,7 @@ import { tenantAndIdWhere, tenantWhere } from './scope'
  * so the tenant condition cannot be forgotten at the call site (spec §8).
  */
 export async function getDocumentsForTenant(tenant: Tenant): Promise<Document[]> {
-  const payload = await getPayload({ config })
+  const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'documents',
     where: tenantWhere(tenant.id),
@@ -29,7 +28,7 @@ export async function getDocumentForTenant(
   tenant: Tenant,
   documentId: number | string,
 ): Promise<Document | null> {
-  const payload = await getPayload({ config })
+  const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'documents',
     where: tenantAndIdWhere(tenant.id, documentId),
@@ -41,7 +40,7 @@ export async function getDocumentForTenant(
 
 /** Forms owned by the tenant (structured report templates). */
 export async function getFormsForTenant(tenant: Tenant): Promise<Form[]> {
-  const payload = await getPayload({ config })
+  const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'forms',
     where: tenantWhere(tenant.id),
@@ -56,7 +55,7 @@ export async function getFormForTenant(
   tenant: Tenant,
   formId: number,
 ): Promise<Form | null> {
-  const payload = await getPayload({ config })
+  const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'forms',
     where: tenantAndIdWhere(tenant.id, formId),
@@ -67,7 +66,7 @@ export async function getFormForTenant(
 }
 
 export async function getFoldersForTenant(tenant: Tenant): Promise<Folder[]> {
-  const payload = await getPayload({ config })
+  const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'folders',
     where: tenantWhere(tenant.id),
@@ -82,7 +81,7 @@ export async function getFolderForTenant(
   tenant: Tenant,
   folderId: number | string,
 ): Promise<Folder | null> {
-  const payload = await getPayload({ config })
+  const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'folders',
     where: tenantAndIdWhere(tenant.id, folderId),
@@ -97,7 +96,7 @@ export async function getDocumentsForFolder(
   tenant: Tenant,
   folderId: number | string | null,
 ): Promise<Document[]> {
-  const payload = await getPayload({ config })
+  const payload = await getLorePayload()
   const folderWhere: Where =
     folderId === null
       ? {
@@ -118,7 +117,7 @@ export async function getDocumentsForFolder(
 export async function searchDocumentsForTenant(tenant: Tenant, query: string): Promise<Document[]> {
   const q = query.trim()
   if (!q) return []
-  const payload = await getPayload({ config })
+  const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'documents',
     where: tenantWhere(tenant.id, {
@@ -132,7 +131,7 @@ export async function searchDocumentsForTenant(tenant: Tenant, query: string): P
 }
 
 export async function getPageForTenant(tenant: Tenant, slug: string): Promise<Page | null> {
-  const payload = await getPayload({ config })
+  const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'pages',
     where: {
@@ -145,7 +144,7 @@ export async function getPageForTenant(tenant: Tenant, slug: string): Promise<Pa
 }
 
 export async function getTenantsForUser(userId: number | string): Promise<Tenant[]> {
-  const payload = await getPayload({ config })
+  const payload = await getLorePayload()
   const characters = await payload.find({
     collection: 'characters',
     where: {
@@ -183,7 +182,7 @@ export async function getCharactersForTenant(
   tenant: Tenant,
   userId: number | string,
 ): Promise<Character[]> {
-  const payload = await getPayload({ config })
+  const payload = await getLorePayload()
   const memberships = await payload.find({
     collection: 'domain-memberships',
     where: {
@@ -203,7 +202,7 @@ export async function getCharactersForTenant(
 }
 
 export async function getDomainMembershipsForTenant(tenant: Tenant): Promise<DomainMembership[]> {
-  const payload = await getPayload({ config })
+  const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'domain-memberships',
     where: { tenant: { equals: tenant.id } },

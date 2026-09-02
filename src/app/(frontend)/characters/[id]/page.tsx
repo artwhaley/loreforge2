@@ -1,10 +1,8 @@
 import { notFound } from 'next/navigation'
-import { getPayload } from 'payload'
-
-import config from '@/payload.config'
 
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { publicCharacterProjection } from '@/lib/characters/publicProjection'
+import { getLorePayload } from '@/lib/payload'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -14,7 +12,7 @@ export default async function CharacterProfilePage({ params }: Props) {
   const { id } = await params
   const characterId = Number(id)
   if (!Number.isFinite(characterId)) notFound()
-  const payload = await getPayload({ config })
+  const payload = await getLorePayload()
   const character = await payload.findByID({ collection: 'characters', id: characterId, depth: 1 })
   if (!character) notFound()
 
@@ -22,6 +20,15 @@ export default async function CharacterProfilePage({ params }: Props) {
   const controller = character.controlledBy && typeof character.controlledBy === 'object' ? character.controlledBy : null
   const profile = publicCharacterProjection(character, controller)
   const tenant = context.tenant
+  const localContexts = tenant
+    ? await payload.find({
+        collection: 'domain-character-contexts',
+        where: { and: [{ tenant: { equals: tenant.id } }, { character: { equals: character.id } }] },
+        depth: 0,
+        limit: 1,
+      })
+    : { docs: [] }
+  const localContext = localContexts.docs[0]
   const pendingClaims = tenant
     ? await payload.find({
         collection: 'character-claim-requests',
@@ -53,11 +60,12 @@ export default async function CharacterProfilePage({ params }: Props) {
         <section>
           <h2>In {tenant.name}</h2>
           <p>Domain-local display context is separate from global Character identity and membership.</p>
+          {localContext ? <p><strong>Local display:</strong> {localContext.localDisplayName}</p> : null}
           <form action="/api/character-context" method="post">
             <input type="hidden" name="tenantSlug" value={tenant.slug} />
             <input type="hidden" name="characterId" value={character.id} />
-            <label>Local display name <input name="localDisplayName" defaultValue={profile.name} required /></label>{' '}
-            <label>Local note <input name="localNote" /></label>{' '}
+            <label>Local display name <input name="localDisplayName" defaultValue={localContext?.localDisplayName ?? profile.name} required /></label>{' '}
+            <label>Local note <input name="localNote" defaultValue={localContext?.localNote ?? ''} /></label>{' '}
             <button type="submit">Save local context</button>
           </form>
         </section>
@@ -87,6 +95,7 @@ export default async function CharacterProfilePage({ params }: Props) {
                 <input type="hidden" name="action" value="decide" />
                 <input type="hidden" name="claimId" value={claim.id} />
                 <input type="hidden" name="characterId" value={character.id} />
+                <input type="hidden" name="tenantSlug" value={tenant.slug} />
                 <span>Claimant: {claimant}</span>{' '}
                 <input name="decisionNote" placeholder="Decision note" />{' '}
                 <button name="decision" value="approved" type="submit">Approve</button>{' '}
