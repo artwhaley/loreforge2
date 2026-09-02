@@ -12,6 +12,8 @@ Implemented commits:
 - `4707af2` — P03-T04 Role hierarchy and scoped assignments.
 - `7f00074` — P03-T04 canonical Domain navigation follow-through.
 - `618be4c` — P03-T03 files all seeded Documents under the folder contract.
+- `6dd13ba` — lifecycle cascades, multi-folder assignment entry, explicit logout, and admin-context separation.
+- `cb90a64` — explicit Domain-membership removal labeling and lifecycle warning.
 
 Automated evidence:
 
