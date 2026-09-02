@@ -1,12 +1,21 @@
 'use client'
 
 import type { MDXEditorMethods } from '@mdxeditor/editor'
-import { useRef, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 
 import { saveDocumentAction } from '@/lib/actions/saveDocument'
 import { savePageAction } from '@/lib/actions/savePage'
 
 import { ForwardRefEditor } from './ForwardRefEditor'
+import {
+  beginSave,
+  createSaveState,
+  editSaveState,
+  isSaveStateDirty,
+  resolveSave,
+  type SaveSnapshot,
+  type SaveState,
+} from './saveState'
 
 import styles from './DocumentEditor.module.scss'
 
@@ -21,6 +30,12 @@ type Props = {
 
 type Mode = 'edit' | 'source'
 
+const LEAVE_MESSAGE = 'You have unsaved changes. Leave this page?'
+
+function isModifiedClick(event: MouseEvent): boolean {
+  return event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey
+}
+
 export function DocumentEditor({
   entityId,
   entityType,
@@ -33,8 +48,57 @@ export function DocumentEditor({
   const [markdown, setMarkdown] = useState(initialMarkdown)
   const [sourceText, setSourceText] = useState(initialMarkdown)
   const [mode, setMode] = useState<Mode>('edit')
-  const [pending, startTransition] = useTransition()
-  const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle')
+  const [transitionPending, startTransition] = useTransition()
+  const [saveState, setSaveState] = useState<SaveState>(() =>
+    createSaveState({ title: initialTitle, body: initialMarkdown }),
+  )
+
+  const dirty = isSaveStateDirty(saveState)
+
+  // Browser refresh/close and ordinary same-origin links (including Next.js
+  // <Link>) must ask before discarding an edited snapshot. The capture-phase
+  // listener runs before Next's delegated link handler, so cancellation leaves
+  // the editor in place and confirmation allows the router event to proceed.
+  useEffect(() => {
+    if (!dirty) return
+
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = LEAVE_MESSAGE
+    }
+
+    const onDocumentClick = (event: MouseEvent) => {
+      if (event.defaultPrevented || isModifiedClick(event)) return
+      const target = event.target instanceof Element ? event.target.closest('a[href]') : null
+      if (!(target instanceof HTMLAnchorElement)) return
+      if (target.hasAttribute('download') || (target.target && target.target !== '_self')) return
+
+      const destination = new URL(target.href, window.location.href)
+      if (destination.origin !== window.location.origin) return
+      if (destination.href === window.location.href) return
+
+      if (!window.confirm(LEAVE_MESSAGE)) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+    }
+
+    window.addEventListener('beforeunload', onBeforeUnload)
+    document.addEventListener('click', onDocumentClick, true)
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload)
+      document.removeEventListener('click', onDocumentClick, true)
+    }
+  }, [dirty])
+
+  function updateCurrent(patch: Partial<SaveSnapshot>) {
+    setSaveState((previous) =>
+      editSaveState(previous, {
+        ...previous.current,
+        ...patch,
+      }),
+    )
+  }
 
   function switchMode(next: Mode) {
     if (next === mode) return
@@ -43,28 +107,59 @@ export function DocumentEditor({
       // mode getMarkdown() returns the lossless Lexical serialization.
       const current = editorRef.current?.getMarkdown() ?? markdown
       setSourceText(current)
+      updateCurrent({ body: current })
       setMode('source')
     } else {
       // Re-parse the textarea verbatim into the WYSIWYG (lossless import path).
       editorRef.current?.setMarkdown(sourceText)
+      setMarkdown(sourceText)
+      updateCurrent({ body: sourceText })
       setMode('edit')
     }
   }
 
   function onSave() {
-    // In source mode the textarea holds the canonical markdown verbatim — no
-    // re-serialization, so save the text directly. In edit mode use the
-    // WYSIWYG serialization (markdown$), which preserves block structure.
-    const body = mode === 'source' ? sourceText : (editorRef.current?.getMarkdown() ?? markdown)
-    setStatus('idle')
+    const attempt = beginSave(saveState)
+    if (!attempt) return
+
+    setSaveState(attempt.state)
     startTransition(async () => {
-      const result =
-        entityType === 'document'
-          ? await saveDocumentAction({ documentId: entityId, tenantSlug, title, body })
-          : await savePageAction({ pageId: entityId, tenantSlug, title, body })
-      setStatus(result.ok ? 'saved' : 'error')
+      let ok = false
+      try {
+        const result =
+          entityType === 'document'
+            ? await saveDocumentAction({
+                documentId: entityId,
+                tenantSlug,
+                title: attempt.snapshot.title,
+                body: attempt.snapshot.body,
+              })
+            : await savePageAction({
+                pageId: entityId,
+                tenantSlug,
+                title: attempt.snapshot.title,
+                body: attempt.snapshot.body,
+              })
+        ok = result.ok
+      } catch {
+        ok = false
+      }
+
+      setSaveState((previous) =>
+        resolveSave(previous, attempt.requestId, attempt.snapshot, ok),
+      )
     })
   }
+
+  const statusText = transitionPending || saveState.pending
+    ? 'Saving…'
+    : saveState.status === 'saved'
+      ? 'Saved'
+      : saveState.status === 'error'
+        ? 'Save failed — retry'
+        : dirty
+          ? 'Unsaved'
+          : ''
 
   return (
     <div className={styles.editor}>
@@ -76,7 +171,11 @@ export function DocumentEditor({
           id="doc-title"
           className={styles.titleInput}
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => {
+            const nextTitle = e.target.value
+            setTitle(nextTitle)
+            updateCurrent({ title: nextTitle })
+          }}
         />
         <span className={styles.spacer} />
         <div className={styles.modeToggle} role="group" aria-label="Edit mode">
@@ -92,13 +191,13 @@ export function DocumentEditor({
             className={mode === 'source' ? styles.modeActive : styles.modeBtn}
             onClick={() => switchMode('source')}
           >
-            Source
+            Source (advanced)
           </button>
         </div>
-        <span className={styles.status}>
-          {pending ? 'Saving…' : status === 'saved' ? 'Saved' : status === 'error' ? 'Save failed' : ''}
+        <span className={styles.status} aria-live="polite">
+          {statusText}
         </span>
-        <button className={styles.saveButton} onClick={onSave} disabled={pending}>
+        <button className={styles.saveButton} onClick={onSave} disabled={saveState.pending || transitionPending}>
           Save
         </button>
       </div>
@@ -108,14 +207,21 @@ export function DocumentEditor({
           <ForwardRefEditor
             markdown={initialMarkdown}
             ref={editorRef}
-            onChange={setMarkdown}
+            onChange={(nextMarkdown) => {
+              setMarkdown(nextMarkdown)
+              updateCurrent({ body: nextMarkdown })
+            }}
             contentEditableClassName="mdx-editor-content"
           />
         </div>
         <textarea
           className={mode === 'source' ? styles.sourceArea : styles.paneHidden}
           value={sourceText}
-          onChange={(e) => setSourceText(e.target.value)}
+          onChange={(e) => {
+            const nextSource = e.target.value
+            setSourceText(nextSource)
+            updateCurrent({ body: nextSource })
+          }}
           spellCheck={false}
           aria-label="Markdown source"
         />
