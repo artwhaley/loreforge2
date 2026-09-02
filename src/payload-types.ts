@@ -68,6 +68,8 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
+    characters: Character;
+    'domain-character-contexts': DomainCharacterContext;
     tenants: Tenant;
     memberships: Membership;
     documents: Document;
@@ -84,6 +86,8 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
+    characters: CharactersSelect<false> | CharactersSelect<true>;
+    'domain-character-contexts': DomainCharacterContextsSelect<false> | DomainCharacterContextsSelect<true>;
     tenants: TenantsSelect<false> | TenantsSelect<true>;
     memberships: MembershipsSelect<false> | MembershipsSelect<true>;
     documents: DocumentsSelect<false> | DocumentsSelect<true>;
@@ -138,6 +142,13 @@ export interface UserAuthOperations {
 export interface User {
   id: number;
   name: string;
+  /**
+   * Optional identity placeholder. Verification is not enabled yet.
+   */
+  slAvatarUUID?: string | null;
+  slAvatarName?: string | null;
+  slVerificationState: 'unlinked' | 'pending' | 'verified';
+  slVerifiedAt?: string | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -159,31 +170,26 @@ export interface User {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "tenants".
+ * via the `definition` "characters".
  */
-export interface Tenant {
+export interface Character {
   id: number;
   name: string;
+  portrait?: (number | null) | Media;
+  bio?: string | null;
   /**
-   * URL identifier, e.g. ravenhurst
+   * Leave empty for an unclaimed or Domain-managed Character.
    */
-  slug: string;
-  motto?: string | null;
-  preset: 'heritage' | 'modern';
-  primaryColor: string;
-  secondaryColor: string;
-  accentColor: string;
-  backgroundColor: string;
-  headingFontKey: 'georgia' | 'palatino' | 'verdana' | 'trebuchet';
-  bodyFontKey: 'verdana' | 'georgia' | 'trebuchet' | 'tahoma';
-  /**
-   * Optional Domain seal or logo (image).
-   */
-  logo?: (number | null) | Media;
-  /**
-   * Optional header banner (image).
-   */
-  banner?: (number | null) | Media;
+  controlledBy?: (number | null) | User;
+  status: 'active' | 'inactive' | 'merged';
+  mergedInto?: (number | null) | Character;
+  aliases?:
+    | {
+        value: string;
+        id?: string | null;
+      }[]
+    | null;
+  createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
@@ -223,6 +229,49 @@ export interface Media {
       filename?: string | null;
     };
   };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "domain-character-contexts".
+ */
+export interface DomainCharacterContext {
+  id: number;
+  tenant: number | Tenant;
+  character: number | Character;
+  localDisplayName: string;
+  localNote?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tenants".
+ */
+export interface Tenant {
+  id: number;
+  name: string;
+  /**
+   * URL identifier, e.g. ravenhurst
+   */
+  slug: string;
+  motto?: string | null;
+  preset: 'heritage' | 'modern';
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  headingFontKey: 'georgia' | 'palatino' | 'verdana' | 'trebuchet';
+  bodyFontKey: 'verdana' | 'georgia' | 'trebuchet' | 'tahoma';
+  /**
+   * Optional Domain seal or logo (image).
+   */
+  logo?: (number | null) | Media;
+  /**
+   * Optional header banner (image).
+   */
+  banner?: (number | null) | Media;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -472,6 +521,14 @@ export interface PayloadLockedDocument {
         value: number | User;
       } | null)
     | ({
+        relationTo: 'characters';
+        value: number | Character;
+      } | null)
+    | ({
+        relationTo: 'domain-character-contexts';
+        value: number | DomainCharacterContext;
+      } | null)
+    | ({
         relationTo: 'tenants';
         value: number | Tenant;
       } | null)
@@ -551,6 +608,10 @@ export interface PayloadMigration {
  */
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
+  slAvatarUUID?: T;
+  slAvatarName?: T;
+  slVerificationState?: T;
+  slVerifiedAt?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -567,6 +628,39 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "characters_select".
+ */
+export interface CharactersSelect<T extends boolean = true> {
+  name?: T;
+  portrait?: T;
+  bio?: T;
+  controlledBy?: T;
+  status?: T;
+  mergedInto?: T;
+  aliases?:
+    | T
+    | {
+        value?: T;
+        id?: T;
+      };
+  createdBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "domain-character-contexts_select".
+ */
+export interface DomainCharacterContextsSelect<T extends boolean = true> {
+  tenant?: T;
+  character?: T;
+  localDisplayName?: T;
+  localNote?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

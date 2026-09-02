@@ -13,5 +13,37 @@ export const Users: CollectionConfig = {
       required: true,
       label: 'Display Name',
     },
+    {
+      name: 'slAvatarUUID',
+      type: 'text',
+      label: 'Second Life avatar UUID',
+      unique: true,
+      index: true,
+      admin: {
+        description: 'Optional identity placeholder. Verification is not enabled yet.',
+      },
+    },
+    {
+      name: 'slAvatarName',
+      type: 'text',
+      label: 'Second Life avatar name',
+    },
+    {
+      name: 'slVerificationState',
+      type: 'select',
+      label: 'Second Life verification state',
+      defaultValue: 'unlinked',
+      required: true,
+      options: [
+        { label: 'Unlinked', value: 'unlinked' },
+        { label: 'Pending', value: 'pending' },
+        { label: 'Verified', value: 'verified' },
+      ],
+    },
+    {
+      name: 'slVerifiedAt',
+      type: 'date',
+      label: 'Second Life verified at',
+    },
   ],
 }

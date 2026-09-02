@@ -8,6 +8,8 @@ import { buildConfig } from 'payload'
 import sharp from 'sharp'
 
 import { Documents } from './collections/Documents'
+import { Characters } from './collections/Characters'
+import { DomainCharacterContexts } from './collections/DomainCharacterContexts'
 import { Folders } from './collections/Folders'
 import { Media } from './collections/Media'
 import { Memberships } from './collections/Memberships'
@@ -115,7 +117,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Tenants, Memberships, Documents, Folders, Pages, Media],
+  collections: [Users, Characters, DomainCharacterContexts, Tenants, Memberships, Documents, Folders, Pages, Media],
   plugins: [formBuilder],
   editor: lexicalEditor(),
   db: sqliteAdapter({

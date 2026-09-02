@@ -18,11 +18,44 @@ const TEST_USERS = [
     email: 'admin@example.test',
     name: 'Morgan Vale',
     password: 'test-password-123',
+    slVerificationState: 'unlinked' as const,
   },
   {
     email: 'officer@example.test',
     name: 'Alex Mercer',
     password: 'test-password-123',
+    slVerificationState: 'unlinked' as const,
+  },
+]
+
+const TEST_CHARACTERS: Array<{
+  key: string
+  name: string
+  controlledBy?: string
+  bio: string
+}> = [
+  {
+    key: 'lucan',
+    name: 'Lucan',
+    controlledBy: 'admin@example.test',
+    bio: 'A civic-minded resident used to verify multi-Character context.',
+  },
+  {
+    key: 'elara',
+    name: 'Elara',
+    controlledBy: 'admin@example.test',
+    bio: 'A second Character controlled by the same account.',
+  },
+  {
+    key: 'alex-resident',
+    name: 'Alex Mercer',
+    controlledBy: 'officer@example.test',
+    bio: 'A resident Character used for ordinary-member checks.',
+  },
+  {
+    key: 'unknown-traveler',
+    name: 'Unknown Traveler',
+    bio: 'An unclaimed Character used for claim and local-context flows.',
   },
 ]
 
@@ -249,6 +282,14 @@ for (const user of TEST_USERS) {
   })
   if (existing.docs[0]) {
     usersByEmail[user.email] = existing.docs[0]
+    if (!existing.docs[0].slVerificationState) {
+      await payload.update({
+        collection: 'users',
+        id: existing.docs[0].id,
+        data: { slVerificationState: 'unlinked' },
+      })
+      payload.logger.info(`Initialized Second Life placeholder for ${user.email}`)
+    }
     payload.logger.info(`User ${user.email} already exists — skipping`)
     continue
   }
@@ -274,6 +315,33 @@ for (const tenant of TENANTS) {
   const created = await payload.create({ collection: 'tenants', data: tenant })
   tenantsBySlug[tenant.slug] = created
   payload.logger.info(`Created tenant ${tenant.slug}`)
+}
+
+// --- Characters (Phase 2) ---
+const charactersByKey: Record<string, { id: number }> = {}
+for (const character of TEST_CHARACTERS) {
+  const existing = await payload.find({
+    collection: 'characters',
+    where: { name: { equals: character.name } },
+    depth: 0,
+    limit: 1,
+  })
+  if (existing.docs[0]) {
+    charactersByKey[character.key] = existing.docs[0]
+    payload.logger.info(`Character ${character.name} already exists — skipping`)
+    continue
+  }
+  const created = await payload.create({
+    collection: 'characters',
+    data: {
+      name: character.name,
+      bio: character.bio,
+      controlledBy: character.controlledBy ? usersByEmail[character.controlledBy].id : null,
+      status: 'active',
+    },
+  })
+  charactersByKey[character.key] = created
+  payload.logger.info(`Created Character ${character.name}`)
 }
 
 // --- Theme media assets + tenant attachment ---
