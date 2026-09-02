@@ -19,8 +19,66 @@
 }
 
 .intro {
-  max-width: 560px;
+  max-width: 620px;
   margin: 0 auto;
+  color: var(--tenant-muted-text);
+
+  p {
+    margin: 0.5rem 0;
+  }
+
+  a {
+    color: var(--tenant-primary);
+  }
+}
+
+.editLink {
+  display: inline-block;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: var(--tenant-primary);
+  text-decoration: none;
+  border-bottom: 1px solid var(--tenant-accent);
+
+  &:hover {
+    border-bottom-color: var(--tenant-primary);
+  }
+}
+
+.modulesRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  max-width: 720px;
+  margin: 2rem auto;
+}
+
+.module {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--tenant-surface-bg);
+  border: 1px solid var(--tenant-accent);
+  border-top: 4px solid var(--tenant-primary);
+  border-radius: 4px;
+  text-decoration: none;
+
+  &:hover {
+    border-top-color: var(--tenant-accent);
+    background: color-mix(in srgb, var(--tenant-accent) 8%, var(--tenant-surface-bg));
+  }
+}
+
+.moduleLabel {
+  font-family: var(--tenant-heading-font);
+  color: var(--tenant-primary);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.moduleHint {
+  font-size: 0.85rem;
   color: var(--tenant-muted-text);
 }
 

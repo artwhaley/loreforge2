@@ -1,31 +1,31 @@
 import { redirect } from 'next/navigation'
 import { notFound } from 'next/navigation'
 
-import { TenantShell } from '@/components/theme/TenantShell'
 import { DocumentEditor } from '@/components/editor/DocumentEditor'
+import { TenantShell } from '@/components/theme/TenantShell'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
-import { getDocumentForTenant, getTenantsForUser } from '@/lib/tenant/queries'
+import { getPageForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 
 type Props = {
-  params: Promise<{ slug: string; id: string }>
+  params: Promise<{ slug: string; pageSlug: string }>
 }
 
 export const dynamic = 'force-dynamic'
 
-export default async function EditDocumentPage({ params }: Props) {
-  const { slug, id } = await params
+export default async function PageEditPage({ params }: Props) {
+  const { slug, pageSlug } = await params
   const { tenant, role, user } = await getActiveTenant()
 
   if (!tenant || tenant.slug !== slug) {
     notFound()
   }
   if (!user) {
-    redirect(`/admin/login`)
+    redirect('/admin/login')
   }
 
-  const doc = await getDocumentForTenant(tenant, id)
-  if (!doc) {
+  const page = await getPageForTenant(tenant, pageSlug)
+  if (!page) {
     notFound()
   }
 
@@ -40,11 +40,11 @@ export default async function EditDocumentPage({ params }: Props) {
       switcherTenants={myTenants}
     >
       <DocumentEditor
-        entityId={doc.id}
-        entityType="document"
+        entityId={page.id}
+        entityType="page"
         tenantSlug={tenant.slug}
-        initialTitle={doc.title}
-        initialMarkdown={doc.body}
+        initialTitle={page.title}
+        initialMarkdown={page.body}
       />
     </TenantShell>
   )

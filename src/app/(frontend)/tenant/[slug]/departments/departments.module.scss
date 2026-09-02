@@ -1,0 +1,53 @@
+.pageTitle {
+  font-family: var(--tenant-heading-font);
+  color: var(--tenant-primary);
+  font-size: 2rem;
+  margin: 0 0 0.5rem;
+}
+
+.pageIntro {
+  color: var(--tenant-muted-text);
+  margin: 0 0 1.5rem;
+}
+
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+}
+
+.card {
+  background: var(--tenant-surface-bg);
+  border: 1px solid var(--tenant-accent);
+  border-top: 5px solid var(--tenant-primary);
+  border-radius: 4px;
+  padding: 1.4rem 1.6rem;
+}
+
+.cardTitle {
+  font-family: var(--tenant-heading-font);
+  color: var(--tenant-primary);
+  font-size: 1.25rem;
+  margin: 0 0 0.5rem;
+}
+
+.cardDesc {
+  color: var(--tenant-primary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0 0 0.75rem;
+}
+
+.cardPhone {
+  font-size: 0.8rem;
+  color: var(--tenant-accent);
+  font-weight: 600;
+}
+
+.empty {
+  color: var(--tenant-muted-text);
+  font-style: italic;
+}

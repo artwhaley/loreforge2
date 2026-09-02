@@ -4,13 +4,16 @@ import type { MDXEditorMethods } from '@mdxeditor/editor'
 import { useRef, useState, useTransition } from 'react'
 
 import { saveDocumentAction } from '@/lib/actions/saveDocument'
+import { savePageAction } from '@/lib/actions/savePage'
 
 import { ForwardRefEditor } from './ForwardRefEditor'
 
 import styles from './DocumentEditor.module.scss'
 
 type Props = {
-  documentId: number | string
+  entityId: number | string
+  /** Which collection this editor writes to (documents vs informational pages). */
+  entityType: 'document' | 'page'
   tenantSlug: string
   initialTitle: string
   initialMarkdown: string
@@ -19,7 +22,8 @@ type Props = {
 type Mode = 'edit' | 'source'
 
 export function DocumentEditor({
-  documentId,
+  entityId,
+  entityType,
   tenantSlug,
   initialTitle,
   initialMarkdown,
@@ -54,7 +58,10 @@ export function DocumentEditor({
     const body = mode === 'source' ? sourceText : (editorRef.current?.getMarkdown() ?? markdown)
     setStatus('idle')
     startTransition(async () => {
-      const result = await saveDocumentAction({ documentId, tenantSlug, title, body })
+      const result =
+        entityType === 'document'
+          ? await saveDocumentAction({ documentId: entityId, tenantSlug, title, body })
+          : await savePageAction({ pageId: entityId, tenantSlug, title, body })
       setStatus(result.ok ? 'saved' : 'error')
     })
   }

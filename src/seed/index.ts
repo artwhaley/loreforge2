@@ -76,6 +76,41 @@ Photographs were taken and the incident was documented for follow-up.
 > This report is an MVP fixture used to evaluate formatting, editing, search, and tenant-specific presentation.
 `
 
+// --- Ticket 04: informational pages (Home welcome prose + About) ---
+const RAVENHURST_HOME = `Ravenhurst is a city of record, order, and public service. Residents and city staff share a single archive for civic records, ordinances, and department documents created during roleplay.
+
+Use the links below to explore our departments, public records, and city information.`
+
+const RAVENHURST_ABOUT = `# About Ravenhurst
+
+Ravenhurst is a roleplay community centered on municipal life, public service, and collaborative storytelling.
+
+This archive provides residents and city staff with a shared home for public records, departmental documents, and other civic material created during roleplay.
+
+## City Services
+
+- City administration
+- Police services
+- Municipal court
+- Public records`
+
+const PORT_VICTORIA_HOME = `Port Victoria is a forward-looking coastal community. This archive houses public records, departmental documents, and civic material for residents and city staff.
+
+Find what you need through our departments and public records.`
+
+const PORT_VICTORIA_ABOUT = `# About Port Victoria
+
+Port Victoria is a roleplay community with a coastal metropolitan identity—open, modern, and oriented toward the harbor.
+
+This archive gives residents and staff a shared home for public records, departmental documents, and other civic material created during roleplay.
+
+## City Services
+
+- City administration
+- Public safety
+- Harbor authority
+- Public records`
+
 const TENANTS: Array<{
   slug: string
   name: string
@@ -338,6 +373,43 @@ if (stressTenant) {
     })
     payload.logger.info('Created editor stress document')
   }
+}
+
+// --- Informational pages (Ticket 04) ---
+const PAGES: Array<{ tenantSlug: string; slug: string; title: string; body: string }> = [
+  { tenantSlug: 'ravenhurst', slug: 'home', title: 'Ravenhurst Home', body: RAVENHURST_HOME },
+  { tenantSlug: 'ravenhurst', slug: 'about', title: 'About Ravenhurst', body: RAVENHURST_ABOUT },
+  { tenantSlug: 'port-victoria', slug: 'home', title: 'Port Victoria Home', body: PORT_VICTORIA_HOME },
+  { tenantSlug: 'port-victoria', slug: 'about', title: 'About Port Victoria', body: PORT_VICTORIA_ABOUT },
+]
+
+for (const page of PAGES) {
+  const existing = await payload.find({
+    collection: 'pages',
+    where: {
+      and: [
+        { tenant: { equals: tenantsBySlug[page.tenantSlug].id } },
+        { slug: { equals: page.slug } },
+      ],
+    },
+    depth: 0,
+    limit: 1,
+  })
+  if (existing.docs[0]) {
+    payload.logger.info(`Page ${page.slug} for ${page.tenantSlug} exists — skipping`)
+    continue
+  }
+  await payload.create({
+    collection: 'pages',
+    data: {
+      tenant: tenantsBySlug[page.tenantSlug].id,
+      title: page.title,
+      slug: page.slug,
+      body: page.body,
+      published: true,
+    },
+  })
+  payload.logger.info(`Created page ${page.slug} for ${page.tenantSlug}`)
 }
 
 payload.logger.info('Seed complete.')

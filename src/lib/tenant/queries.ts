@@ -2,7 +2,7 @@ import { getPayload } from 'payload'
 
 import config from '@/payload.config'
 
-import type { Document, Tenant } from '@/payload-types'
+import type { Document, Page, Tenant } from '@/payload-types'
 
 import { tenantAndIdWhere, tenantWhere } from './scope'
 
@@ -32,6 +32,19 @@ export async function getDocumentForTenant(
   const result = await payload.find({
     collection: 'documents',
     where: tenantAndIdWhere(tenant.id, documentId),
+    depth: 0,
+    limit: 1,
+  })
+  return result.docs[0] ?? null
+}
+
+export async function getPageForTenant(tenant: Tenant, slug: string): Promise<Page | null> {
+  const payload = await getPayload({ config })
+  const result = await payload.find({
+    collection: 'pages',
+    where: {
+      and: [{ tenant: { equals: tenant.id } }, { slug: { equals: slug } }],
+    },
     depth: 0,
     limit: 1,
   })

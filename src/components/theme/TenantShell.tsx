@@ -14,6 +14,8 @@ type Props = {
 
 const NAV = [
   { label: 'Home', segment: '' },
+  { label: 'About', segment: 'about' },
+  { label: 'Departments', segment: 'departments' },
   { label: 'Records', segment: 'records' },
 ]
 

@@ -26,18 +26,6 @@ npm test           # unit tests (tenant scoping + theme resolution)
 Dev server port is pinned to **3055**; if it's taken, `npm run dev` fails loudly rather than silently picking another port.
 
 Reset: delete the SQLite file (see `payload.config.ts` for its path) and `public/media/*`, then re-run `npm run seed`.
-copy .env.example .env
-npm run dev
-```
-
-Then:
-
-- App: http://localhost:3055
-- Payload admin login: http://localhost:3055/admin/login
-
-The port is fixed to `3055` (`next dev -p 3055`). If it's occupied the dev server
-errors loudly instead of silently choosing a different port — this is intentional
-so the URL stays predictable through tenants and sessions.
 
 ## Local test credentials (fixtures, not secrets)
 
@@ -68,9 +56,18 @@ theme settings. A server-side active-tenant resolver (cookie + verified membersh
 document query — the UI never filters by tenant. Tenant themes are flattened onto the `Tenants`
 collection for MVP (a dedicated Theme Studio arrives in Ticket 03).
 
-Routes: `/tenant/ravenhurst`, `/tenant/port-victoria` and their `.../records` and
-`.../documents/:id`. Switch cities via the "Viewing as" selector or the city buttons on the home
-page.
+Routes: `/tenant/ravenhurst`, `/tenant/port-victoria` and their `.../records`, `.../about`,
+`.../departments`, and `.../documents/:id`. Switch cities via the "Viewing as" selector or the
+city buttons on the home page.
+
+## Ticket 04 scope
+
+Each tenant site is now a small believable city website built from a `Pages` collection (Home
+welcome prose + About), a fixture department directory, and the archive's Records route. Prose
+pages use the same Markdown editor as documents (WYSIWYG + safe source mode) and store canonical
+Markdown. Home is an application-owned layout: editable welcome prose (a `home` page) plus fixed
+quick-link modules and recent records. Routes: `/tenant/[slug]`, `.../about`, `.../departments`,
+`.../records`, `.../documents/:id`, and `.../pages/[pageSlug]/edit`.
 
 ## Tests
 

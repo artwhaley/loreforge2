@@ -9,6 +9,7 @@ import sharp from 'sharp'
 import { Documents } from './collections/Documents'
 import { Media } from './collections/Media'
 import { Memberships } from './collections/Memberships'
+import { Pages } from './collections/Pages'
 import { Tenants } from './collections/Tenants'
 import { Users } from './collections/Users'
 
@@ -29,7 +30,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Tenants, Memberships, Documents, Media],
+  collections: [Users, Tenants, Memberships, Documents, Pages, Media],
   editor: lexicalEditor(),
   db: sqliteAdapter({
     client: {
