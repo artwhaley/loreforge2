@@ -4,6 +4,7 @@ import { CopyMarkdownButton } from '@/components/archive/CopyMarkdownButton'
 import { TenantShell } from '@/components/theme/TenantShell'
 import { deleteDocumentAction, moveDocumentAction } from '@/lib/actions/archive'
 import { buildFolderTree, flattenFolderTree } from '@/lib/archive/folderTree'
+import { originLabel } from '@/lib/origin'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getDocumentForTenant, getFoldersForTenant } from '@/lib/tenant/queries'
 import { renderMarkdown } from '@/lib/markdown/render'
@@ -116,7 +117,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
                 })}
               </span>
             )}
-            <span className={styles.origin}>{doc.origin.replace('-', ' ')}</span>
+            <span className={styles.origin}>{originLabel(doc.origin)}</span>
           </div>
         </header>
 

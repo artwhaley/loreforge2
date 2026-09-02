@@ -4,6 +4,7 @@ import { DeleteFolderButton } from '@/components/archive/DeleteFolderButton'
 import { TenantShell } from '@/components/theme/TenantShell'
 import { createDocumentAction, createFolderAction } from '@/lib/actions/archive'
 import { buildFolderTree, flattenFolderTree, folderPath } from '@/lib/archive/folderTree'
+import { originLabel } from '@/lib/origin'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import {
   getDocumentsForTenant,
@@ -191,7 +192,7 @@ export default async function RecordsPage({ params, searchParams }: Props) {
                     {doc.title}
                   </a>
                   <div className={styles.itemMeta}>
-                    <span className={styles.origin}>{doc.origin.replace('-', ' ')}</span>
+                    <span className={styles.origin}>{originLabel(doc.origin)}</span>
                     {typeof doc.updatedAt === 'string' ? (
                       <span>
                         Updated{' '}

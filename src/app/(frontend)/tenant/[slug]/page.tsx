@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 
 import { TenantShell } from '@/components/theme/TenantShell'
+import { originLabel } from '@/lib/origin'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getDocumentsForTenant, getPageForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 import { renderMarkdown } from '@/lib/markdown/render'
@@ -77,7 +78,7 @@ export default async function TenantHomePage({ params }: Props) {
                 <a className={styles.docLink} href={`/tenant/${tenant.slug}/documents/${doc.id}`}>
                   {doc.title}
                 </a>
-                <span className={styles.docOrigin}>{doc.origin.replace('-', ' ')}</span>
+                <span className={styles.docOrigin}>{originLabel(doc.origin)}</span>
               </li>
             ))}
           </ul>

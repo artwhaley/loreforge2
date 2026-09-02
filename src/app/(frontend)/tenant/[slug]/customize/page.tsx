@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 
 import { TenantShell } from '@/components/theme/TenantShell'
 import { ThemeStudio } from '@/components/theme/ThemeStudio'
+import { originLabel } from '@/lib/origin'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getDocumentForTenant, getDocumentsForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 import { renderMarkdown } from '@/lib/markdown/render'
@@ -39,7 +40,7 @@ export default async function CustomizePage({ params }: Props) {
     ? renderMarkdown(previewDoc.body)
     : '<p>No record yet.</p>'
   const previewMeta = previewDoc
-    ? `Filed ${new Date(previewDoc.createdAt as string).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} · ${previewDoc.origin.replace('-', ' ')}`
+    ? `Filed ${new Date(previewDoc.createdAt as string).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} · ${originLabel(previewDoc.origin)}`
     : ''
 
   return (

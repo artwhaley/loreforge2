@@ -40,8 +40,11 @@ Reset: delete the SQLite file (see `payload.config.ts` for its path) and `public
 npm run seed
 ```
 
-To fully reset: stop the dev server, delete `sl-civic-archive.db*` from the project root, and run
-`npm run seed` again (the dev server also creates the DB on boot).
+To fully reset: stop the dev server, delete `sl-civic-archive.db*` from the project root and
+`public/media/*`, then run `npm run seed` again (the dev server also creates the DB on boot).
+
+If the Payload admin reports a missing import-map component after a fresh clone (e.g. after the
+Form Builder plugin install), run `npx payload generate:importmap` once.
 
 ## Local files (gitignored)
 
@@ -100,6 +103,19 @@ searchable, movable, and exportable like any other record.
 
 Note for Windows/local dev: after adding the plugin, run `npx payload generate:importmap` (or let
 the dev server regenerate it) so the plugin's Lexical confirmation field resolves in the admin.
+
+## Ticket 08 scope
+
+Integration cleanup and the final acceptance run. The complete 27-step build-spec scenario passes
+from a clean local reset: admin (theme + WYSIWYG/source authoring + form authoring), member
+(form fill -> normal record), simulated SL (notecard import), and tenant separation (distinct
+branding, no cross-tenant leakage). Document origin badges were made consistent via
+`src/lib/origin.ts`. Product questions and deferred work are recorded in `MVP_REVIEW.md`.
+
+Known local quirk: on Windows the seed can transiently collide with a running dev server over
+schema/index creation — stop the dev server before `npm run seed`. Direct URL navigation to a
+tenant you are not currently switched to returns a 404 (by design; use the switcher) rather than
+leaking content.
 
 ## Tests
 
