@@ -2,7 +2,7 @@ import type { Character, Tenant } from '@/payload-types'
 
 import { mediaSrc } from '@/lib/theme/fonts'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
-import { getCharactersForTenant, getTenantsForUser } from '@/lib/tenant/queries'
+import { getAdministrationDomainsForUser, getCharactersForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 
 import styles from './TenantShell.module.scss'
 
@@ -20,6 +20,7 @@ const NAV = [
   { label: 'Home', segment: '' },
   { label: 'About', segment: 'about' },
   { label: 'Subdomains', segment: 'subdomains' },
+  { label: 'Roles', segment: 'roles' },
   { label: 'Records', segment: 'records' },
   { label: 'Forms', segment: 'forms' },
 ]
@@ -44,6 +45,7 @@ export async function TenantShell({
   const resolvedActiveCharacter = activeCharacter === undefined ? context.activeCharacter : activeCharacter
   const resolvedTenants =
     switcherTenants ?? (context.user ? await getTenantsForUser(context.user.id) : [])
+  const administrationDomains = context.user ? await getAdministrationDomainsForUser(context.user.id) : []
   const base = `/domain/${tenant.slug}`
 
   return (
@@ -92,6 +94,15 @@ export async function TenantShell({
             Switch
           </button>
         </form>
+        {administrationDomains.length > 0 ? (
+          <form action="/api/switch-administration" method="post" className={styles.contextControl}>
+            <label htmlFor="administration-domain-switcher" className={styles.contextLabel}>Administration</label>
+            <select id="administration-domain-switcher" name="domainSlug" className={styles.contextSelect} defaultValue={tenant.slug}>
+              {administrationDomains.map((domain) => <option key={domain.id} value={domain.slug}>{domain.name}</option>)}
+            </select>
+            <button type="submit" className={styles.contextButton}>Enter</button>
+          </form>
+        ) : null}
         {role === 'admin' ? (
           <form action="/api/switch-administration" method="post" className={styles.adminModeForm}>
             <input type="hidden" name="domainSlug" value={tenant.slug} />

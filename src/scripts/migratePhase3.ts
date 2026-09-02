@@ -76,12 +76,27 @@ for (const tenant of legacyTenants.docs) {
 
 const updateDomainRelation = async (collection: string, doc: Record<string, unknown>) => {
   const legacy = doc.tenant
-  if (legacy === null || legacy === undefined) throw new Error(`${collection}/${String(doc.id)} has no legacy Tenant relation.`)
+  // Phase 3-created records (for example Ar's new Subdomain folders) are
+  // already canonical and intentionally have no legacy Tenant relation.
+  if (legacy === null || legacy === undefined) {
+    if (doc.domain !== null && doc.domain !== undefined) return false
+    throw new Error(`${collection}/${String(doc.id)} has neither a legacy Tenant nor a Domain relation.`)
+  }
   const domainId = mappings.get(relationId(legacy))
   if (!domainId) throw new Error(`${collection}/${String(doc.id)} references an unmapped Tenant.`)
   if (relationId(doc.domain) === domainId) return false
   await payload.update({ collection: collection as never, id: doc.id as never, data: { domain: domainId } as never, depth: 0 })
   return true
+}
+
+// Create a durable system root before enforcing the one-Folder-per-Document
+// contract. This keeps documents that were previously filed at a nullable
+// tenant root addressable while preserving every existing folder reference.
+const rootByDomain = new Map<number, number>()
+for (const [legacyTenantId, domainId] of mappings) {
+  const roots = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domainId } }, { systemManaged: { equals: true } }, { parent: { equals: null } }] }, depth: 0, limit: 1 })
+  const root = roots.docs[0] ?? await payload.create({ collection: 'folders', data: { domain: domainId, tenant: legacyTenantId, name: 'Domain Root', parent: null, systemManaged: true }, depth: 0 })
+  rootByDomain.set(domainId, Number(root.id))
 }
 
 const relationCollections = ['documents', 'folders', 'pages', 'forms', 'domain-memberships', 'domain-character-contexts', 'character-claim-requests', 'character-merge-requests']
@@ -91,6 +106,13 @@ for (const collection of relationCollections) {
   for (const doc of result.docs as unknown as Array<Record<string, unknown>>) {
     if (await updateDomainRelation(collection, doc)) updated += 1
   }
+}
+
+const unfiledDocuments = await payload.find({ collection: 'documents', depth: 0, limit: 1000 })
+for (const document of unfiledDocuments.docs) {
+  const domainId = relationId(document.domain)
+  const rootId = rootByDomain.get(domainId)
+  if (rootId && !document.folder) await payload.update({ collection: 'documents', id: document.id, data: { folder: rootId }, depth: 0 })
 }
 
 const documents = await payload.find({ collection: 'documents', depth: 0, limit: 1000 })

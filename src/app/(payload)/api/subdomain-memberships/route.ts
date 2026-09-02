@@ -20,6 +20,8 @@ export async function POST(request: Request) {
   if (!domain || !subdomain || String(typeof subdomain.domain === 'object' ? subdomain.domain.id : subdomain.domain) !== String(domain.id)) return NextResponse.redirect(new URL(`/domain/${domainSlug}/members`, request.url), 303)
   const allowed = await authorizeInterimOperation(payload, { userId: user.id }, domain.id)
   if (allowed !== true) return NextResponse.redirect(new URL(`/domain/${domainSlug}/members`, request.url), 303)
+  const domainMember = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domain.id } }, { character: { equals: characterId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
+  if (action !== 'remove' && !domainMember.docs[0]) return NextResponse.redirect(new URL(`/domain/${domainSlug}/members`, request.url), 303)
   const existing = await payload.find({ collection: 'subdomain-memberships', where: { and: [{ subdomain: { equals: subdomain.id } }, { character: { equals: characterId } }] }, depth: 0, limit: 1 })
   if (existing.docs[0]) await payload.update({ collection: 'subdomain-memberships', id: existing.docs[0].id, data: { status: action === 'remove' ? 'inactive' : 'active', addedBy: user.id } })
   else if (action !== 'remove') await payload.create({ collection: 'subdomain-memberships', data: { subdomain: subdomain.id, character: characterId, status: 'active', addedBy: user.id } })

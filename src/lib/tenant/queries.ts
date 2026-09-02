@@ -180,6 +180,17 @@ export async function getTenantsForUser(userId: number | string): Promise<Domain
   return [...tenantsById.values()].sort((a, b) => a.name.localeCompare(b.name))
 }
 
+/** User-level Administration domains, intentionally separate from Character membership. */
+export async function getAdministrationDomainsForUser(userId: number | string): Promise<DomainRecord[]> {
+  const payload = await getLorePayload()
+  const owned = await payload.find({ collection: 'domains', where: { 'ownerUser': { equals: userId } }, depth: 0, limit: 200 })
+  const adminRows = await payload.find({ collection: 'domain-admins', where: { and: [{ user: { equals: userId } }, { status: { equals: 'active' } }] }, depth: 1, limit: 200 })
+  const byId = new Map<string, DomainRecord>()
+  for (const domain of owned.docs) byId.set(String(domain.id), domain)
+  for (const row of adminRows.docs) if (row.domain && typeof row.domain === 'object') byId.set(String(row.domain.id), row.domain as DomainRecord)
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name))
+}
+
 /** Active Characters the User controls who are members of a Domain. */
 export async function getCharactersForTenant(
   tenant: DomainRecord,

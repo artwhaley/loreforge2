@@ -1,6 +1,6 @@
 import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { getLorePayload } from '@/lib/payload'
-import { getTenantsForUser } from '@/lib/tenant/queries'
+import { getAdministrationDomainsForUser, getTenantsForUser } from '@/lib/tenant/queries'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,8 +21,10 @@ export default async function HomePage() {
 
   // Domains the logged-in user belongs to (MVP entry point into Domain sites).
   let domains: Array<{ slug: string; name: string }> = []
+  let administrationDomains: Array<{ slug: string; name: string }> = []
   if (user) {
     domains = (await getTenantsForUser(user.id)).map((t) => ({ slug: t.slug, name: t.name }))
+    administrationDomains = (await getAdministrationDomainsForUser(user.id)).map((t) => ({ slug: t.slug, name: t.name }))
   }
 
   return (
@@ -82,6 +84,11 @@ export default async function HomePage() {
               ))}
             </ul>
           )}
+          {administrationDomains.length > 0 ? <>
+            <h2>Administration</h2>
+            <p>Account-level Domain management is separate from acting as a Character.</p>
+            <ul>{administrationDomains.map((domain) => <li key={domain.slug}><form action="/api/switch-administration" method="post" style={{ display: 'inline' }}><input type="hidden" name="domainSlug" value={domain.slug} /><button type="submit">Manage {domain.name}</button></form></li>)}</ul>
+          </> : null}
         </section>
       ) : (
         <p>
