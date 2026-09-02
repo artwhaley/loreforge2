@@ -9,6 +9,7 @@
  * Reset: delete the SQLite file (see README), then re-run.
  */
 import { getPayload } from 'payload'
+import sharp from 'sharp'
 
 import config from '@/payload.config'
 
@@ -185,8 +186,9 @@ const TENANTS: Array<{
 
 // --- Theme Studio media fixtures (Ticket 03) ---
 // Clearly different civic identities: Ravenhurst = heraldic navy/gold seal;
-// Port Victoria = modern flat teal mark. Generated as SVG text so the seed
-// stays dependency-free; Payload/sharp handle SVG uploads like any image.
+// Port Victoria = modern flat teal mark. Source SVG strings are rasterized to
+// PNG before storage so seeded media follows the same no-SVG contract as the
+// Theme Studio upload action.
 const RAVENHURST_SEAL_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
   <circle cx="100" cy="100" r="96" fill="#F3EFE6" stroke="#B9975B" stroke-width="6"/>
   <circle cx="100" cy="100" r="78" fill="none" stroke="#243145" stroke-width="4"/>
@@ -228,10 +230,10 @@ const MEDIA_ASSETS: Array<{
   tenantSlug: string
   field: 'logo' | 'banner'
 }> = [
-  { filename: 'ravenhurst-seal.svg', alt: 'City of Ravenhurst civic seal', svg: RAVENHURST_SEAL_SVG, tenantSlug: 'ravenhurst', field: 'logo' },
-  { filename: 'ravenhurst-banner.svg', alt: 'City of Ravenhurst banner', svg: RAVENHURST_BANNER_SVG, tenantSlug: 'ravenhurst', field: 'banner' },
-  { filename: 'port-victoria-seal.svg', alt: 'Port Victoria civic mark', svg: PORT_VICTORIA_SEAL_SVG, tenantSlug: 'port-victoria', field: 'logo' },
-  { filename: 'port-victoria-banner.svg', alt: 'Port Victoria banner', svg: PORT_VICTORIA_BANNER_SVG, tenantSlug: 'port-victoria', field: 'banner' },
+  { filename: 'ravenhurst-seal.png', alt: 'City of Ravenhurst civic seal', svg: RAVENHURST_SEAL_SVG, tenantSlug: 'ravenhurst', field: 'logo' },
+  { filename: 'ravenhurst-banner.png', alt: 'City of Ravenhurst banner', svg: RAVENHURST_BANNER_SVG, tenantSlug: 'ravenhurst', field: 'banner' },
+  { filename: 'port-victoria-seal.png', alt: 'Port Victoria civic mark', svg: PORT_VICTORIA_SEAL_SVG, tenantSlug: 'port-victoria', field: 'logo' },
+  { filename: 'port-victoria-banner.png', alt: 'Port Victoria banner', svg: PORT_VICTORIA_BANNER_SVG, tenantSlug: 'port-victoria', field: 'banner' },
 ]
 
 const payload = await getPayload({ config })
@@ -287,14 +289,20 @@ for (const asset of MEDIA_ASSETS) {
     mediaId = existing.docs[0].id
     payload.logger.info(`Media ${asset.filename} already exists — skipping`)
   } else {
+    const png = await sharp(Buffer.from(asset.svg, 'utf8'), {
+      failOn: 'error',
+      limitInputPixels: 4096 * 4096,
+    })
+      .png()
+      .toBuffer()
     const created = await payload.create({
       collection: 'media',
       data: { alt: asset.alt },
       file: {
-        data: Buffer.from(asset.svg, 'utf8'),
-        mimetype: 'image/svg+xml',
+        data: png,
+        mimetype: 'image/png',
         name: asset.filename,
-        size: Buffer.byteLength(asset.svg, 'utf8'),
+        size: png.length,
       },
     })
     mediaId = created.id
