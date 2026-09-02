@@ -759,11 +759,13 @@ if (stressTenant) {
     await payload.create({
       collection: 'documents',
       data: {
+        domain: domainsBySlug.ravenhurst.id,
         tenant: stressTenant.id,
         title: 'City Council Meeting Notes',
         body: EDITOR_STRESS_DOC,
         origin: 'web-editor',
         createdBy: usersByEmail['admin@example.test'].id,
+        folder: rootFolderIds.ravenhurst,
       },
     })
     payload.logger.info('Created editor stress document')
@@ -788,6 +790,7 @@ if (importTenant) {
     await payload.create({
       collection: 'documents',
       data: {
+        domain: domainsBySlug.ravenhurst.id,
         tenant: importTenant.id,
         title: 'Patrol Contact Report',
         body: SL_NOTECARD,
