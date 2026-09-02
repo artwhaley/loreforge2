@@ -22,7 +22,6 @@ export const Folders: CollectionConfig = {
       name: 'domain',
       type: 'relationship',
       relationTo: 'domains',
-      index: true,
       label: 'Domain',
       admin: { description: 'Canonical Domain relationship. Populated by the Phase 3 migration.' },
     },
@@ -31,7 +30,6 @@ export const Folders: CollectionConfig = {
       type: 'relationship',
       relationTo: 'tenants',
       required: true,
-      index: true,
       admin: { hidden: true },
     },
     {

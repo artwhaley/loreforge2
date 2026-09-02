@@ -19,7 +19,7 @@ type Props = {
 const NAV = [
   { label: 'Home', segment: '' },
   { label: 'About', segment: 'about' },
-  { label: 'Subdomains', segment: 'departments' },
+  { label: 'Subdomains', segment: 'subdomains' },
   { label: 'Records', segment: 'records' },
   { label: 'Forms', segment: 'forms' },
 ]
@@ -44,7 +44,7 @@ export async function TenantShell({
   const resolvedActiveCharacter = activeCharacter === undefined ? context.activeCharacter : activeCharacter
   const resolvedTenants =
     switcherTenants ?? (context.user ? await getTenantsForUser(context.user.id) : [])
-  const base = `/tenant/${tenant.slug}`
+  const base = `/domain/${tenant.slug}`
 
   return (
     <div className={styles.root} style={cssVars as React.CSSProperties}>

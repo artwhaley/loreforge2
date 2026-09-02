@@ -5,13 +5,13 @@
   "type": "module",
   "scripts": {
     "build": "cross-env NODE_OPTIONS=--no-experimental-require-module next build",
-    "dev": "cross-env NODE_OPTIONS=--no-experimental-require-module next dev -p 3055",
+    "dev": "cross-env NODE_OPTIONS=--no-experimental-require-module PAYLOAD_PUSH=false next dev -p 3055",
     "start": "next start -p 3055",
     "generate:types": "payload generate:types",
     "payload": "payload",
     "seed": "payload run ./src/seed/index.ts",
     "migrate:phase3": "payload run ./src/scripts/migratePhase3.ts",
-    "test": "node --import tsx --test src/lib/tenant/scope.test.ts src/lib/theme/fonts.test.ts src/lib/theme/input.test.ts src/lib/archive/folderTree.test.ts src/lib/forms/generateDocument.test.ts src/lib/markdown/render.test.ts src/components/editor/saveState.test.ts src/components/editor/roundTripFixtures.test.ts src/lib/media/validateThemeAsset.test.ts src/lib/characters/invariants.test.ts src/lib/characters/membershipMigration.test.ts src/lib/characters/claims.test.ts src/lib/domains/invariants.test.ts src/lib/domains/migration.test.ts"
+    "test": "node --import tsx --test src/lib/tenant/scope.test.ts src/lib/theme/fonts.test.ts src/lib/theme/input.test.ts src/lib/archive/folderTree.test.ts src/lib/forms/generateDocument.test.ts src/lib/markdown/render.test.ts src/components/editor/saveState.test.ts src/components/editor/roundTripFixtures.test.ts src/lib/media/validateThemeAsset.test.ts src/lib/characters/invariants.test.ts src/lib/characters/membershipMigration.test.ts src/lib/characters/claims.test.ts src/lib/domains/invariants.test.ts src/lib/domains/migration.test.ts src/lib/domains/subdomainInvariants.test.ts src/lib/authorization/interim.test.ts"
   },
   "dependencies": {
     "@mdxeditor/editor": "^4.2.3",

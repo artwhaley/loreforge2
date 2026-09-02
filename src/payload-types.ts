@@ -75,6 +75,8 @@ export interface Config {
     'domain-memberships': DomainMembership;
     domains: Domain;
     'domain-admins': DomainAdmin;
+    subdomains: Subdomain;
+    'subdomain-memberships': SubdomainMembership;
     tenants: Tenant;
     memberships: Membership;
     documents: Document;
@@ -98,6 +100,8 @@ export interface Config {
     'domain-memberships': DomainMembershipsSelect<false> | DomainMembershipsSelect<true>;
     domains: DomainsSelect<false> | DomainsSelect<true>;
     'domain-admins': DomainAdminsSelect<false> | DomainAdminsSelect<true>;
+    subdomains: SubdomainsSelect<false> | SubdomainsSelect<true>;
+    'subdomain-memberships': SubdomainMembershipsSelect<false> | SubdomainMembershipsSelect<true>;
     tenants: TenantsSelect<false> | TenantsSelect<true>;
     memberships: MembershipsSelect<false> | MembershipsSelect<true>;
     documents: DocumentsSelect<false> | DocumentsSelect<true>;
@@ -323,7 +327,7 @@ export interface DomainCharacterContext {
    * Canonical Domain relationship. Populated by the Phase 3 migration.
    */
   domain?: (number | null) | Domain;
-  tenant: number | Tenant;
+  tenant?: (number | null) | Tenant;
   character: number | Character;
   localDisplayName: string;
   localNote?: string | null;
@@ -369,7 +373,7 @@ export interface DomainMembership {
    * Canonical Domain relationship. Populated by the Phase 3 migration.
    */
   domain?: (number | null) | Domain;
-  tenant: number | Tenant;
+  tenant?: (number | null) | Tenant;
   character: number | Character;
   status: 'active' | 'inactive';
   addedBy?: (number | null) | User;
@@ -387,6 +391,37 @@ export interface DomainAdmin {
   user: number | User;
   status: 'active' | 'inactive';
   addedBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "subdomains".
+ */
+export interface Subdomain {
+  id: number;
+  domain: number | Domain;
+  name: string;
+  slug: string;
+  description?: string | null;
+  sortOrder?: number | null;
+  headCharacter?: (number | null) | Character;
+  adminCharacters?: (number | Character)[] | null;
+  publicListing?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "subdomain-memberships".
+ */
+export interface SubdomainMembership {
+  id: number;
+  subdomain: number | Subdomain;
+  character: number | Character;
+  status: 'active' | 'inactive';
+  addedBy?: (number | null) | User;
+  note?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -682,6 +717,14 @@ export interface PayloadLockedDocument {
         value: number | DomainAdmin;
       } | null)
     | ({
+        relationTo: 'subdomains';
+        value: number | Subdomain;
+      } | null)
+    | ({
+        relationTo: 'subdomain-memberships';
+        value: number | SubdomainMembership;
+      } | null)
+    | ({
         relationTo: 'tenants';
         value: number | Tenant;
       } | null)
@@ -905,6 +948,35 @@ export interface DomainAdminsSelect<T extends boolean = true> {
   user?: T;
   status?: T;
   addedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "subdomains_select".
+ */
+export interface SubdomainsSelect<T extends boolean = true> {
+  domain?: T;
+  name?: T;
+  slug?: T;
+  description?: T;
+  sortOrder?: T;
+  headCharacter?: T;
+  adminCharacters?: T;
+  publicListing?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "subdomain-memberships_select".
+ */
+export interface SubdomainMembershipsSelect<T extends boolean = true> {
+  subdomain?: T;
+  character?: T;
+  status?: T;
+  addedBy?: T;
+  note?: T;
   updatedAt?: T;
   createdAt?: T;
 }

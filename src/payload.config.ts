@@ -15,6 +15,8 @@ import { DomainCharacterContexts } from './collections/DomainCharacterContexts'
 import { DomainAdmins } from './collections/DomainAdmins'
 import { DomainMemberships } from './collections/DomainMemberships'
 import { Domains } from './collections/Domains'
+import { Subdomains } from './collections/Subdomains'
+import { SubdomainMemberships } from './collections/SubdomainMemberships'
 import { Folders } from './collections/Folders'
 import { Media } from './collections/Media'
 import { Memberships } from './collections/Memberships'
@@ -131,10 +133,11 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Characters, CharacterClaimRequests, CharacterMergeRequests, DomainCharacterContexts, DomainMemberships, Domains, DomainAdmins, Tenants, Memberships, Documents, Folders, Pages, Media],
+  collections: [Users, Characters, CharacterClaimRequests, CharacterMergeRequests, DomainCharacterContexts, DomainMemberships, Domains, DomainAdmins, Subdomains, SubdomainMemberships, Tenants, Memberships, Documents, Folders, Pages, Media],
   plugins: [formBuilder],
   editor: lexicalEditor(),
   db: sqliteAdapter({
+    push: process.env.PAYLOAD_PUSH !== 'false',
     client: {
       url: process.env.DATABASE_URI,
     },

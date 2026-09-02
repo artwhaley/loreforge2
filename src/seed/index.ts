@@ -345,6 +345,31 @@ for (const character of TEST_CHARACTERS) {
   payload.logger.info(`Created Character ${character.name}`)
 }
 
+// --- Durable Community Domains (Phase 3) ---
+// Keep the spike Tenants as migration input, but seed the canonical Domain
+// records as well. Ar/Bayview are the stable institutional-structure fixtures.
+const domainsBySlug: Record<string, { id: number }> = {}
+const domainFixtures = [
+  ...TENANTS.map((tenant) => ({ ...tenant, ownerUser: usersByEmail['admin@example.test'].id })),
+  {
+    slug: 'ar', name: 'Ar', motto: 'Strength, Honor, Order', preset: 'heritage' as const,
+    primaryColor: '#2B2430', secondaryColor: '#8D6E4A', accentColor: '#C6A15B', backgroundColor: '#F2ECE1',
+    headingFontKey: 'georgia' as const, bodyFontKey: 'verdana' as const, ownerUser: usersByEmail['admin@example.test'].id,
+  },
+  {
+    slug: 'bayview', name: 'Bayview', motto: 'Open, Capable, Connected', preset: 'modern' as const,
+    primaryColor: '#164A63', secondaryColor: '#E9F1F4', accentColor: '#3DB6C6', backgroundColor: '#F8FBFC',
+    headingFontKey: 'trebuchet' as const, bodyFontKey: 'verdana' as const, ownerUser: usersByEmail['admin@example.test'].id,
+  },
+]
+for (const fixture of domainFixtures) {
+  const existing = await payload.find({ collection: 'domains', where: { slug: { equals: fixture.slug } }, depth: 0, limit: 1 })
+  const domain = existing.docs[0] ?? await payload.create({ collection: 'domains', data: { ...fixture, kind: 'community', lifecycle: 'active', publicEnabled: false, allowCrossDomainMove: false } })
+  domainsBySlug[fixture.slug] = { id: domain.id }
+  const admin = await payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: domain.id } }, { user: { equals: fixture.ownerUser } }] }, depth: 0, limit: 1 })
+  if (!admin.docs[0]) await payload.create({ collection: 'domain-admins', data: { domain: domain.id, user: fixture.ownerUser, status: 'active', addedBy: fixture.ownerUser } })
+}
+
 // --- Theme media assets + tenant attachment ---
 for (const asset of MEDIA_ASSETS) {
   const existing = await payload.find({
@@ -514,6 +539,26 @@ for (const membership of fixtureCharacterMemberships) {
 payload.logger.info(
   `Character membership migration mapped ${migration.mapped.length} legacy rows; unresolved ${migration.unresolved.length}; accounted ${migration.accountedRowIds.length}`,
 )
+
+// --- Subdomains and Character memberships (Phase 3) ---
+const subdomainFixtures = [
+  { domainSlug: 'ar', slug: 'scribes', name: 'Scribes', description: 'Records, deeds, and historical archives.', head: charactersByKey.elara.id, members: [charactersByKey.elara.id] },
+  { domainSlug: 'ar', slug: 'warriors', name: 'Warriors', description: 'Command, patrol, and battle records.', head: charactersByKey['alex-resident'].id, members: [charactersByKey['alex-resident'].id, charactersByKey.lucan.id] },
+  { domainSlug: 'ar', slug: 'magistrates', name: 'Magistrates', description: 'Courts, rulings, and civic judgment.', head: charactersByKey.lucan.id, members: [charactersByKey.lucan.id] },
+]
+const subdomainsByKey: Record<string, { id: number }> = {}
+for (const fixture of subdomainFixtures) {
+  const domain = domainsBySlug[fixture.domainSlug]
+  const existing = await payload.find({ collection: 'subdomains', where: { and: [{ domain: { equals: domain.id } }, { slug: { equals: fixture.slug } }] }, depth: 0, limit: 1 })
+  const subdomain = existing.docs[0] ?? await payload.create({ collection: 'subdomains', data: { domain: domain.id, slug: fixture.slug, name: fixture.name, description: fixture.description, headCharacter: fixture.head, adminCharacters: [fixture.head], publicListing: true } })
+  subdomainsByKey[`${fixture.domainSlug}:${fixture.slug}`] = { id: subdomain.id }
+  for (const characterId of fixture.members) {
+    const domainMember = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domain.id } }, { character: { equals: characterId } }] }, depth: 0, limit: 1 })
+    if (!domainMember.docs[0]) await payload.create({ collection: 'domain-memberships', data: { domain: domain.id, character: characterId, status: 'active', addedBy: usersByEmail['admin@example.test'].id, note: 'Phase 3 Ar fixture membership.' } })
+    const member = await payload.find({ collection: 'subdomain-memberships', where: { and: [{ subdomain: { equals: subdomain.id } }, { character: { equals: characterId } }] }, depth: 0, limit: 1 })
+    if (!member.docs[0]) await payload.create({ collection: 'subdomain-memberships', data: { subdomain: subdomain.id, character: characterId, status: 'active', addedBy: usersByEmail['admin@example.test'].id } })
+  }
+}
 
 // --- Archive folders (Ticket 05) ---
 const folderIds: Record<string, Record<string, number>> = {}

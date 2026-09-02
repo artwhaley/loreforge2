@@ -22,7 +22,6 @@ export const Pages: CollectionConfig = {
       name: 'domain',
       type: 'relationship',
       relationTo: 'domains',
-      index: true,
       label: 'Domain',
       admin: { description: 'Canonical Domain relationship. Populated by the Phase 3 migration.' },
     },
