@@ -12,6 +12,7 @@ import { getPayload } from 'payload'
 import sharp from 'sharp'
 
 import config from '@/payload.config'
+import { planMembershipMigration } from '@/lib/characters/membershipMigration'
 
 const TEST_USERS = [
   {
@@ -423,6 +424,96 @@ for (const membership of MEMBERSHIPS) {
   })
   payload.logger.info(`Created membership ${membership.userEmail}->${membership.tenantSlug}`)
 }
+
+// --- Character Domain memberships (Phase 2) ---
+// Keep the legacy User Membership rows as a restartable migration source until
+// P03 consumes/removes them. Explicit fixture mappings resolve Morgan's two
+// Characters without fanning one User membership out to both Characters.
+const relationId = (value: unknown): number =>
+  typeof value === 'object' && value !== null && 'id' in value
+    ? Number((value as { id: number | string }).id)
+    : Number(value)
+const legacyMembershipDocs = await payload.find({
+  collection: 'memberships',
+  depth: 0,
+  limit: 200,
+})
+const legacyMembershipRows = legacyMembershipDocs.docs.map((row) => ({
+  id: row.id,
+  userId: relationId(row.user),
+  tenantId: relationId(row.tenant),
+  role: row.role,
+}))
+const controlledCharacterIds = new Map<string, Array<number | string>>([
+  [String(usersByEmail['admin@example.test'].id), [charactersByKey.lucan.id, charactersByKey.elara.id]],
+  [String(usersByEmail['officer@example.test'].id), [charactersByKey['alex-resident'].id]],
+])
+const explicitMembershipMappings = [
+  {
+    userId: usersByEmail['admin@example.test'].id,
+    tenantId: tenantsBySlug.ravenhurst.id,
+    characterId: charactersByKey.lucan.id,
+    reason: 'Fixture owner mapping for multi-Character User.',
+  },
+  {
+    userId: usersByEmail['admin@example.test'].id,
+    tenantId: tenantsBySlug['port-victoria'].id,
+    characterId: charactersByKey.lucan.id,
+    reason: 'Fixture owner mapping for multi-Character User.',
+  },
+]
+const migration = planMembershipMigration(legacyMembershipRows, controlledCharacterIds, explicitMembershipMappings)
+for (const row of migration.mapped) {
+  const existing = await payload.find({
+    collection: 'domain-memberships',
+    where: {
+      and: [{ tenant: { equals: row.tenantId } }, { character: { equals: row.characterId } }],
+    },
+    depth: 0,
+    limit: 1,
+  })
+  if (existing.docs[0]) continue
+  await payload.create({
+    collection: 'domain-memberships',
+    data: {
+      tenant: Number(row.tenantId),
+      character: Number(row.characterId),
+      status: 'active',
+      addedBy: Number(row.userId),
+      note: `Migrated from legacy Membership ${row.id}: ${row.reason}`,
+    },
+  })
+}
+// Explicit fixture-only membership proves that two Characters controlled by
+// one User can differ while Lucan participates in both Domains.
+const fixtureCharacterMemberships = [
+  { tenantId: tenantsBySlug.ravenhurst.id, characterId: charactersByKey.elara.id, addedBy: usersByEmail['admin@example.test'].id },
+]
+for (const membership of fixtureCharacterMemberships) {
+  const existing = await payload.find({
+    collection: 'domain-memberships',
+    where: {
+      and: [{ tenant: { equals: membership.tenantId } }, { character: { equals: membership.characterId } }],
+    },
+    depth: 0,
+    limit: 1,
+  })
+  if (!existing.docs[0]) {
+    await payload.create({
+      collection: 'domain-memberships',
+      data: {
+        tenant: membership.tenantId,
+        character: membership.characterId,
+        status: 'active',
+        addedBy: membership.addedBy,
+        note: 'Phase 2 multi-Character fixture membership.',
+      },
+    })
+  }
+}
+payload.logger.info(
+  `Character membership migration mapped ${migration.mapped.length} legacy rows; unresolved ${migration.unresolved.length}; accounted ${migration.accountedRowIds.length}`,
+)
 
 // --- Archive folders (Ticket 05) ---
 const folderIds: Record<string, Record<string, number>> = {}

@@ -3,7 +3,7 @@ import type { Where } from 'payload'
 
 import config from '@/payload.config'
 
-import type { Document, Folder, Form, Page, Tenant } from '@/payload-types'
+import type { Character, Document, DomainMembership, Folder, Form, Page, Tenant } from '@/payload-types'
 
 import { tenantAndIdWhere, tenantWhere } from './scope'
 
@@ -146,13 +146,70 @@ export async function getPageForTenant(tenant: Tenant, slug: string): Promise<Pa
 
 export async function getTenantsForUser(userId: number | string): Promise<Tenant[]> {
   const payload = await getPayload({ config })
+  const characters = await payload.find({
+    collection: 'characters',
+    where: {
+      and: [{ controlledBy: { equals: userId } }, { status: { equals: 'active' } }],
+    },
+    depth: 0,
+    limit: 100,
+  })
+  if (characters.docs.length === 0) return []
+
+  const membershipResults = await Promise.all(
+    characters.docs.map((character) =>
+      payload.find({
+        collection: 'domain-memberships',
+        where: {
+          and: [{ character: { equals: character.id } }, { status: { equals: 'active' } }],
+        },
+        depth: 1,
+        limit: 100,
+      }),
+    ),
+  )
+  const tenantsById = new Map<string, Tenant>()
+  for (const result of membershipResults) {
+    for (const membership of result.docs) {
+      const tenant = membership.tenant
+      if (tenant && typeof tenant === 'object') tenantsById.set(String(tenant.id), tenant as Tenant)
+    }
+  }
+  return [...tenantsById.values()].sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** Active Characters the User controls who are members of a Domain. */
+export async function getCharactersForTenant(
+  tenant: Tenant,
+  userId: number | string,
+): Promise<Character[]> {
+  const payload = await getPayload({ config })
   const memberships = await payload.find({
-    collection: 'memberships',
-    where: { user: { equals: userId } },
+    collection: 'domain-memberships',
+    where: {
+      and: [{ tenant: { equals: tenant.id } }, { status: { equals: 'active' } }],
+    },
     depth: 1,
-    limit: 50,
+    limit: 200,
   })
   return memberships.docs
-    .map((m) => m.tenant as Tenant)
-    .filter((t): t is Tenant => Boolean(t && typeof t === 'object'))
+    .map((membership) => membership.character)
+    .filter((character): character is Character => {
+      if (!character || typeof character !== 'object' || character.status !== 'active') return false
+      const controlledBy = character.controlledBy
+      const controllerId = typeof controlledBy === 'object' ? controlledBy?.id : controlledBy
+      return String(controllerId) === String(userId)
+    })
+}
+
+export async function getDomainMembershipsForTenant(tenant: Tenant): Promise<DomainMembership[]> {
+  const payload = await getPayload({ config })
+  const result = await payload.find({
+    collection: 'domain-memberships',
+    where: { tenant: { equals: tenant.id } },
+    depth: 1,
+    limit: 200,
+    sort: 'updatedAt',
+  })
+  return result.docs
 }

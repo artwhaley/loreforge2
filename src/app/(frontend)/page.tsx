@@ -2,6 +2,7 @@ import { getPayload } from 'payload'
 
 import config from '@/payload.config'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
+import { getTenantsForUser } from '@/lib/tenant/queries'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,16 +25,7 @@ export default async function HomePage() {
   // Domains the logged-in user belongs to (MVP entry point into Domain sites).
   let domains: Array<{ slug: string; name: string }> = []
   if (user) {
-    const memberships = await payload.find({
-      collection: 'memberships',
-      where: { user: { equals: user.id } },
-      depth: 1,
-      limit: 50,
-    })
-    domains = memberships.docs
-      .map((m) => m.tenant)
-      .filter((t): t is Exclude<typeof t, number | null> => Boolean(t && typeof t === 'object'))
-      .map((t) => ({ slug: t.slug, name: t.name }))
+    domains = (await getTenantsForUser(user.id)).map((t) => ({ slug: t.slug, name: t.name }))
   }
 
   return (

@@ -6,6 +6,7 @@ import type { CollectionConfig } from 'payload'
  */
 export const DomainCharacterContexts: CollectionConfig = {
   slug: 'domain-character-contexts',
+  indexes: [{ unique: true, fields: ['tenant', 'character'] }],
   admin: {
     useAsTitle: 'localDisplayName',
     defaultColumns: ['tenant', 'character', 'localDisplayName', 'updatedAt'],

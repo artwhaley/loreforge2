@@ -70,6 +70,7 @@ export interface Config {
     users: User;
     characters: Character;
     'domain-character-contexts': DomainCharacterContext;
+    'domain-memberships': DomainMembership;
     tenants: Tenant;
     memberships: Membership;
     documents: Document;
@@ -88,6 +89,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     characters: CharactersSelect<false> | CharactersSelect<true>;
     'domain-character-contexts': DomainCharacterContextsSelect<false> | DomainCharacterContextsSelect<true>;
+    'domain-memberships': DomainMembershipsSelect<false> | DomainMembershipsSelect<true>;
     tenants: TenantsSelect<false> | TenantsSelect<true>;
     memberships: MembershipsSelect<false> | MembershipsSelect<true>;
     documents: DocumentsSelect<false> | DocumentsSelect<true>;
@@ -270,6 +272,20 @@ export interface Tenant {
    * Optional header banner (image).
    */
   banner?: (number | null) | Media;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "domain-memberships".
+ */
+export interface DomainMembership {
+  id: number;
+  tenant: number | Tenant;
+  character: number | Character;
+  status: 'active' | 'inactive';
+  addedBy?: (number | null) | User;
+  note?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -529,6 +545,10 @@ export interface PayloadLockedDocument {
         value: number | DomainCharacterContext;
       } | null)
     | ({
+        relationTo: 'domain-memberships';
+        value: number | DomainMembership;
+      } | null)
+    | ({
         relationTo: 'tenants';
         value: number | Tenant;
       } | null)
@@ -659,6 +679,19 @@ export interface DomainCharacterContextsSelect<T extends boolean = true> {
   character?: T;
   localDisplayName?: T;
   localNote?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "domain-memberships_select".
+ */
+export interface DomainMembershipsSelect<T extends boolean = true> {
+  tenant?: T;
+  character?: T;
+  status?: T;
+  addedBy?: T;
+  note?: T;
   updatedAt?: T;
   createdAt?: T;
 }

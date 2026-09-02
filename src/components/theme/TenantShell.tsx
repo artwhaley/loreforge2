@@ -2,7 +2,7 @@ import type { Character, Tenant } from '@/payload-types'
 
 import { mediaSrc } from '@/lib/theme/fonts'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
-import { getTenantsForUser } from '@/lib/tenant/queries'
+import { getCharactersForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 
 import styles from './TenantShell.module.scss'
 
@@ -38,7 +38,9 @@ export async function TenantShell({
   children,
 }: Props) {
   const context = await getActiveContext()
-  const resolvedCharacters = switcherCharacters ?? context.characters
+  const resolvedCharacters =
+    switcherCharacters ??
+    (context.user ? await getCharactersForTenant(tenant, context.user.id) : context.characters)
   const resolvedActiveCharacter = activeCharacter === undefined ? context.activeCharacter : activeCharacter
   const resolvedTenants =
     switcherTenants ?? (context.user ? await getTenantsForUser(context.user.id) : [])

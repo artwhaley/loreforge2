@@ -26,9 +26,13 @@ export async function POST(request: Request) {
     const tenant = tenants.docs[0]
     if (tenant) {
       const memberships = await payload.find({
-        collection: 'memberships',
+        collection: 'domain-memberships',
         where: {
-          and: [{ user: { equals: user.id } }, { tenant: { equals: tenant.id } }],
+          and: [
+            { character: { equals: activeCharacterId } },
+            { tenant: { equals: tenant.id } },
+            { status: { equals: 'active' } },
+          ],
         },
         depth: 0,
         limit: 1,

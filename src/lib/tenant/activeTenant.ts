@@ -61,9 +61,8 @@ export async function getActiveContext(): Promise<ActiveContext> {
     return { tenant: null, role: null, user: contextUser, activeCharacter, characters }
   }
 
-  // P02-T02 deliberately clears Domain when Character changes. Until P02-T03
-  // creates Character DomainMemberships, the legacy User Membership is the
-  // transitional Domain source for an already-selected Character.
+  // P02-T02 deliberately clears Domain when Character changes. P02-T03 now
+  // validates the selected Domain against the active Character membership.
   if (!activeCharacter) {
     return { tenant: null, role: null, user: contextUser, activeCharacter: null, characters }
   }
@@ -81,9 +80,13 @@ export async function getActiveContext(): Promise<ActiveContext> {
 
   // Membership check: only members/admins of this tenant may activate it.
   const memberships = await payload.find({
-    collection: 'memberships',
+    collection: 'domain-memberships',
     where: {
-      and: [{ user: { equals: user?.id ?? -1 } }, { tenant: { equals: tenant.id } }],
+      and: [
+        { character: { equals: activeCharacter.id } },
+        { tenant: { equals: tenant.id } },
+        { status: { equals: 'active' } },
+      ],
     },
     depth: 0,
     limit: 1,
@@ -93,9 +96,21 @@ export async function getActiveContext(): Promise<ActiveContext> {
     return { tenant: null, role: null, user: contextUser, activeCharacter, characters }
   }
 
+  // The legacy role is retained only as a transitional display/authorization
+  // seam until P03-T01 migrates owner/admin authority to the Domain model.
+  const legacyMemberships = await payload.find({
+    collection: 'memberships',
+    where: {
+      and: [{ user: { equals: user.id } }, { tenant: { equals: tenant.id } }],
+    },
+    depth: 0,
+    limit: 1,
+  })
+  const legacyRole = legacyMemberships.docs[0]?.role
+
   return {
     tenant,
-    role: membership.role as 'admin' | 'member',
+    role: legacyRole === 'admin' || legacyRole === 'member' ? legacyRole : null,
     user: contextUser,
     activeCharacter,
     characters,
