@@ -2,9 +2,12 @@ import type { Where } from 'payload'
 
 import { getLorePayload } from '@/lib/payload'
 
-import type { Character, Document, DomainMembership, Folder, Form, Page, Tenant } from '@/payload-types'
+import type { Character, Document, Domain, DomainMembership, Folder, Form, Page, Tenant } from '@/payload-types'
 
-import { tenantAndIdWhere, tenantWhere } from './scope'
+import { domainAndIdWhere, domainWhere } from './scope'
+
+type DomainRecord = Domain | Tenant
+const domainId = (domain: DomainRecord) => Number(domain.id)
 
 /**
  * Tenant-scoped data access.
@@ -12,11 +15,11 @@ import { tenantAndIdWhere, tenantWhere } from './scope'
  * Every tenant-owned query in the application goes through helpers like this
  * so the tenant condition cannot be forgotten at the call site (spec §8).
  */
-export async function getDocumentsForTenant(tenant: Tenant): Promise<Document[]> {
+export async function getDocumentsForTenant(tenant: DomainRecord): Promise<Document[]> {
   const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'documents',
-    where: tenantWhere(tenant.id),
+    where: domainWhere(domainId(tenant)),
     depth: 0,
     limit: 100,
     sort: '-updatedAt',
@@ -25,13 +28,13 @@ export async function getDocumentsForTenant(tenant: Tenant): Promise<Document[]>
 }
 
 export async function getDocumentForTenant(
-  tenant: Tenant,
+  tenant: DomainRecord,
   documentId: number | string,
 ): Promise<Document | null> {
   const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'documents',
-    where: tenantAndIdWhere(tenant.id, documentId),
+    where: domainAndIdWhere(domainId(tenant), documentId),
     depth: 0,
     limit: 1,
   })
@@ -39,11 +42,11 @@ export async function getDocumentForTenant(
 }
 
 /** Forms owned by the tenant (structured report templates). */
-export async function getFormsForTenant(tenant: Tenant): Promise<Form[]> {
+export async function getFormsForTenant(tenant: DomainRecord): Promise<Form[]> {
   const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'forms',
-    where: tenantWhere(tenant.id),
+    where: domainWhere(domainId(tenant)),
     depth: 0,
     limit: 100,
     sort: 'title',
@@ -52,24 +55,24 @@ export async function getFormsForTenant(tenant: Tenant): Promise<Form[]> {
 }
 
 export async function getFormForTenant(
-  tenant: Tenant,
+  tenant: DomainRecord,
   formId: number,
 ): Promise<Form | null> {
   const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'forms',
-    where: tenantAndIdWhere(tenant.id, formId),
+    where: domainAndIdWhere(domainId(tenant), formId),
     depth: 1,
     limit: 1,
   })
   return result.docs[0] ?? null
 }
 
-export async function getFoldersForTenant(tenant: Tenant): Promise<Folder[]> {
+export async function getFoldersForTenant(tenant: DomainRecord): Promise<Folder[]> {
   const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'folders',
-    where: tenantWhere(tenant.id),
+    where: domainWhere(domainId(tenant)),
     depth: 1,
     limit: 200,
     sort: 'name',
@@ -78,13 +81,13 @@ export async function getFoldersForTenant(tenant: Tenant): Promise<Folder[]> {
 }
 
 export async function getFolderForTenant(
-  tenant: Tenant,
+  tenant: DomainRecord,
   folderId: number | string,
 ): Promise<Folder | null> {
   const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'folders',
-    where: tenantAndIdWhere(tenant.id, folderId),
+    where: domainAndIdWhere(domainId(tenant), folderId),
     depth: 1,
     limit: 1,
   })
@@ -93,7 +96,7 @@ export async function getFolderForTenant(
 
 /** Documents filed directly in a folder (folderId null = archive root). */
 export async function getDocumentsForFolder(
-  tenant: Tenant,
+  tenant: DomainRecord,
   folderId: number | string | null,
 ): Promise<Document[]> {
   const payload = await getLorePayload()
@@ -105,7 +108,7 @@ export async function getDocumentsForFolder(
       : { folder: { equals: folderId } }
   const result = await payload.find({
     collection: 'documents',
-    where: tenantWhere(tenant.id, folderWhere),
+    where: domainWhere(domainId(tenant), folderWhere),
     depth: 0,
     limit: 100,
     sort: '-updatedAt',
@@ -114,13 +117,13 @@ export async function getDocumentsForFolder(
 }
 
 /** Tenant-scoped search over title and Markdown body (spec §7.5). */
-export async function searchDocumentsForTenant(tenant: Tenant, query: string): Promise<Document[]> {
+export async function searchDocumentsForTenant(tenant: DomainRecord, query: string): Promise<Document[]> {
   const q = query.trim()
   if (!q) return []
   const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'documents',
-    where: tenantWhere(tenant.id, {
+    where: domainWhere(domainId(tenant), {
       or: [{ title: { like: q } }, { body: { like: q } }],
     }),
     depth: 0,
@@ -130,12 +133,12 @@ export async function searchDocumentsForTenant(tenant: Tenant, query: string): P
   return result.docs
 }
 
-export async function getPageForTenant(tenant: Tenant, slug: string): Promise<Page | null> {
+export async function getPageForTenant(tenant: DomainRecord, slug: string): Promise<Page | null> {
   const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'pages',
     where: {
-      and: [{ tenant: { equals: tenant.id } }, { slug: { equals: slug } }],
+      and: [{ domain: { equals: domainId(tenant) } }, { slug: { equals: slug } }],
     },
     depth: 0,
     limit: 1,
@@ -143,7 +146,7 @@ export async function getPageForTenant(tenant: Tenant, slug: string): Promise<Pa
   return result.docs[0] ?? null
 }
 
-export async function getTenantsForUser(userId: number | string): Promise<Tenant[]> {
+export async function getTenantsForUser(userId: number | string): Promise<DomainRecord[]> {
   const payload = await getLorePayload()
   const characters = await payload.find({
     collection: 'characters',
@@ -167,11 +170,11 @@ export async function getTenantsForUser(userId: number | string): Promise<Tenant
       }),
     ),
   )
-  const tenantsById = new Map<string, Tenant>()
+  const tenantsById = new Map<string, DomainRecord>()
   for (const result of membershipResults) {
     for (const membership of result.docs) {
-      const tenant = membership.tenant
-      if (tenant && typeof tenant === 'object') tenantsById.set(String(tenant.id), tenant as Tenant)
+      const tenant = membership.domain ?? membership.tenant
+      if (tenant && typeof tenant === 'object') tenantsById.set(String(tenant.id), tenant as DomainRecord)
     }
   }
   return [...tenantsById.values()].sort((a, b) => a.name.localeCompare(b.name))
@@ -179,14 +182,14 @@ export async function getTenantsForUser(userId: number | string): Promise<Tenant
 
 /** Active Characters the User controls who are members of a Domain. */
 export async function getCharactersForTenant(
-  tenant: Tenant,
+  tenant: DomainRecord,
   userId: number | string,
 ): Promise<Character[]> {
   const payload = await getLorePayload()
   const memberships = await payload.find({
     collection: 'domain-memberships',
     where: {
-      and: [{ tenant: { equals: tenant.id } }, { status: { equals: 'active' } }],
+      and: [{ or: [{ domain: { equals: domainId(tenant) } }, { tenant: { equals: domainId(tenant) } }] }, { status: { equals: 'active' } }],
     },
     depth: 1,
     limit: 200,
@@ -201,11 +204,11 @@ export async function getCharactersForTenant(
     })
 }
 
-export async function getDomainMembershipsForTenant(tenant: Tenant): Promise<DomainMembership[]> {
+export async function getDomainMembershipsForTenant(tenant: DomainRecord): Promise<DomainMembership[]> {
   const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'domain-memberships',
-    where: { tenant: { equals: tenant.id } },
+    where: { or: [{ domain: { equals: domainId(tenant) } }, { tenant: { equals: domainId(tenant) } }] },
     depth: 1,
     limit: 200,
     sort: 'updatedAt',

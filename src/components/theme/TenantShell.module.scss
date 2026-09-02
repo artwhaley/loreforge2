@@ -74,6 +74,11 @@
   }
 }
 
+.adminModeForm {
+  align-self: center;
+  justify-self: end;
+}
+
 @media (max-width: 680px) {
   .contextBar {
     grid-template-columns: 1fr;

@@ -73,6 +73,8 @@ export interface Config {
     'character-merge-requests': CharacterMergeRequest;
     'domain-character-contexts': DomainCharacterContext;
     'domain-memberships': DomainMembership;
+    domains: Domain;
+    'domain-admins': DomainAdmin;
     tenants: Tenant;
     memberships: Membership;
     documents: Document;
@@ -94,6 +96,8 @@ export interface Config {
     'character-merge-requests': CharacterMergeRequestsSelect<false> | CharacterMergeRequestsSelect<true>;
     'domain-character-contexts': DomainCharacterContextsSelect<false> | DomainCharacterContextsSelect<true>;
     'domain-memberships': DomainMembershipsSelect<false> | DomainMembershipsSelect<true>;
+    domains: DomainsSelect<false> | DomainsSelect<true>;
+    'domain-admins': DomainAdminsSelect<false> | DomainAdminsSelect<true>;
     tenants: TenantsSelect<false> | TenantsSelect<true>;
     memberships: MembershipsSelect<false> | MembershipsSelect<true>;
     documents: DocumentsSelect<false> | DocumentsSelect<true>;
@@ -315,6 +319,10 @@ export interface CharacterMergeRequest {
  */
 export interface DomainCharacterContext {
   id: number;
+  /**
+   * Canonical Domain relationship. Populated by the Phase 3 migration.
+   */
+  domain?: (number | null) | Domain;
   tenant: number | Tenant;
   character: number | Character;
   localDisplayName: string;
@@ -324,15 +332,61 @@ export interface DomainCharacterContext {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "domains".
+ */
+export interface Domain {
+  id: number;
+  name: string;
+  slug: string;
+  kind: 'community' | 'personal';
+  ownerUser?: (number | null) | User;
+  ownerCharacter?: (number | null) | Character;
+  lifecycle: 'active' | 'grace' | 'read-only' | 'suspended' | 'archived';
+  motto?: string | null;
+  preset: 'heritage' | 'modern';
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  headingFontKey: 'georgia' | 'palatino' | 'verdana' | 'trebuchet';
+  bodyFontKey: 'verdana' | 'georgia' | 'trebuchet' | 'tahoma';
+  logo?: (number | null) | Media;
+  banner?: (number | null) | Media;
+  publicEnabled?: boolean | null;
+  allowCrossDomainMove?: boolean | null;
+  installedPackKey?: string | null;
+  installedPackVersion?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "domain-memberships".
  */
 export interface DomainMembership {
   id: number;
+  /**
+   * Canonical Domain relationship. Populated by the Phase 3 migration.
+   */
+  domain?: (number | null) | Domain;
   tenant: number | Tenant;
   character: number | Character;
   status: 'active' | 'inactive';
   addedBy?: (number | null) | User;
   note?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "domain-admins".
+ */
+export interface DomainAdmin {
+  id: number;
+  domain: number | Domain;
+  user: number | User;
+  status: 'active' | 'inactive';
+  addedBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
@@ -354,6 +408,10 @@ export interface Membership {
  */
 export interface Document {
   id: number;
+  /**
+   * Canonical Domain relationship. Populated by the Phase 3 migration.
+   */
+  domain?: (number | null) | Domain;
   tenant: number | Tenant;
   /**
    * Archive folder. Leave empty to file at the root.
@@ -378,6 +436,10 @@ export interface Document {
  */
 export interface Folder {
   id: number;
+  /**
+   * Canonical Domain relationship. Populated by the Phase 3 migration.
+   */
+  domain?: (number | null) | Domain;
   tenant: number | Tenant;
   name: string;
   parent?: (number | null) | Folder;
@@ -391,6 +453,10 @@ export interface Folder {
  */
 export interface Page {
   id: number;
+  /**
+   * Canonical Domain relationship. Populated by the Phase 3 migration.
+   */
+  domain?: (number | null) | Domain;
   tenant: number | Tenant;
   title: string;
   /**
@@ -520,6 +586,10 @@ export interface Form {
         id?: string | null;
       }[]
     | null;
+  /**
+   * Canonical Domain relationship. Populated by the Phase 3 migration.
+   */
+  domain?: (number | null) | Domain;
   tenant: number | Tenant;
   /**
    * Destination folder for generated documents.
@@ -602,6 +672,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'domain-memberships';
         value: number | DomainMembership;
+      } | null)
+    | ({
+        relationTo: 'domains';
+        value: number | Domain;
+      } | null)
+    | ({
+        relationTo: 'domain-admins';
+        value: number | DomainAdmin;
       } | null)
     | ({
         relationTo: 'tenants';
@@ -768,6 +846,7 @@ export interface CharacterMergeRequestsSelect<T extends boolean = true> {
  * via the `definition` "domain-character-contexts_select".
  */
 export interface DomainCharacterContextsSelect<T extends boolean = true> {
+  domain?: T;
   tenant?: T;
   character?: T;
   localDisplayName?: T;
@@ -780,11 +859,52 @@ export interface DomainCharacterContextsSelect<T extends boolean = true> {
  * via the `definition` "domain-memberships_select".
  */
 export interface DomainMembershipsSelect<T extends boolean = true> {
+  domain?: T;
   tenant?: T;
   character?: T;
   status?: T;
   addedBy?: T;
   note?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "domains_select".
+ */
+export interface DomainsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  kind?: T;
+  ownerUser?: T;
+  ownerCharacter?: T;
+  lifecycle?: T;
+  motto?: T;
+  preset?: T;
+  primaryColor?: T;
+  secondaryColor?: T;
+  accentColor?: T;
+  backgroundColor?: T;
+  headingFontKey?: T;
+  bodyFontKey?: T;
+  logo?: T;
+  banner?: T;
+  publicEnabled?: T;
+  allowCrossDomainMove?: T;
+  installedPackKey?: T;
+  installedPackVersion?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "domain-admins_select".
+ */
+export interface DomainAdminsSelect<T extends boolean = true> {
+  domain?: T;
+  user?: T;
+  status?: T;
+  addedBy?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -824,6 +944,7 @@ export interface MembershipsSelect<T extends boolean = true> {
  * via the `definition` "documents_select".
  */
 export interface DocumentsSelect<T extends boolean = true> {
+  domain?: T;
   tenant?: T;
   folder?: T;
   title?: T;
@@ -838,6 +959,7 @@ export interface DocumentsSelect<T extends boolean = true> {
  * via the `definition` "folders_select".
  */
 export interface FoldersSelect<T extends boolean = true> {
+  domain?: T;
   tenant?: T;
   name?: T;
   parent?: T;
@@ -850,6 +972,7 @@ export interface FoldersSelect<T extends boolean = true> {
  * via the `definition` "pages_select".
  */
 export interface PagesSelect<T extends boolean = true> {
+  domain?: T;
   tenant?: T;
   title?: T;
   slug?: T;
@@ -993,6 +1116,7 @@ export interface FormsSelect<T extends boolean = true> {
         message?: T;
         id?: T;
       };
+  domain?: T;
   tenant?: T;
   folder?: T;
   archive?:

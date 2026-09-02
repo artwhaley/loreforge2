@@ -12,7 +12,9 @@ import { Characters } from './collections/Characters'
 import { CharacterClaimRequests } from './collections/CharacterClaimRequests'
 import { CharacterMergeRequests } from './collections/CharacterMergeRequests'
 import { DomainCharacterContexts } from './collections/DomainCharacterContexts'
+import { DomainAdmins } from './collections/DomainAdmins'
 import { DomainMemberships } from './collections/DomainMemberships'
+import { Domains } from './collections/Domains'
 import { Folders } from './collections/Folders'
 import { Media } from './collections/Media'
 import { Memberships } from './collections/Memberships'
@@ -56,7 +58,7 @@ const formBuilder = formBuilderPlugin({
   formOverrides: {
     admin: {
       useAsTitle: 'title',
-      defaultColumns: ['title', 'tenant', 'updatedAt'],
+      defaultColumns: ['title', 'domain', 'updatedAt'],
     },
     access: {
       read: () => true,
@@ -64,11 +66,20 @@ const formBuilder = formBuilderPlugin({
     fields: ({ defaultFields }) => [
       ...defaultFields,
       {
+        name: 'domain',
+        type: 'relationship',
+        relationTo: 'domains',
+        index: true,
+        label: 'Domain',
+        admin: { description: 'Canonical Domain relationship. Populated by the Phase 3 migration.' },
+      },
+      {
         name: 'tenant',
         type: 'relationship',
         relationTo: 'tenants',
         required: true,
         index: true,
+        admin: { hidden: true },
       },
       {
         name: 'folder',
@@ -120,7 +131,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Characters, CharacterClaimRequests, CharacterMergeRequests, DomainCharacterContexts, DomainMemberships, Tenants, Memberships, Documents, Folders, Pages, Media],
+  collections: [Users, Characters, CharacterClaimRequests, CharacterMergeRequests, DomainCharacterContexts, DomainMemberships, Domains, DomainAdmins, Tenants, Memberships, Documents, Folders, Pages, Media],
   plugins: [formBuilder],
   editor: lexicalEditor(),
   db: sqliteAdapter({

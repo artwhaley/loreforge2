@@ -3,6 +3,7 @@ import type { CollectionConfig } from 'payload'
 export const Memberships: CollectionConfig = {
   slug: 'memberships',
   admin: {
+    hidden: true,
     useAsTitle: 'user',
     defaultColumns: ['user', 'tenant', 'role'],
   },

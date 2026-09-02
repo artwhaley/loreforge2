@@ -11,12 +11,21 @@ export const DomainMemberships: CollectionConfig = {
   indexes: [{ unique: true, fields: ['tenant', 'character'] }],
   fields: [
     {
+      name: 'domain',
+      type: 'relationship',
+      relationTo: 'domains',
+      index: true,
+      label: 'Domain',
+      admin: { description: 'Canonical Domain relationship. Populated by the Phase 3 migration.' },
+    },
+    {
       name: 'tenant',
       type: 'relationship',
       relationTo: 'tenants',
       required: true,
       index: true,
-      label: 'Domain',
+      label: 'Legacy Tenant (migration only)',
+      admin: { hidden: true },
     },
     {
       name: 'character',

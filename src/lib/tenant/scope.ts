@@ -19,3 +19,14 @@ export function tenantWhere(tenantId: number | string, extra?: Where): Where {
 export function tenantAndIdWhere(tenantId: number | string, id: number | string): Where {
   return tenantWhere(tenantId, { id: { equals: id } })
 }
+
+/** Canonical Domain-scoped predicates used after the Phase 3 migration. */
+export function domainWhere(domainId: number | string, extra?: Where): Where {
+  const and: Where[] = [{ domain: { equals: domainId } }]
+  if (extra) and.push(extra)
+  return { and }
+}
+
+export function domainAndIdWhere(domainId: number | string, id: number | string): Where {
+  return domainWhere(domainId, { id: { equals: id } })
+}

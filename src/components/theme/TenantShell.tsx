@@ -93,9 +93,12 @@ export async function TenantShell({
           </button>
         </form>
         {role === 'admin' ? (
-          <a className={styles.adminMode} href="/admin">
+          <form action="/api/switch-administration" method="post" className={styles.adminModeForm}>
+            <input type="hidden" name="domainSlug" value={tenant.slug} />
+            <button type="submit" className={styles.adminMode}>
             Administration
-          </a>
+            </button>
+          </form>
         ) : null}
       </div>
       <header className={styles.header}>

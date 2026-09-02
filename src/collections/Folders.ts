@@ -19,11 +19,20 @@ export const Folders: CollectionConfig = {
   timestamps: true,
   fields: [
     {
+      name: 'domain',
+      type: 'relationship',
+      relationTo: 'domains',
+      index: true,
+      label: 'Domain',
+      admin: { description: 'Canonical Domain relationship. Populated by the Phase 3 migration.' },
+    },
+    {
       name: 'tenant',
       type: 'relationship',
       relationTo: 'tenants',
       required: true,
       index: true,
+      admin: { hidden: true },
     },
     {
       name: 'name',

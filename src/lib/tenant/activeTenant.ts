@@ -1,15 +1,16 @@
 import { cookies } from 'next/headers.js'
 import { getLorePayload } from '@/lib/payload'
 
-import type { Character, Tenant } from '@/payload-types'
+import type { Character, Domain, Tenant } from '@/payload-types'
 
 export const ACTIVE_TENANT_COOKIE = 'sl-civic-active-tenant'
 export const ACTIVE_CHARACTER_COOKIE = 'sl-civic-active-character'
+export const ADMINISTRATION_CONTEXT_COOKIE = 'sl-civic-administration'
 
 export type ContextUser = { id: number; name?: string; email?: string }
 
 export type ActiveContext = {
-  tenant: Tenant | null
+  tenant: (Domain | Tenant) | null
   role: 'admin' | 'member' | null
   user: ContextUser | null
   activeCharacter: Character | null
@@ -54,6 +55,7 @@ export async function getActiveContext(): Promise<ActiveContext> {
     : null
 
   const cookieValue = cookieStore.get(ACTIVE_TENANT_COOKIE)?.value
+  const administrationMode = cookieStore.get(ADMINISTRATION_CONTEXT_COOKIE)?.value === '1'
 
   if (!cookieValue) {
     return { tenant: null, role: null, user: contextUser, activeCharacter, characters }
@@ -61,12 +63,8 @@ export async function getActiveContext(): Promise<ActiveContext> {
 
   // P02-T02 deliberately clears Domain when Character changes. P02-T03 now
   // validates the selected Domain against the active Character membership.
-  if (!activeCharacter) {
-    return { tenant: null, role: null, user: contextUser, activeCharacter: null, characters }
-  }
-
   const tenants = await payload.find({
-    collection: 'tenants',
+    collection: 'domains',
     where: { slug: { equals: cookieValue } },
     depth: 1,
     limit: 1,
@@ -77,12 +75,26 @@ export async function getActiveContext(): Promise<ActiveContext> {
   }
 
   // Membership check: only members/admins of this tenant may activate it.
+  const domainAdmins = await payload.find({
+    collection: 'domain-admins',
+    where: { and: [{ domain: { equals: tenant.id } }, { user: { equals: user.id } }, { status: { equals: 'active' } }] },
+    depth: 0,
+    limit: 1,
+  })
+  const isDomainAdmin = Number(tenant.ownerUser && typeof tenant.ownerUser === 'object' ? tenant.ownerUser.id : tenant.ownerUser) === Number(user.id) || domainAdmins.docs.length > 0
+  if (administrationMode && isDomainAdmin) {
+    return { tenant, role: 'admin', user: contextUser, activeCharacter: null, characters }
+  }
+  if (!activeCharacter) {
+    return { tenant: null, role: null, user: contextUser, activeCharacter: null, characters }
+  }
+
   const memberships = await payload.find({
     collection: 'domain-memberships',
     where: {
       and: [
         { character: { equals: activeCharacter.id } },
-        { tenant: { equals: tenant.id } },
+        { or: [{ domain: { equals: tenant.id } }, { tenant: { equals: tenant.id } }] },
         { status: { equals: 'active' } },
       ],
     },
@@ -94,8 +106,7 @@ export async function getActiveContext(): Promise<ActiveContext> {
     return { tenant: null, role: null, user: contextUser, activeCharacter, characters }
   }
 
-  // The legacy role is retained only as a transitional display/authorization
-  // seam until P03-T01 migrates owner/admin authority to the Domain model.
+  // Legacy membership is retained only as a read fallback for records created before migration.
   const legacyMemberships = await payload.find({
     collection: 'memberships',
     where: {
@@ -108,7 +119,7 @@ export async function getActiveContext(): Promise<ActiveContext> {
 
   return {
     tenant,
-    role: legacyRole === 'admin' || legacyRole === 'member' ? legacyRole : null,
+    role: isDomainAdmin ? 'admin' : legacyRole === 'member' ? 'member' : null,
     user: contextUser,
     activeCharacter,
     characters,
@@ -116,7 +127,7 @@ export async function getActiveContext(): Promise<ActiveContext> {
 }
 
 export async function getActiveTenant(): Promise<{
-  tenant: Tenant | null
+  tenant: (Domain | Tenant) | null
   role: 'admin' | 'member' | null
   user: ContextUser | null
   activeCharacter: Character | null

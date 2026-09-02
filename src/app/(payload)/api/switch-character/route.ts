@@ -4,7 +4,7 @@ import { getPayload } from 'payload'
 
 import config from '@payload-config'
 
-import { ACTIVE_CHARACTER_COOKIE, ACTIVE_TENANT_COOKIE } from '@/lib/tenant/activeTenant'
+import { ACTIVE_CHARACTER_COOKIE, ACTIVE_TENANT_COOKIE, ADMINISTRATION_CONTEXT_COOKIE } from '@/lib/tenant/activeTenant'
 
 export async function POST(request: Request) {
   const payload = await getPayload({ config })
@@ -25,8 +25,9 @@ export async function POST(request: Request) {
   if (!Number.isFinite(characterId)) return response
 
   const character = await payload.findByID({ collection: 'characters', id: characterId, depth: 0 })
+  if (!character) return response
   const controlledBy = typeof character.controlledBy === 'object' ? character.controlledBy?.id : character.controlledBy
-  if (!character || character.status !== 'active' || String(controlledBy) !== String(user.id)) {
+  if (character.status !== 'active' || String(controlledBy) !== String(user.id)) {
     return response
   }
 
@@ -37,5 +38,6 @@ export async function POST(request: Request) {
     path: '/',
   })
   response.cookies.delete(ACTIVE_TENANT_COOKIE)
+  response.cookies.delete(ADMINISTRATION_CONTEXT_COOKIE)
   return response
 }
