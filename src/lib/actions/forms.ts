@@ -109,6 +109,6 @@ export async function submitReportFormAction(
     answers,
   })
 
-  revalidatePath(`/tenant/${tenantSlug}/records`)
-  redirect(`/tenant/${tenantSlug}/documents/${result.id}`)
+  revalidatePath(`/domain/${tenantSlug}/records`)
+  redirect(`/domain/${tenantSlug}/documents/${result.id}`)
 }

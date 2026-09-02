@@ -22,7 +22,7 @@ export default async function FormsPage({ params }: Props) {
     notFound()
   }
 
-  const base = `/tenant/${tenant.slug}`
+  const base = `/domain/${tenant.slug}`
   const myTenants = user ? await getTenantsForUser(user.id) : []
   const forms = await getFormsForTenant(tenant)
   const tokens = resolveThemeTokens(tenant)

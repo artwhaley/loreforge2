@@ -23,7 +23,7 @@ export default async function TenantHomePage({ params }: Props) {
     notFound()
   }
 
-  const base = `/tenant/${tenant.slug}`
+  const base = `/domain/${tenant.slug}`
   const myTenants = user ? await getTenantsForUser(user.id) : []
   const docs = await getDocumentsForTenant(tenant)
   const homePage = await getPageForTenant(tenant, 'home')
@@ -75,7 +75,7 @@ export default async function TenantHomePage({ params }: Props) {
           <ul className={styles.docList}>
             {docs.map((doc) => (
               <li key={doc.id} className={styles.docItem}>
-                <a className={styles.docLink} href={`/tenant/${tenant.slug}/documents/${doc.id}`}>
+                <a className={styles.docLink} href={`/domain/${tenant.slug}/documents/${doc.id}`}>
                   {doc.title}
                 </a>
                 <span className={styles.docOrigin}>{originLabel(doc.origin)}</span>

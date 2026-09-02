@@ -38,7 +38,7 @@ export default async function ImportPage({ params }: Props) {
     notFound()
   }
 
-  const base = `/tenant/${tenant.slug}`
+  const base = `/domain/${tenant.slug}`
   const myTenants = user ? await getTenantsForUser(user.id) : []
   const folders = await getFoldersForTenant(tenant)
   const flat = flattenFolderTree(buildFolderTree(folders))
