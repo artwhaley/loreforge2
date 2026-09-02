@@ -33,7 +33,7 @@ export default async function RecordsPage({ params, searchParams }: Props) {
     notFound()
   }
 
-  const base = `/tenant/${tenant.slug}`
+  const base = `/domain/${tenant.slug}`
   const myTenants = user ? await getTenantsForUser(user.id) : []
   const tokens = resolveThemeTokens(tenant)
 

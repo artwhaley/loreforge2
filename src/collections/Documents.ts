@@ -7,6 +7,17 @@ export const Documents: CollectionConfig = {
     defaultColumns: ['title', 'tenant', 'origin', 'updatedAt'],
   },
   timestamps: true,
+  hooks: {
+    beforeChange: [
+      ({ data, originalDoc, operation }) => {
+        const folder = data?.folder ?? originalDoc?.folder
+        if (folder === null || folder === undefined || folder === '') {
+          throw new Error('Every Document must belong to a Folder; use the Domain Root when no branch is selected.')
+        }
+        return data
+      },
+    ],
+  },
   fields: [
     {
       name: 'domain',
@@ -19,7 +30,7 @@ export const Documents: CollectionConfig = {
       name: 'tenant',
       type: 'relationship',
       relationTo: 'tenants',
-      required: true,
+      required: false,
       admin: { hidden: true },
     },
     {
@@ -27,6 +38,7 @@ export const Documents: CollectionConfig = {
       type: 'relationship',
       relationTo: 'folders',
       index: true,
+      required: false,
       admin: {
         description: 'Archive folder. Leave empty to file at the root.',
       },

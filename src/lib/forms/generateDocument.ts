@@ -68,16 +68,21 @@ export async function generateDocumentFromSubmission(args: {
   if (form.folder) {
     const found = await payload.find({
       collection: 'folders',
-      where: { and: [{ tenant: { equals: tenant.id } }, { id: { equals: form.folder } }] },
+      where: { and: [{ or: [{ domain: { equals: tenant.id } }, { tenant: { equals: tenant.id } }] }, { id: { equals: form.folder } }] },
       depth: 0,
       limit: 1,
     })
     if (found.docs[0]) folder = Number(form.folder)
   }
+  if (folder === null) {
+    const roots = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: tenant.id } }, { systemManaged: { equals: true } }, { parent: { equals: null } }] }, depth: 0, limit: 1 })
+    folder = roots.docs[0]?.id ?? null
+  }
 
   const created = await payload.create({
     collection: 'documents',
     data: {
+      domain: tenant.id,
       tenant: tenant.id,
       folder,
       title,

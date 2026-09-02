@@ -39,7 +39,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
 
   const tokens = resolveThemeTokens(tenant)
   const html = renderMarkdown(doc.body)
-  const base = `/tenant/${tenant.slug}/documents/${doc.id}`
+  const base = `/domain/${tenant.slug}/documents/${doc.id}`
 
   return (
     <TenantShell tenant={tenant} cssVars={themeTokensToCssVars(tokens)} role={role}>
@@ -63,7 +63,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
               defaultValue={String(folderIdValue)}
               className={styles.moveSelect}
             >
-              <option value="">No folder</option>
+              <option value="">Domain Root (default)</option>
               {flatFolders.map(({ folder, depth }) => (
                 <option key={folder.id} value={folder.id}>
                   {'\u00A0'.repeat(depth * 2)}

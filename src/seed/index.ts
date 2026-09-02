@@ -58,6 +58,16 @@ const TEST_CHARACTERS: Array<{
     name: 'Unknown Traveler',
     bio: 'An unclaimed Character used for claim and local-context flows.',
   },
+  { key: 'kael', name: 'Kael', bio: 'Warrior Commander fixture.' },
+  { key: 'rarius', name: 'Rarius', bio: 'First Platoon Captain fixture.' },
+  { key: 'tarl', name: 'Tarl', bio: 'Second Platoon Captain fixture.' },
+  { key: 'varro', name: 'Varro', bio: 'Warrior fixture.' },
+  { key: 'cassian', name: 'Cassian', bio: 'Warrior explicit-deny fixture.' },
+  { key: 'livia', name: 'Livia', bio: 'Magistrate fixture.' },
+  { key: 'aren', name: 'Aren', bio: 'Multi-Role Warrior and Magistrate fixture.' },
+  { key: 'marlen', name: 'Marlen', bio: 'Head Scribe fixture.' },
+  { key: 'sera', name: 'Sera', bio: 'Junior Scribe fixture.' },
+  { key: 'dorian', name: 'Dorian', bio: 'Junior Scribe fixture.' },
 ]
 
 const EDITOR_STRESS_DOC = `# City Council Meeting Notes
@@ -348,9 +358,9 @@ for (const character of TEST_CHARACTERS) {
 // --- Durable Community Domains (Phase 3) ---
 // Keep the spike Tenants as migration input, but seed the canonical Domain
 // records as well. Ar/Bayview are the stable institutional-structure fixtures.
-const domainsBySlug: Record<string, { id: number }> = {}
+const domainsBySlug: Record<string, { id: number; tenantId?: number }> = {}
 const domainFixtures = [
-  ...TENANTS.map((tenant) => ({ ...tenant, ownerUser: usersByEmail['admin@example.test'].id })),
+  ...TENANTS.map((tenant) => ({ ...tenant, tenantId: tenantsBySlug[tenant.slug].id, ownerUser: usersByEmail['admin@example.test'].id })),
   {
     slug: 'ar', name: 'Ar', motto: 'Strength, Honor, Order', preset: 'heritage' as const,
     primaryColor: '#2B2430', secondaryColor: '#8D6E4A', accentColor: '#C6A15B', backgroundColor: '#F2ECE1',
@@ -365,7 +375,7 @@ const domainFixtures = [
 for (const fixture of domainFixtures) {
   const existing = await payload.find({ collection: 'domains', where: { slug: { equals: fixture.slug } }, depth: 0, limit: 1 })
   const domain = existing.docs[0] ?? await payload.create({ collection: 'domains', data: { ...fixture, kind: 'community', lifecycle: 'active', publicEnabled: false, allowCrossDomainMove: false } })
-  domainsBySlug[fixture.slug] = { id: domain.id }
+  domainsBySlug[fixture.slug] = { id: domain.id, tenantId: 'tenantId' in fixture ? fixture.tenantId : undefined }
   const admin = await payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: domain.id } }, { user: { equals: fixture.ownerUser } }] }, depth: 0, limit: 1 })
   if (!admin.docs[0]) await payload.create({ collection: 'domain-admins', data: { domain: domain.id, user: fixture.ownerUser, status: 'active', addedBy: fixture.ownerUser } })
 }
@@ -571,7 +581,7 @@ for (const [tenantSlug, files] of Object.entries(FOLDER_TREES)) {
     const existing = await payload.find({
       collection: 'folders',
       where: {
-        and: [
+      and: [
           { tenant: { equals: tenantsBySlug[tenantSlug].id } },
           { name: { equals: file.name } },
           parentCond,
@@ -588,6 +598,7 @@ for (const [tenantSlug, files] of Object.entries(FOLDER_TREES)) {
     const created = await payload.create({
       collection: 'folders',
       data: {
+        domain: domainsBySlug[tenantSlug].id,
         tenant: tenantsBySlug[tenantSlug].id,
         name: file.name,
         parent: file.parentPath ? (folderIds[tenantSlug][file.parentPath] ?? null) : null,
@@ -596,6 +607,89 @@ for (const [tenantSlug, files] of Object.entries(FOLDER_TREES)) {
     folderIds[tenantSlug][file.path] = created.id
     payload.logger.info(`Created folder ${tenantSlug}/${file.path}`)
   }
+}
+
+// --- System-managed Domain roots and institutional Ar folder tree (Phase 3) ---
+const rootFolderIds: Record<string, number> = {}
+for (const [domainSlug, domainRef] of Object.entries(domainsBySlug)) {
+  const existingRoot = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domainRef.id } }, { systemManaged: { equals: true } }, { parent: { equals: null } }] }, depth: 0, limit: 1 })
+  const root = existingRoot.docs[0] ?? await payload.create({ collection: 'folders', data: { domain: domainRef.id, tenant: domainRef.tenantId ?? null, name: 'Domain Root', parent: null, systemManaged: true } })
+  rootFolderIds[domainSlug] = root.id
+  const topLevel = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domainRef.id } }, { parent: { equals: null } }] }, depth: 0, limit: 500 })
+  for (const folder of topLevel.docs) {
+    if (folder.id !== root.id && !folder.systemManaged) await payload.update({ collection: 'folders', id: folder.id, data: { parent: root.id } })
+  }
+  const rootDocs = await payload.find({ collection: 'documents', where: { and: [{ domain: { equals: domainRef.id } }, { folder: { equals: null } }] }, depth: 0, limit: 500 })
+  for (const document of rootDocs.docs) await payload.update({ collection: 'documents', id: document.id, data: { folder: root.id } })
+}
+
+const arFolderFixtures = [
+  { path: 'scribes', name: 'Scribes', parent: null, subdomain: 'scribes' },
+  { path: 'scribes/property-records', name: 'Property Records', parent: 'scribes', subdomain: 'scribes' },
+  { path: 'scribes/property-records/deeds', name: 'Deeds', parent: 'scribes/property-records', subdomain: 'scribes' },
+  { path: 'scribes/historical-records', name: 'Historical Records', parent: 'scribes', subdomain: 'scribes' },
+  { path: 'warriors', name: 'Warriors', parent: null, subdomain: 'warriors' },
+  { path: 'warriors/incident-reports', name: 'Incident Reports', parent: 'warriors', subdomain: 'warriors' },
+  { path: 'warriors/first-platoon', name: 'First Platoon', parent: 'warriors', subdomain: 'warriors' },
+  { path: 'warriors/first-platoon/battle-plans', name: 'Battle Plans', parent: 'warriors/first-platoon', subdomain: 'warriors' },
+  { path: 'warriors/second-platoon', name: 'Second Platoon', parent: 'warriors', subdomain: 'warriors' },
+  { path: 'warriors/second-platoon/battle-plans', name: 'Battle Plans', parent: 'warriors/second-platoon', subdomain: 'warriors' },
+  { path: 'warriors/internal-affairs', name: 'Internal Affairs', parent: 'warriors', subdomain: 'warriors' },
+  { path: 'magistrates', name: 'Magistrates', parent: null, subdomain: 'magistrates' },
+  { path: 'magistrates/court-cases', name: 'Court Cases', parent: 'magistrates', subdomain: 'magistrates' },
+  { path: 'magistrates/rulings', name: 'Rulings', parent: 'magistrates', subdomain: 'magistrates' },
+]
+const arFolderIds: Record<string, number> = {}
+for (const fixture of arFolderFixtures) {
+  const parentId = fixture.parent ? arFolderIds[fixture.parent] : rootFolderIds.ar
+  const subdomain = subdomainsByKey[`ar:${fixture.subdomain}`]
+  const existing = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domainsBySlug.ar.id } }, { name: { equals: fixture.name } }, { parent: { equals: parentId } }] }, depth: 0, limit: 1 })
+  const folder = existing.docs[0] ?? await payload.create({ collection: 'folders', data: { domain: domainsBySlug.ar.id, tenant: domainsBySlug.ar.tenantId ?? null, name: fixture.name, parent: parentId, subdomain: subdomain?.id ?? null, systemManaged: false } })
+  arFolderIds[fixture.path] = folder.id
+}
+
+// --- Institutional Role hierarchy and scoped assignments (Phase 3) ---
+const arDomain = domainsBySlug.ar
+const arSubdomainId = (slug: string) => subdomainsByKey[`ar:${slug}`]?.id
+const roleFixtures = [
+  { key: 'head-scribe', name: 'Head Scribe', subdomain: 'scribes', parent: null },
+  { key: 'senior-scribe', name: 'Senior Scribe', subdomain: 'scribes', parent: 'head-scribe' },
+  { key: 'junior-scribe', name: 'Junior Scribe', subdomain: 'scribes', parent: 'senior-scribe' },
+  { key: 'commander', name: 'Commander', subdomain: 'warriors', parent: null },
+  { key: 'captain', name: 'Captain', subdomain: 'warriors', parent: 'commander' },
+  { key: 'warrior', name: 'Warrior', subdomain: 'warriors', parent: 'captain' },
+  { key: 'chief-magistrate', name: 'Chief Magistrate', subdomain: 'magistrates', parent: null },
+  { key: 'magistrate', name: 'Magistrate', subdomain: 'magistrates', parent: 'chief-magistrate' },
+  { key: 'clerk', name: 'Clerk', subdomain: 'magistrates', parent: 'chief-magistrate' },
+]
+const rolesByKey: Record<string, { id: number }> = {}
+for (const fixture of roleFixtures) {
+  const existing = await payload.find({ collection: 'roles', where: { and: [{ domain: { equals: arDomain.id } }, { name: { equals: fixture.name } }] }, depth: 0, limit: 1 })
+  const role = existing.docs[0] ?? await payload.create({ collection: 'roles', data: { domain: arDomain.id, subdomain: arSubdomainId(fixture.subdomain) ?? null, name: fixture.name, parentRole: fixture.parent ? rolesByKey[fixture.parent].id : null, active: true, system: false } })
+  rolesByKey[fixture.key] = { id: role.id }
+}
+const roleAssignments = [
+  { character: 'kael', role: 'commander' },
+  { character: 'rarius', role: 'captain', scope: 'warriors/first-platoon' },
+  { character: 'tarl', role: 'captain', scope: 'warriors/second-platoon' },
+  { character: 'varro', role: 'warrior' },
+  { character: 'cassian', role: 'warrior' },
+  { character: 'livia', role: 'magistrate' },
+  { character: 'aren', role: 'warrior' },
+  { character: 'aren', role: 'magistrate' },
+  { character: 'marlen', role: 'head-scribe' },
+  { character: 'sera', role: 'junior-scribe', scope: 'scribes/property-records' },
+  { character: 'dorian', role: 'junior-scribe', scope: 'scribes/historical-records' },
+]
+for (const assignment of roleAssignments) {
+  const character = charactersByKey[assignment.character]
+  const role = rolesByKey[assignment.role]
+  if (!character || !role) continue
+  const member = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: arDomain.id } }, { character: { equals: character.id } }] }, depth: 0, limit: 1 })
+  if (!member.docs[0]) await payload.create({ collection: 'domain-memberships', data: { domain: arDomain.id, character: character.id, status: 'active', addedBy: usersByEmail['admin@example.test'].id, note: 'Phase 3 Role fixture membership.' } })
+  const scopeFolder = assignment.scope ? arFolderIds[assignment.scope] : null
+  const existing = await payload.find({ collection: 'role-assignments', where: { and: [{ character: { equals: character.id } }, { role: { equals: role.id } }, scopeFolder ? { scopeFolder: { equals: scopeFolder } } : { scopeFolder: { equals: null } }] }, depth: 0, limit: 1 })
+  if (!existing.docs[0]) await payload.create({ collection: 'role-assignments', data: { character: character.id, role: role.id, scopeFolder, status: 'active', assignedBy: usersByEmail['admin@example.test'].id } })
 }
 
 // --- Shared fixture document (once per tenant) ---
@@ -633,12 +727,13 @@ for (const tenant of TENANTS) {
   await payload.create({
     collection: 'documents',
     data: {
+      domain: domainsBySlug[tenant.slug].id,
       tenant: tenantsBySlug[tenant.slug].id,
       title: 'Incident Report 2026-014',
       body: SHARED_INCIDENT_REPORT,
       origin: 'web-editor',
       createdBy: usersByEmail['officer@example.test'].id,
-      folder: folderId,
+      folder: folderId ?? rootFolderIds[tenant.slug] ?? null,
     },
   })
   payload.logger.info(`Created fixture document for ${tenant.slug}`)

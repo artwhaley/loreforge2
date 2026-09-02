@@ -6,7 +6,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 
 import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
-import { tenantAndIdWhere } from '@/lib/tenant/scope'
+import { domainAndIdWhere, tenantAndIdWhere } from '@/lib/tenant/scope'
 
 /**
  * Save an archive document's title and canonical Markdown body.
@@ -28,6 +28,28 @@ export async function saveDocumentAction(input: {
 
   if (!user) {
     return { ok: false }
+  }
+
+  const domains = await payload.find({
+    collection: 'domains',
+    where: { slug: { equals: tenantSlug } },
+    depth: 0,
+    limit: 1,
+  })
+  const domain = domains.docs[0]
+  if (domain) {
+    const ownerId = typeof domain.ownerUser === 'object' ? domain.ownerUser?.id : domain.ownerUser
+    const admins = await payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: domain.id } }, { user: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
+    const controlled = await payload.find({ collection: 'characters', where: { and: [{ controlledBy: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 200 })
+    const memberships = controlled.docs.length
+      ? await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domain.id } }, { character: { in: controlled.docs.map((character) => character.id) } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
+      : { docs: [] }
+    if (Number(ownerId) !== Number(user.id) && admins.docs.length === 0 && memberships.docs.length === 0) return { ok: false }
+    const existing = await payload.find({ collection: 'documents', where: domainAndIdWhere(domain.id, documentId), depth: 0, limit: 1 })
+    if (existing.docs.length === 0) return { ok: false }
+    await payload.update({ collection: 'documents', id: documentId, data: { title, body: canonicalizeMarkdown(body) }, depth: 0 })
+    payload.logger.info(`Saved document ${documentId}`)
+    return { ok: true }
   }
 
   const tenants = await payload.find({

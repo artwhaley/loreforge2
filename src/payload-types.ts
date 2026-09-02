@@ -77,6 +77,8 @@ export interface Config {
     'domain-admins': DomainAdmin;
     subdomains: Subdomain;
     'subdomain-memberships': SubdomainMembership;
+    roles: Role;
+    'role-assignments': RoleAssignment;
     tenants: Tenant;
     memberships: Membership;
     documents: Document;
@@ -102,6 +104,8 @@ export interface Config {
     'domain-admins': DomainAdminsSelect<false> | DomainAdminsSelect<true>;
     subdomains: SubdomainsSelect<false> | SubdomainsSelect<true>;
     'subdomain-memberships': SubdomainMembershipsSelect<false> | SubdomainMembershipsSelect<true>;
+    roles: RolesSelect<false> | RolesSelect<true>;
+    'role-assignments': RoleAssignmentsSelect<false> | RoleAssignmentsSelect<true>;
     tenants: TenantsSelect<false> | TenantsSelect<true>;
     memberships: MembershipsSelect<false> | MembershipsSelect<true>;
     documents: DocumentsSelect<false> | DocumentsSelect<true>;
@@ -427,6 +431,60 @@ export interface SubdomainMembership {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "roles".
+ */
+export interface Role {
+  id: number;
+  domain: number | Domain;
+  subdomain?: (number | null) | Subdomain;
+  name: string;
+  parentRole?: (number | null) | Role;
+  active?: boolean | null;
+  system?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "role-assignments".
+ */
+export interface RoleAssignment {
+  id: number;
+  character: number | Character;
+  role: number | Role;
+  scopeFolder?: (number | null) | Folder;
+  status: 'active' | 'inactive';
+  startsAt?: string | null;
+  endsAt?: string | null;
+  assignedBy: number | User;
+  assignedByCharacter?: (number | null) | Character;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "folders".
+ */
+export interface Folder {
+  id: number;
+  /**
+   * Canonical Domain relationship. Populated by the Phase 3 migration.
+   */
+  domain?: (number | null) | Domain;
+  tenant?: (number | null) | Tenant;
+  subdomain?: (number | null) | Subdomain;
+  name: string;
+  parent?: (number | null) | Folder;
+  sortOrder?: number | null;
+  /**
+   * Domain root folders are protected from normal deletion or movement.
+   */
+  systemManaged?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "memberships".
  */
 export interface Membership {
@@ -447,7 +505,7 @@ export interface Document {
    * Canonical Domain relationship. Populated by the Phase 3 migration.
    */
   domain?: (number | null) | Domain;
-  tenant: number | Tenant;
+  tenant?: (number | null) | Tenant;
   /**
    * Archive folder. Leave empty to file at the root.
    */
@@ -462,23 +520,6 @@ export interface Document {
    * Author, if known
    */
   createdBy?: (number | null) | User;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "folders".
- */
-export interface Folder {
-  id: number;
-  /**
-   * Canonical Domain relationship. Populated by the Phase 3 migration.
-   */
-  domain?: (number | null) | Domain;
-  tenant: number | Tenant;
-  name: string;
-  parent?: (number | null) | Folder;
-  sortOrder?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -723,6 +764,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'subdomain-memberships';
         value: number | SubdomainMembership;
+      } | null)
+    | ({
+        relationTo: 'roles';
+        value: number | Role;
+      } | null)
+    | ({
+        relationTo: 'role-assignments';
+        value: number | RoleAssignment;
       } | null)
     | ({
         relationTo: 'tenants';
@@ -982,6 +1031,36 @@ export interface SubdomainMembershipsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "roles_select".
+ */
+export interface RolesSelect<T extends boolean = true> {
+  domain?: T;
+  subdomain?: T;
+  name?: T;
+  parentRole?: T;
+  active?: T;
+  system?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "role-assignments_select".
+ */
+export interface RoleAssignmentsSelect<T extends boolean = true> {
+  character?: T;
+  role?: T;
+  scopeFolder?: T;
+  status?: T;
+  startsAt?: T;
+  endsAt?: T;
+  assignedBy?: T;
+  assignedByCharacter?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "tenants_select".
  */
 export interface TenantsSelect<T extends boolean = true> {
@@ -1033,9 +1112,11 @@ export interface DocumentsSelect<T extends boolean = true> {
 export interface FoldersSelect<T extends boolean = true> {
   domain?: T;
   tenant?: T;
+  subdomain?: T;
   name?: T;
   parent?: T;
   sortOrder?: T;
+  systemManaged?: T;
   updatedAt?: T;
   createdAt?: T;
 }

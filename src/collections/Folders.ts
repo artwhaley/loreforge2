@@ -1,5 +1,12 @@
 import type { CollectionConfig } from 'payload'
 
+import { assertFolderPlacement } from '@/lib/archive/folderInvariants'
+
+const relationId = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === '') return null
+  return typeof value === 'object' && 'id' in value ? Number((value as { id: number | string }).id) : Number(value)
+}
+
 /**
  * Tenant-owned archive folders with a nullable self-parent (spec §6.3).
  *
@@ -17,6 +24,30 @@ export const Folders: CollectionConfig = {
     read: () => true,
   },
   timestamps: true,
+  hooks: {
+    beforeChange: [async ({ data, originalDoc, operation, req }) => {
+      const domainId = relationId(data?.domain ?? originalDoc?.domain)
+      if (operation === 'create' && !domainId) throw new Error('Every Folder must belong to a Domain.')
+      const parentId = relationId(data?.parent ?? originalDoc?.parent)
+      if (parentId && domainId) {
+        const parent = await req.payload.findByID({ collection: 'folders', id: parentId, depth: 0 })
+        const all = await req.payload.find({ collection: 'folders', depth: 0, limit: 10000 })
+        assertFolderPlacement(
+          { id: originalDoc?.id ?? 'new', domainId, parentId },
+          { id: parent.id, domainId: relationId(parent.domain) ?? relationId(parent.tenant) ?? '', parentId: relationId(parent.parent) },
+          all.docs.map((folder) => ({ id: folder.id, domainId: relationId(folder.domain) ?? relationId(folder.tenant) ?? '', parentId: relationId(folder.parent), systemManaged: Boolean(folder.systemManaged) })),
+        )
+      }
+      if (originalDoc?.systemManaged && data?.parent !== undefined && relationId(data.parent) !== relationId(originalDoc.parent)) {
+        throw new Error('System-managed Domain roots cannot be moved.')
+      }
+      return data
+    }],
+    beforeDelete: [async ({ id, req }) => {
+      const folder = await req.payload.findByID({ collection: 'folders', id, depth: 0 })
+      if (folder.systemManaged) throw new Error('System-managed Domain roots cannot be deleted.')
+    }],
+  },
   fields: [
     {
       name: 'domain',
@@ -29,9 +60,10 @@ export const Folders: CollectionConfig = {
       name: 'tenant',
       type: 'relationship',
       relationTo: 'tenants',
-      required: true,
+      required: false,
       admin: { hidden: true },
     },
+    { name: 'subdomain', type: 'relationship', relationTo: 'subdomains', label: 'Subdomain' },
     {
       name: 'name',
       type: 'text',
@@ -47,5 +79,6 @@ export const Folders: CollectionConfig = {
       name: 'sortOrder',
       type: 'number',
     },
+    { name: 'systemManaged', type: 'checkbox', defaultValue: false, admin: { description: 'Domain root folders are protected from normal deletion or movement.' } },
   ],
 }
