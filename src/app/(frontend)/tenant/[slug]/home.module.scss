@@ -1,0 +1,85 @@
+.welcome {
+  text-align: center;
+  padding: 2rem 1rem 2.5rem;
+}
+
+.welcomeTitle {
+  font-family: var(--tenant-heading-font);
+  color: var(--tenant-primary);
+  font-size: 2.2rem;
+  margin: 0 0 0.5rem;
+}
+
+.mottoLine {
+  font-family: var(--tenant-heading-font);
+  color: var(--tenant-accent);
+  font-style: italic;
+  font-size: 1.05rem;
+  margin: 0 0 1rem;
+}
+
+.intro {
+  max-width: 560px;
+  margin: 0 auto;
+  color: var(--tenant-muted-text);
+}
+
+.recent {
+  background: var(--tenant-surface-bg);
+  border: 1px solid var(--tenant-accent);
+  border-radius: 4px;
+  padding: 1.5rem 2rem;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.sectionTitle {
+  font-family: var(--tenant-heading-font);
+  color: var(--tenant-primary);
+  font-size: 1.3rem;
+  margin: 0 0 1rem;
+  border-bottom: 2px solid var(--tenant-accent);
+  padding-bottom: 0.4rem;
+}
+
+.docList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.docItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px dotted var(--tenant-accent);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.docLink {
+  font-family: var(--tenant-body-font);
+  color: var(--tenant-primary);
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+    text-decoration-color: var(--tenant-accent);
+  }
+}
+
+.docOrigin {
+  font-size: 0.75rem;
+  color: var(--tenant-muted-text);
+  white-space: nowrap;
+}
+
+.empty {
+  color: var(--tenant-muted-text);
+  font-style: italic;
+}

@@ -47,3 +47,23 @@ To fully reset: stop the dev server, delete `sl-civic-archive.db*` from the proj
 
 - `sl-civic-archive.db` — SQLite database
 - `public/media/` — uploaded media (future tickets)
+
+## Ticket 01 scope
+
+Tenant-scoped civic sites. Both seeded cities render the same fixture Markdown with distinct
+branding through centralized theme tokens (`--tenant-*` CSS variables) driven by the tenant's
+theme settings. A server-side active-tenant resolver (cookie + verified membership) scopes every
+document query — the UI never filters by tenant. Tenant themes are flattened onto the `Tenants`
+collection for MVP (a dedicated Theme Studio arrives in Ticket 03).
+
+Routes: `/tenant/ravenhurst`, `/tenant/port-victoria` and their `.../records` and
+`.../documents/:id`. Switch cities via the "Viewing as" selector or the city buttons on the home
+page.
+
+## Tests
+
+```bash
+npm test
+```
+
+Covers the tenant scope helper and theme token resolution (cheap, important logic per spec §14).

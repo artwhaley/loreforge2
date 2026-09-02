@@ -6,6 +6,9 @@ import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { buildConfig } from 'payload'
 import sharp from 'sharp'
 
+import { Documents } from './collections/Documents'
+import { Memberships } from './collections/Memberships'
+import { Tenants } from './collections/Tenants'
 import { Users } from './collections/Users'
 
 const filename = fileURLToPath(import.meta.url)
@@ -25,7 +28,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users],
+  collections: [Users, Tenants, Memberships, Documents],
   editor: lexicalEditor(),
   db: sqliteAdapter({
     client: {

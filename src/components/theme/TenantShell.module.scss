@@ -1,0 +1,82 @@
+.root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--tenant-page-bg, #f5f5f5);
+  font-family: var(--tenant-body-font, sans-serif);
+  color: #222;
+}
+
+.header {
+  background: var(--tenant-primary);
+  color: var(--tenant-text-on-primary);
+}
+
+.headerInner {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cityName {
+  font-family: var(--tenant-heading-font);
+  font-size: 1.6rem;
+  color: var(--tenant-text-on-primary);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+
+.motto {
+  font-family: var(--tenant-body-font);
+  font-size: 0.85rem;
+  opacity: 0.85;
+  margin-top: 0.15rem;
+}
+
+.nav {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.navLink {
+  color: var(--tenant-text-on-primary);
+  text-decoration: none;
+  font-size: 0.95rem;
+  opacity: 0.9;
+  border-bottom: 2px solid transparent;
+  padding-bottom: 2px;
+
+  &:hover {
+    opacity: 1;
+    border-bottom-color: var(--tenant-accent);
+  }
+}
+
+.rule {
+  height: 4px;
+  background: var(--tenant-accent);
+}
+
+.main {
+  flex: 1;
+  padding: 2rem 1.5rem;
+  max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.footer {
+  background: var(--tenant-primary);
+  color: var(--tenant-text-on-primary);
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 0.75rem;
+  opacity: 0.95;
+}
