@@ -4,6 +4,7 @@ import { headers } from 'next/headers.js'
 import { getPayload } from 'payload'
 
 import config from '@/payload.config'
+import { validateThemeAsset } from '@/lib/media/validateThemeAsset'
 
 const KIND_TO_FIELD = { logo: 'logo', banner: 'banner' } as const
 
@@ -15,13 +16,14 @@ const KIND_TO_FIELD = { logo: 'logo', banner: 'banner' } as const
 export async function uploadThemeAssetAction(formData: FormData): Promise<{
   ok: boolean
   url?: string
+  error?: string
 }> {
   const tenantSlug = String(formData.get('tenantSlug') ?? '')
   const kind = String(formData.get('kind') ?? '') as 'logo' | 'banner'
   const file = formData.get('file')
 
   if (!tenantSlug || !KIND_TO_FIELD[kind] || !(file instanceof File)) {
-    return { ok: false }
+    return { ok: false, error: 'Choose a supported image file.' }
   }
 
   const payload = await getPayload({ config })
@@ -49,15 +51,17 @@ export async function uploadThemeAssetAction(formData: FormData): Promise<{
   const membership = memberships.docs[0]
   if (!membership || membership.role !== 'admin') return { ok: false }
 
-  const buffer = Buffer.from(await file.arrayBuffer())
+  const validated = await validateThemeAsset(file)
+  if (!validated) return { ok: false, error: 'Use a JPEG, PNG, or WebP image up to 4096×4096 and 5 MiB.' }
+
   const media = await payload.create({
     collection: 'media',
     data: { alt: `${kind} for ${tenantSlug}` },
     file: {
-      data: buffer,
-      mimetype: file.type,
-      name: file.name,
-      size: file.size,
+      data: validated.buffer,
+      mimetype: validated.mimeType,
+      name: validated.filename,
+      size: validated.buffer.length,
     },
   })
 

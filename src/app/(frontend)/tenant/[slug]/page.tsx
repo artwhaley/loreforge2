@@ -58,7 +58,7 @@ export default async function TenantHomePage({ params }: Props) {
           <span className={styles.moduleHint}>Who we are and what we do</span>
         </a>
         <a className={styles.module} href={`${base}/departments`}>
-          <span className={styles.moduleLabel}>Departments</span>
+          <span className={styles.moduleLabel}>Subdomains</span>
           <span className={styles.moduleHint}>Offices and services</span>
         </a>
         <a className={styles.module} href={`${base}/records`}>

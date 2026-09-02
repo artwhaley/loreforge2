@@ -42,7 +42,7 @@ export default async function FormsPage({ params }: Props) {
         </p>
 
         {forms.length === 0 ? (
-          <p className={styles.empty}>No report forms have been set up for this city yet.</p>
+          <p className={styles.empty}>No report forms have been set up for this Domain yet.</p>
         ) : (
           <ul className={styles.list}>
             {forms.map((form) => (

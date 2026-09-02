@@ -12,6 +12,21 @@
   font-size: 1.25rem;
 }
 
+.helpText {
+  margin: -0.5rem 0 1.25rem;
+  color: var(--tenant-muted-text, #777);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.groupTitle {
+  color: var(--tenant-primary, #243145);
+  border-top: 1px solid var(--tenant-accent, #aaa);
+  padding-top: 0.9rem;
+  margin: 1.25rem 0 0.8rem;
+  font-size: 1rem;
+}
+
 .controls {
   background: var(--tenant-surface-bg, #fff);
   border: 1px solid var(--tenant-accent, #999);
@@ -106,6 +121,11 @@
   &:disabled {
     opacity: 0.6;
   }
+
+  &:focus-visible {
+    outline: 3px solid var(--tenant-accent, #999);
+    outline-offset: 2px;
+  }
 }
 
 /* ---- Live preview scaffolding ---- */
@@ -161,7 +181,7 @@
   font-weight: 700;
 }
 
-.cityName {
+.domainName {
   font-family: var(--tenant-heading-font);
   font-size: 1.3rem;
   line-height: 1.1;
@@ -245,5 +265,11 @@
   hr {
     border: none;
     border-top: 2px solid var(--tenant-accent);
+  }
+}
+
+@media (max-width: 780px) {
+  .studio {
+    grid-template-columns: 1fr;
   }
 }

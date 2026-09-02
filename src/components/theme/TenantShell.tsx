@@ -15,7 +15,7 @@ type Props = {
 const NAV = [
   { label: 'Home', segment: '' },
   { label: 'About', segment: 'about' },
-  { label: 'Departments', segment: 'departments' },
+  { label: 'Subdomains', segment: 'departments' },
   { label: 'Records', segment: 'records' },
   { label: 'Forms', segment: 'forms' },
 ]
@@ -62,7 +62,7 @@ export function TenantShell({ tenant, cssVars, role, switcherTenants, children }
               <div className={styles.sealFallback}>{tenant.name.charAt(0)}</div>
             )}
             <div>
-              <a href={base} className={styles.cityName}>
+              <a href={base} className={styles.domainName}>
                 {tenant.name}
               </a>
               {tenant.motto ? <div className={styles.motto}>{tenant.motto}</div> : null}

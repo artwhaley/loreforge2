@@ -19,8 +19,8 @@ export default async function HomePage() {
     dbOk = false
   }
 
-  // Cities the logged-in user belongs to (MVP entry point into tenant sites).
-  let cities: Array<{ slug: string; name: string }> = []
+  // Domains the logged-in user belongs to (MVP entry point into Domain sites).
+  let domains: Array<{ slug: string; name: string }> = []
   if (user) {
     const memberships = await payload.find({
       collection: 'memberships',
@@ -28,7 +28,7 @@ export default async function HomePage() {
       depth: 1,
       limit: 50,
     })
-    cities = memberships.docs
+    domains = memberships.docs
       .map((m) => m.tenant)
       .filter((t): t is Exclude<typeof t, number | null> => Boolean(t && typeof t === 'object'))
       .map((t) => ({ slug: t.slug, name: t.name }))
@@ -37,20 +37,20 @@ export default async function HomePage() {
   return (
     <main>
       <h1>SL Civic Archive</h1>
-      <p>Local MVP spike — Ticket 01: tenant themed document slice.</p>
+      <p>Local MVP spike — Ticket 01: Domain-themed document slice.</p>
 
       {user ? (
         <section>
-          <h2>Your cities</h2>
-          {cities.length === 0 ? (
-            <p>No city memberships for this account.</p>
+          <h2>Your Domains</h2>
+          {domains.length === 0 ? (
+            <p>No Domain memberships for this account.</p>
           ) : (
             <ul>
-              {cities.map((city) => (
-                <li key={city.slug}>
+              {domains.map((domain) => (
+                <li key={domain.slug}>
                   <form action="/api/switch-tenant" method="post" style={{ display: 'inline' }}>
-                    <input type="hidden" name="tenantSlug" value={city.slug} />
-                    <button type="submit">{city.name}</button>
+                    <input type="hidden" name="tenantSlug" value={domain.slug} />
+                    <button type="submit">{domain.name}</button>
                   </form>
                 </li>
               ))}
@@ -59,7 +59,7 @@ export default async function HomePage() {
         </section>
       ) : (
         <p>
-          <a href="/admin/login">Log in</a> to access your city archive.{' '}
+          <a href="/admin/login">Log in</a> to access your Domain archive.{' '}
           <strong>Test login:</strong> <code>admin@example.test</code> /{' '}
           <code>test-password-123</code>
         </p>

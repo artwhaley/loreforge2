@@ -108,7 +108,7 @@ export const Tenants: CollectionConfig = {
       relationTo: 'media',
       label: 'Seal / logo',
       admin: {
-        description: 'Optional city seal or logo (image).',
+        description: 'Optional Domain seal or logo (image).',
       },
     },
     {

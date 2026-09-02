@@ -4,7 +4,7 @@ import type { Where } from 'payload'
  * Builds a Payload `where` filter that scopes a query to one tenant.
  *
  * Pure and unit-tested (spec §14) so no call site can forget the tenant
- * condition — the accidental cross-city leak we guard against in the app path
+ * condition — the accidental cross-Domain leak we guard against in the app path
  * is a server-side data concern, never UI filtering.
  */
 export function tenantWhere(tenantId: number | string, extra?: Where): Where {

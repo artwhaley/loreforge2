@@ -25,7 +25,7 @@ type ThemeState = {
 
 type Props = {
   tenantSlug: string
-  cityName: string
+  domainName: string
   motto: string
   initial: ThemeState
   logoUrl: string
@@ -37,7 +37,7 @@ type Props = {
 
 export function ThemeStudio({
   tenantSlug,
-  cityName,
+  domainName,
   motto,
   initial,
   logoUrl,
@@ -51,6 +51,7 @@ export function ThemeStudio({
   const [banner, setBanner] = useState(bannerUrl)
   const [pending, startTransition] = useTransition()
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle')
+  const [uploadStatus, setUploadStatus] = useState('')
 
   const tokens = useMemo(
     () =>
@@ -85,11 +86,19 @@ export function ThemeStudio({
     fd.set('tenantSlug', tenantSlug)
     fd.set('kind', kind)
     fd.set('file', file)
+    setUploadStatus('Uploading…')
     startTransition(async () => {
-      const res = await uploadThemeAssetAction(fd)
-      if (res.ok && res.url) {
-        if (kind === 'logo') setLogo(res.url)
-        else setBanner(res.url)
+      try {
+        const res = await uploadThemeAssetAction(fd)
+        if (res.ok && res.url) {
+          if (kind === 'logo') setLogo(res.url)
+          else setBanner(res.url)
+          setUploadStatus('Image ready')
+        } else {
+          setUploadStatus(res.error ?? 'Upload failed — retry')
+        }
+      } catch {
+        setUploadStatus('Upload failed — retry')
       }
     })
   }
@@ -97,15 +106,20 @@ export function ThemeStudio({
   function onSave() {
     setStatus('idle')
     startTransition(async () => {
-      const result = await saveThemeAction({ tenantSlug, theme })
-      setStatus(result.ok ? 'saved' : 'error')
+      try {
+        const result = await saveThemeAction({ tenantSlug, theme })
+        setStatus(result.ok ? 'saved' : 'error')
+      } catch {
+        setStatus('error')
+      }
     })
   }
 
   return (
     <div className={styles.studio}>
       <div className={styles.controls}>
-        <h2 className={styles.sectionTitle}>Theme</h2>
+        <h2 className={styles.sectionTitle}>Customize this Domain</h2>
+        <p className={styles.helpText}>Choose a visual style for the public home and archive records.</p>
 
         <label className={styles.field}>
           <span className={styles.label}>Preset</span>
@@ -122,6 +136,7 @@ export function ThemeStudio({
           </select>
         </label>
 
+        <h3 className={styles.groupTitle}>Brand colors</h3>
         <div className={styles.swatches}>
           {(
             [
@@ -143,6 +158,7 @@ export function ThemeStudio({
           ))}
         </div>
 
+        <h3 className={styles.groupTitle}>Typography</h3>
         <label className={styles.field}>
           <span className={styles.label}>Heading font</span>
           <select
@@ -173,36 +189,39 @@ export function ThemeStudio({
           </select>
         </label>
 
+        <h3 className={styles.groupTitle}>Brand images</h3>
         <div className={styles.uploads}>
           <label className={styles.field}>
-            <span className={styles.label}>Seal / logo</span>
+            <span className={styles.label}>Domain seal or logo</span>
             {logo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img className={styles.logoPreview} src={logo} alt="Logo preview" />
             ) : null}
             <input
               type="file"
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+              aria-label="Upload Domain seal or logo"
               onChange={(e) => onUpload('logo', e.target.files?.[0] ?? null)}
             />
           </label>
           <label className={styles.field}>
-            <span className={styles.label}>Banner image</span>
+            <span className={styles.label}>Header banner image</span>
             {banner ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img className={styles.bannerPreview} src={banner} alt="Banner preview" />
             ) : null}
             <input
               type="file"
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+              aria-label="Upload header banner image"
               onChange={(e) => onUpload('banner', e.target.files?.[0] ?? null)}
             />
           </label>
         </div>
 
         <div className={styles.saveRow}>
-          <span className={styles.status}>
-            {pending ? 'Saving…' : status === 'saved' ? 'Saved' : status === 'error' ? 'Save failed' : ''}
+          <span className={styles.status} aria-live="polite">
+            {pending ? 'Saving…' : status === 'saved' ? 'Saved' : status === 'error' ? 'Save failed — retry' : uploadStatus}
           </span>
           <button className={styles.saveButton} onClick={onSave} disabled={pending}>
             Save changes
@@ -221,10 +240,10 @@ export function ThemeStudio({
                   // eslint-disable-next-line @next/next/no-img-element
                   <img className={styles.seal} src={logo} alt="Seal" />
                 ) : (
-                  <div className={styles.sealFallback}>{cityName.charAt(0)}</div>
+                  <div className={styles.sealFallback}>{domainName.charAt(0)}</div>
                 )}
                 <div>
-                  <div className={styles.cityName}>{cityName}</div>
+                  <div className={styles.domainName}>{domainName}</div>
                   {motto ? <div className={styles.motto}>{motto}</div> : null}
                 </div>
               </div>

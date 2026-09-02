@@ -6,16 +6,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 
 import type { Tenant } from '@/payload-types'
-
-export type ThemeInput = {
-  preset: 'heritage' | 'modern'
-  primaryColor: string
-  secondaryColor: string
-  accentColor: string
-  backgroundColor: string
-  headingFontKey: string
-  bodyFontKey: string
-}
+import { isValidThemeInput, type ThemeInput } from '@/lib/theme/input'
 
 /**
  * Persist tenant theme settings. Verifies the session user is an admin of
@@ -27,6 +18,7 @@ export async function saveThemeAction(input: {
   theme: ThemeInput
 }): Promise<{ ok: boolean }> {
   const { tenantSlug, theme } = input
+  if (!isValidThemeInput(theme)) return { ok: false }
   const payload = await getPayload({ config })
   const hdrs = await headers()
   const { user } = await payload.auth({ headers: hdrs })

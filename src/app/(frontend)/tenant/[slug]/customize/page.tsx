@@ -52,7 +52,7 @@ export default async function CustomizePage({ params }: Props) {
     >
       <ThemeStudio
         tenantSlug={tenant.slug}
-        cityName={tenant.name}
+        domainName={tenant.name}
         motto={tenant.motto ?? ''}
         initial={{
           preset: tenant.preset,

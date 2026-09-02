@@ -34,11 +34,11 @@ export default async function DepartmentsPage({ params }: Props) {
       switcherTenants={myTenants}
     >
       <section>
-        <h1 className={styles.pageTitle}>Departments</h1>
+        <h1 className={styles.pageTitle}>Subdomains</h1>
         <p className={styles.pageIntro}>Offices and services of {tenant.name}.</p>
 
         {departments.length === 0 ? (
-          <p className={styles.empty}>No departments listed.</p>
+          <p className={styles.empty}>No subdomains listed.</p>
         ) : (
           <ul className={styles.grid}>
             {departments.map((dept) => (
