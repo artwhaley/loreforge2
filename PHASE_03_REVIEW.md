@@ -10,6 +10,7 @@ Implemented commits:
 - `fe2808e` — P03-T02 Subdomains and separate member roster.
 - `d6c56a8` — P03-T03 protected Domain roots and folder branches.
 - `4707af2` — P03-T04 Role hierarchy and scoped assignments.
+- `7f00074` — P03-T04 canonical Domain navigation follow-through.
 
 Automated evidence:
 
