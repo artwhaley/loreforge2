@@ -3,7 +3,7 @@ import type { Where } from 'payload'
 
 import config from '@/payload.config'
 
-import type { Document, Folder, Page, Tenant } from '@/payload-types'
+import type { Document, Folder, Form, Page, Tenant } from '@/payload-types'
 
 import { tenantAndIdWhere, tenantWhere } from './scope'
 
@@ -34,6 +34,33 @@ export async function getDocumentForTenant(
     collection: 'documents',
     where: tenantAndIdWhere(tenant.id, documentId),
     depth: 0,
+    limit: 1,
+  })
+  return result.docs[0] ?? null
+}
+
+/** Forms owned by the tenant (structured report templates). */
+export async function getFormsForTenant(tenant: Tenant): Promise<Form[]> {
+  const payload = await getPayload({ config })
+  const result = await payload.find({
+    collection: 'forms',
+    where: tenantWhere(tenant.id),
+    depth: 0,
+    limit: 100,
+    sort: 'title',
+  })
+  return result.docs
+}
+
+export async function getFormForTenant(
+  tenant: Tenant,
+  formId: number,
+): Promise<Form | null> {
+  const payload = await getPayload({ config })
+  const result = await payload.find({
+    collection: 'forms',
+    where: tenantAndIdWhere(tenant.id, formId),
+    depth: 1,
     limit: 1,
   })
   return result.docs[0] ?? null

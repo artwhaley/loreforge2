@@ -1,0 +1,35 @@
+.panel {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+.crumbs {
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+  color: var(--tenant-muted, #666);
+}
+
+.crumbLink {
+  color: var(--tenant-accent, #4a7a8a);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.sep {
+  margin: 0 0.4rem;
+}
+
+.title {
+  font-family: var(--tenant-font-heading, inherit);
+  color: var(--tenant-primary, inherit);
+  margin: 0 0 0.5rem;
+}
+
+.intro {
+  color: var(--tenant-muted, #555);
+  margin: 0 0 1.5rem;
+}

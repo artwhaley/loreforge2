@@ -10,12 +10,13 @@
     "generate:types": "payload generate:types",
     "payload": "payload",
     "seed": "payload run ./src/seed/index.ts",
-    "test": "node --import tsx --test src/lib/tenant/scope.test.ts src/lib/theme/fonts.test.ts src/lib/archive/folderTree.test.ts"
+    "test": "node --import tsx --test src/lib/tenant/scope.test.ts src/lib/theme/fonts.test.ts src/lib/archive/folderTree.test.ts src/lib/forms/generateDocument.test.ts"
   },
   "dependencies": {
     "@mdxeditor/editor": "^4.2.3",
     "@payloadcms/db-sqlite": "3.88.0",
     "@payloadcms/next": "3.88.0",
+    "@payloadcms/plugin-form-builder": "^3.88.0",
     "@payloadcms/richtext-lexical": "3.88.0",
     "@payloadcms/translations": "3.88.0",
     "@payloadcms/ui": "3.88.0",

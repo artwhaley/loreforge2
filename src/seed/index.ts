@@ -493,6 +493,109 @@ if (importTenant) {
   }
 }
 
+// --- Fixture structured report form (Ticket 07, fixture §7) ---
+const formTenant = tenantsBySlug['ravenhurst']
+const formFolder = folderIds['ravenhurst']?.['city-records/police/reports'] ?? null
+const INCIDENT_REPORT_TEMPLATE = [
+  '# {{incident_type}} Report',
+  '',
+  '**Date:** {{incident_date}}  ',
+  '**Reporting Officer:** {{officer_name}}  ',
+  '**Location:** {{location}}',
+  '',
+  '## Persons Involved',
+  '',
+  '{{persons_involved}}',
+  '',
+  '## Narrative',
+  '',
+  '{{narrative}}',
+  '',
+  '## Follow-up Required',
+  '',
+  '{{follow_up_required}}',
+].join('\n')
+if (formTenant) {
+  const existingForm = await payload.find({
+    collection: 'forms',
+    where: {
+      and: [{ tenant: { equals: formTenant.id } }, { title: { equals: 'Incident Report' } }],
+    },
+    depth: 0,
+    limit: 1,
+  })
+  if (existingForm.docs[0]) {
+    payload.logger.info('Fixture Incident Report form exists — skipping')
+  } else {
+    await payload.create({
+      collection: 'forms',
+      data: {
+        tenant: formTenant.id,
+        folder: formFolder,
+        title: 'Incident Report',
+        confirmationType: 'message',
+        confirmationMessage: {
+          root: {
+            type: 'root',
+            format: '',
+            indent: 0,
+            version: 1,
+            direction: 'ltr',
+            children: [
+              {
+                type: 'paragraph',
+                format: '',
+                indent: 0,
+                version: 1,
+                direction: 'ltr',
+                textFormat: 0,
+                textStyle: '',
+                children: [
+                  {
+                    type: 'text',
+                    format: 0,
+                    detail: 0,
+                    mode: 'normal',
+                    style: '',
+                    text: 'Your report has been filed in the archive.',
+                    version: 1,
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        archive: {
+          titleTemplate: '{{incident_type}} Report - {{incident_date}}',
+          markdownTemplate: INCIDENT_REPORT_TEMPLATE,
+        },
+        fields: [
+          { blockType: 'date', name: 'incident_date', label: 'Incident Date', required: true },
+          { blockType: 'text', name: 'officer_name', label: 'Reporting Officer', required: true },
+          { blockType: 'text', name: 'location', label: 'Location', required: true },
+          {
+            blockType: 'select',
+            name: 'incident_type',
+            label: 'Incident Type',
+            required: true,
+            options: [
+              { label: 'Property Damage', value: 'Property Damage' },
+              { label: 'Disturbance', value: 'Disturbance' },
+              { label: 'Traffic Stop', value: 'Traffic Stop' },
+              { label: 'Medical Assist', value: 'Medical Assist' },
+              { label: 'Other', value: 'Other' },
+            ],
+          },
+          { blockType: 'textarea', name: 'persons_involved', label: 'Persons Involved' },
+          { blockType: 'textarea', name: 'narrative', label: 'Narrative', required: true },
+          { blockType: 'checkbox', name: 'follow_up_required', label: 'Follow-up Required' },
+        ],
+      } as never,
+    })
+    payload.logger.info('Created fixture Incident Report form')
+  }
+}
+
 // --- Informational pages (Ticket 04) ---
 const PAGES: Array<{ tenantSlug: string; slug: string; title: string; body: string }> = [
   { tenantSlug: 'ravenhurst', slug: 'home', title: 'Ravenhurst Home', body: RAVENHURST_HOME },

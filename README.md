@@ -87,6 +87,20 @@ Every document viewer has Copy Markdown (canonical Markdown to clipboard) and a 
 view. All Markdown text boundaries (import + editor saves) canonicalize CRLF to LF so stored
 bodies stay canonical. Imported records are ordinary documents: editable, movable, searchable.
 
+## Ticket 07 scope
+
+Structured report forms via `@payloadcms/plugin-form-builder`, restricted to the five MVP field
+types (short text, long text, date, select, checkbox). Forms carry archive metadata (tenant,
+destination folder, `{{field}}` title/Markdown output templates). Form→Document generation lives
+in one explicit module (`src/lib/forms/generateDocument.ts`) — deliberately outside plugin
+callbacks/UI, so the authoring tool can be swapped without touching generation. Members fill
+forms from the tenant site (`/tenant/[slug]/forms`) with server-side required validation;
+submission creates an ordinary Document (`origin: form`) in its destination folder, editable,
+searchable, movable, and exportable like any other record.
+
+Note for Windows/local dev: after adding the plugin, run `npx payload generate:importmap` (or let
+the dev server regenerate it) so the plugin's Lexical confirmation field resolves in the admin.
+
 ## Tests
 
 ```bash

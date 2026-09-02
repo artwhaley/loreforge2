@@ -17,6 +17,7 @@ const NAV = [
   { label: 'About', segment: 'about' },
   { label: 'Departments', segment: 'departments' },
   { label: 'Records', segment: 'records' },
+  { label: 'Forms', segment: 'forms' },
 ]
 
 /**
