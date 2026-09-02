@@ -39,6 +39,7 @@ export default async function DomainMembersPage({ params }: Props) {
         <p><a href={`/domain/${slug}`}>← Domain home</a></p>
         <h1>Domain members</h1>
         <p>Characters belong to this Domain independently of their controlling account, local alias, Subdomain membership, and Roles.</p>
+        {role === 'admin' ? <p><strong>Lifecycle:</strong> removing Domain membership also deactivates this Character's Subdomain memberships and Role assignments. Re-adding the Domain never restores those narrower grants automatically.</p> : null}
         {role === 'admin' ? (
           <form action="/api/domain-memberships" method="post">
             <input type="hidden" name="domainSlug" value={slug} />
@@ -57,7 +58,7 @@ export default async function DomainMembersPage({ params }: Props) {
                 <td>{membership.status === 'active' ? 'Active' : 'Inactive'}</td>
                 <td>{character ? subdomainsByCharacter.get(Number(character.id))?.join(', ') ?? 'None' : 'None'}</td>
                 <td>{character ? roleNamesByCharacter.get(Number(character.id))?.join(', ') ?? 'None' : 'None'}</td>
-                {role === 'admin' ? <td><form action="/api/domain-memberships" method="post"><input type="hidden" name="domainSlug" value={slug} /><input type="hidden" name="characterId" value={character?.id ?? ''} /><input type="hidden" name="action" value="remove" /><button type="submit">Remove</button></form></td> : null}
+                {role === 'admin' ? <td><form action="/api/domain-memberships" method="post"><input type="hidden" name="domainSlug" value={slug} /><input type="hidden" name="characterId" value={character?.id ?? ''} /><input type="hidden" name="action" value="remove" /><button type="submit">Remove Domain membership</button></form></td> : null}
               </tr>
             ))}
           </tbody>
