@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers.js'
 import { getPayload } from 'payload'
 
 import config from '@payload-config'
 
-import { ACTIVE_TENANT_COOKIE } from '@/lib/tenant/activeTenant'
+import { ACTIVE_CHARACTER_COOKIE, ACTIVE_TENANT_COOKIE } from '@/lib/tenant/activeTenant'
 
 export async function POST(request: Request) {
   const payload = await getPayload({ config })
@@ -11,8 +12,10 @@ export async function POST(request: Request) {
 
   const formData = await request.formData()
   const slug = String(formData.get('tenantSlug') ?? '')
+  const cookieStore = await cookies()
+  const activeCharacterId = cookieStore.get(ACTIVE_CHARACTER_COOKIE)?.value
 
-  if (user && slug) {
+  if (user && slug && activeCharacterId) {
     // Validate membership before accepting the switch.
     const tenants = await payload.find({
       collection: 'tenants',

@@ -1,6 +1,8 @@
-import type { Tenant } from '@/payload-types'
+import type { Character, Tenant } from '@/payload-types'
 
 import { mediaSrc } from '@/lib/theme/fonts'
+import { getActiveContext } from '@/lib/tenant/activeTenant'
+import { getTenantsForUser } from '@/lib/tenant/queries'
 
 import styles from './TenantShell.module.scss'
 
@@ -9,6 +11,8 @@ type Props = {
   cssVars: Record<string, string>
   role: 'admin' | 'member' | null
   switcherTenants?: Tenant[]
+  activeCharacter?: Character | null
+  switcherCharacters?: Character[]
   children: React.ReactNode
 }
 
@@ -24,35 +28,69 @@ const NAV = [
  * Branded application shell. Reads only semantic theme tokens through CSS
  * custom properties — components never read arbitrary tenant fields.
  */
-export function TenantShell({ tenant, cssVars, role, switcherTenants, children }: Props) {
+export async function TenantShell({
+  tenant,
+  cssVars,
+  role,
+  switcherTenants,
+  activeCharacter,
+  switcherCharacters,
+  children,
+}: Props) {
+  const context = await getActiveContext()
+  const resolvedCharacters = switcherCharacters ?? context.characters
+  const resolvedActiveCharacter = activeCharacter === undefined ? context.activeCharacter : activeCharacter
+  const resolvedTenants =
+    switcherTenants ?? (context.user ? await getTenantsForUser(context.user.id) : [])
   const base = `/tenant/${tenant.slug}`
 
   return (
     <div className={styles.root} style={cssVars as React.CSSProperties}>
-      {switcherTenants && switcherTenants.length > 1 ? (
-        <div className={styles.switcherBar}>
-          <form action="/api/switch-tenant" method="post" className={styles.switcherForm}>
-            <label htmlFor="tenant-switcher" className={styles.switcherLabel}>
-              Viewing as:
-            </label>
-            <select
-              id="tenant-switcher"
-              name="tenantSlug"
-              defaultValue={tenant.slug}
-              className={styles.switcherSelect}
-            >
-              {switcherTenants.map((t) => (
-                <option key={t.id} value={t.slug}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-            <button type="submit" className={styles.switcherButton}>
-              Switch
-            </button>
-          </form>
-        </div>
-      ) : null}
+      <div className={styles.contextBar} aria-label="Operating context">
+        <form action="/api/switch-tenant" method="post" className={styles.contextControl}>
+          <label htmlFor="tenant-switcher" className={styles.contextLabel}>
+            Domain
+          </label>
+          <select
+            id="tenant-switcher"
+            name="tenantSlug"
+            defaultValue={tenant.slug}
+            className={styles.contextSelect}
+            disabled={resolvedTenants.length === 0}
+          >
+            {resolvedTenants.length === 0 ? <option value={tenant.slug}>{tenant.name}</option> : null}
+            {resolvedTenants.map((t) => (
+              <option key={t.id} value={t.slug}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <button type="submit" className={styles.contextButton} disabled={resolvedTenants.length === 0}>
+            Switch
+          </button>
+        </form>
+        <form action="/api/switch-character" method="post" className={styles.contextControl}>
+          <label htmlFor="character-switcher" className={styles.contextLabel}>
+            Acting as
+          </label>
+          <select
+            id="character-switcher"
+            name="characterId"
+            defaultValue={resolvedActiveCharacter?.id ?? ''}
+            className={styles.contextSelect}
+          >
+            <option value="">No active Character</option>
+            {resolvedCharacters.map((character) => (
+              <option key={character.id} value={character.id}>
+                {character.name}
+              </option>
+            ))}
+          </select>
+          <button type="submit" className={styles.contextButton}>
+            Switch
+          </button>
+        </form>
+      </div>
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <div className={styles.identity}>

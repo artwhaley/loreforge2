@@ -1,6 +1,7 @@
 import { getPayload } from 'payload'
 
 import config from '@/payload.config'
+import { getActiveContext } from '@/lib/tenant/activeTenant'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,6 +9,7 @@ export default async function HomePage() {
   const payload = await getPayload({ config })
   const headers = await import('next/headers.js').then((m) => m.headers())
   const { user } = await payload.auth({ headers })
+  const context = await getActiveContext()
 
   let userCount: number | null = null
   let dbOk = true
@@ -41,8 +43,33 @@ export default async function HomePage() {
 
       {user ? (
         <section>
+          <h2>Choose your Character</h2>
+          <p>
+            {context.activeCharacter
+              ? `Acting as ${context.activeCharacter.name}.`
+              : 'No Character is active. Choose one to enter a Domain as that roleplay identity.'}
+          </p>
+          <form action="/api/switch-character" method="post">
+            <label htmlFor="home-character-switcher">Acting as: </label>
+            <select
+              id="home-character-switcher"
+              name="characterId"
+              defaultValue={context.activeCharacter?.id ?? ''}
+            >
+              <option value="">No active Character</option>
+              {context.characters.map((character) => (
+                <option key={character.id} value={character.id}>
+                  {character.name}
+                </option>
+              ))}
+            </select>{' '}
+            <button type="submit">Set Character</button>
+          </form>
+
           <h2>Your Domains</h2>
-          {domains.length === 0 ? (
+          {!context.activeCharacter ? (
+            <p>Select an active Character before choosing a Domain.</p>
+          ) : domains.length === 0 ? (
             <p>No Domain memberships for this account.</p>
           ) : (
             <ul>

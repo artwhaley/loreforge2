@@ -7,6 +7,65 @@
   color: #222;
 }
 
+.contextBar {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0.65rem 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  background: var(--tenant-surface-bg, #fff);
+  border-bottom: 1px solid var(--tenant-accent);
+}
+
+.contextControl {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.contextLabel {
+  color: var(--tenant-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.contextSelect {
+  min-width: 0;
+  flex: 1;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--tenant-accent);
+  border-radius: 3px;
+  background: var(--tenant-surface-bg, #fff);
+  color: var(--tenant-primary);
+  font: inherit;
+}
+
+.contextButton {
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--tenant-primary);
+  border-radius: 3px;
+  background: var(--tenant-primary);
+  color: var(--tenant-text-on-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.contextButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 680px) {
+  .contextBar {
+    grid-template-columns: 1fr;
+  }
+}
+
 .header {
   background: var(--tenant-primary);
   color: var(--tenant-text-on-primary);
