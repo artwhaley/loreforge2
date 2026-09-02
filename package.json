@@ -10,7 +10,7 @@
     "generate:types": "payload generate:types",
     "payload": "payload",
     "seed": "payload run ./src/seed/index.ts",
-    "test": "node --import tsx --test src/lib/tenant/scope.test.ts src/lib/theme/fonts.test.ts src/lib/archive/folderTree.test.ts src/lib/forms/generateDocument.test.ts"
+    "test": "node --import tsx --test src/lib/tenant/scope.test.ts src/lib/theme/fonts.test.ts src/lib/archive/folderTree.test.ts src/lib/forms/generateDocument.test.ts src/lib/markdown/render.test.ts"
   },
   "dependencies": {
     "@mdxeditor/editor": "^4.2.3",
@@ -26,12 +26,14 @@
     "payload": "3.88.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "sanitize-html": "^2.17.0",
     "sharp": "^0.34.4"
   },
   "devDependencies": {
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/sanitize-html": "^2.16.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "typescript": "^5.9.3"
