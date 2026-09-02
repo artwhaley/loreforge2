@@ -24,8 +24,12 @@ npm run dev
 
 Then:
 
-- App: http://localhost:3000 (or the port Next prints if 3000 is busy)
-- Payload admin login: http://localhost:3000/admin/login
+- App: http://localhost:3055
+- Payload admin login: http://localhost:3055/admin/login
+
+The port is fixed to `3055` (`next dev -p 3055`). If it's occupied the dev server
+errors loudly instead of silently choosing a different port — this is intentional
+so the URL stays predictable through tenants and sessions.
 
 ## Local test credentials (fixtures, not secrets)
 

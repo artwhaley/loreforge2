@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "cross-env NODE_OPTIONS=--no-experimental-require-module next build",
-    "dev": "cross-env NODE_OPTIONS=--no-experimental-require-module next dev",
-    "start": "next start",
+    "dev": "cross-env NODE_OPTIONS=--no-experimental-require-module next dev -p 3055",
+    "start": "next start -p 3055",
     "generate:types": "payload generate:types",
     "payload": "payload",
     "seed": "payload run ./src/seed/index.ts",
