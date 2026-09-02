@@ -158,6 +158,21 @@
   align-self: center;
 }
 
+.toolLink {
+  font-size: 0.85rem;
+  color: var(--tenant-primary);
+  text-decoration: none;
+  border: 1px solid var(--tenant-accent);
+  padding: 0.4rem 0.75rem;
+  border-radius: 4px;
+  background: var(--tenant-surface-bg);
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--tenant-page-bg);
+  }
+}
+
 .crumbs {
   font-size: 0.85rem;
   margin-bottom: 0.5rem;

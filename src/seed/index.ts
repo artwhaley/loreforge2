@@ -76,6 +76,21 @@ Photographs were taken and the incident was documented for follow-up.
 > This report is an MVP fixture used to evaluate formatting, editing, search, and tenant-specific presentation.
 `
 
+// --- Ticket 06: simulated Second Life notecard import ---
+const SL_NOTECARD = `# Patrol Contact Report
+
+**Officer:** Alex Mercer  
+**Date:** September 1, 2026  
+**Location:** Ravenhurst Square
+
+## Contact
+
+Spoke with a resident regarding a noise complaint near the square. The resident agreed to lower the volume and no further action was required.
+
+## Disposition
+
+Closed without citation.`
+
 // --- Ticket 04: informational pages (Home welcome prose + About) ---
 const RAVENHURST_HOME = `Ravenhurst is a city of record, order, and public service. Residents and city staff share a single archive for civic records, ordinances, and department documents created during roleplay.
 
@@ -445,6 +460,36 @@ if (stressTenant) {
       },
     })
     payload.logger.info('Created editor stress document')
+  }
+}
+
+// --- Simulated SL notecard import fixture (Ticket 06, Ravenhurst) ---
+const importTenant = tenantsBySlug['ravenhurst']
+const importFolder = folderIds['ravenhurst']?.['city-records/police/reports'] ?? null
+if (importTenant) {
+  const existing = await payload.find({
+    collection: 'documents',
+    where: {
+      and: [{ tenant: { equals: importTenant.id } }, { title: { equals: 'Patrol Contact Report' } }],
+    },
+    depth: 0,
+    limit: 1,
+  })
+  if (existing.docs[0]) {
+    payload.logger.info('Imported notecard document exists — skipping')
+  } else {
+    await payload.create({
+      collection: 'documents',
+      data: {
+        tenant: importTenant.id,
+        title: 'Patrol Contact Report',
+        body: SL_NOTECARD,
+        origin: 'markdown-import',
+        createdBy: usersByEmail['officer@example.test'].id,
+        folder: importFolder,
+      },
+    })
+    payload.logger.info('Created imported notecard document')
   }
 }
 

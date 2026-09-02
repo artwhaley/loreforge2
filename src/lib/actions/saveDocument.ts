@@ -5,6 +5,7 @@ import { getPayload } from 'payload'
 
 import config from '@/payload.config'
 
+import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 import { tenantAndIdWhere } from '@/lib/tenant/scope'
 
 /**
@@ -66,7 +67,7 @@ export async function saveDocumentAction(input: {
   await payload.update({
     collection: 'documents',
     id: documentId,
-    data: { title, body },
+    data: { title, body: canonicalizeMarkdown(body) },
     depth: 0,
   })
 

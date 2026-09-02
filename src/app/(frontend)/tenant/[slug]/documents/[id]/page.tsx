@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 
+import { CopyMarkdownButton } from '@/components/archive/CopyMarkdownButton'
 import { TenantShell } from '@/components/theme/TenantShell'
 import { deleteDocumentAction, moveDocumentAction } from '@/lib/actions/archive'
 import { buildFolderTree, flattenFolderTree } from '@/lib/archive/folderTree'
@@ -81,6 +82,8 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
               Delete
             </button>
           </form>
+
+          <CopyMarkdownButton text={doc.body} />
 
           <a
             className={styles.action}

@@ -1,0 +1,79 @@
+.panel {
+  max-width: 680px;
+  margin: 0 auto;
+  background: var(--tenant-surface-bg);
+  border: 1px solid var(--tenant-accent);
+  border-radius: 4px;
+  padding: 2rem 2.5rem;
+}
+
+.title {
+  font-family: var(--tenant-heading-font);
+  color: var(--tenant-primary);
+  font-size: 1.6rem;
+  margin: 0 0 0.5rem;
+}
+
+.intro {
+  color: var(--tenant-muted-text);
+  margin: 0 0 1.5rem;
+  line-height: 1.5;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--tenant-primary);
+}
+
+.input,
+.select,
+.textarea {
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--tenant-accent);
+  border-radius: 4px;
+  background: var(--tenant-surface-bg);
+  color: var(--tenant-primary);
+}
+
+.textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.submit {
+  font: inherit;
+  font-size: 0.95rem;
+  background: var(--tenant-primary);
+  color: var(--tenant-text-on-primary);
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1.1rem;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.92;
+  }
+}

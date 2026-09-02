@@ -78,10 +78,20 @@ flows. Document viewers support Edit, a Move-to-folder selector, Delete, and Mar
 Server actions re-verifies the session user is a member of the tenant for every create/move/delete.
 Delete folder refuses a non-empty folder. Search is tenant-scoped over title and body (spec §7.5).
 
+## Ticket 06 scope
+
+Simulated Second Life Markdown round trip. `/tenant/[slug]/import` accepts a title, destination
+folder, and pasted Markdown, and creates a normal Document with origin `markdown-import` (no SL
+transport assumptions — just a paste surface). A "Load sample notecard" button fills the fixture.
+Every document viewer has Copy Markdown (canonical Markdown to clipboard) and a Markdown source
+view. All Markdown text boundaries (import + editor saves) canonicalize CRLF to LF so stored
+bodies stay canonical. Imported records are ordinary documents: editable, movable, searchable.
+
 ## Tests
 
 ```bash
 npm test
 ```
 
-Covers the tenant scope helper and theme token resolution (cheap, important logic per spec §14).
+Covers the tenant scope helper, theme token resolution, and folder-tree helpers (cheap, important
+logic per spec §14).

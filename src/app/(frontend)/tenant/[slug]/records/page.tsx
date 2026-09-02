@@ -159,6 +159,9 @@ export default async function RecordsPage({ params, searchParams }: Props) {
                 New record
               </button>
             </form>
+            <a className={styles.toolLink} href={`${base}/import`}>
+              Import notecard
+            </a>
           </div>
 
           <nav className={styles.crumbs} aria-label="Folder path">

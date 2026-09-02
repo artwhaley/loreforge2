@@ -1,0 +1,14 @@
+.btn {
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--tenant-primary);
+  background: var(--tenant-surface-bg);
+  border: 1px solid var(--tenant-accent);
+  border-radius: 4px;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tenant-page-bg);
+  }
+}

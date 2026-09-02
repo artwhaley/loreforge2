@@ -5,6 +5,8 @@ import { getPayload } from 'payload'
 
 import config from '@/payload.config'
 
+import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
+
 /**
  * Save an informational page's title and canonical Markdown body.
  *
@@ -65,7 +67,7 @@ export async function savePageAction(input: {
   await payload.update({
     collection: 'pages',
     id: pageId,
-    data: { title, body },
+    data: { title, body: canonicalizeMarkdown(body) },
     depth: 0,
   })
 

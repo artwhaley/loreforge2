@@ -8,6 +8,7 @@ import { getPayload } from 'payload'
 
 import config from '@/payload.config'
 
+import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 import { tenantAndIdWhere } from '@/lib/tenant/scope'
 
 type MemberTenant = {
@@ -150,6 +151,32 @@ export async function deleteDocumentAction(formData: FormData): Promise<void> {
     await payload.delete({ collection: 'documents', id: documentId })
   }
   redirect(recordsPath(tenantSlug))
+}
+
+/** Import pasted (notecard) Markdown as a normal archive document. */
+export async function importMarkdownAction(formData: FormData): Promise<void> {
+  const tenantSlug = String(formData.get('tenantSlug') ?? '')
+  const title = String(formData.get('title') ?? '').trim()
+  // Form serialization turns textareas into CRLF; store canonical LF.
+  const body = canonicalizeMarkdown(String(formData.get('body') ?? '')).trim()
+  const ctx = await getMemberTenant(tenantSlug)
+  if (!ctx || !title || !body) redirect('/admin/login')
+
+  const { payload, user, tenant } = ctx
+  const folder = await tenantFolderId(payload, tenant.id, String(formData.get('folderId') ?? ''))
+
+  const created = await payload.create({
+    collection: 'documents',
+    data: {
+      tenant: tenant.id,
+      title,
+      body,
+      origin: 'markdown-import',
+      createdBy: user.id,
+      folder,
+    },
+  })
+  redirect(`/tenant/${tenantSlug}/documents/${created.id}`)
 }
 
 export type FolderActionState = { ok: boolean; message?: string }
