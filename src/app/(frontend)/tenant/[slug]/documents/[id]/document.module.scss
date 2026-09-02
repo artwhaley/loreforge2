@@ -1,3 +1,38 @@
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.action {
+  font-family: var(--tenant-body-font);
+  font-size: 0.85rem;
+  color: var(--tenant-primary);
+  text-decoration: none;
+  border: 1px solid var(--tenant-accent);
+  padding: 0.25rem 0.75rem;
+  border-radius: 3px;
+  background: var(--tenant-surface-bg);
+
+  &:hover {
+    background: var(--tenant-page-bg);
+  }
+}
+
+.source {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #f7f7f7;
+  border: 1px solid var(--tenant-accent);
+  border-radius: 4px;
+  padding: 1rem;
+  margin: 0;
+}
+
 .record {
   background: var(--tenant-surface-bg);
   border: 1px solid var(--tenant-accent);

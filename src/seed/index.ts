@@ -25,6 +25,32 @@ const TEST_USERS = [
   },
 ]
 
+const EDITOR_STRESS_DOC = `# City Council Meeting Notes
+
+## Attendance
+
+- Mayor Morgan Vale
+- Clerk Jamie North
+- Councilor Avery Stone
+
+## Agenda
+
+1. Call to order
+2. Harbor permit discussion
+3. Public comments
+4. Adjournment
+
+The council discussed **Permit PV-2026-22** and agreed that the revised application should be reviewed at the next meeting.
+
+For background, see [Permit Guidance](https://example.invalid/permit-guidance).
+
+> Clerk's note: no final action was taken.
+
+---
+
+Meeting adjourned at 8:42 PM.
+`
+
 const SHARED_INCIDENT_REPORT = `# Incident Report 2026-014
 
 **Reporting Officer:** Alex Mercer  
@@ -190,6 +216,37 @@ for (const tenant of TENANTS) {
     },
   })
   payload.logger.info(`Created fixture document for ${tenant.slug}`)
+}
+
+// --- Editor round-trip stress fixture (Ravenhurst only) ---
+const stressTenant = tenantsBySlug['ravenhurst']
+if (stressTenant) {
+  const existing = await payload.find({
+    collection: 'documents',
+    where: {
+      and: [
+        { tenant: { equals: stressTenant.id } },
+        { title: { equals: 'City Council Meeting Notes' } },
+      ],
+    },
+    depth: 0,
+    limit: 1,
+  })
+  if (existing.docs[0]) {
+    payload.logger.info('Editor stress document exists — skipping')
+  } else {
+    await payload.create({
+      collection: 'documents',
+      data: {
+        tenant: stressTenant.id,
+        title: 'City Council Meeting Notes',
+        body: EDITOR_STRESS_DOC,
+        origin: 'web-editor',
+        createdBy: usersByEmail['admin@example.test'].id,
+      },
+    })
+    payload.logger.info('Created editor stress document')
+  }
 }
 
 payload.logger.info('Seed complete.')

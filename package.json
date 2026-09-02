@@ -13,6 +13,7 @@
     "test": "node --import tsx --test src/lib/tenant/scope.test.ts src/lib/theme/fonts.test.ts"
   },
   "dependencies": {
+    "@mdxeditor/editor": "^4.2.3",
     "@payloadcms/db-sqlite": "3.88.0",
     "@payloadcms/next": "3.88.0",
     "@payloadcms/richtext-lexical": "3.88.0",
