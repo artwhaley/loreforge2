@@ -7,7 +7,6 @@ import {
   BlockTypeSelect,
   BoldItalicUnderlineToggles,
   CreateLink,
-  DiffSourceToggleWrapper,
   InsertTable,
   InsertThematicBreak,
   ListsToggle,
@@ -16,7 +15,6 @@ import {
   UndoRedo,
   type MDXEditorMethods,
   type MDXEditorProps,
-  diffSourcePlugin,
   headingsPlugin,
   linkPlugin,
   listsPlugin,
@@ -27,9 +25,12 @@ import {
   toolbarPlugin,
 } from '@mdxeditor/editor'
 
-// Small, intentionally-scoped toolbar: only the supported Archive Markdown
-// features (spec 2.3 / 7.4). Blockquotes are authored via the `>` shortcut or
-// the source view; no arbitrary code blocks, admonitions, or embeds.
+// Small, intentionally-scoped WYSIWYG toolbar: only the supported Archive
+// Markdown features. NOTE: we deliberately do NOT include `diffSourcePlugin` /
+// `DiffSourceToggleWrapper` here — MDXEditor's built-in source pane re-serializes
+// markdown and collapses blank lines between block elements (headings merge).
+// Source editing is provided by our own plain textarea (see DocumentEditor),
+// which preserves the canonical Markdown verbatim.
 const plugins = [
   headingsPlugin(),
   listsPlugin(),
@@ -38,10 +39,9 @@ const plugins = [
   markdownShortcutPlugin(),
   linkPlugin(),
   tablePlugin(),
-  diffSourcePlugin({ viewMode: 'rich-text', diffMarkdown: '' }),
   toolbarPlugin({
     toolbarContents: () => (
-      <DiffSourceToggleWrapper>
+      <>
         <UndoRedo />
         <Separator />
         <BoldItalicUnderlineToggles />
@@ -55,7 +55,7 @@ const plugins = [
         <InsertThematicBreak />
         <Separator />
         <InsertTable />
-      </DiffSourceToggleWrapper>
+      </>
     ),
   }),
 ]

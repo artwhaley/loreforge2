@@ -60,10 +60,57 @@
   }
 }
 
+.modeToggle {
+  display: flex;
+  border: 1px solid var(--tenant-accent);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.modeBtn,
+.modeActive {
+  font-family: var(--tenant-body-font);
+  font-size: 0.85rem;
+  padding: 0.35rem 0.8rem;
+  border: none;
+  background: transparent;
+  color: var(--tenant-text-on-primary);
+  cursor: pointer;
+}
+
+.modeActive {
+  background: var(--tenant-accent);
+  color: var(--tenant-primary);
+  font-weight: 600;
+}
+
 .bodyEditor {
   padding: 0.5rem;
 
   :global(.mdx-editor-content) {
     min-height: 360px;
   }
+}
+
+.paneActive {
+  display: block;
+}
+
+.paneHidden {
+  display: none;
+}
+
+.sourceArea {
+  width: 100%;
+  min-height: 420px;
+  box-sizing: border-box;
+  border: 1px solid var(--tenant-accent);
+  border-radius: 4px;
+  padding: 1rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  resize: vertical;
+  background: #fbfbfb;
+  color: #1a1a1a;
 }
