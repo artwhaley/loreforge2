@@ -186,7 +186,9 @@
 
 .banner {
   width: 100%;
+  aspect-ratio: 1920 / 240;
   height: auto;
+  object-fit: cover;
   display: block;
 }
 
