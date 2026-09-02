@@ -126,13 +126,14 @@ const RAVENHURST_SEAL_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 
   <text x="100" y="165" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#243145">RAVENHURST</text>
 </svg>`
 
-const RAVENHURST_BANNER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid slice">
-  <rect width="1200" height="400" fill="#243145"/>
-  <rect y="330" width="1200" height="70" fill="#8A6A3C"/>
-  <rect y="322" width="1200" height="8" fill="#B9975B"/>
-  <circle cx="980" cy="120" r="70" fill="none" stroke="#B9975B" stroke-width="6"/>
-  <text x="80" y="210" font-family="Georgia, serif" font-size="64" fill="#F3EFE6">City of Ravenhurst</text>
-  <text x="80" y="260" font-family="Georgia, serif" font-size="28" fill="#B9975B">Order · Service · Community</text>
+const RAVENHURST_BANNER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 240" preserveAspectRatio="xMidYMid meet">
+  <rect width="1920" height="240" fill="#243145"/>
+  <rect y="224" width="1920" height="6" fill="#B9975B"/>
+  <rect y="230" width="1920" height="10" fill="#8A6A3C"/>
+  <circle cx="1580" cy="120" r="80" fill="none" stroke="#B9975B" stroke-width="5"/>
+  <circle cx="1580" cy="120" r="58" fill="none" stroke="#8A6A3C" stroke-width="2"/>
+  <text x="96" y="134" font-family="Georgia, serif" font-size="76" fill="#F3EFE6">City of Ravenhurst</text>
+  <text x="100" y="192" font-family="Georgia, serif" font-size="30" fill="#B9975B">Order · Service · Community</text>
 </svg>`
 
 const PORT_VICTORIA_SEAL_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
@@ -143,13 +144,12 @@ const PORT_VICTORIA_SEAL_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox=
   <text x="100" y="70" text-anchor="middle" font-family="Trebuchet MS, sans-serif" font-size="30" font-weight="bold" fill="#FFFFFF">PV</text>
 </svg>`
 
-const PORT_VICTORIA_BANNER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid slice">
-  <rect width="1200" height="400" fill="#F8FAFC"/>
-  <rect width="1200" height="260" fill="#123C5A"/>
-  <path d="M0 260 Q300 220 600 260 T1200 260 V400 H0 Z" fill="#21A4B8"/>
-  <path d="M0 300 Q300 270 600 300 T1200 300 V400 H0 Z" fill="#123C5A" opacity="0.35"/>
-  <text x="80" y="150" font-family="Trebuchet MS, sans-serif" font-size="64" font-weight="bold" fill="#FFFFFF">Port Victoria</text>
-  <text x="80" y="200" font-family="Trebuchet MS, sans-serif" font-size="28" fill="#9BD8E0">Forward Together</text>
+const PORT_VICTORIA_BANNER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 240" preserveAspectRatio="xMidYMid meet">
+  <rect width="1920" height="240" fill="#123C5A"/>
+  <path d="M0 196 Q240 168 480 196 T960 196 T1440 196 T1920 196 V240 H0 Z" fill="#21A4B8"/>
+  <path d="M0 212 Q240 188 480 212 T960 212 T1440 212 T1920 212 V240 H0 Z" fill="#0E2F45" opacity="0.5"/>
+  <text x="96" y="134" font-family="Trebuchet MS, sans-serif" font-size="76" font-weight="bold" fill="#FFFFFF">Port Victoria</text>
+  <text x="100" y="192" font-family="Trebuchet MS, sans-serif" font-size="30" fill="#9BD8E0">Forward Together</text>
 </svg>`
 
 const MEDIA_ASSETS: Array<{
