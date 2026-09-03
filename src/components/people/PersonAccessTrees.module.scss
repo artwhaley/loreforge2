@@ -41,6 +41,7 @@
 .treeItem { margin: .12rem 0; }
 .treeRow { display: flex; align-items: center; min-height: 2.2rem; gap: .35rem; padding: .1rem .35rem; border-radius: 7px; }
 .treeRow:hover { background: color-mix(in srgb, var(--tenant-accent) 12%, var(--tenant-page-bg)); }
+.treeRowSelected { background: color-mix(in srgb, var(--tenant-accent) 24%, var(--tenant-page-bg)); box-shadow: inset 3px 0 0 var(--tenant-primary); }
 .disclosure { border: 0; border-radius: 5px; background: transparent; font: inherit; font-size: 1.1rem; cursor: pointer; }
 .disclosure:hover, .disclosure:focus-visible { background: color-mix(in srgb, var(--tenant-accent) 25%, var(--tenant-page-bg)); outline: 0; }
 .disclosureSpacer { display: inline-block; width: 1.35rem; flex: 0 0 1.35rem; }
@@ -50,6 +51,8 @@
 .checkLabel { display: inline-flex; align-items: center; gap: .55rem; min-width: 0; color: var(--tenant-primary); font-size: .88rem; cursor: pointer; }
 .checkLabel input { width: 1.05rem; height: 1.05rem; accent-color: var(--tenant-primary); }
 .checkLabel span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.roleSelectButton { border: 0; padding: .25rem .35rem; border-radius: 5px; color: var(--tenant-primary); background: transparent; font: inherit; font-size: .88rem; text-align: left; cursor: pointer; }
+.roleSelectButton:hover, .roleSelectButton:focus-visible { background: color-mix(in srgb, var(--tenant-accent) 18%, var(--tenant-page-bg)); outline: 0; }
 
 .folderTree { padding: .32rem .4rem; }
 .folderTree + .folderTree { padding-top: 0; }

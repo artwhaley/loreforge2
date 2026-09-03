@@ -16,20 +16,38 @@ export async function POST(request: Request) {
   const { user } = await payload.auth({ headers: request.headers })
   const form = await request.formData()
   const domainSlug = String(form.get('domainSlug') ?? '')
-  const name = String(form.get('name') ?? '').trim()
-  const parentRoleId = idOf(form.get('parentRoleId'))
-  const subdomainId = idOf(form.get('subdomainId'))
-  if (!user || !domainSlug || !name || !subdomainId) return NextResponse.redirect(new URL('/', request.url), 303)
+  const action = String(form.get('action') ?? 'create')
+  const requestedReturnTo = String(form.get('returnTo') ?? '')
+  const fallback = `/domain/${domainSlug}/roles`
+  const destination = requestedReturnTo.startsWith(`/domain/${domainSlug}/`) ? requestedReturnTo : fallback
+  if (!user || !domainSlug) return NextResponse.redirect(new URL('/', request.url), 303)
   const domains = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
   const domain = domains.docs[0]
   if (!domain) return NextResponse.redirect(new URL('/', request.url), 303)
-  if (await authorizeInterimOperation(payload, { userId: user.id }, domain.id) !== true) return NextResponse.redirect(new URL(`/domain/${domainSlug}/roles`, request.url), 303)
+  if (await authorizeInterimOperation(payload, { userId: user.id }, domain.id) !== true) return NextResponse.redirect(new URL(destination, request.url), 303)
+  if (action === 'delete') {
+    const roleId = Number(form.get('roleId') ?? '')
+    if (!Number.isFinite(roleId)) return NextResponse.redirect(new URL(destination, request.url), 303)
+    const role = await payload.findByID({ collection: 'roles', id: roleId, depth: 0 }).catch(() => null)
+    if (!role || idOf(role.domain) !== Number(domain.id) || role.system) return NextResponse.redirect(new URL(destination, request.url), 303)
+    const children = await payload.find({ collection: 'roles', where: { and: [{ parentRole: { equals: roleId } }, { active: { equals: true } }] }, depth: 0, limit: 1 })
+    if (children.docs.length > 0) return NextResponse.redirect(new URL(destination, request.url), 303)
+    await payload.update({ collection: 'roles', id: roleId, data: { active: false } })
+    const assignments = await payload.find({ collection: 'role-assignments', where: { and: [{ role: { equals: roleId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 5000 })
+    for (const assignment of assignments.docs) await payload.update({ collection: 'role-assignments', id: assignment.id, data: { status: 'inactive' } })
+    payload.logger.info(`Phase 5 role archived: actorUser=${user.id} operation=delete_role resource=${roleId}`)
+    return NextResponse.redirect(new URL(destination, request.url), 303)
+  }
+  const name = String(form.get('name') ?? '').trim()
+  const parentRoleId = idOf(form.get('parentRoleId'))
+  const subdomainId = idOf(form.get('subdomainId'))
+  if (!name || !subdomainId) return NextResponse.redirect(new URL(destination, request.url), 303)
   const roles = await payload.find({ collection: 'roles', where: { domain: { equals: domain.id } }, depth: 0, limit: 500 })
   const parent = parentRoleId ? roles.docs.find((role) => Number(role.id) === parentRoleId) : null
-  if (parentRoleId && !parent) return NextResponse.redirect(new URL(`/domain/${domainSlug}/roles`, request.url), 303)
+  if (parentRoleId && !parent) return NextResponse.redirect(new URL(destination, request.url), 303)
   if (subdomainId) {
     const subdomain = await payload.findByID({ collection: 'subdomains', id: subdomainId, depth: 0 }).catch(() => null)
-    if (!subdomain || idOf(subdomain.domain) !== Number(domain.id)) return NextResponse.redirect(new URL(`/domain/${domainSlug}/roles`, request.url), 303)
+    if (!subdomain || idOf(subdomain.domain) !== Number(domain.id)) return NextResponse.redirect(new URL(destination, request.url), 303)
   }
   try {
     assertRoleHierarchy(
@@ -42,5 +60,5 @@ export async function POST(request: Request) {
   } catch {
     // Keep the customer on the role manager with no schema/error details leaked.
   }
-  return NextResponse.redirect(new URL(`/domain/${domainSlug}/roles`, request.url), 303)
+  return NextResponse.redirect(new URL(destination, request.url), 303)
 }

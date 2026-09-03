@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import styles from './PersonAccessTrees.module.scss'
 
@@ -34,12 +34,21 @@ type RoleTreeProps = {
   characterId: number
   departments: RoleDepartment[]
   initialMode?: RoleMode
+  showModeFilter?: boolean
+  showAssignmentCheckbox?: boolean
+  selectedRoleId?: number | null
+  onSelectRole?: (node: RoleTreeNode, department: RoleDepartment) => void
+  onContextRole?: (event: React.MouseEvent, node: RoleTreeNode, department: RoleDepartment) => void
 }
 
 type FolderTreeProps = {
   domainSlug: string
-  characterId: number
+  characterId?: number
+  principalType?: 'Character' | 'Role'
+  principalId?: number
   folders: FolderTreeNode[]
+  heading?: string
+  description?: string
 }
 
 function roleMatches(node: RoleTreeNode, query: string, mode: RoleMode): RoleTreeNode | null {
@@ -66,17 +75,18 @@ function countRoles(nodes: RoleTreeNode[]): { total: number; held: number } {
   }, { total: 0, held: 0 })
 }
 
-function RoleNode({ node, domainSlug, characterId, expanded, toggle }: { node: RoleTreeNode; domainSlug: string; characterId: number; expanded: Set<string>; toggle: (key: string) => void }) {
+function RoleNode({ node, department, domainSlug, characterId, expanded, toggle, showAssignmentCheckbox, selectedRoleId, onSelectRole, onContextRole }: { node: RoleTreeNode; department: RoleDepartment; domainSlug: string; characterId: number; expanded: Set<string>; toggle: (key: string) => void; showAssignmentCheckbox: boolean; selectedRoleId?: number | null; onSelectRole?: (node: RoleTreeNode, department: RoleDepartment) => void; onContextRole?: (event: React.MouseEvent, node: RoleTreeNode, department: RoleDepartment) => void }) {
   const key = `role-${node.id}`
   const hasChildren = node.children.length > 0
   const isOpen = expanded.has(key)
-  return <li className={styles.treeItem} role="treeitem" aria-expanded={hasChildren ? isOpen : undefined}>
-    <div className={styles.treeRow}>
-      {hasChildren ? <button type="button" className={styles.disclosure} aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${node.name}`} aria-expanded={isOpen} onClick={() => toggle(key)}>{isOpen ? '⌄' : '›'}</button> : <span className={styles.disclosureSpacer} aria-hidden="true" />}
+  const selected = selectedRoleId === node.id
+  return <li className={styles.treeItem} role="treeitem" aria-expanded={hasChildren ? isOpen : undefined} aria-selected={onSelectRole ? selected : undefined}>
+    <div className={`${styles.treeRow} ${selected ? styles.treeRowSelected : ''}`} onClick={() => onSelectRole?.(node, department)} onContextMenu={(event) => onContextRole?.(event, node, department)}>
+      {hasChildren ? <button type="button" className={styles.disclosure} aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${node.name}`} aria-expanded={isOpen} onClick={(event) => { event.stopPropagation(); toggle(key) }}>{isOpen ? '⌄' : '›'}</button> : <span className={styles.disclosureSpacer} aria-hidden="true" />}
       <span className={styles.roleBranch} aria-hidden="true" />
-      <span className={styles.roleAssignment}><RoleAssignmentToggle domainSlug={domainSlug} characterId={characterId} roleId={node.id} checked={node.held} label={node.name} /></span>
+      <span className={styles.roleAssignment}>{showAssignmentCheckbox ? <RoleAssignmentToggle domainSlug={domainSlug} characterId={characterId} roleId={node.id} checked={node.held} label={node.name} /> : <button type="button" className={styles.roleSelectButton} onClick={(event) => { event.stopPropagation(); onSelectRole?.(node, department) }} onContextMenu={(event) => { event.stopPropagation(); onContextRole?.(event, node, department) }}>{node.name}</button>}</span>
     </div>
-    {hasChildren && isOpen ? <ul className={styles.nestedTree} role="group">{node.children.map((child) => <RoleNode key={child.id} node={child} domainSlug={domainSlug} characterId={characterId} expanded={expanded} toggle={toggle} />)}</ul> : null}
+    {hasChildren && isOpen ? <ul className={styles.nestedTree} role="group">{node.children.map((child) => <RoleNode key={child.id} node={child} department={department} domainSlug={domainSlug} characterId={characterId} expanded={expanded} toggle={toggle} showAssignmentCheckbox={showAssignmentCheckbox} selectedRoleId={selectedRoleId} onSelectRole={onSelectRole} onContextRole={onContextRole} />)}</ul> : null}
   </li>
 }
 
@@ -90,12 +100,29 @@ function RoleAssignmentToggle({ domainSlug, characterId, roleId, checked, label 
   </form>
 }
 
-export function RoleTree({ domainSlug, characterId, departments, initialMode = 'all' }: RoleTreeProps) {
+export function RoleTree({ domainSlug, characterId, departments, initialMode = 'all', showModeFilter = true, showAssignmentCheckbox = true, selectedRoleId, onSelectRole, onContextRole }: RoleTreeProps) {
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState<RoleMode>(initialMode)
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(departments.map((department) => `department-${department.id}`)))
   const normalizedQuery = query.trim().toLocaleLowerCase()
   const visibleDepartments = useMemo(() => departments.map((department) => filterDepartment(department, normalizedQuery, mode)).filter((department): department is RoleDepartment => department !== null), [departments, mode, normalizedQuery])
+  useEffect(() => {
+    if (mode !== 'held' && !normalizedQuery) return
+    setExpanded((current) => {
+      const next = new Set(current)
+      for (const department of visibleDepartments) {
+        next.add(`department-${department.id}`)
+        const openBranch = (node: RoleTreeNode) => {
+          if (node.children.length > 0) {
+            next.add(`role-${node.id}`)
+            node.children.forEach(openBranch)
+          }
+        }
+        department.roles.forEach(openBranch)
+      }
+      return next
+    })
+  }, [mode, normalizedQuery, visibleDepartments])
   const displayedCount = visibleDepartments.reduce((result, department) => {
     const count = countRoles(department.roles)
     return { total: result.total + count.total, held: result.held + count.held }
@@ -107,12 +134,12 @@ export function RoleTree({ domainSlug, characterId, departments, initialMode = '
     return next
   })
   return <section className={styles.panel} aria-labelledby="roles-heading">
-    <div className={styles.panelHeader}><div><h2 id="roles-heading">Roles</h2><p className={styles.panelMeta}>{displayedCount.held} held · {displayedCount.total} shown</p></div><div className={styles.modeTabs} role="group" aria-label="Role filter"><button type="button" className={mode === 'all' ? styles.modeActive : styles.modeButton} onClick={() => setMode('all')}>All roles</button><button type="button" className={mode === 'held' ? styles.modeActive : styles.modeButton} onClick={() => setMode('held')}>Held only</button></div></div>
+    <div className={styles.panelHeader}><div><h2 id="roles-heading">Roles</h2><p className={styles.panelMeta}>{displayedCount.held} held · {displayedCount.total} shown</p></div>{showModeFilter ? <div className={styles.modeTabs} role="group" aria-label="Role filter"><button type="button" className={mode === 'all' ? styles.modeActive : styles.modeButton} onClick={() => setMode('all')}>All roles</button><button type="button" className={mode === 'held' ? styles.modeActive : styles.modeButton} onClick={() => setMode('held')}>Held only</button></div> : null}</div>
     <div className={styles.searchBar}><span className={styles.searchIcon} aria-hidden="true">⌕</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search roles or departments" aria-label="Search roles or departments" /></div>
     <div className={styles.treeBox} role="tree" aria-label="Department roles">
       {visibleDepartments.map((department) => { const key = `department-${department.id}`; const isOpen = expanded.has(key); const count = countRoles(department.roles); return <div key={department.id} className={styles.departmentGroup}>
         <button type="button" className={styles.departmentHeader} aria-expanded={isOpen} onClick={() => toggle(key)}><span className={styles.chevron}>{isOpen ? '⌄' : '›'}</span><span className={styles.departmentName}>{department.name}</span><span className={styles.countBadge}>{count.held}/{count.total}</span></button>
-        {isOpen ? <ul className={styles.roleTree} role="group">{department.roles.map((role) => <RoleNode key={role.id} node={role} domainSlug={domainSlug} characterId={characterId} expanded={expanded} toggle={toggle} />)}</ul> : null}
+        {isOpen ? <ul className={styles.roleTree} role="group">{department.roles.map((role) => <RoleNode key={role.id} node={role} department={department} domainSlug={domainSlug} characterId={characterId} expanded={expanded} toggle={toggle} showAssignmentCheckbox={showAssignmentCheckbox} selectedRoleId={selectedRoleId} onSelectRole={onSelectRole} onContextRole={onContextRole} />)}</ul> : null}
       </div> })}
       {visibleDepartments.length === 0 ? <p className={styles.emptyState}>No roles match your search.</p> : null}
     </div>
@@ -135,26 +162,27 @@ function PermissionCheckbox({ label, state, onChange }: { label: string; state: 
   </label>
 }
 
-function FolderNode({ node, domainSlug, characterId, expanded, toggle }: { node: FolderTreeNode; domainSlug: string; characterId: number; expanded: Set<string>; toggle: (key: string) => void }) {
-  const key = `folder-${node.id}`
+function FolderNode({ node, domainSlug, principalType, principalId, expanded, toggle }: { node: FolderTreeNode; domainSlug: string; principalType: 'Character' | 'Role'; principalId: number; expanded: Set<string>; toggle: (key: string) => void }) {
+  const key = `${principalType.toLowerCase()}-folder-${node.id}`
   const hasChildren = node.children.length > 0
   const isOpen = expanded.has(key)
   const [readState, setReadState] = useState<PermissionState>(node.readState)
   const [writeState, setWriteState] = useState<PermissionState>(node.writeState)
   return <li className={styles.folderItem} role="treeitem" aria-expanded={hasChildren ? isOpen : undefined}>
     <form action="/api/permission-rules" method="post" className={styles.folderRow}>
-      <input type="hidden" name="domainSlug" value={domainSlug} /><input type="hidden" name="characterId" value={characterId} /><input type="hidden" name="folderId" value={node.id} /><input type="hidden" name="readState" value={readState} /><input type="hidden" name="writeState" value={writeState} />
+      <input type="hidden" name="domainSlug" value={domainSlug} /><input type="hidden" name={principalType === 'Role' ? 'roleId' : 'characterId'} value={principalId} /><input type="hidden" name="principalType" value={principalType} /><input type="hidden" name="folderId" value={node.id} /><input type="hidden" name="readState" value={readState} /><input type="hidden" name="writeState" value={writeState} />
       <div className={styles.folderIdentity}>{hasChildren ? <button type="button" className={styles.disclosure} aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${node.name}`} aria-expanded={isOpen} onClick={() => toggle(key)}>{isOpen ? '⌄' : '›'}</button> : <span className={styles.disclosureSpacer} aria-hidden="true" />}<span className={styles.folderIcon} aria-hidden="true">{node.systemManaged ? '⌂' : '▱'}</span><span className={styles.folderName}>{node.name}</span></div>
       <div className={styles.permissionSet}><PermissionCheckbox label="Read" state={readState} onChange={setReadState} /><PermissionCheckbox label="Write" state={writeState} onChange={setWriteState} /></div>
       <button type="submit" className={styles.saveButton}>Save</button>
     </form>
-    {hasChildren && isOpen ? <ul className={styles.folderTree} role="group">{node.children.map((child) => <FolderNode key={child.id} node={child} domainSlug={domainSlug} characterId={characterId} expanded={expanded} toggle={toggle} />)}</ul> : null}
+    {hasChildren && isOpen ? <ul className={styles.folderTree} role="group">{node.children.map((child) => <FolderNode key={`${principalType}-${principalId}-${child.id}`} node={child} domainSlug={domainSlug} principalType={principalType} principalId={principalId} expanded={expanded} toggle={toggle} />)}</ul> : null}
   </li>
 }
 
-export function FolderTree({ domainSlug, characterId, folders }: FolderTreeProps) {
+export function FolderTree({ domainSlug, characterId, principalType = 'Character', principalId = characterId, folders, heading, description }: FolderTreeProps) {
+  const resolvedPrincipalId = principalId ?? 0
   const [query, setQuery] = useState('')
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(folders.map((folder) => `folder-${folder.id}`)))
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(folders.map((folder) => `${principalType.toLowerCase()}-folder-${folder.id}`)))
   const normalizedQuery = query.trim().toLocaleLowerCase()
   const visibleFolders = useMemo(() => folders.map((folder) => folderMatches(folder, normalizedQuery)).filter((folder): folder is FolderTreeNode => folder !== null), [folders, normalizedQuery])
   const toggle = (key: string) => setExpanded((current) => {
@@ -163,11 +191,13 @@ export function FolderTree({ domainSlug, characterId, folders }: FolderTreeProps
     else next.add(key)
     return next
   })
+  const resolvedHeading = heading ?? 'Folder access'
+  const resolvedDescription = description ?? (principalType === 'Role' ? 'Default access for this Role' : 'Direct access for this Character')
   return <section className={styles.panel} aria-labelledby="folder-access-heading">
-    <div className={styles.panelHeader}><div><h2 id="folder-access-heading">Folder access</h2><p className={styles.panelMeta}>Direct access for this Character</p></div><span className={styles.legend}><span className={styles.legendSwatch} /> inherited</span></div>
+    <div className={styles.panelHeader}><div><h2 id="folder-access-heading">{resolvedHeading}</h2><p className={styles.panelMeta}>{resolvedDescription}</p></div><span className={styles.legend}><span className={styles.legendSwatch} /> inherited</span></div>
     <div className={styles.searchBar}><span className={styles.searchIcon} aria-hidden="true">⌕</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search folders" aria-label="Search folders" /></div>
     <div className={styles.treeBox} role="tree" aria-label="Folder access">
-      {visibleFolders.map((folder) => <ul key={folder.id} className={styles.folderTree} role="group"><FolderNode node={folder} domainSlug={domainSlug} characterId={characterId} expanded={expanded} toggle={toggle} /></ul>)}
+      {visibleFolders.map((folder) => <ul key={`${principalType}-${resolvedPrincipalId}-${folder.id}`} className={styles.folderTree} role="group"><FolderNode node={folder} domainSlug={domainSlug} principalType={principalType} principalId={resolvedPrincipalId} expanded={expanded} toggle={toggle} /></ul>)}
       {visibleFolders.length === 0 ? <p className={styles.emptyState}>No folders match your search.</p> : null}
     </div>
   </section>

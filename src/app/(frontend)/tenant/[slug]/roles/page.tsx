@@ -1,85 +1,102 @@
 import { notFound } from 'next/navigation'
 
+import { type FolderTreeNode, type PermissionState, type RoleDepartment, type RoleTreeNode } from '@/components/people/PersonAccessTrees'
+import { RoleManager } from '@/components/roles/RoleManager'
 import { TenantShell } from '@/components/theme/TenantShell'
-import { getActiveTenant } from '@/lib/tenant/activeTenant'
+import { buildFolderTree } from '@/lib/archive/folderTree'
 import { getLorePayload } from '@/lib/payload'
+import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getTenantsForUser } from '@/lib/tenant/queries'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 
-type Props = { params: Promise<{ slug: string }> }
+type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<{ roleId?: string }> }
 export const dynamic = 'force-dynamic'
 
 const relationId = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null
-  return typeof value === 'object' && 'id' in value ? Number((value as { id: number | string }).id) : Number(value)
+  if (typeof value === 'object' && value !== null && 'value' in value) return relationId((value as { value: unknown }).value)
+  return typeof value === 'object' && value !== null && 'id' in value ? Number((value as { id: number | string }).id) : Number(value)
 }
 
-export default async function RolesPage({ params }: Props) {
+function toFolderNode(node: ReturnType<typeof buildFolderTree>[number]): FolderTreeNode {
+  return { id: Number(node.folder.id), name: node.folder.name, systemManaged: Boolean(node.folder.systemManaged), readState: 'inherit', writeState: 'inherit', children: node.children.map(toFolderNode) }
+}
+
+export default async function RolesPage({ params, searchParams }: Props) {
   const { slug } = await params
+  const query = await searchParams
   const { tenant, role: contextRole, user } = await getActiveTenant()
-  if (!tenant || tenant.slug !== slug) notFound()
+  if (!tenant || tenant.slug !== slug || contextRole !== 'admin') notFound()
   const payload = await getLorePayload()
-  const roles = await payload.find({ collection: 'roles', where: { domain: { equals: tenant.id } }, depth: 1, limit: 500, sort: 'name' })
-  const assignments = roles.docs.length
-    ? await payload.find({ collection: 'role-assignments', where: { and: [{ role: { in: roles.docs.map((r) => r.id) } }, { status: { equals: 'active' } }] }, depth: 2, limit: 500, sort: 'createdAt' })
-    : { docs: [] }
-  const domainMemberships = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: tenant.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 500 })
-  const domainCharacterIds = new Set(domainMemberships.docs.map((membership) => String(relationId(membership.character))))
-  const characters = await payload.find({ collection: 'characters', where: { status: { equals: 'active' } }, depth: 0, limit: 500, sort: 'name' })
-  const folders = await payload.find({ collection: 'folders', where: { domain: { equals: tenant.id } }, depth: 0, limit: 500, sort: 'name' })
-  const subdomains = await payload.find({ collection: 'subdomains', where: { domain: { equals: tenant.id } }, depth: 0, limit: 100, sort: 'name' })
-  const domains = user ? await getTenantsForUser(user.id) : []
-  const roleName = new Map(roles.docs.map((r) => [Number(r.id), r.name]))
-  const characterName = new Map(characters.docs.map((c) => [Number(c.id), c.name]))
-  const folderById = new Map(folders.docs.map((f) => [Number(f.id), f]))
-  const folderLabel = (id: number): string => {
-    const names: string[] = []
-    let current = folderById.get(id)
-    const seen = new Set<number>()
-    while (current && !seen.has(Number(current.id))) {
-      seen.add(Number(current.id)); names.unshift(current.name)
-      const parentId = relationId(current.parent)
-      current = parentId ? folderById.get(parentId) : undefined
-    }
-    return names.join(' / ')
+  const [departments, roles, assignments, memberships, characters, folders, permissionRules, domains] = await Promise.all([
+    payload.find({ collection: 'subdomains', where: { domain: { equals: tenant.id } }, depth: 0, limit: 500, sort: 'name' }),
+    payload.find({ collection: 'roles', where: { and: [{ domain: { equals: tenant.id } }, { active: { equals: true } }] }, depth: 0, limit: 1000, sort: 'name' }),
+    payload.find({ collection: 'role-assignments', where: { status: { equals: 'active' } }, depth: 0, limit: 5000 }),
+    payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: tenant.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 5000 }),
+    payload.find({ collection: 'characters', where: { status: { equals: 'active' } }, depth: 0, limit: 5000, sort: 'name' }),
+    payload.find({ collection: 'folders', where: { domain: { equals: tenant.id } }, depth: 0, limit: 2000, sort: 'name' }),
+    payload.find({ collection: 'permission-rules', where: { and: [{ domain: { equals: tenant.id } }, { principalType: { equals: 'Role' } }, { resourceType: { equals: 'Folder' } }] }, depth: 0, limit: 10000 }).catch(() => ({ docs: [] })),
+    user ? getTenantsForUser(user.id) : Promise.resolve([]),
+  ])
+
+  const roleById = new Map(roles.docs.map((item) => [Number(item.id), item]))
+  const roleNodes = new Map<number, RoleTreeNode>()
+  for (const item of roles.docs) roleNodes.set(Number(item.id), { id: Number(item.id), name: item.name, held: false, children: [] })
+  const rolesByDepartment = new Map<number, RoleTreeNode[]>()
+  for (const item of roles.docs) {
+    const node = roleNodes.get(Number(item.id))
+    const departmentId = relationId(item.subdomain)
+    if (!node || departmentId === null) continue
+    const parentRoleId = relationId(item.parentRole)
+    const parent = parentRoleId === null ? null : roleNodes.get(parentRoleId)
+    const parentDepartmentId = parentRoleId === null ? null : relationId(roleById.get(parentRoleId)?.subdomain)
+    if (parent && parentDepartmentId === departmentId) continue
+    const roots = rolesByDepartment.get(departmentId) ?? []
+    roots.push(node)
+    rolesByDepartment.set(departmentId, roots)
   }
-  const isAdmin = contextRole === 'admin'
-  const activeAssignments = assignments.docs.filter((assignment) => domainCharacterIds.has(String(relationId(assignment.character))))
-  const assignableCharacters = characters.docs.filter((character) => domainCharacterIds.has(String(character.id)))
-  return (
-    <TenantShell tenant={tenant} cssVars={themeTokensToCssVars(resolveThemeTokens(tenant))} role={contextRole} switcherTenants={domains}>
-      <section>
-        <p><a href={`/domain/${slug}`}>← Domain home</a></p>
-        <h1>Roles</h1>
-        <p>Roles are Department-owned jobs. Characters receive Roles; Department participation is derived from those assignments. Folder access is managed separately on the Character workspace.</p>
-        {roles.docs.length === 0 ? <p>No Roles have been configured.</p> : <ul>
-          {roles.docs.map((item) => {
-            const parent = relationId(item.parentRole)
-            const subdomain = relationId(item.subdomain)
-            const assignedCount = activeAssignments.filter((assignment) => relationId(assignment.role) === Number(item.id)).length
-            return <li key={item.id}><strong>{item.name}</strong>{parent ? ` — reports to ${roleName.get(parent) ?? 'Role ' + parent}` : ' — top-level'}{subdomain ? ` — ${subdomains.docs.find((s) => Number(s.id) === subdomain)?.name ?? 'Department'}` : ' — Domain-wide'} · {assignedCount} assigned · <a href={`/domain/${slug}/manage/people?q=${encodeURIComponent(item.name)}`}>View People</a></li>
-          })}
-        </ul>}
-        {isAdmin ? <>
-          <details><summary>Create or assign Roles</summary>
-          <h2>Create Role</h2><form action="/api/roles" method="post">
-            <input type="hidden" name="domainSlug" value={slug} />
-            <input name="name" placeholder="Role name" aria-label="Role name" required />{' '}
-            <select name="parentRoleId" defaultValue=""><option value="">No superior (top-level)</option>{roles.docs.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{' '}
-            <select name="subdomainId" defaultValue="" required><option value="">Choose Department</option>{subdomains.docs.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{' '}
-            <button type="submit">Create Role</button>
-          </form>
-          <h2>Bulk assignment</h2><p>For one-person changes, use <a href={`/domain/${slug}/manage/people`}>People</a>. This bulk form remains for repeated assignments.</p><form action="/api/role-assignments" method="post">
-            <input type="hidden" name="domainSlug" value={slug} />
-            <select name="characterId" aria-label="Character" required><option value="">Choose Character</option>{assignableCharacters.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{' '}
-            <select name="roleId" aria-label="Role" required><option value="">Choose Role</option>{roles.docs.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{' '}
-            <button type="submit">Assign Role</button>
-          </form></details>
-        </> : null}
-        <h2>Active assignments</h2>
-        {activeAssignments.length === 0 ? <p>No active Role assignments.</p> : <table><thead><tr><th>Character</th><th>Role</th>{isAdmin ? <th>Actions</th> : null}</tr></thead><tbody>{activeAssignments.map((assignment) => { const character = relationId(assignment.character); const roleId = relationId(assignment.role); return <tr key={assignment.id}><td>{characterName.get(character ?? -1) ?? `Character ${character ?? ''}`}</td><td>{roleName.get(roleId ?? -1) ?? `Role ${roleId ?? ''}`}</td>{isAdmin ? <td><form action="/api/role-assignments" method="post"><input type="hidden" name="domainSlug" value={slug} /><input type="hidden" name="characterId" value={character ?? ''} /><input type="hidden" name="roleId" value={roleId ?? ''} /><input type="hidden" name="action" value="remove" /><button type="submit">Remove</button></form></td> : null}</tr> })}</tbody></table>}
-        <p><a href={`/domain/${slug}/members`}>Open Domain member roster</a></p>
-      </section>
-    </TenantShell>
-  )
+  for (const item of roles.docs) {
+    const node = roleNodes.get(Number(item.id))
+    const parentRoleId = relationId(item.parentRole)
+    const parent = parentRoleId === null ? null : roleNodes.get(parentRoleId)
+    const departmentId = relationId(item.subdomain)
+    const parentDepartmentId = parentRoleId === null ? null : relationId(roleById.get(parentRoleId)?.subdomain)
+    if (node && parent && departmentId !== null && parentDepartmentId === departmentId) parent.children.push(node)
+  }
+  const roleDepartments: RoleDepartment[] = departments.docs.map((department) => ({ id: Number(department.id), name: department.name, roles: rolesByDepartment.get(Number(department.id)) ?? [] })).filter((department) => department.roles.length > 0)
+  const domainCharacterIds = new Set(memberships.docs.map((membership) => String(relationId(membership.character))))
+  const characterName = new Map(characters.docs.map((character) => [Number(character.id), character.name]))
+  const holdersByRole: Record<string, { id: number; name: string }[]> = {}
+  for (const assignment of assignments.docs) {
+    const characterId = relationId(assignment.character)
+    const roleId = relationId(assignment.role)
+    if (characterId === null || roleId === null || !domainCharacterIds.has(String(characterId)) || !characterName.has(characterId)) continue
+    const holders = holdersByRole[String(roleId)] ?? []
+    if (!holders.some((holder) => holder.id === characterId)) holders.push({ id: characterId, name: characterName.get(characterId)! })
+    holdersByRole[String(roleId)] = holders
+  }
+  const folderNodes = buildFolderTree(folders.docs).map(toFolderNode)
+  const folderStatesByRole: Record<string, Record<string, { readState: PermissionState; writeState: PermissionState }>> = {}
+  for (const rule of permissionRules.docs) {
+    if (rule.active === false) continue
+    const roleId = relationId(rule.principal)
+    const folderId = relationId(rule.resource)
+    if (roleId === null || folderId === null) continue
+    const current = folderStatesByRole[String(roleId)] ?? {}
+    const state = current[String(folderId)] ?? { readState: 'inherit' as PermissionState, writeState: 'inherit' as PermissionState }
+    if (rule.capability === 'read') state.readState = rule.effect as PermissionState
+    if (rule.capability === 'create_document' || rule.capability === 'edit_document') state.writeState = rule.effect as PermissionState
+    current[String(folderId)] = state
+    folderStatesByRole[String(roleId)] = current
+  }
+  const roleRecords = roles.docs.map((item) => ({ id: Number(item.id), name: item.name, departmentId: relationId(item.subdomain) ?? 0, parentRoleId: relationId(item.parentRole) }))
+  const requestedRoleId = Number(query?.roleId ?? '')
+  const initialRoleId = Number.isFinite(requestedRoleId) && requestedRoleId > 0 ? requestedRoleId : null
+  return <TenantShell tenant={tenant} cssVars={themeTokensToCssVars(resolveThemeTokens(tenant))} role={contextRole} switcherTenants={domains}>
+    <section>
+      <p><a href={`/domain/${slug}`}>← Domain home</a></p>
+      <h1>Roles</h1>
+      <RoleManager domainSlug={slug} departments={roleDepartments} roleRecords={roleRecords} holdersByRole={holdersByRole} folders={folderNodes} folderStatesByRole={folderStatesByRole} initialRoleId={initialRoleId} />
+    </section>
+  </TenantShell>
 }

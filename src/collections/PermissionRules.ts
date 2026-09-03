@@ -2,10 +2,11 @@ import type { CollectionConfig } from 'payload'
 
 const relationId = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null
+  if (typeof value === 'object' && value !== null && 'value' in value) return relationId((value as { value: unknown }).value)
   return typeof value === 'object' && 'id' in value ? Number((value as { id: number | string }).id) : Number(value)
 }
 
-/** Central permission rows. P05 uses Character+Folder Read/Write subset; P07 completes evaluation. */
+/** Central permission rows. P05 uses Character/Role + Folder Read/Write rows; P07 completes evaluation. */
 export const PermissionRules: CollectionConfig = {
   slug: 'permission-rules',
   admin: { useAsTitle: 'capability', defaultColumns: ['domain', 'principalType', 'resourceType', 'capability', 'effect'] },
@@ -30,7 +31,7 @@ export const PermissionRules: CollectionConfig = {
       const principalId = relationId(data?.principal ?? originalDoc?.principal)
       const resourceId = relationId(data?.resource ?? originalDoc?.resource)
       if (!domainId || !principalId || !resourceId) throw new Error('Permission rules require a Domain, principal, and resource.')
-      if (principalType === 'Character' && resourceType === 'Folder') {
+      if ((principalType === 'Character' || principalType === 'Role') && resourceType === 'Folder') {
         const folder = await req.payload.findByID({ collection: 'folders', id: resourceId, depth: 0 })
         if (relationId(folder.domain) !== domainId) throw new Error('Folder access must stay inside the rule Domain.')
       }

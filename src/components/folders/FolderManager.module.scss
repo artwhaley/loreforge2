@@ -1,0 +1,35 @@
+.page { display: grid; gap: 1rem; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.toolbar h2 { margin: 0; color: var(--tenant-primary); font-family: var(--tenant-heading-font); font-size: 1.2rem; }
+.toolbar p { margin: .25rem 0 0; color: var(--tenant-muted-text); font-size: .8rem; }
+.button { border: 1px solid var(--tenant-primary); border-radius: 7px; padding: .45rem .7rem; color: var(--tenant-text-on-primary); background: var(--tenant-primary); font: inherit; font-size: .78rem; cursor: pointer; }
+.search { display: flex; gap: .45rem; align-items: center; padding: .5rem .7rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 9px; background: var(--tenant-page-bg); }
+.search span { color: var(--tenant-muted-text); }
+.search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--tenant-primary); font: inherit; font-size: .88rem; }
+.treeBox { border: 1px solid color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 12px; padding: .55rem; background: var(--tenant-page-bg); }
+.tree, .nested { margin: 0; padding: 0; list-style: none; }
+.nested { margin-left: 1.5rem; border-left: 1px solid color-mix(in srgb, var(--tenant-accent) 58%, #fff); }
+.row { display: flex; align-items: center; min-height: 2.3rem; gap: .35rem; padding: .16rem .4rem; border-radius: 7px; color: var(--tenant-primary); }
+.row:hover { background: color-mix(in srgb, var(--tenant-accent) 14%, var(--tenant-page-bg)); }
+.disclosure { display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; border: 0; border-radius: 5px; color: var(--tenant-primary); background: transparent; font: inherit; font-size: 1.05rem; cursor: pointer; }
+.disclosure:hover, .disclosure:focus-visible { background: color-mix(in srgb, var(--tenant-accent) 24%, var(--tenant-page-bg)); outline: 0; }
+.spacer { width: 1.35rem; }
+.folderIcon { width: 1.15rem; text-align: center; }
+.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .88rem; }
+.system { color: var(--tenant-muted-text); font-size: .7rem; }
+.contextMenu { position: fixed; z-index: 20; display: grid; min-width: 190px; gap: .2rem; padding: .35rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 80%, #fff); border-radius: 9px; background: var(--tenant-surface-bg); box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+.contextMenu button { border: 0; border-radius: 6px; padding: .5rem .62rem; color: var(--tenant-primary); background: transparent; text-align: left; font: inherit; font-size: .8rem; cursor: pointer; }
+.contextMenu button:hover, .contextMenu button:focus-visible { background: color-mix(in srgb, var(--tenant-accent) 20%, var(--tenant-page-bg)); outline: 0; }
+.dialog { display: grid; gap: .75rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 14px; padding: 1.1rem 1.2rem; background: color-mix(in srgb, var(--tenant-surface-bg) 94%, #fff); box-shadow: 0 8px 24px rgba(27,24,18,.06); }
+.dialog h3 { margin: 0; color: var(--tenant-primary); font-family: var(--tenant-heading-font); font-size: 1.15rem; }
+.dialogHeader { display: flex; justify-content: space-between; align-items: center; gap: .7rem; }
+.close { border: 0; color: var(--tenant-muted-text); background: transparent; font-size: 1.2rem; cursor: pointer; }
+.dialog form { display: grid; gap: .7rem; }
+.dialog label { display: grid; gap: .25rem; color: var(--tenant-primary); font-size: .78rem; font-weight: 700; }
+.dialog input, .dialog select { min-height: 2.25rem; padding: .45rem .55rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 7px; background: var(--tenant-page-bg); color: var(--tenant-primary); font: inherit; }
+.actions { display: flex; gap: .5rem; }
+.primary, .secondary, .danger { border: 1px solid var(--tenant-primary); border-radius: 7px; padding: .45rem .7rem; font: inherit; font-size: .78rem; cursor: pointer; }
+.primary { color: var(--tenant-text-on-primary); background: var(--tenant-primary); }
+.secondary { color: var(--tenant-primary); background: transparent; }
+.danger { border-color: #8f2d21; color: #8f2d21; background: transparent; }
+.empty { margin: 0; padding: 1rem; color: var(--tenant-muted-text); font-size: .82rem; text-align: center; }
