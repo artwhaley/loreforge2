@@ -152,10 +152,10 @@ export default async function RecordsPage({ params, searchParams }: Props) {
               ) : null}
             </form>
 
-            <a className={styles.toolLink} href={`${base}/records/new${currentFolder ? `?folder=${currentFolder.id}` : ''}`}>New document</a>
-            <a className={styles.toolLink} href={`${base}/import`}>
-              Import notecard
-            </a>
+            <div className={styles.creationTools} aria-label="Create a record">
+              <a className={styles.toolLink} href={`${base}/records/new${currentFolder ? `?folder=${currentFolder.id}` : ''}`}>New document</a>
+              <a className={styles.toolLink} href={`${base}/import`}>Import notecard</a>
+            </div>
           </div>
 
           <nav className={styles.crumbs} aria-label="Folder path">

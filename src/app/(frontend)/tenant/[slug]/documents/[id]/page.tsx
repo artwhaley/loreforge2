@@ -72,7 +72,6 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
               <button type="submit" className={styles.action}>File now</button>
             </form>
           ) : null}
-          {role === 'admin' && doc.lifecycle === 'pending_review' ? <a className={styles.action} href={`/domain/${tenant.slug}/review`}>Open review queue</a> : null}
           {role === 'admin' && doc.lifecycle === 'filed' ? (
             <form action={documentWorkflowAction}>
               <input type="hidden" name="tenantSlug" value={tenant.slug} />

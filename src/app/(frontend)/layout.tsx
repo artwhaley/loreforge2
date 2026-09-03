@@ -4,9 +4,9 @@ import React from 'react'
 import './custom.scss'
 
 export const metadata: Metadata = {
-  title: 'SL Civic Archive',
+  title: 'Loreforge',
   description:
-    'Local proof of concept: civic records archive for Second Life roleplay communities.',
+    'A crafted archive for worlds worth remembering.',
 }
 
 export default function FrontendLayout({ children }: { children: React.ReactNode }) {

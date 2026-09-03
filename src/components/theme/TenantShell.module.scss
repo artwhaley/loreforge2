@@ -193,7 +193,6 @@
 }
 
 .managementNav { max-width: 980px; margin: 0 auto; padding: .55rem 1.5rem; display: flex; align-items: center; gap: 1.1rem; flex-wrap: wrap; font-size: .82rem; }
-.managementNav span { margin-right: .35rem; opacity: .75; font-weight: 700; }
 .managementNav a { color: var(--tenant-text-on-primary); opacity: .92; text-decoration: none; }
 .managementNav a:hover { text-decoration: underline; text-decoration-color: var(--tenant-accent); }
 

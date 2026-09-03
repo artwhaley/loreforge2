@@ -158,6 +158,13 @@
   align-self: center;
 }
 
+.creationTools {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+
 .toolLink {
   font-size: 0.85rem;
   color: var(--tenant-primary);
@@ -259,5 +266,8 @@
   }
   .sidebar {
     position: static;
+  }
+  .creationTools {
+    margin-left: 0;
   }
 }
