@@ -7,6 +7,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { canEditDocumentBody } from '@/lib/documents/lifecycle'
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
+import { requireInterimWorkflowAuthority } from '@/lib/documents/workflow'
 import { domainAndIdWhere, tenantAndIdWhere } from '@/lib/tenant/scope'
 
 function historyPath(tenantSlug: string, documentId: string | number, error?: string): string {
@@ -42,6 +43,7 @@ export async function restoreDocumentVersionAction(formData: FormData): Promise<
   })
   const domain = domainResult.docs[0]
   if (domain) {
+    try { await requireInterimWorkflowAuthority(payload, user.id, domain.id) } catch { redirect(destination + '?error=forbidden') }
     const ownerId = typeof domain.ownerUser === 'object' ? domain.ownerUser?.id : domain.ownerUser
     const admins = await payload.find({
       collection: 'domain-admins',

@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 
 import { TenantShell } from '@/components/theme/TenantShell'
 import { restoreDocumentVersionAction } from '@/lib/actions/documentVersions'
+import { restoreSoftDeletedDocumentAction } from '@/lib/actions/documentWorkflow'
 import { canEditDocumentBody } from '@/lib/documents/lifecycle'
 import { renderMarkdown } from '@/lib/markdown/render'
 import { getLorePayload } from '@/lib/payload'
@@ -25,7 +26,7 @@ export default async function DocumentHistoryPage({ params, searchParams }: Prop
   const { tenant, role, user } = await getActiveTenant()
   if (!tenant || tenant.slug !== slug || !user) notFound()
 
-  const document = await getDocumentForTenant(tenant, id)
+  const document = await getDocumentForTenant(tenant, id, { includeDeleted: true })
   if (!document) notFound()
 
   const payload = await getLorePayload()
@@ -51,6 +52,7 @@ export default async function DocumentHistoryPage({ params, searchParams }: Prop
   const selectedBelongs = selected && String(selected.parent) === String(document.id) ? selected : null
   const preview = selectedBelongs?.version
   const currentEditable = canEditDocumentBody(document.lifecycle)
+  const isDeleted = Boolean(document.softDeletedAt)
   const previewEditable = preview?.lifecycle ? canEditDocumentBody(preview.lifecycle) : false
   const tenants = await getTenantsForUser(user.id)
   const tokens = resolveThemeTokens(tenant)
@@ -62,6 +64,14 @@ export default async function DocumentHistoryPage({ params, searchParams }: Prop
         <p><a href={`/domain/${tenant.slug}/records`}>Records</a> / <a href={base}>{document.title}</a> / History</p>
         <h1>Revision history</h1>
         <p>Every save is retained as a revision. Selecting a revision opens a read-only preview; restoring it writes a new current revision.</p>
+        {isDeleted ? <p role="status">This record was soft-deleted on {document.softDeletedAt ? new Date(document.softDeletedAt).toLocaleString() : 'an unknown date'} and is hidden from Records.</p> : null}
+        {isDeleted ? (
+          <form action={restoreSoftDeletedDocumentAction} style={{ margin: '1rem 0' }}>
+            <input type="hidden" name="tenantSlug" value={tenant.slug} />
+            <input type="hidden" name="documentId" value={document.id} />
+            <button type="submit">Restore this record</button>
+          </form>
+        ) : null}
         {query?.error ? <p role="alert" style={{ color: '#8f2d21' }}>This revision action could not be completed ({query.error.replaceAll('-', ' ')}).</p> : null}
 
         {selectedBelongs ? (

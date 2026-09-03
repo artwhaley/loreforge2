@@ -59,7 +59,7 @@ export async function TenantShell({ tenant, cssVars, role, switcherTenants, acti
           <div className={styles.identity}><Link href={base} className={styles.domainIdentity} aria-label={`${tenant.name} Domain home`}>{mediaSrc(tenant.logo) ? <img className={styles.seal} src={mediaSrc(tenant.logo)} alt="" /> : <span className={styles.sealFallback}>{tenant.name.charAt(0)}</span>}<span><span className={styles.domainName}>{tenant.name}</span>{tenant.motto ? <span className={styles.motto}>{tenant.motto}</span> : null}</span></Link></div>
           <nav className={styles.nav} aria-label={`${tenant.name} navigation`}>{PRIMARY_NAV.map((item) => <Link key={item.label} className={styles.navLink} href={item.segment ? `${base}/${item.segment}` : base}>{item.label}</Link>)}</nav>
         </div>
-        {role === 'admin' ? <nav className={styles.managementNav} aria-label={`Manage ${tenant.name}`}><span>Manage {tenant.name}</span><Link href={`${base}/manage/people`}>People</Link><Link href={`${base}/roles`}>Roles</Link><Link href={`${base}/forms`}>Templates &amp; Forms</Link><Link href={`${base}/customize`}>Customize</Link></nav> : null}
+        {role === 'admin' ? <nav className={styles.managementNav} aria-label={`Manage ${tenant.name}`}><span>Manage {tenant.name}</span><Link href={`${base}/manage/people`}>People</Link><Link href={`${base}/review`}>Review</Link><Link href={`${base}/roles`}>Roles</Link><Link href={`${base}/forms`}>Templates &amp; Forms</Link><Link href={`${base}/customize`}>Customize</Link></nav> : null}
         <div className={styles.rule} />
         {mediaSrc(tenant.banner) ? <div className={styles.bannerWrap}><img className={styles.banner} src={mediaSrc(tenant.banner)} alt="" /></div> : null}
       </header>

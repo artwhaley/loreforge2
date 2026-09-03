@@ -8,6 +8,7 @@ import { domainAndIdWhere, domainWhere } from './scope'
 
 type DomainRecord = Domain | Tenant
 const domainId = (domain: DomainRecord) => Number(domain.id)
+const notDeletedWhere: Where = { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] }
 
 /**
  * Tenant-scoped data access.
@@ -19,7 +20,7 @@ export async function getDocumentsForTenant(tenant: DomainRecord): Promise<Docum
   const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'documents',
-    where: domainWhere(domainId(tenant)),
+    where: domainWhere(domainId(tenant), notDeletedWhere),
     depth: 0,
     limit: 100,
     sort: '-updatedAt',
@@ -30,11 +31,12 @@ export async function getDocumentsForTenant(tenant: DomainRecord): Promise<Docum
 export async function getDocumentForTenant(
   tenant: DomainRecord,
   documentId: number | string,
+  options?: { includeDeleted?: boolean },
 ): Promise<Document | null> {
   const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'documents',
-    where: domainAndIdWhere(domainId(tenant), documentId),
+    where: options?.includeDeleted ? domainAndIdWhere(domainId(tenant), documentId) : domainWhere(domainId(tenant), { and: [{ id: { equals: documentId } }, notDeletedWhere] }),
     depth: 1,
     limit: 1,
   })
@@ -108,7 +110,7 @@ export async function getDocumentsForFolder(
       : { folder: { equals: folderId } }
   const result = await payload.find({
     collection: 'documents',
-    where: domainWhere(domainId(tenant), folderWhere),
+    where: domainWhere(domainId(tenant), { and: [folderWhere, notDeletedWhere] }),
     depth: 0,
     limit: 100,
     sort: '-updatedAt',
@@ -123,9 +125,7 @@ export async function searchDocumentsForTenant(tenant: DomainRecord, query: stri
   const payload = await getLorePayload()
   const result = await payload.find({
     collection: 'documents',
-    where: domainWhere(domainId(tenant), {
-      or: [{ title: { like: q } }, { body: { like: q } }],
-    }),
+    where: domainWhere(domainId(tenant), { and: [notDeletedWhere, { or: [{ title: { like: q } }, { body: { like: q } }] }] }),
     depth: 0,
     limit: 100,
     sort: '-updatedAt',

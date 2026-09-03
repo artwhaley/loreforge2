@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation'
 
 import { CopyMarkdownButton } from '@/components/archive/CopyMarkdownButton'
 import { TenantShell } from '@/components/theme/TenantShell'
-import { deleteDocumentAction, moveDocumentAction } from '@/lib/actions/archive'
+import { moveDocumentAction } from '@/lib/actions/archive'
+import { documentWorkflowAction, softDeleteDocumentAction } from '@/lib/actions/documentWorkflow'
 import { buildFolderTree, flattenFolderTree } from '@/lib/archive/folderTree'
 import { originLabel } from '@/lib/origin'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
@@ -55,6 +56,40 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
             History
           </a>
 
+          {doc.lifecycle === 'draft' ? (
+            <form action={documentWorkflowAction}>
+              <input type="hidden" name="tenantSlug" value={tenant.slug} />
+              <input type="hidden" name="documentId" value={doc.id} />
+              <input type="hidden" name="operation" value="submit" />
+              <button type="submit" className={styles.action}>Submit for review</button>
+            </form>
+          ) : null}
+          {role === 'admin' && doc.lifecycle === 'draft' ? (
+            <form action={documentWorkflowAction}>
+              <input type="hidden" name="tenantSlug" value={tenant.slug} />
+              <input type="hidden" name="documentId" value={doc.id} />
+              <input type="hidden" name="operation" value="file" />
+              <button type="submit" className={styles.action}>File now</button>
+            </form>
+          ) : null}
+          {role === 'admin' && doc.lifecycle === 'pending_review' ? <a className={styles.action} href={`/domain/${tenant.slug}/review`}>Open review queue</a> : null}
+          {role === 'admin' && doc.lifecycle === 'filed' ? (
+            <form action={documentWorkflowAction}>
+              <input type="hidden" name="tenantSlug" value={tenant.slug} />
+              <input type="hidden" name="documentId" value={doc.id} />
+              <input type="hidden" name="operation" value="lock" />
+              <button type="submit" className={styles.action}>Lock</button>
+            </form>
+          ) : null}
+          {role === 'admin' && doc.lifecycle === 'locked' ? (
+            <form action={documentWorkflowAction}>
+              <input type="hidden" name="tenantSlug" value={tenant.slug} />
+              <input type="hidden" name="documentId" value={doc.id} />
+              <input type="hidden" name="operation" value="unlock" />
+              <button type="submit" className={styles.action}>Unlock</button>
+            </form>
+          ) : null}
+
           <form action={moveDocumentAction} className={styles.moveForm}>
             <input type="hidden" name="tenantSlug" value={tenant.slug} />
             <input type="hidden" name="documentId" value={doc.id} />
@@ -80,7 +115,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
             </button>
           </form>
 
-          <form action={deleteDocumentAction} className={styles.deleteForm}>
+          <form action={softDeleteDocumentAction} className={styles.deleteForm}>
             <input type="hidden" name="tenantSlug" value={tenant.slug} />
             <input type="hidden" name="documentId" value={doc.id} />
             <button type="submit" className={styles.deleteBtn}>

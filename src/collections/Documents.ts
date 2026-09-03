@@ -10,6 +10,11 @@ export const Documents: CollectionConfig = {
   },
   timestamps: true,
   versions: { maxPerDoc: 0 },
+  access: {
+    // Permanent deletion is never an ordinary Domain action. P04 workflow
+    // uses softDeletedAt/softDeletedBy and a reversible restore path.
+    delete: () => false,
+  },
   hooks: {
     beforeChange: [
       ({ data, originalDoc, operation }) => {
