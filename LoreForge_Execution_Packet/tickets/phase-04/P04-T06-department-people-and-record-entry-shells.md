@@ -4,6 +4,8 @@
 **Phase:** 4  
 **Commit prefix:** `P04-T06:`
 
+> **Historical/superseded model:** This completed ticket records the first People shell. `CC-2026-09-03-03` and mandatory P05-T00 replace its Department-membership and scoped-Role controls with Role-derived Department participation and separate Role/Folder trees. Do not preserve the obsolete controls.
+
 ## Objective
 Reorganize existing Phase 3 machinery into Department- and Character-centered customer workflows and establish the full-page Document creation entry that later phases hydrate.
 

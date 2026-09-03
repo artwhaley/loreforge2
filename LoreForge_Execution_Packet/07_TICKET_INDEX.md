@@ -1,11 +1,11 @@
 # LoreForge Ticket Index
 
-**Total ticket files:** 83 (68 implementation/design tickets plus 15 mandatory human review gates).
+**Total ticket files:** 84 (69 implementation/design tickets plus 15 mandatory human review gates).
 
 This index is navigation only. `01_ORCHESTRATOR.md`, each phase's `00_PHASE_ORCHESTRATOR.md`, and the ticket itself control execution.
 
 ## Global execution rule
-- The current continuation point is Phase 5 after recorded owner approval of P04-GATE and `CC-2026-09-03-02`; the original Phase 1 kickoff is historical.
+- The current continuation point is P05-T00 after recorded owner approval of P04-GATE and owner correction `CC-2026-09-03-03`; the original Phase 1 kickoff is historical.
 - Every later phase requires explicit owner approval of the previous phase gate.
 - One ticket = one bounded change = one separate commit.
 - Review gates are hard stops and may not be self-approved.
@@ -59,16 +59,16 @@ This index is navigation only. `01_ORCHESTRATOR.md`, each phase's `00_PHASE_ORCH
   _Replace spike tenant terminology/schema with durable Community Domain and User-level authority._
 - **P03-T02** — Subdomains, membership, and landing pages  
   `tickets/phase-03/P03-T02-subdomains-memberships-and-landing.md`  
-  _Represent explicit Character membership and an editable member roster alongside Scribes/Warriors/Magistrates delegated boundaries, not nested tenants._
+  _Historical Phase 3 implementation; direct Department membership is superseded by CC-2026-09-03-03 and mandatory P05-T00._
 - **P03-T03** — Domain root, Subdomain folder branches, and navigation  
   `tickets/phase-03/P03-T03-domain-root-subdomain-folders-and-navigation.md`  
   _Make every Document location explicit and prepare folder branches for later delegation._
 - **P03-T04** — Role hierarchy and scoped assignments  
   `tickets/phase-03/P03-T04-role-hierarchy-and-scoped-assignments.md`  
-  _Create institutional Roles and scoped Captains without building the full ACL engine yet._
+  _Historical Phase 3 implementation; scoped Role assignments are superseded by CC-2026-09-03-03 and mandatory P05-T00._
 - **P03-GATE** — Review Gate 3 — institutional structure and navigation  
   `tickets/phase-03/P03-GATE-review-gate-3.md`  
-  _Ensure Domain -> Subdomain -> Folder -> Role feels like an RP institution, not a tree-management database._
+  _Historical gate; its relationship model is superseded by CC-2026-09-03-03 and mandatory P05-T00._
 
 ## Phase 4 — User-first Shell, Document Types, Lifecycle, Revisions, and Provenance
 - Branch: `phase-04-user-first-shell-document-lifecycle`
@@ -103,6 +103,9 @@ This index is navigation only. `01_ORCHESTRATOR.md`, each phase's `00_PHASE_ORCH
 - Branch: `phase-05-document-relations-copy-share`
 - Orchestrator: `tickets/phase-05/00_PHASE_ORCHESTRATOR.md`
 
+- **P05-T00** — Correct Role, Department, and Folder assignment model
+  `tickets/phase-05/P05-T00-correct-role-department-and-folder-assignment-model.md`
+  _Remove Folder scope from RoleAssignments and redundant Department memberships, make Roles Department-owned, and establish separate modern Role and Folder controls on the Character workspace._
 - **P05-T01** — Prepared-by credits, Concerns links, and Domain tag vocabulary  
   `tickets/phase-05/P05-T01-character-links-and-domain-tags.md`  
   _Add typed visible preparation credits, Characters a record concerns, and Domain tags without conflating any of them with provenance actors._
@@ -149,9 +152,9 @@ This index is navigation only. `01_ORCHESTRATOR.md`, each phase's `00_PHASE_ORCH
 - **P07-T02** — Server, Payload, and query authorization enforcement  
   `tickets/phase-07/P07-T02-server-and-payload-enforcement.md`  
   _Make the evaluator authoritative across all read/write paths so UI hiding is never the security boundary._
-- **P07-T03** — Role defaults, hierarchy, and scoped authority  
+- **P07-T03** — Department Role defaults and hierarchy
   `tickets/phase-07/P07-T03-role-defaults-hierarchy-and-scoped-authority.md`  
-  _Make rigid Role hierarchy useful for default access while preserving scoped assignments such as Captains controlling different platoons._
+  _Make Department-owned Role hierarchy useful for default access and subordinate assignment without attaching Folder scope to a RoleAssignment._
 - **P07-T04** — Folder inheritance, direct grants, and explicit denies  
   `tickets/phase-07/P07-T04-folder-inheritance-direct-grants-and-explicit-denies.md`  
   _Complete practical folder/document permission administration including temporary lockout cases._

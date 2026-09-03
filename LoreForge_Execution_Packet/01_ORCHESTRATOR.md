@@ -8,7 +8,7 @@ Advance LoreForge **one reviewed phase at a time** from the completed MVP spike 
 
 ## Kickoff sequence — Phase 1 only
 
-This sequence is retained for historical clean-start reconstruction. The current repository has completed and owner-approved Phases 1–3; current continuation begins with the Phase 4 sequence below.
+This sequence is retained for historical clean-start reconstruction. The current repository has completed and owner-approved Phases 1–4; current continuation begins with the Phase 5 sequence below.
 
 1. Read `00_START_HERE.md` through `06_CHANGE_CONTROL.md` completely.
 2. Read `references/FULL_PRODUCT_SPEC.md` sections 1–3, 24–25, and 27–29 (the source skips section 26).
@@ -27,13 +27,13 @@ This sequence is retained for historical clean-start reconstruction. The current
    - `tickets/phase-01/P01-GATE-review-gate-1.md`
 11. Stop after `P01-GATE`. Return the gate report to the owner. **Do not create a Phase 2 branch.**
 
-## Current continuation — Phase 4
+## Current continuation — Phase 5
 
-1. Confirm the repository's `execution-notes/P03-GATE.md` is `APPROVED_BY_OWNER` and this packet contains `CC-2026-09-02-01`.
-2. Create `phase-04-user-first-shell-document-lifecycle` from that approved state.
-3. Read `tickets/phase-04/00_PHASE_ORCHESTRATOR.md` completely.
-4. Execute exactly: `P04-T00`, `P04-T05`, `P04-T06`, `P04-T01`, `P04-T02`, `P04-T03`, `P04-T04`, `P04-GATE`.
-5. Stop after `P04-GATE`; Phase 5 requires explicit owner approval.
+1. Confirm the repository's `execution-notes/P04-GATE.md` is `APPROVED_BY_OWNER` and this packet contains `CC-2026-09-03-03`.
+2. Create `phase-05-document-relations-copy-share` from that approved state.
+3. Read `tickets/phase-05/00_PHASE_ORCHESTRATOR.md` completely.
+4. Execute exactly: `P05-T00`, `P05-T01`, `P05-T02`, `P05-T03`, `P05-T04`, `P05-GATE`.
+5. Stop after `P05-GATE`; Phase 6 requires explicit owner approval.
 
 ## Ticket loop
 

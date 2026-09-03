@@ -55,8 +55,8 @@ ticket_files=sorted([
     p for p in TROOT.rglob("*.md")
     if p.name!="00_PHASE_ORCHESTRATOR.md"
 ])
-if len(ticket_files)!=83:
-    errors.append(f"expected 83 ticket files, found {len(ticket_files)}")
+if len(ticket_files)!=84:
+    errors.append(f"expected 84 ticket files, found {len(ticket_files)}")
 
 records={}
 phase_impl={p:[] for p in range(1,16)}
@@ -113,10 +113,10 @@ for f in ticket_files:
     else:
         phase_impl[phase].append(tid)
 
-if len(records)!=83: errors.append(f"parsed {len(records)} ticket records, expected 83")
+if len(records)!=84: errors.append(f"parsed {len(records)} ticket records, expected 84")
 if len(phase_gate)!=15: errors.append(f"expected 15 review gates, found {len(phase_gate)}")
-if sum(len(v) for v in phase_impl.values())!=68:
-    errors.append(f"expected 68 implementation/design tickets, found {sum(len(v) for v in phase_impl.values())}")
+if sum(len(v) for v in phase_impl.values())!=69:
+    errors.append(f"expected 69 implementation/design tickets, found {sum(len(v) for v in phase_impl.values())}")
 
 # Dependency references must resolve; gates must name every phase implementation ticket.
 for tid,r in records.items():

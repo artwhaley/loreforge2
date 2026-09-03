@@ -4,6 +4,8 @@
 **Phase:** 3  
 **Commit prefix:** `P03-T04:`
 
+> **Historical/superseded model:** This completed ticket records what Phase 3 originally built. `CC-2026-09-03-03` and mandatory P05-T00 remove `scopeFolder` and replace scoped Captain assignments with distinct Department Roles plus separate Folder permission rules. Do not use the requirements below as the current product contract.
+
 ## Objective
 Create institutional Roles and scoped Captains without building the full ACL engine yet.
 

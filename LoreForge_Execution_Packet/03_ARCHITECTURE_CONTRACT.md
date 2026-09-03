@@ -87,9 +87,11 @@ Public Character/controller responses use a dedicated projection. A public contr
 ### Customer surface and navigation contract
 Signed-out `/` is the branded LoreForge platform home with an embedded ordinary customer login. Signed-in `/` is the LoreForge User dashboard. Ordinary customer flows never link to `/admin/login`; Payload Admin remains internal back office. Branded `/about`, `/subscriptions`, `/create-account`, `/forgot-password`, `/account`, and `/account/characters` destinations may begin as explicit placeholders but must never expose diagnostics/test credentials.
 
-The LoreForge logo returns to `/`. Within a selected Domain, primary navigation is stable and ordered exactly `Home, About, Departments, Records`. Domain theme/identity appears beneath the persistent LoreForge global header. Authorized management links appear only in a subordinate `Manage <Domain>` bar with customer destinations `People, Roles, Templates & Forms, Customize`; the primary bar never swells or reorders based on capability. The server authorizes every destination/action independently of link visibility.
+The LoreForge logo returns to `/`. Within a selected Domain, primary navigation is stable and ordered exactly `Home, About, Departments, Records`. Domain theme/identity appears beneath the persistent LoreForge global header. Authorized management links appear only in a subordinate, unlabeled bar with customer destinations `People, Roles, Templates & Forms, Customize`; do not add redundant `Manage <Domain>` copy. The primary bar never swells or reorders based on capability. The server authorizes every destination/action independently of link visibility.
 
-`People` is a Character-centered Domain manager, not a User-role table. Its detail workspace unifies Domain membership, Department memberships, Role assignments including independent Folder scopes, effective Folder access with source explanations, recent work, and audited change history. The controlling User is separate identity metadata. Before P07, effective access editing may be explicitly unavailable; do not fake the final evaluator.
+`People` is a Character-centered Domain manager, not a User-role table. Its directory begins with a debounced, ranked, keyboard-navigable quick search and an updating result window; SQLite FTS5 is the preferred local implementation when supported by the existing Payload/SQLite seam, but the required contract is the behavior and server-ranked search, not a client-side full-table download. Its detail workspace unifies Domain membership, Department-owned Role assignments, separately managed Folder access with source explanations, recent work, and audited change history. The controlling User is separate identity metadata. Before P07, effective access editing may be explicitly unavailable; do not fake the final evaluator.
+
+The Character workspace has two deliberately separate assignment controls. `Roles` is a searchable hierarchical Department/Role tree with checkboxes and filters for `Held roles` and `Roles I can assign`. `Folder access` is a searchable interactive Folder tree with independent Read and Write controls, effective-state/source display, and direct per-Character overrides. Neither control links to the other or stores Folder scope on a RoleAssignment. Ordinary one-person changes happen inline in this workspace rather than requiring navigation among Role, Department, and Folder collection pages.
 
 Canonical customer routes use `/departments` and `/manage/*`. Legacy `/subdomains` customer URLs redirect to `/departments`; internal collection/model names remain neutral `subdomain` unless a later schema migration explicitly renames them. Templates & Forms groups three separate subviews: Document Types, Templates, and Forms.
 
@@ -161,14 +163,11 @@ Unique `(domain, character)` active/inactive membership. Membership alone does n
 ### subdomains
 - Domain;
 - name/slug/sort;
-- Character head/admin assignments;
+- no direct Character head/admin or membership assignments; Department leadership/administration is expressed through Department-owned Roles and their capabilities;
 - no theme/billing/hostname;
 - no recursive parent Subdomain initially.
 - `publicListing` boolean default false.
 - default customer vocabulary `Department(s)` and canonical customer route `/departments`; internal schema remains `subdomains`.
-
-### subdomain-memberships
-Unique `(subdomain, character)`.
 
 ### folders
 - Domain required;
@@ -183,7 +182,7 @@ Every Document points to one Folder. Null folder is not permanent root.
 
 ### roles
 - Domain;
-- Subdomain nullable;
+- Subdomain required for every Community-Domain Role;
 - name;
 - `parentRole` = immediate **superior** role, nullable for top;
 - active/system flags as needed.
@@ -193,16 +192,26 @@ Hierarchy must be acyclic. A senior role inherits default grants given to descen
 - Character;
 - Role;
 - Domain/Subdomain derived/validated from Role;
-- optional `scopeFolder`;
 - active dates/status;
 - assignedBy User/Character.
+
+A RoleAssignment never stores or implies a Folder selection. Active Department participation is derived by grouping the Character's active RoleAssignments by each Role's required Subdomain. Removing the last active Role in a Department removes participation immediately. Removing Domain membership revokes/deletes all RoleAssignments and direct Folder rules in that Domain while audit history records what was removed; re-adding Domain membership starts clean and cannot revive them.
+
+### direct Character Folder access
+Direct per-Character Folder overrides are PermissionRule rows, independent of RoleAssignments—not a Folder field on a Role assignment and not a second long-term authorization system.
+- Read control authors/removes the Character + Folder `read` grant/deny.
+- Write control atomically authors/removes the Character + Folder `create_document` and `edit_document` grants/denies.
+- Each axis exposes `inherit | grant | deny`; `inherit` means no direct per-Character rule for that axis.
+- actor/audit fields and timestamps are required.
+
+Effective access may still come from Role defaults or Folder ancestry. The People Folder tree shows both effective access and the direct override; changing one never creates, removes, or edits a RoleAssignment. Capabilities beyond the Read/Write convenience controls remain available through the advanced permission model in P07.
 
 ### document-types
 - Domain;
 - name/description;
 - active;
 - default filing policy `direct-file | review-required`;
-- optional default folder;
+- optional default Folder used only by creation/import flows with no richer Template destination; a selected Template's normal destination always wins;
 - seeded `Plain Text`.
 
 ### documents
@@ -269,6 +278,8 @@ Domain-owned Tag vocabulary. Authorized ad-hoc creation creates a normal Tag bef
 - Document Type;
 - name;
 - scope Folder (Domain root allowed);
+- required normal destination Folder in the same Domain;
+- `allowDestinationOverride` boolean, default false; Plain Text may enable it;
 - `availableToDescendants`;
 - optional `baseTemplate` same Domain;
 - kind `document | form`;
@@ -281,14 +292,14 @@ Base graph acyclic. Base contains exactly one `{{content}}`; child replaces it, 
 ### permission-rules
 One centralized rule collection.
 - Domain;
-- principal polymorphic relation to Character, User, Role, DomainMembership, or SubdomainMembership;
+- principal polymorphic relation to Character, User, Role, or DomainMembership;
 - resource polymorphic relation to Domain, Subdomain, Folder, or Document;
 - capability;
 - effect `grant | deny`;
 - audit fields.
 
 Stable capabilities include:
-`read, create_document, edit_document, submit_document, file_document, approve_document, lock_document, unlock_document, delete_document, restore_document, move_document, copy_document, share_document, export_document, manage_folders, manage_templates, manage_types_tags, manage_access, manage_members, manage_claims, assign_roles, manage_subdomain, manage_domain_appearance, manage_notices`.
+`read, create_document, edit_document, submit_document, file_document, approve_document, lock_document, unlock_document, delete_document, restore_document, move_document, copy_document, share_document, export_document, manage_folders, manage_templates, manage_types_tags, manage_access, manage_members, manage_claims, manage_roles, assign_roles, assign_subordinates, manage_subdomain, manage_domain_appearance, manage_notices`.
 
 Ownership/subscription transfer is not a normal permission capability.
 
@@ -302,7 +313,7 @@ Evaluate `(User, active Character, capability, resource)` server-side.
 5. Principal class priority: **direct User/Character > Role > membership default**. Within the direct class, User and active-Character rules are peers: most-specific resource wins and deny wins equal-specificity ties. A Character grant does not automatically outrank a User deny or vice versa.
 6. Within a principal class, most-specific resource wins: Document > deepest matching Folder > Subdomain > Domain.
 7. Equal class + specificity: deny wins.
-8. Role evaluation: senior assignment also matches rules for descendant/subordinate roles. `scopeFolder` excludes role authority outside that branch.
+8. Role evaluation: senior assignment also matches default rules for descendant/subordinate Roles in the same Department. RoleAssignments never narrow or expand those rules with an assignment-specific Folder scope.
 9. Role conflicts: most-specific resource wins; deny wins ties.
 10. Membership defaults last with same rule.
 11. No matching grant = deny.
@@ -316,7 +327,7 @@ All API/server-action/list paths use this subsystem. Filter inaccessible rows be
 Pre-P07 authority is a compatibility seam, not a product role and not permission-by-UI-hiding:
 - expose one server-side `authorizeInterimOperation` boundary and call it from every pre-P07 privileged API/action;
 - in P02 only, claim approval is limited to a User with the legacy Tenant `admin` membership for that Domain; P03 migrates that operational authority to `ownerUser`/DomainAdmin and removes this legacy branch;
-- from P03 through P06, ownerUser and operational DomainAdmins may manage Domain/Subdomain memberships and Roles; review/approve/lock/restore; add/remove tags, Character links, or Document relationships; Copy/Move/Share; manage Templates; and create unclaimed Characters inline;
+- from P03 through P06, ownerUser and operational DomainAdmins may manage Domain memberships, Department-owned Roles, RoleAssignments, and direct Folder-access records; review/approve/lock/restore; add/remove tags, Character links, or Document relationships; Copy/Move/Share; manage Templates; and create unclaimed Characters inline;
 - ordinary P06 form/document creation requires an authenticated User controlling the active Character, an active DomainMembership, and the existing server-validated destination scope; it never grants management authority;
 - all interim decisions record actor User, acting Character where applicable, operation, resource, and timestamp in audit/provenance;
 - P07-T02 replaces and deletes this helper/legacy branch, with integration tests proving no legacy User Membership still grants access.
@@ -345,9 +356,14 @@ To grant capability `X` on resource `R`, actor must:
 To deny, actor must possess `manage_access` for that scope.
 Folder managers may manage ACLs/folders but may not create Roles.
 Role creation:
-- Domain Owner/Domain Admin -> Domain roles;
-- Subdomain head/admin -> that Subdomain's roles;
+- Domain Owner/Domain Admin -> Roles in any Department in that Domain;
+- Character with explicit `manage_roles` -> Roles only in the Department covered by that authority;
 - nobody else through delegation.
+
+Role assignment is a separate decision from Folder delegation and Role creation:
+- `assign_roles` may authorize assignment within its explicit Department scope;
+- `assign_subordinates` authorizes only strict descendant Roles beneath an active Role held by the actor in the same Department;
+- neither capability grants Folder access, and `manage_access` grants no Role-assignment authority.
 
 ## 9. Document lifecycle contract
 
@@ -437,7 +453,7 @@ Unknown runtime token = error/no Document, never silent blanking.
 
 After successful Document creation, raw answer JSON/submission rows are not retained as a second truth.
 
-The ordinary creation route is `/domain/:domain/records/new`. Records presents one `New document` action and no inline title/create form. The full creation surface contains destination Folder, searchable Template selector grouped by Document Type, title, `Prepared by`, `Concerns`, Tags, and WYSIWYG or form body. Plain Text is the blank option once its Template exists. Template changes after user input require destructive-replacement confirmation. Lifecycle actions are `Save Draft` and the effective `Submit for Review` or `File` action.
+The ordinary creation route is `/domain/:domain/records/new`. Records presents one `New document` action and no inline title/create form. The full creation surface contains a searchable Template selector grouped by Document Type, Template-derived destination Folder, title, `Prepared by`, `Concerns`, Tags, and WYSIWYG or form body. Selecting a Template immediately selects its required normal destination. The destination control is read-only with an explanation unless that Template has `allowDestinationOverride=true`, in which case it offers only destinations where the actor may create. Plain Text is the blank, destination-flexible option once its Template exists. Template changes after user input require destructive-replacement confirmation. Lifecycle actions are `Save Draft` and the effective `Submit for Review` or `File` action.
 
 ## 12. Theme/vocabulary/starter-pack contract
 No raw CSS.

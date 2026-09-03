@@ -1,11 +1,11 @@
-# P07-T03 — Role defaults, hierarchy, and scoped authority
+# P07-T03 — Department Role defaults and hierarchy
 
 **Mode:** IMPLEMENTATION TICKET  
 **Phase:** 7  
 **Commit prefix:** `P07-T03:`
 
 ## Objective
-Make rigid Role hierarchy useful for default access while preserving scoped assignments such as Captains controlling different platoons.
+Make Department-owned Role hierarchy useful for default access and subordinate assignment without coupling an individual RoleAssignment to any Folder.
 
 ## Required pre-read
 - `00_START_HERE.md`
@@ -20,17 +20,17 @@ Make rigid Role hierarchy useful for default access while preserving scoped assi
 - P07-T02
 
 ## Frozen context for this ticket
-- A Character may hold multiple Roles across one or more Subdomains; effective access unions allowed paths subject to denies.
+- Every Role belongs to one Department. A Character may hold multiple Roles across one or more Departments; those Roles derive Department participation and their effective access unions allowed paths subject to denies.
 - Role parent is immediate superior; senior Role inherits subordinate Role permission grants.
-- RoleAssignment may be scoped to a Folder/resource branch; same Role title can therefore govern different branches.
+- RoleAssignment is only Character + Role and has no Folder/resource scope.
 - Role hierarchy itself does not prohibit direct cross-hierarchy access grants.
 
 ## Required work
-1. Build Role editor for Domain/Subdomain authorized heads with parent-role selection constrained to same scope and cycle prevention.
-2. Build RoleAssignment UI assigning Character + Role + optional scopeFolder constrained to relevant Subdomain/Domain. Hydrate People -> Character -> Roles as the primary one-person assignment flow; keep Role-centered assignment as a secondary bulk/definition workflow.
+1. Build Role editor for authorized Domain administrators and Department Role managers with Department required, parent-role selection constrained to the same Department, and cycle prevention.
+2. Hydrate People -> Character -> Roles as the primary one-person assignment flow using the approved searchable Department/Role checkbox tree. Populate `Held roles` and `Roles I can assign` from server decisions; keep Role-centered assignment as a secondary bulk/definition workflow. No request or record may contain a Folder.
 3. Allow defining default PermissionRules on Roles through same rule model.
-4. Show effective/scoped role labels in member roster and permission explanation.
-5. Seed fixture Warrior hierarchy Commander > Captain > Warrior and Scribe hierarchy.
+4. Show Role-derived Department participation and effective Role defaults in member roster and permission explanations without presenting them as direct Folder grants.
+5. Seed distinct Department Roles where jobs differ by responsibility: Warrior hierarchy includes Commander with First Captain and Second Captain branches rather than reusing one Folder-scoped Captain assignment; seed the Scribe hierarchy with named records roles.
 
 ## Likely code touchpoints
 - src/app/**/roles/**
@@ -38,17 +38,19 @@ Make rigid Role hierarchy useful for default access while preserving scoped assi
 
 ## Automated acceptance
 - Role cycle rejected.
-- Commander inherits Captain/Warrior Role grants; Captain assignment scoped First Platoon does not grant Second Platoon folder authority.
+- Commander inherits subordinate Role grants; First Captain and Second Captain receive only their Role definitions' respective default rules, with no assignment scope.
 - Character with Warrior + Magistrate Role receives both independent allowed privileges.
 - Removing RoleAssignment removes inherited Role rules but leaves direct grants intact.
+- Removing a Character's last Role in a Department removes that Department from their derived participation; no Department membership row is written.
 
 ## Manual acceptance
-- Demonstrate two Captains with identical Role but different scopeFolder and visibly different folder authority.
+- Assign and remove First Captain and Second Captain from the People Role tree and verify the Department and defaults follow the Roles without any Folder field on the assignment.
 - Give a Warrior a Magistrate Role and verify both role sets without switching accounts.
 
 ## Guardrails / non-goals
 - `Do not make Role names globally unique; uniqueness is within owning scope as specified.`
-- `Do not infer Subdomain membership solely from Role assignment.`
+- `Do not create or consult a separate SubdomainMembership; Department participation is derived from active Roles.`
+- `Do not put Folder controls, Folder IDs, or resource scope in the Role-assignment UI or mutation.`
 - Do not advance work scheduled for a later phase merely because a nearby file is open.
 - Do not introduce a new framework/provider/abstraction not authorized by the Architecture Contract.
 - Keep customer-facing language free of Payload/CMS schema terminology.

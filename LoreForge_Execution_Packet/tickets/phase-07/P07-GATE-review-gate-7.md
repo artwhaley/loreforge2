@@ -29,7 +29,7 @@ Hard security/behavior gate before public surfaces and starter packs multiply co
 ## Required work
 1. Run exhaustive permission matrix and integration/API tests.
 2. Execute golden scenarios for Commander/Captains/Warrior, cross-hierarchy grant, explicit deny, multi-role Character, and delegation chain.
-3. Produce permission explanation outputs for each fixture actor and compare the People Access tree with the equivalent Folder-centered permissions view.
+3. Produce permission explanation outputs for each fixture actor and compare the People Folder-access tree with the equivalent Folder-centered permissions view. Separately inspect the Role tree and prove its mutations do not alter direct Folder rules.
 4. Have reviewer attempt direct URL/API bypass and scope escalation.
 
 ## Likely code touchpoints
@@ -46,7 +46,8 @@ Hard security/behavior gate before public surfaces and starter packs multiply co
 - No tenant leak.
 - No lower actor can grant more authority/scope than possessed.
 - Direct Document share and explicit deny follow frozen precedence.
-- A head can select one Character in People, manage Departments/Roles/scoped access, and understand Can view/edit/manage without navigating separate collection tables.
+- A Head Scribe can find one Character through quick search, assign only permitted descendant Roles with checkboxes, edit direct Read/Write overrides in a separate Folder tree, and understand effective sources without navigating collection tables.
+- Role mutation requests contain no Folder; Folder mutation requests contain no RoleAssignment operation; Department participation is derived from Roles.
 - Management navigation is capability-driven while the primary Domain navigation remains stable; no Administration mode returns.
 
 ## Guardrails / non-goals

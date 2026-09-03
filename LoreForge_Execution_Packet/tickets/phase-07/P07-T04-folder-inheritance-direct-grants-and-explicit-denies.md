@@ -21,16 +21,16 @@ Complete practical folder/document permission administration including temporary
 
 ## Frozen context for this ticket
 - Folder is the primary unit of record access and permission inheritance.
-- Membership and Role can carry defaults, but are not permanently linked to access.
+- Domain membership and Role definitions can carry defaults, but RoleAssignments never carry Folder access.
 - Explicit deny is required (e.g. Warrior under investigation retains Role but loses sensitive access).
 - Document-specific exceptions are supported.
 - Personal folder sharing remains prohibited later; Community Domain folder access is normal.
 
 ## Required work
-1. Hydrate both the contextual Folder permissions panel and People -> Character -> Access tree from the same evaluator/explanation service. Show inherited/effective rules separately from rules authored at the Folder.
+1. Hydrate both the contextual Folder permissions panel and People -> Character -> Folder access tree from the same evaluator/explanation service. Show inherited/effective Role defaults separately from direct per-Character rules authored at the Folder.
 2. Allow authorized manager to grant/deny Character/User/Role actions at Folder and Document resources.
 3. Implement inheritance through descendants using evaluator; no duplicated copied rules per child.
-4. On the Character Access tree, provide `Can view`, `Can edit`, and `Can manage` filters and explain each effective node using Role, inherited grant, direct grant, or explicit deny sources. Show explicit deny clearly in both person- and resource-centered views.
+4. On the Character Folder tree, preserve the approved separate Read and Write controls: Read maps to `read`; Write maps atomically to `create_document` and `edit_document`. Each control can inherit, grant, or deny and shows the effective result and source. Advanced `Can manage` inspection may be separate; it must not replace or muddle the two primary controls. Show explicit deny clearly in both person- and resource-centered views.
 5. Add safe revoke/delete rule actions with provenance/audit.
 
 ## Likely code touchpoints
@@ -43,15 +43,17 @@ Complete practical folder/document permission administration including temporary
 - Unrelated soldier can receive direct First Platoon folder edit despite not holding Captain/First-Platoon Role.
 - Document-specific read grant exposes only target document.
 - People Access tree and Folder permission panel return the same effective result/explanation for the same Character, capability, and resource.
+- Changing any direct Read/Write override leaves every RoleAssignment unchanged.
 
 ## Manual acceptance
 - As Commander, deny Cassian access to Investigations while he remains Warrior; verify Role display unchanged and access gone.
-- As First Platoon Captain, direct-grant Varro edit to battle plans; verify grant works without membership rewrite.
-- Open Varro from People, switch among Can view/edit/manage, locate the grant and its source in the Folder tree, and make the permitted change without leaving the Character workspace.
+- As First Captain, direct-grant Varro Write to First Platoon Battle Plans; verify the grant works without changing Varro's Roles or derived Department participation.
+- Open Varro from People, search the Folder tree, change Read and Write independently, locate the effective source, and save without leaving the Character workspace or changing his Roles.
 
 ## Guardrails / non-goals
 - `Do not require creating one-person Roles for exceptions.`
 - `Do not copy permission rules into every descendant Folder.`
+- `Do not place direct Folder access controls in Role assignment or Department participation UI.`
 - Do not advance work scheduled for a later phase merely because a nearby file is open.
 - Do not introduce a new framework/provider/abstraction not authorized by the Architecture Contract.
 - Keep customer-facing language free of Payload/CMS schema terminology.

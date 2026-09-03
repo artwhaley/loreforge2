@@ -17,7 +17,7 @@ Add typed Character credits/subject links and Domain tags beside Markdown withou
 - this ticket.
 
 ## Depends on
-- P04-GATE approved
+- P05-T00
 
 ## Frozen context for this ticket
 - Characters linked to a Document are typed structural relationships, not inferred mentions in Markdown.

@@ -5,8 +5,8 @@
 
 ## Counts
 - 15 implementation phases after the completed spike.
-- 83 individual ticket files.
-- 68 implementation/design tickets.
+- 84 individual ticket files.
+- 69 implementation/design tickets.
 - 15 mandatory human review gates.
 - 15 phase orchestrators plus the master orchestrator.
 - 9 spike/spec reference artifacts.

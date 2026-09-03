@@ -17,6 +17,7 @@ Human validation that document identity, succession, and cross-boundary operatio
 - this ticket.
 
 ## Depends on
+- P05-T00
 - P05-T01
 - P05-T02
 - P05-T03
@@ -27,7 +28,7 @@ Human validation that document identity, succession, and cross-boundary operatio
 
 ## Required work
 1. Run Phase 5 tests.
-2. Demonstrate separate Prepared by credits, Concerns links, and provenance actors; then execute golden scenarios for deed supersession, marriage-license share, copy divergence, and cross-Domain move disabled/enabled.
+2. Demonstrate the corrected Role/Department/Folder model and Character workspace; demonstrate separate Prepared by credits, Concerns links, and provenance actors; then execute golden scenarios for deed supersession, marriage-license share, copy divergence, and cross-Domain move disabled/enabled.
 3. Inspect provenance on both source and destination/copy.
 4. Record screenshots/notes of Document Actions wording.
 
@@ -46,6 +47,7 @@ Human validation that document identity, succession, and cross-boundary operatio
 - Copy and Share demonstrably differ by ID/version behavior.
 - Cross-Domain move defaults disabled.
 - Prepared by credits, Concerns links, and provenance actors remain visibly and structurally distinct.
+- RoleAssignments contain no Folder scope, Department participation is Role-derived, and direct Folder overrides are managed independently on the Character workspace.
 
 ## Guardrails / non-goals
 - Do not advance work scheduled for a later phase merely because a nearby file is open.

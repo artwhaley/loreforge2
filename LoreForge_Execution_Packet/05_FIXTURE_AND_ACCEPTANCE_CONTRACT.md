@@ -54,20 +54,22 @@ Fixture fantasy names are not product vocabulary.
 
 ## Role hierarchy fixture
 Scribes: `Head Scribe > Senior Scribe > Junior Scribe`
-Warriors: `Commander > Captain > Warrior`
+Warriors: `Commander > {First Captain, Second Captain, Warrior}`
 Magistrates: `Chief Magistrate > Magistrate/Clerk`
 
 Assignments:
 - Kael = Commander, Warriors.
-- Rarius = Captain scoped First Platoon.
-- Tarl = Captain scoped Second Platoon.
+- Rarius = First Captain, Warriors.
+- Tarl = Second Captain, Warriors.
 - Varro = Warrior.
 - Cassian = Warrior + explicit deny scenario.
 - Livia = Magistrate.
 - Aren = Warrior + Magistrate.
 - Marlen = Head Scribe.
-- Sera = Junior Scribe + delegated Property Records management.
-- Dorian = Junior Scribe + delegated Historical Records management.
+- Sera = Property Records Clerk; that Role supplies default Property Records permissions.
+- Dorian = Historical Records Clerk; that Role supplies default Historical Records permissions.
+
+There are no direct Character-to-Department membership fixtures and no Folder-scoped RoleAssignments. Department participation is derived from active RoleAssignments. Add at least one direct per-Character Folder override fixture to prove that Folder access remains editable without changing Roles.
 
 ## Required record fixtures
 1. Plain Text note.
@@ -93,7 +95,7 @@ Restyle same Domain into two convincingly different identities. Shell and Docume
 One User switches Characters; ordinary Character-level Domain/Department access changes with active Character, account session does not. The top-level bar shows the one `Domain` selector on the left and `Acting as` Character on the right; the Character choices for a selected Domain are only that User's active member Characters. Switching to a managed Domain with no eligible Character clears the Character and preserves the Domain. The ownerUser/operational DomainAdmin can use User-level management links for that selected Domain without entering a mode or gaining roleplay identity.
 
 ### GS-04 Role hierarchy + exception
-Commander sees all Warrior folders. First Captain manages First Platoon not Second. Captain grants Varro edit to First Platoon Battle Plans despite no platoon assignment.
+Commander sees the Warrior defaults inherited through the Role hierarchy. First Captain and Second Captain are distinct Department-owned Roles with different default Folder rules. An authorized manager directly grants Varro Write to First Platoon Battle Plans without changing Varro's Role or creating Department membership.
 
 ### GS-05 Explicit deny
 Cassian's direct deny blocks normal Warrior role grant. A more-specific direct Document grant may override a broader direct deny per authorization contract.
@@ -129,7 +131,7 @@ GM delivers, delays, intercepts, garbles. Original admin-auditable; recipient se
 Permission + location checked at action start. Authorized edit can save later despite lag/location expiry. Physical presence never bypasses local permission.
 
 ### GS-16 LoreForge shell and user-first administration
-Signed-out `/` is a branded LoreForge home with embedded customer login and About/Subscriptions/Create Account links; signed-in `/` is the User dashboard. Domain primary navigation remains Home/About/Departments/Records for ordinary and administrative users. An authorized head selects Sera from People and manages Department membership, multiple scoped Roles, and effective Folder access from one Character workspace without navigating raw collection tables.
+Signed-out `/` is a branded LoreForge home with embedded customer login and About/Subscriptions/Create Account links; signed-in `/` is the User dashboard. Domain primary navigation remains Home/About/Departments/Records for ordinary and administrative users. An authorized head finds Sera through the ranked People quick search, checks/unchecks Department-owned Roles in the Role tree, and manages direct Read/Write Folder overrides in a separate searchable Folder tree without navigating raw collection tables. The Department list is derived from Sera's Roles.
 
 ### GS-17 Unified document creation
-From Records, click one `New document` action and reach the full editor. Select a searchable Template/Plain Text option, destination, title, additional Prepared by credits, Concerns Characters, and Tags. The active Character cannot be removed from Prepared by. Plain Text opens WYSIWYG; a form Template opens the form; both create ordinary lifecycle/provenance-bearing Documents.
+From Records, click one `New document` action and reach the full editor. Select a searchable Template/Plain Text option; the Template selects its normal destination automatically, while only Templates explicitly allowing override expose alternative authorized destinations. Enter title, additional Prepared by credits, Concerns Characters, and Tags. The active Character cannot be removed from Prepared by. Plain Text opens WYSIWYG; a form Template opens the form; both create ordinary lifecycle/provenance-bearing Documents.

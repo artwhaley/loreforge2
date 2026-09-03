@@ -27,7 +27,7 @@ Complete form-first authoring so a filer fills a friendly form and receives an o
 - Before P07, form/document creation requires authenticated User -> controlled active Character -> active DomainMembership plus the existing server-validated destination scope. Inline creation of an unclaimed Character is separately ownerUser/operational-DomainAdmin only. All checks use the interim boundary and are replaced by P07 without changing creation APIs.
 
 ## Required work
-1. Complete the existing `/domain/:domain/records/new` flow rather than adding a parallel form route: searchable Template selection, destination Folder, title, Prepared by, Concerns, Tags, and form/WYSIWYG body share one creation shell.
+1. Complete the existing `/domain/:domain/records/new` flow rather than adding a parallel form route: searchable Template selection, Template-derived destination Folder, title, Prepared by, Concerns, Tags, and form/WYSIWYG body share one creation shell. Alternative destination selection appears only when the chosen Template permits it.
 2. Render form from neutral schema; character field searches readable existing Characters. Show create-unclaimed inline only to an interim-authorized owner/admin and enforce the same check server-side.
 3. Generate canonical Markdown, escape user input so field values cannot inject unintended Markdown structure, and create Document + typed Character links in one transaction. Preserve the active Character as required Prepared by credit and map Character form fields only to Concerns.
 4. Apply effective lifecycle: save draft explicitly or submit using direct-file/review-required policy.
@@ -42,13 +42,14 @@ Complete form-first authoring so a filer fills a friendly form and receives an o
 - Incident form creates expected Markdown exactly from fixture.
 - Character form value creates DocumentCharacterLink.
 - Form and WYSIWYG Template choices use the same title, destination, Prepared by, Concerns, Tags, lifecycle, validation, and provenance machinery.
+- The server rejects a forged destination different from a fixed Template's normal destination and rejects every override the Template or actor does not permit.
 - Unknown token or failed Character create rolls back entire Document creation.
 - No raw form answer object remains in database after commit.
 - Review-required Template submission produces Pending Review.
 - Inactive/nonmember active Character cannot create through direct API; ordinary member cannot use the inline unclaimed-Character mutation.
 
 ## Manual acceptance
-- Officer opens Records -> New document, selects Incident Report in the same searchable chooser used for Plain Text, completes the form with the active Character retained under Prepared by, later opens it in the normal Markdown editor once editable, and sees it behave identically to a hand-authored Document.
+- Officer opens Records -> New document, selects Incident Report in the same searchable chooser used for Plain Text, sees its destination selected automatically, completes the form with the active Character retained under Prepared by, later opens it in the normal Markdown editor once editable, and sees it behave identically to a hand-authored Document.
 - Verify output remains readable when copied as plain Markdown/notecard-style text.
 
 ## Guardrails / non-goals

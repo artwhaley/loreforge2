@@ -5,7 +5,7 @@
 **Commit prefix:** `P06-T01:`
 
 ## Objective
-Create a reusable template system that supports Domain/Subdomain/folder availability and letterhead-style composition without a page-builder.
+Create a reusable template system that supports Department/Folder availability, Template-directed filing, and letterhead-style composition without a page-builder.
 
 ## Required pre-read
 - `00_START_HERE.md`
@@ -23,15 +23,16 @@ Create a reusable template system that supports Domain/Subdomain/folder availabi
 - Document Type and Template remain distinct; each Template creates exactly one required Document Type.
 - Templates are content configuration, not runtime starter-pack dependencies.
 - A Template has an owning scope/location and `availableToDescendants` toggle.
+- A Template also has one required normal destination Folder. Choosing the Template chooses that Folder unless the Template explicitly allows an authorized destination override.
 - Child templates may base themselves on an available ancestor Template (e.g. Scribe letterhead -> Deed template).
 - Blank Plain Text is an ordinary Domain-level inheritable Template.
 - Template management before P07 is ownerUser/operational-DomainAdmin only through the audited interim authorization boundary.
 
 ## Required work
-1. Add Template collection exactly as contracted: Domain, required scope Folder (Domain root allowed), name, Document Type, kind `document|form`, title/body Markdown template, neutral form fields for form kind, optional same-Domain baseTemplate, availableToDescendants, lifecycle policy override/inherit, active/version timestamps.
+1. Add Template collection exactly as contracted: Domain, required availability-scope Folder (Domain root allowed), required same-Domain normal destination Folder, `allowDestinationOverride` default false, name, Document Type, kind `document|form`, title/body Markdown template, neutral form fields for form kind, optional same-Domain baseTemplate, availableToDescendants, lifecycle policy override/inherit, active/version timestamps. Keep availability scope and filing destination visibly distinct.
 2. Implement deterministic availability resolver based on current destination folder ancestry and inheritance toggle.
 3. Implement base-template composition with exactly one reserved `{{content}}` insertion point in every referenced base; reject activation/save when missing or duplicated, validate no cycles, and replace that token with child output before resolving field tokens. Never append implicitly.
-4. Hydrate the approved `/domain/:domain/records/new` searchable Template combobox, grouped by Document Type and filtered by destination availability. Plain Text is the ordinary blank choice; changing Template after user input requires explicit replacement confirmation.
+4. Hydrate the approved `/domain/:domain/records/new` searchable Template combobox, grouped by Document Type. Choosing a Template selects its normal destination and then verifies that the Template is available there and the actor may create there. Hide/disable unauthorized Templates with a useful explanation. Expose destination alternatives only when `allowDestinationOverride=true`, filtered to Folders where both Template availability and actor creation permission pass. Plain Text is the ordinary flexible blank choice; changing Template after user input requires explicit replacement confirmation.
 5. Seed/update Plain Text template at Domain root.
 6. Establish the customer `Templates & Forms` management area with separate Document Types, Templates, and Forms subnavigation; this ticket hydrates Types/Templates and leaves the Form Studio destination to P06-T03.
 
@@ -45,13 +46,14 @@ Create a reusable template system that supports Domain/Subdomain/folder availabi
 - Base-template cycle rejected.
 - Composition output canonical and deterministic.
 - Template pointing to Type from another Domain rejected.
+- Template pointing to a destination Folder in another Domain is rejected; fixed-destination Templates cannot be submitted to a client-forged alternative Folder.
 - Missing/duplicate `{{content}}` in a referenced base is rejected; owner/admin interim checks apply equally to direct API writes.
-- Searchable chooser never offers a Template unavailable to the selected destination and never silently replaces entered content.
+- Searchable chooser selects the Template's normal destination, never offers an unauthorized Template/destination pair, and never silently replaces entered content.
 
 ## Manual acceptance
 - Create Head Scribe Letterhead at Scribes root; create Deed template beneath it; update letterhead and verify new documents use updated composition while old Documents remain unchanged.
 - Verify Plain Text appears in descendant folders by normal inheritance.
-- From Records -> New document, search the chooser by Template and Type name, switch destination, and verify the available options update without leaving the creation page.
+- From Records -> New document, search the chooser by Template and Type name and verify selection takes the user to the Template's declared destination. Confirm a fixed Deed Template has no alternative Folder control and an override-enabled Plain Text Template offers only authorized destinations.
 
 ## Guardrails / non-goals
 - `Do not retroactively alter Documents when Templates change.`

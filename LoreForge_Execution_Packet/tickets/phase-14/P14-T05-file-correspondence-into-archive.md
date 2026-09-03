@@ -26,7 +26,7 @@ Allow authorized roleplayers to intentionally preserve a correspondence record a
 - Notifications may signal delivered correspondence but inbox content remains correspondence UI.
 
 ## Required work
-1. Add File-to-Archive action. Eligible filer must be the sender, recipient, or a Character/User with `moderate_correspondence`; in every case the filer must also have `create_document` on the chosen destination Folder. Allow choosing destination Folder and active Document Type/Template; default to the destination Domain's Plain Text Type/blank Template when no richer Template is chosen.
+1. Add File-to-Archive action. Eligible filer must be the sender, recipient, or a Character/User with `moderate_correspondence`; in every case the filer must also have `create_document` on the resolved destination Folder. Allow choosing an active Document Type/Template; a richer Template selects its normal destination and exposes alternatives only when its override policy and the actor's authority permit them. Default to the destination Domain's Plain Text Type/blank Template and its flexible authorized destination control when no richer Template is chosen.
 2. Generate canonical Markdown representation with sender/recipient/sent/delivered metadata appropriate to filer view and provenance pointer to Correspondence ID.
 3. Create new Document with normal lifecycle policy and independent future edits.
 4. On delivery, create one body-free summary/link notification only for the recipient Character's current controlling User, if any. Sender status remains in Sent, moderators use their queue, and an unclaimed recipient produces no User notification. Avoid duplicating message body in Notification.

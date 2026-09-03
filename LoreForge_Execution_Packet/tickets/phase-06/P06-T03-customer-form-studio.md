@@ -26,7 +26,7 @@ Build the Head-Scribe-friendly form-template authoring surface instead of exposi
 - Before P07, only ownerUser/operational DomainAdmins may create/edit/duplicate/deactivate Templates through the audited interim authorization boundary.
 
 ## Required work
-1. Build Form Studio under the approved `Manage <Domain> -> Templates & Forms -> Forms` customer navigation for authorized template managers: ordered field list with Add/Remove/Reorder, field editor for six supported types, required toggle, select options, preview.
+1. Build Form Studio under the approved unlabeled management bar at `Templates & Forms -> Forms` for authorized template managers: ordered field list with Add/Remove/Reorder, field editor for six supported types, required toggle, select options, preview.
 2. Provide Document Output editor using existing Markdown WYSIWYG/source component plus `Insert Field` control that inserts the selected token without typing braces.
 3. Show live/generated preview using sample values; surface unknown/missing token errors inline.
 4. Provide base-template selector constrained to available ancestor Templates.

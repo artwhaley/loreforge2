@@ -1,6 +1,6 @@
 # LoreForge user-first navigation and workflow specification
 
-**Status:** Approved by owner on 2026-09-02; incorporated as execution-packet change `CC-2026-09-02-01`  
+**Status:** Approved by owner on 2026-09-02; incorporated as execution-packet change `CC-2026-09-02-01` and amended by `CC-2026-09-03-03`
 **Date:** 2026-09-02  
 **Scope:** Product navigation, public/authenticated home surfaces, Domain navigation, customer administration, and document-creation entry flow. The authoritative implementation requirements now live in the amended execution packet; this document remains the readable design rationale.
 
@@ -24,7 +24,7 @@
 - **Domain:** a community or personal archive selected in the global context header.
 - **Department:** the customer-facing default name for the existing internal `Subdomain` model. Internal neutral schema names may remain `subdomain`; customer routes and copy use `department(s)`. Legacy `/subdomains` routes redirect to canonical `/departments` routes.
 - **People:** the recommended navigation label for the Domain's Character-centered membership manager. It avoids calling a Character a User and is friendlier than “principals” or “assignments.”
-- **Role:** a reusable bundle/hierarchy of default authority. The Role manager defines Roles; a Character's People page is the primary place to assign them.
+- **Role:** a Department-owned job/rank in a reusable hierarchy, with default authority. The Role manager defines Roles; a Character's People page is the primary place to assign them.
 - **Document Type:** classification and lifecycle defaults, such as Plain Text or Deed.
 - **Template:** reusable starting content/presentation for one Document Type.
 - **Form:** a guided data-entry experience that generates an ordinary Document through a form Template.
@@ -108,7 +108,7 @@ It remains stable for anonymous visitors and ordinary members, subject to public
 If the current User or active Character has at least one management capability in the selected Domain, show a smaller, visually distinct bar:
 
 ```text
-Manage Ar:    People    Roles    Templates & Forms    Customize
+People    Roles    Templates & Forms    Customize
 ```
 
 - Show the bar only when at least one destination is authorized.
@@ -191,13 +191,13 @@ About is Domain-authored informational Markdown in fixed application chrome. Add
 Ordinary view:
 
 - card/list navigation to visible Departments;
-- description, head, membership status, and recent accessible activity where permitted;
+- description, leadership Roles, the active Character's Role-derived participation status, and recent accessible activity where permitted;
 - no raw membership table.
 
 Authorized management affordance:
 
 - a **Manage Departments** button/tab appears on this page;
-- management view supports create, edit, archive, order, head/admin selection, member counts, folder root, Roles, Templates, and Forms;
+- management view supports create, edit, archive, order, Role configuration, Role-derived participant counts, folder root, Templates, and Forms;
 - selecting a Department opens one coherent Department workspace rather than separate collection pages.
 
 Department landing:
@@ -215,7 +215,7 @@ The primary administration workflow starts with a person/Character, because that
 
 ### People directory
 
-- Search by global Character name, Domain alias, controlling account display name, Department, or Role.
+- Begin with a modern FTS-style quick-search box. Results populate directly beneath it as the administrator types; results are ranked, keyboard navigable, and server-filtered. Search global Character name, Domain alias, controlling account display name, Department, or Role.
 - Filters: active/inactive membership, Department, Role, claimed/unclaimed, access issue.
 - Each row/card shows Character, local alias, controlling User separately, Departments, key Roles, and membership state.
 - Selecting a result opens the Character's Domain management workspace.
@@ -231,12 +231,13 @@ Header:
 
 Panels/tabs:
 
-1. **Overview** — identity, membership summary, Departments, Roles, recent work, and warnings.
-2. **Departments** — checklist or cards for Department membership and Department-specific title/alias. Removing Domain membership explains and cascades removal/deactivation of Department participation and Role assignments. Re-adding never restores them automatically.
-3. **Roles** — add/remove one or many Role assignments, each with its own optional Folder scope. Role choices are constrained to the Domain/Department and delegator's authority.
-4. **Access** — a single Folder tree with a **Can view / Can edit / Can manage** selector. Each node shows effective result plus its source: Role, inherited grant, direct grant, or explicit deny. A separate **Change access** action exposes only delegatable controls. Denies and conflicts are explained in plain language.
-5. **Recent work** — accessible recent Documents prepared, edited, submitted, reviewed, filed, or otherwise meaningfully acted upon by the Character.
-6. **History** — audited membership, Role, and permission changes affecting this Character in the Domain.
+1. **Overview** — identity, Domain membership summary, Role-derived Departments, Roles, recent work, and warnings.
+2. **Roles** — one searchable hierarchical tree grouped by Department, with inline checkboxes to add/remove Roles. Filters switch between **Held roles** and **Roles I can assign**. A Role assignment contains no Folder scope. Department participation appears automatically when the Character holds a Role there and disappears when the last Role is removed.
+3. **Folder access** — a separate searchable interactive Folder tree. Each Folder has independent **Read** and **Write** controls plus effective-state/source display. Direct per-Character overrides are edited here; Role defaults may be shown as a source but are never edited by changing the Character's Role assignment.
+4. **Recent work** — accessible recent Documents prepared, edited, submitted, reviewed, filed, or otherwise meaningfully acted upon by the Character.
+5. **History** — audited membership, Role, and permission changes affecting this Character in the Domain.
+
+Removing Domain membership transactionally removes all Role assignments and direct Folder overrides in that Domain while preserving audit history. Re-adding the Character starts clean and never revives old Department participation, Roles, or Folder access.
 
 Changes that would cascade or remove access require a specific consequence summary. Multi-control edits may be staged and saved together, but authorization is checked again for each mutation on the server.
 
@@ -251,8 +252,8 @@ This surface is Character-centered even if administrators colloquially search fo
 Roles is where authorized people define the Role hierarchy and its default authority:
 
 - hierarchy/tree and Role descriptions;
-- Domain or Department ownership;
-- inherited/default capabilities and Folder scope;
+- required Department ownership;
+- inherited/default capabilities, including any default Folder permission rules;
 - assigned Character count, linking into filtered People results;
 - create/duplicate/deactivate within delegation limits.
 
@@ -264,6 +265,7 @@ One management destination groups three concepts without conflating them:
 
 - **Document Types:** classification and lifecycle policy.
 - **Templates:** reusable starting content, header/footer/base composition, destination availability, and Document Type.
+- **Template filing:** each Template declares its normal destination Folder and whether authorized filers may override it.
 - **Forms:** guided field builders whose output becomes a Document through a form Template.
 
 The landing page explains the relationship visually and lists actionable items. Customer copy never exposes Payload collections, JSON schema, or token syntax unless the User deliberately opens an advanced source view.
@@ -278,7 +280,7 @@ Customize contains the existing Theme Studio, organized into Identity, Colors, T
 
 - Folder tree, search, filters, list/grid preference, breadcrumbs, and selected-folder context.
 - **New document** is the primary action when the active Character is authorized to create in at least one destination.
-- Creating inside a selected Folder preselects that Folder but permits another authorized destination.
+- Creating inside a selected Folder may prefilter/highlight Templates whose normal destination is that Folder. It does not override a Template's filing rule. Plain Text or an override-enabled Template may preselect the current Folder when the actor may create there.
 - Folder creation/rename/delete and permission management are contextual management actions, not always-visible forms in the browsing surface.
 
 ### `/domain/:domain/records/new`
@@ -287,9 +289,9 @@ Opening **New document** immediately loads a full creation page. There is no tit
 
 Creation header:
 
-- searchable **Template** combobox, grouped by Document Type and limited to Templates available for the selected destination;
+- searchable **Template** combobox, grouped by Document Type; choosing a Template selects its normal destination Folder;
 - **Plain Text** is the ordinary blank option;
-- destination Folder selector/breadcrumb;
+- destination Folder breadcrumb/control, read-only unless the chosen Template explicitly permits an authorized override;
 - changing Template after entering content warns before replacing generated starting content.
 
 Document fields:
@@ -349,16 +351,19 @@ Add a bounded UX foundation patch:
 
 ### Phase 5
 
+- First execute P05-T00 to remove Folder scope from RoleAssignments, remove direct Department membership, make Roles Department-owned, and establish the separate Role and Folder trees in People.
 - Add typed Prepared by and Concerns Character relationships, tags, related/superseding records, and Copy/Move/Share in the same document action system.
 
 ### Phase 6
 
 - Hydrate the searchable Template chooser and switch between WYSIWYG and form-based creation.
+- Make Template choice select the Template's normal destination; expose an alternative Folder only for Templates that explicitly permit override.
 - Build Templates & Forms as one customer management area with Types/Templates/Forms subnavigation.
 
 ### Phase 7
 
-- Hydrate People → Access with the effective permission tree, sources, direct grants, denies, delegation limits, and authoritative APIs.
+- Hydrate People → Folder access with authoritative effective sources, direct Read/Write grants/denies, and delegation limits, without changing Role assignments.
+- Enforce `assign_subordinates` against the Department Role tree and populate `Roles I can assign` from the same server decision.
 - Drive management-bar visibility from real capabilities.
 
 ### Phase 8
@@ -383,7 +388,7 @@ Add a bounded UX foundation patch:
 6. Primary Domain navigation is exactly Home, About, Departments, Records and does not swell with permissions.
 7. Authorized management appears in a distinct bar and is scoped to the selected Domain.
 8. All customer-visible Subdomain copy says Department(s); legacy URLs redirect without data migration.
-9. A Domain administrator can start from People, select a Character, and see Domain membership, Departments, Roles, folder-access summary, and recent work in one coherent workspace.
+9. A Domain administrator can search and select a Character in People, edit Department-owned Roles in one checkbox tree, edit direct Read/Write access in a separate Folder tree, and see recent work without visiting raw collection pages.
 10. Roles remains the Role-definition surface, while one-person assignment occurs naturally from People.
 11. Records has one New document action that opens a full editor/creation page; it never asks for title inline on the Records browser.
 12. The new-document specification preserves Title, required active-Character Prepared by credit, additional preparers, Concerns, tags, destination, Template/Form choice, body, lifecycle actions, provenance, and validation.

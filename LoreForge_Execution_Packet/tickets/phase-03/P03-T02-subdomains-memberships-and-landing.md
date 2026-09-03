@@ -4,6 +4,8 @@
 **Phase:** 3  
 **Commit prefix:** `P03-T02:`
 
+> **Historical/superseded model:** This completed ticket records what Phase 3 originally built. `CC-2026-09-03-03` and mandatory P05-T00 remove direct SubdomainMembership and Character head/admin assignments. Do not use the requirements below as the current product contract.
+
 ## Objective
 Represent Scribes/Warriors/Magistrates as delegated organizational boundaries, not nested tenants.
 

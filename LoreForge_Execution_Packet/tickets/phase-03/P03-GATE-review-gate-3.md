@@ -4,6 +4,8 @@
 **Phase:** 3  
 **Commit prefix:** `P03-GATE:`
 
+> **Historical/superseded model:** This accepted gate describes the Phase 3 implementation at that time. `CC-2026-09-03-03` and mandatory P05-T00 replace direct Department membership and Folder-scoped Role assignment. It is not the current relationship contract.
+
 ## Objective
 Ensure Domain membership -> Subdomain membership -> Folder -> Role feels like an RP institution, not a tree-management database, with each relationship visibly distinct.
 

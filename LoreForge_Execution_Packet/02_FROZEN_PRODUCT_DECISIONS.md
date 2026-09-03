@@ -34,21 +34,25 @@ These decisions came from the product-design conversation and supersede stale/sp
 - A Domain may have multiple operational administrators, but LoreForge does not adjudicate owner disputes.
 - Subdomain is the neutral internal model for a real delegated organizational boundary (Scribes, Warriors, Courts, etc.), not a nested tenant. The default customer-facing vocabulary and canonical route use `Department(s)`; legacy `/subdomains` URLs redirect to `/departments`. The controlled vocabulary may later change the displayed noun without renaming the schema.
 - Subdomains share Domain theme/billing/site identity.
-- Subdomains have heads/admins, membership, roles, folders, templates/forms, and an app-owned landing page.
+- Departments have Roles, folders, templates/forms, and an app-owned landing page. A Character participates in a Department only by holding at least one active Role owned by that Department; there is no separate Character-to-Department membership assignment.
 - Initial model has one Subdomain level. More granular organization uses folders/delegation, not recursive Subdomains.
 
 ## Roles and access
-- Role hierarchy is real and rigid within its role set. A Character may hold multiple role assignments.
+- Every Community-Domain Role belongs to exactly one Department. Role hierarchy is real and rigid within that Department. A Character may hold multiple Role assignments in one or many Departments.
 - Hierarchy provides rank, default privilege inheritance, and delegation convenience, but **is not the only source of access**.
 - Direct grants across the hierarchy are allowed.
 - Explicit deny is required.
-- Role assignments may carry a folder/resource scope.
+- A Role assignment is only a Character-to-Role relationship. It never carries a Folder, resource scope, or Folder permission.
+- Role definitions may supply default permission rules, including defaults that affect Folders. Those defaults belong to the Role definition, not to an individual Role assignment.
+- Direct per-Character Folder access is represented and edited separately from Role assignments. Removing a Role removes only defaults inherited through that Role; direct Folder grants/denies remain.
+- Removing a Character from a Domain transactionally removes that Character's RoleAssignments and direct Folder grants/denies in the Domain. Audit history preserves the fact of removal, not reusable live assignment rows. Re-adding the Character starts with no Roles, Department participation, or direct Folder access.
 - No actor may delegate more authority than they possess or outside the branch they administer.
-- Domain and Subdomain membership are explicit and separate from Roles and explicit permissions.
-- Membership and Roles may supply default permissions; they are not synonymous with permissions.
-- Role creation is not generally delegatable: Domain Owner/Domain admins create Domain roles; Subdomain heads/admins create Subdomain roles; folder managers do not create roles merely because they manage ACLs.
+- Domain membership is explicit and separate from Roles and explicit permissions. Department participation is derived from active Department-owned Roles and is not stored or edited as a redundant membership.
+- Domain membership and Roles may supply default permissions; they are not synonymous with direct Folder permissions.
+- Role creation is not generally delegatable: Domain Owner/Domain admins create Roles; a Department Role with explicit `manage_roles` authority may create/configure Roles in that Department; folder managers do not create Roles merely because they manage Folder access. `manage_roles` and `assign_subordinates` are separate capabilities.
+- `assign_subordinates` is a Role-management capability. A holder may assign only active descendant Roles beneath a Role they hold, within the same Department; it never permits assigning that Role itself, a peer, an ancestor, or a Role in another Department. Server authorization, not tree visibility, enforces this boundary.
 - Folder permissions are primary. Document-specific sharing/grants/denies are supported as exceptions.
-- Customer administration is Character-centered. `People` is the default navigation label for the Domain member manager: select a Character, then inspect/manage Domain membership, Departments, Roles, independent Folder-scoped assignments, effective access, recent work, and change history in one workspace. The controlling User is displayed separately and never receives a Character Role by implication.
+- Customer administration is Character-centered. `People` is the default navigation label for the Domain member manager: find a Character with a fast typeahead search, then inspect/manage Domain membership, Department-owned Roles, separately assigned Folder access, effective access, recent work, and change history in one workspace. The controlling User is displayed separately and never receives a Character Role by implication.
 - `Roles` defines hierarchy/default authority and may support bulk assignment; the ordinary one-person assignment workflow lives on the Character's People page.
 
 ## Archive and Documents
@@ -66,6 +70,7 @@ These decisions came from the product-design conversation and supersede stale/sp
 - Normal deletion is soft delete/restore.
 - Records exposes one `New document` action leading to a full creation/editor page; it never asks for a title inline on the Records browser.
 - New-document UI includes searchable Template selection, destination Folder, editable title, required `Prepared by` Character credits, `Concerns` Character links, Tags, and either WYSIWYG content or a generated form. The active Character is automatically included in `Prepared by` and cannot be removed during creation; additional Characters may be credited.
+- A Template specifies its normal destination Folder. Choosing the Template selects that destination automatically; an authorized alternative is possible only when the Template explicitly permits destination override. Plain Text remains deliberately flexible.
 - Visible `Prepared by` credits, `Concerns` links, and immutable provenance actors are separate semantics and may not be collapsed into one generic Character link.
 
 ## Document relationships and movement
@@ -96,7 +101,7 @@ There are exactly two core relationship semantics:
 - Starter packs are first-party only for now.
 - Starter packs are **copy-on-install**. Installed Domain configuration is independent forever; pack updates never silently rewrite it.
 - Initial packs: Gorean City + one strongly contrasting modern pack.
-- Domain branding begins below the persistent LoreForge global header. Primary Domain navigation is stable and ordered `Home, About, Departments, Records`. A visually subordinate `Manage <Domain>` bar exposes authorized `People, Roles, Templates & Forms, Customize` destinations without changing the primary navigation.
+- Domain branding begins below the persistent LoreForge global header. Primary Domain navigation is stable and ordered `Home, About, Departments, Records`. A visually subordinate, unlabeled management bar exposes authorized `People, Roles, Templates & Forms, Customize` destinations without changing the primary navigation; do not prepend redundant `Manage <Domain>` copy.
 - `Templates & Forms` is one customer management area with distinct Document Types, Templates, and Forms subviews; grouping them must not conflate their data semantics.
 
 ## Public and Personal Domains

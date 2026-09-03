@@ -31,12 +31,12 @@ Create it only from the owner-approved previous state.
   - P07-T01
 - Outcome: Make the evaluator authoritative across all read/write paths so UI hiding is never the security boundary.
 
-### P07-T03 — Role defaults, hierarchy, and scoped authority
+### P07-T03 — Department Role defaults and hierarchy
 - File: `P07-T03-role-defaults-hierarchy-and-scoped-authority.md`
 - Mode: IMPLEMENTATION TICKET
 - Depends on:
   - P07-T02
-- Outcome: Make rigid Role hierarchy useful for default access while preserving scoped assignments such as Captains controlling different platoons.
+- Outcome: Make Department-owned Role hierarchy useful for default access and subordinate assignment without putting Folder scope on RoleAssignments.
 
 ### P07-T04 — Folder inheritance, direct grants, and explicit denies
 - File: `P07-T04-folder-inheritance-direct-grants-and-explicit-denies.md`

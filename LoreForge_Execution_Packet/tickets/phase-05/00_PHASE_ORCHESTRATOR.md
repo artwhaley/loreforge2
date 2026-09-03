@@ -3,7 +3,7 @@
 **Status:** READY — P04-GATE was owner-approved on 2026-09-03; Phase 5 has not begun.
 
 ## Phase outcome
-Add structured Character links, tags, grouped/supersedes relationships, and rigorously distinct Copy, Move, and Share behavior.
+First correct the rejected Role/Department/Folder assignment model, then add structured Character links, tags, grouped/supersedes relationships, and rigorously distinct Copy, Move, and Share behavior.
 
 ## Authority for this phase
 Before implementation, read the packet root documents `00_START_HERE.md` through `06_CHANGE_CONTROL.md`, this phase orchestrator, and each ticket immediately before executing it. The ticket is the bounded unit of work; this file controls order and stop behavior.
@@ -17,11 +17,19 @@ Create it only from the owner-approved previous state.
 
 ## Ordered ticket sequence
 
+### P05-T00 — Correct Role, Department, and Folder assignment model
+- File: `P05-T00-correct-role-department-and-folder-assignment-model.md`
+- Mode: IMPLEMENTATION TICKET
+- Depends on:
+  - P04-GATE approved
+  - CC-2026-09-03-03
+- Outcome: Remove Folder scope from RoleAssignments and redundant Department memberships, make Roles Department-owned, and establish separate modern Role and Folder controls on the Character workspace.
+
 ### P05-T01 — Prepared-by credits, Concerns links, and Domain tag vocabulary
 - File: `P05-T01-character-links-and-domain-tags.md`
 - Mode: IMPLEMENTATION TICKET
 - Depends on:
-  - P04-GATE approved
+  - P05-T00
 - Outcome: Add typed visible preparation credits, Characters a record concerns, and Domain tags without conflating any of them with provenance actors.
 
 ### P05-T02 — Grouped and Supersedes document relationships
@@ -49,6 +57,7 @@ Create it only from the owner-approved previous state.
 - File: `P05-GATE-review-gate-5.md`
 - Mode: REVIEW GATE — NO SELF-APPROVAL
 - Depends on:
+  - P05-T00
   - P05-T01
   - P05-T02
   - P05-T03
