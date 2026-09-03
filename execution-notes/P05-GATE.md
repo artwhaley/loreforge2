@@ -11,6 +11,7 @@
 - `c38493f` — P05-T04 Share and consolidated Document Actions.
 - `aa9a2a9` — P05-T04 follow-up hardening: strict Character-authored creation context, form/import/copy identity checks, independent Folder search, and cleanup of Domain-local shares during cross-Domain Move.
 - `86531f7` — P05-T04 follow-up: reject copies whose acting Character is not an active member of the destination Domain before creating anything.
+- `9cd9225` — P05-T03 follow-up: render Type/Tag mapping and drop previews before cross-Domain confirmation.
 
 ## Automated evidence
 
