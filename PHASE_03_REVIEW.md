@@ -1,6 +1,6 @@
 # Phase 3 review — Domain/Subdomain structure
 
-Status: `AWAITING_OWNER_APPROVAL`
+Status: `APPROVED_BY_OWNER` on 2026-09-02
 
 Branch: `phase-03-domain-subdomain-structure`
 
@@ -35,7 +35,7 @@ Implemented contract points:
 - Roles are Domain/Subdomain-owned, acyclic, and assignable to the same Character multiple times; `scopeFolder` is rendered as a full branch path. Interim mutations use `authorizeInterimOperation` and emit audit log entries.
 - Post-gate hardening adds explicit Subdomain-member removal, cascaded deactivation of Subdomain memberships and Role assignments when Domain membership is removed, active-parent checks on narrower grants, multi-folder Role assignment entry, and visible Account/Log out controls.
 
-Owner-only acceptance still required:
+Owner acceptance coverage:
 
 1. Visual/context pass for the Domain/Character/Administration selectors and the distinction between User authority and Character identity.
 2. Admin membership pass: add/remove a Character from `/domain/ar/members`, then independently add/remove a Subdomain membership; verify the two changes do not alter each other or imply a Role.
@@ -49,4 +49,4 @@ Owner-only acceptance still required:
 
 Known environment caveat: the existing local SQLite file was created before the new collections. Its compatibility schema was migrated in place for this run; the dev command intentionally uses `PAYLOAD_PUSH=false` because Payload's dev-push currently attempts to recreate already-existing indexes. A fresh database may run the seed with schema push enabled once; the existing fixture should use the command in the test instructions below.
 
-Hard stop: do not begin Phase 4 until the owner records approval in `execution-notes/P03-GATE.md`.
+Gate result: approved. Phase 4 may begin after the pre-Phase-4 workflow checkpoint is complete.
