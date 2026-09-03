@@ -26,6 +26,8 @@ type Props = {
   tenantSlug: string
   initialTitle: string
   initialMarkdown: string
+  /** Render the editor as a read-only historical/current snapshot. */
+  readOnly?: boolean
 }
 
 type Mode = 'edit' | 'source'
@@ -42,6 +44,7 @@ export function DocumentEditor({
   tenantSlug,
   initialTitle,
   initialMarkdown,
+  readOnly = false,
 }: Props) {
   const editorRef = useRef<MDXEditorMethods>(null)
   const [title, setTitle] = useState(initialTitle)
@@ -171,6 +174,7 @@ export function DocumentEditor({
           id="doc-title"
           className={styles.titleInput}
           value={title}
+          readOnly={readOnly}
           onChange={(e) => {
             const nextTitle = e.target.value
             setTitle(nextTitle)
@@ -183,6 +187,7 @@ export function DocumentEditor({
             type="button"
             className={mode === 'edit' ? styles.modeActive : styles.modeBtn}
             aria-pressed={mode === 'edit'}
+            disabled={readOnly}
             onClick={() => switchMode('edit')}
           >
             Edit
@@ -191,6 +196,7 @@ export function DocumentEditor({
             type="button"
             className={mode === 'source' ? styles.modeActive : styles.modeBtn}
             aria-pressed={mode === 'source'}
+            disabled={readOnly}
             onClick={() => switchMode('source')}
           >
             Source (advanced)
@@ -199,8 +205,8 @@ export function DocumentEditor({
         <span className={styles.status} aria-live="polite">
           {statusText}
         </span>
-        <button className={styles.saveButton} onClick={onSave} disabled={saveState.pending || transitionPending}>
-          Save
+        <button className={styles.saveButton} onClick={onSave} disabled={readOnly || saveState.pending || transitionPending}>
+          {readOnly ? 'Read-only' : 'Save'}
         </button>
       </div>
 
@@ -209,6 +215,7 @@ export function DocumentEditor({
           <ForwardRefEditor
             markdown={initialMarkdown}
             ref={editorRef}
+            readOnly={readOnly}
             onChange={(nextMarkdown) => {
               setMarkdown(nextMarkdown)
               updateCurrent({ body: nextMarkdown })
@@ -225,6 +232,7 @@ export function DocumentEditor({
             updateCurrent({ body: nextSource })
           }}
           spellCheck={false}
+          readOnly={readOnly}
           aria-label="Markdown source"
         />
       </div>

@@ -6,6 +6,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 
 import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
+import { canEditDocumentBody } from '@/lib/documents/lifecycle'
 import { domainAndIdWhere, tenantAndIdWhere } from '@/lib/tenant/scope'
 
 /**
@@ -47,6 +48,7 @@ export async function saveDocumentAction(input: {
     if (Number(ownerId) !== Number(user.id) && admins.docs.length === 0 && memberships.docs.length === 0) return { ok: false }
     const existing = await payload.find({ collection: 'documents', where: domainAndIdWhere(domain.id, documentId), depth: 0, limit: 1 })
     if (existing.docs.length === 0) return { ok: false }
+    if (!canEditDocumentBody(existing.docs[0].lifecycle)) return { ok: false }
     await payload.update({ collection: 'documents', id: documentId, data: { title, body: canonicalizeMarkdown(body) }, depth: 0 })
     payload.logger.info(`Saved document ${documentId}`)
     return { ok: true }
@@ -85,6 +87,7 @@ export async function saveDocumentAction(input: {
   if (existing.docs.length === 0) {
     return { ok: false }
   }
+  if (!canEditDocumentBody(existing.docs[0].lifecycle)) return { ok: false }
 
   await payload.update({
     collection: 'documents',

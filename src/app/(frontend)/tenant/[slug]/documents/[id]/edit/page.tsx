@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 
 import { TenantShell } from '@/components/theme/TenantShell'
 import { DocumentEditor } from '@/components/editor/DocumentEditor'
+import { canEditDocumentBody } from '@/lib/documents/lifecycle'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getDocumentForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
@@ -31,6 +32,7 @@ export default async function EditDocumentPage({ params }: Props) {
 
   const myTenants = await getTenantsForUser(user.id)
   const tokens = resolveThemeTokens(tenant)
+  const editable = canEditDocumentBody(doc.lifecycle)
 
   return (
     <TenantShell
@@ -39,13 +41,18 @@ export default async function EditDocumentPage({ params }: Props) {
       role={role}
       switcherTenants={myTenants}
     >
-      <DocumentEditor
-        entityId={doc.id}
-        entityType="document"
-        tenantSlug={tenant.slug}
-        initialTitle={doc.title}
-        initialMarkdown={doc.body}
-      />
+      <section>
+        <p><a href={`/domain/${tenant.slug}/records`}>Records</a> / <a href={`/domain/${tenant.slug}/documents/${doc.id}`}>{doc.title}</a> / Edit</p>
+        {!editable ? <p role="status">This record is <strong>{doc.lifecycle.replace('_', ' ')}</strong> and is read-only. A Domain administrator can return it to an editable state.</p> : null}
+        <DocumentEditor
+          entityId={doc.id}
+          entityType="document"
+          tenantSlug={tenant.slug}
+          initialTitle={doc.title}
+          initialMarkdown={doc.body}
+          readOnly={!editable}
+        />
+      </section>
     </TenantShell>
   )
 }

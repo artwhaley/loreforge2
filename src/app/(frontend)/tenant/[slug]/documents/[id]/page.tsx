@@ -51,6 +51,10 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
             </a>
           ) : null}
 
+          <a className={styles.action} href={`${base}/history`}>
+            History
+          </a>
+
           <form action={moveDocumentAction} className={styles.moveForm}>
             <input type="hidden" name="tenantSlug" value={tenant.slug} />
             <input type="hidden" name="documentId" value={doc.id} />
@@ -118,6 +122,8 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
               </span>
             )}
             <span className={styles.origin}>{originLabel(doc.origin)}</span>
+            <span className={styles.origin}>{typeof doc.documentType === 'object' ? doc.documentType.name : 'Document'}</span>
+            <span className={styles.origin}>{doc.lifecycle.replace('_', ' ')}</span>
           </div>
         </header>
 

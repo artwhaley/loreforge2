@@ -35,7 +35,7 @@ export async function getDocumentForTenant(
   const result = await payload.find({
     collection: 'documents',
     where: domainAndIdWhere(domainId(tenant), documentId),
-    depth: 0,
+    depth: 1,
     limit: 1,
   })
   return result.docs[0] ?? null
