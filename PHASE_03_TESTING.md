@@ -72,10 +72,14 @@ authorization phase.
 4. Under **Members**, each active member has a **Remove from Warriors** button.
    Use that button and confirm the page returns to Warriors with the member
    removed.
-5. Return to the Domain roster. Confirm the Character's Domain membership is
-   still **Active** and its Subdomains column no longer lists Warriors.
-6. Re-add the Character to Warriors. Confirm this does not create or remove a
-   Role.
+5. To return to the Domain roster, scroll to the bottom of the Subdomain page
+   and click **Back to Domain roster**, or open
+   <http://localhost:3055/domain/ar/members> directly. Confirm the Character's
+   Domain membership is still **Active** and its Subdomains column no longer
+   lists Warriors.
+6. Re-add the Character to Warriors. From the roster, click **View Subdomains**
+   at the bottom, open **Warriors**, enter the Character ID, and click **Add
+   Subdomain member**. Confirm this does not create or remove a Role.
 7. For the cascade test, click **Remove Domain membership** in the Domain
    roster. Confirm the Character disappears from the active Domain roster,
    Subdomain pages, and active Role assignments.
