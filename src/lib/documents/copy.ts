@@ -41,6 +41,8 @@ export async function copyDocument(args: { payload: Payload; sourceDocumentId: n
   const destinationDomain = await payload.findByID({ collection: 'domains', id: destinationDomainId, depth: 0, overrideAccess: true })
   const sourceDomain = await payload.findByID({ collection: 'domains', id: sourceDomainId, depth: 0, overrideAccess: true })
   if (!destinationDomain || !sourceDomain) throw new Error('Domain not found.')
+  const actingMembership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: destinationDomainId } }, { character: { equals: actorCharacterId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true })
+  if (!actingMembership.docs[0]) throw new Error('The acting Character must be an active member of the destination Domain.')
   const crossDomain = Number(sourceDomainId) !== Number(destinationDomainId)
   if (crossDomain && args.confirmCrossDomain !== true) throw new Error('Cross-Domain copy requires explicit confirmation.')
   const folder = await destinationFolder(payload, destinationDomainId, args.destinationFolderId)
