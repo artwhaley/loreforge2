@@ -54,7 +54,7 @@ export async function generateDocumentFromSubmission(args: {
   payload: Payload
   tenant: { id: number; slug: string }
   user: { id: number }
-  actorCharacterId: number
+  actorCharacterId?: number
   form: FormArchiveMetadata
   answers: FormAnswers
 }): Promise<GeneratedDocument> {
@@ -87,7 +87,7 @@ export async function generateDocumentFromSubmission(args: {
 
   const created = await payload.create({
     collection: 'documents',
-    context: { preparedByCharacterId: actorCharacterId, actorUserId: user.id },
+    context: actorCharacterId == null ? { allowUserCreate: true, actorUserId: user.id } : { preparedByCharacterId: actorCharacterId, actorUserId: user.id },
     data: {
       domain: tenant.id,
       tenant: tenant.id,

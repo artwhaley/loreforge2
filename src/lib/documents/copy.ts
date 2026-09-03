@@ -31,7 +31,6 @@ async function destinationFolder(payload: Payload, domainId: number | string, fo
 
 export async function copyDocument(args: { payload: Payload; sourceDocumentId: number | string; destinationDomainId: number | string; destinationFolderId?: number | string | null; actorUserId: number | string; actorCharacterId?: number | string | null; confirmCrossDomain?: boolean }) {
   const { payload, sourceDocumentId, destinationDomainId, actorUserId, actorCharacterId } = args
-  if (actorCharacterId == null || actorCharacterId === '') throw new Error('An acting Character is required to copy a Document.')
   const source = await payload.findByID({ collection: 'documents', id: sourceDocumentId, depth: 1, overrideAccess: true })
   if (!source) throw new Error('Source Document not found.')
   const sourceDomainId = idOf(source.domain)
@@ -41,8 +40,10 @@ export async function copyDocument(args: { payload: Payload; sourceDocumentId: n
   const destinationDomain = await payload.findByID({ collection: 'domains', id: destinationDomainId, depth: 0, overrideAccess: true })
   const sourceDomain = await payload.findByID({ collection: 'domains', id: sourceDomainId, depth: 0, overrideAccess: true })
   if (!destinationDomain || !sourceDomain) throw new Error('Domain not found.')
-  const actingMembership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: destinationDomainId } }, { character: { equals: actorCharacterId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true })
-  if (!actingMembership.docs[0]) throw new Error('The acting Character must be an active member of the destination Domain.')
+  if (actorCharacterId != null && actorCharacterId !== '') {
+    const actingMembership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: destinationDomainId } }, { character: { equals: actorCharacterId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true })
+    if (!actingMembership.docs[0]) throw new Error('The acting Character must be an active member of the destination Domain.')
+  }
   const crossDomain = Number(sourceDomainId) !== Number(destinationDomainId)
   if (crossDomain && args.confirmCrossDomain !== true) throw new Error('Cross-Domain copy requires explicit confirmation.')
   const folder = await destinationFolder(payload, destinationDomainId, args.destinationFolderId)
@@ -52,7 +53,7 @@ export async function copyDocument(args: { payload: Payload; sourceDocumentId: n
   const destinationTypeId = crossDomain ? resolveCrossDomainType(sourceType.name, destinationTypes.docs.map((type) => ({ id: type.id, name: type.name, active: type.active })), plain) : Number(sourceType.id)
   if (!destinationTypeId) throw new Error('No compatible destination Document Type exists.')
   const bodyHash = createHash('sha256').update(source.body).digest('hex')
-  const created = await payload.create({ collection: 'documents', context: { preparedByCharacterId: Number(actorCharacterId), actorUserId }, overrideAccess: true, data: { domain: Number(destinationDomainId), title: source.title, body: source.body, origin: 'web-editor', sourceKind: 'copy', documentType: destinationTypeId, lifecycle: copyLifecycle(destinationDomain.kind), publicAccess: 'inherit', createdBy: Number(actorUserId), folder: folder.id } })
+  const created = await payload.create({ collection: 'documents', context: actorCharacterId == null || actorCharacterId === '' ? { allowUserCreate: true, actorUserId } : { preparedByCharacterId: Number(actorCharacterId), actorUserId }, overrideAccess: true, data: { domain: Number(destinationDomainId), title: source.title, body: source.body, origin: 'web-editor', sourceKind: 'copy', documentType: destinationTypeId, lifecycle: copyLifecycle(destinationDomain.kind), publicAccess: 'inherit', createdBy: Number(actorUserId), folder: folder.id } })
   const sourceLinks = await getDocumentCharacterLinks(payload, source.id)
   for (const link of sourceLinks.docs) {
     const characterId = idOf(link.character)

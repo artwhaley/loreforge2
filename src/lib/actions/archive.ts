@@ -27,6 +27,50 @@ type MemberTenant = {
   legacyTenantId?: number
 }
 
+export type DocumentEditorActionState = {
+  error?: 'missing' | 'type' | 'authorization' | 'concerns'
+  values?: {
+    title: string
+    body: string
+    documentTypeId: string
+    folderId: string
+    concernLinks: string
+    tagNames: string
+  }
+}
+
+function editorValues(formData: FormData): DocumentEditorActionState['values'] {
+  return {
+    title: String(formData.get('title') ?? ''),
+    body: String(formData.get('body') ?? ''),
+    documentTypeId: String(formData.get('documentTypeId') ?? ''),
+    folderId: String(formData.get('folderId') ?? ''),
+    concernLinks: String(formData.get('concernLinks') ?? ''),
+    tagNames: String(formData.get('tagNames') ?? ''),
+  }
+}
+
+type ConcernSubmission = { characterId?: number; newName?: string; relationshipLabel?: string }
+
+function parseConcernLinks(raw: string): ConcernSubmission[] | null {
+  if (!raw.trim()) return []
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return null
+    return parsed.map((item) => {
+      if (!item || typeof item !== 'object') throw new Error('invalid')
+      const row = item as Record<string, unknown>
+      const characterId = Number(row.characterId)
+      const newName = typeof row.newName === 'string' ? row.newName.trim() : ''
+      const relationshipLabel = typeof row.relationshipLabel === 'string' ? row.relationshipLabel.trim() : ''
+      if ((!Number.isFinite(characterId) || characterId <= 0) && !newName) throw new Error('invalid')
+      return { characterId: Number.isFinite(characterId) && characterId > 0 ? characterId : undefined, newName: newName || undefined, relationshipLabel: relationshipLabel || undefined }
+    })
+  } catch {
+    return null
+  }
+}
+
 async function plainTextTypeId(payload: MemberTenant['payload'], domainId: number): Promise<number | null> {
   const result = await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: domainId } }, { name: { equals: 'Plain Text' } }, { active: { equals: true } }] }, depth: 0, limit: 1 })
   return result.docs[0]?.id ?? null
@@ -132,16 +176,14 @@ export async function createDocumentAction(formData: FormData): Promise<void> {
 
   const { payload, user, tenant } = ctx
   const activeContext = await getActiveContext()
-  if (!activeContext.activeCharacter || activeContext.tenant?.slug !== tenantSlug) redirect(`/domain/${tenantSlug}/records/new?error=character`)
-  const membership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: tenant.id } }, { character: { equals: activeContext.activeCharacter.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
-  if (!membership.docs[0]) redirect(`/domain/${tenantSlug}/records/new?error=character`)
+  const activeCharacterId = activeContext.tenant?.slug === tenantSlug ? activeContext.activeCharacter?.id : undefined
   const documentType = await plainTextTypeId(payload, tenant.id)
   if (!documentType) redirect(`/domain/${tenantSlug}/records/new?error=type`)
   const folder = await tenantFolderId(payload, tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
 
   const created = await payload.create({
     collection: 'documents',
-    context: { preparedByCharacterId: activeContext.activeCharacter.id, actorUserId: user.id },
+    context: activeCharacterId ? { preparedByCharacterId: activeCharacterId, actorUserId: user.id } : { allowUserCreate: true, actorUserId: user.id },
     data: {
       domain: tenant.id,
       ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}),
@@ -157,48 +199,63 @@ export async function createDocumentAction(formData: FormData): Promise<void> {
       folder,
     },
   })
-  await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: created.id, eventType: 'created', actorUserId: user.id, revisionId: await latestDocumentRevisionId(payload, created.id) })
+  await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: created.id, eventType: 'created', actorUserId: user.id, actorCharacterId: activeCharacterId, revisionId: await latestDocumentRevisionId(payload, created.id) })
   redirect(`${ctx.basePath}/documents/${created.id}/edit`)
 }
 
-/** Full-page customer document entry. The active Character is required for
- * authoring; user-level Domain administration alone cannot create a record. */
-export async function createDocumentFromEditorAction(formData: FormData): Promise<void> {
+/** Full-page customer document entry. An acting Character is optional; when
+ * selected it is automatically recorded as the required Prepared by credit. */
+export async function createDocumentFromEditorAction(_previousState: DocumentEditorActionState, formData: FormData): Promise<DocumentEditorActionState> {
   const tenantSlug = String(formData.get('tenantSlug') ?? '')
   const title = String(formData.get('title') ?? '').trim()
   const body = canonicalizeMarkdown(String(formData.get('body') ?? '')).trim() || `# ${title}`
+  const values = editorValues(formData)!
   const ctx = await getMemberTenant(tenantSlug)
-  if (!ctx || !title) redirect(`/domain/${tenantSlug}/records/new?error=missing`)
+  if (!ctx) return { error: 'authorization', values }
+  if (!title) return { error: 'missing', values }
 
   const context = await getActiveContext()
-  if (!context.activeCharacter || context.tenant?.slug !== tenantSlug) redirect(`/domain/${tenantSlug}/records/new?error=character`)
-  const membership = await ctx.payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: ctx.tenant.id } }, { character: { equals: context.activeCharacter.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
-  if (!membership.docs[0]) redirect(`/domain/${tenantSlug}/records/new?error=character`)
+  const activeCharacterId = context.tenant?.slug === tenantSlug ? context.activeCharacter?.id : undefined
+  const concernEntries = parseConcernLinks(values.concernLinks)
+  if (!concernEntries) return { error: 'concerns', values }
   const folder = await tenantFolderId(ctx.payload, ctx.tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
   const requestedTypeId = Number(formData.get('documentTypeId') ?? '')
   const typeResult = await ctx.payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: ctx.tenant.id } }, { active: { equals: true } }] }, depth: 0, limit: 500 })
   const selectedType = typeResult.docs.find((item) => Number(item.id) === requestedTypeId) ?? typeResult.docs.find((item) => item.name.toLowerCase() === 'plain text')
-  if (!selectedType) redirect(`/domain/${tenantSlug}/records/new?error=type`)
+  if (!selectedType) return { error: 'type', values }
+  const interim = await authorizeInterimOperation(ctx.payload, { userId: ctx.user.id, activeCharacterId }, ctx.tenant.id)
+  if (concernEntries.length > 0 && interim !== true) return { error: 'authorization', values }
+  if (interim === true) {
+    const requestedCharacterIds = [...new Set(concernEntries.flatMap((entry) => entry.characterId ? [entry.characterId] : []))]
+    if (requestedCharacterIds.length > 0) {
+      const characterRows = await ctx.payload.find({ collection: 'characters', where: { and: [{ id: { in: requestedCharacterIds } }, { status: { equals: 'active' } }] }, depth: 0, limit: requestedCharacterIds.length, overrideAccess: true })
+      if (characterRows.docs.length !== requestedCharacterIds.length) return { error: 'concerns', values }
+    }
+  }
   const folderRecord = folder ? await ctx.payload.findByID({ collection: 'folders', id: folder, depth: 0 }).catch(() => null) : null
   const domainRecord = await ctx.payload.findByID({ collection: 'domains', id: ctx.tenant.id, depth: 0 })
   const policy = resolveFilingPolicy({ template: 'inherit', folder: (folderRecord?.filingPolicy ?? 'inherit') as FilingPolicy, documentType: selectedType.defaultFilingPolicy, domain: (domainRecord.defaultFilingPolicy ?? 'direct-file') as Exclude<FilingPolicy, 'inherit'> })
-  const created = await ctx.payload.create({ collection: 'documents', context: { preparedByCharacterId: context.activeCharacter.id, actorUserId: ctx.user.id }, data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body, origin: 'web-editor', sourceKind: 'web', documentType: selectedType.id, lifecycle: policy === 'review-required' ? 'pending_review' : 'filed', publicAccess: 'inherit', createdBy: ctx.user.id, folder } })
-  await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'created', actorUserId: ctx.user.id, actorCharacterId: context.activeCharacter.id, context: { lifecycle: created.lifecycle }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id) })
-  const interim = await authorizeInterimOperation(ctx.payload, { userId: ctx.user.id, activeCharacterId: context.activeCharacter.id }, ctx.tenant.id)
+  const created = await ctx.payload.create({ collection: 'documents', context: activeCharacterId ? { preparedByCharacterId: activeCharacterId, actorUserId: ctx.user.id } : { allowUserCreate: true, actorUserId: ctx.user.id }, data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body, origin: 'web-editor', sourceKind: 'web', documentType: selectedType.id, lifecycle: policy === 'review-required' ? 'pending_review' : 'filed', publicAccess: 'inherit', createdBy: ctx.user.id, folder } })
+  await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'created', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { lifecycle: created.lifecycle }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id) })
   if (interim === true) {
-    const preparedByIds = formData.getAll('preparedByIds').map((value) => Number(value)).filter((id) => Number.isFinite(id) && id > 0)
-    const concernIds = formData.getAll('concernCharacterIds').map((value) => Number(value)).filter((id) => Number.isFinite(id) && id > 0)
-    for (const characterId of [...new Set(preparedByIds)]) if (characterId !== Number(context.activeCharacter.id)) await attachDocumentCharacterLink({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId, kind: 'prepared_by', actor: { userId: ctx.user.id, characterId: context.activeCharacter.id } })
-    const relationshipLabel = String(formData.get('concernsRelationship') ?? '').trim() || null
-    for (const characterId of [...new Set(concernIds)]) await attachDocumentCharacterLink({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId, kind: 'concerns', relationshipLabel, actor: { userId: ctx.user.id, characterId: context.activeCharacter.id } })
+    for (const entry of concernEntries) {
+      let characterId = entry.characterId
+      if (!characterId && entry.newName) {
+        const allCharacters = await ctx.payload.find({ collection: 'characters', where: { status: { equals: 'active' } }, depth: 0, limit: 5000, overrideAccess: true })
+        const existing = allCharacters.docs.find((character) => character.name.trim().toLocaleLowerCase() === entry.newName?.toLocaleLowerCase())
+        const character = existing ?? await ctx.payload.create({ collection: 'characters', overrideAccess: true, data: { name: entry.newName, status: 'active', createdBy: ctx.user.id } })
+        characterId = Number(character.id)
+      }
+      if (characterId) await attachDocumentCharacterLink({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId, kind: 'concerns', relationshipLabel: entry.relationshipLabel, actor: { userId: ctx.user.id, characterId: activeCharacterId } })
+    }
     const rawTags = String(formData.get('tagNames') ?? '').split(',').map((name) => name.trim()).filter(Boolean)
     for (const name of [...new Set(rawTags.map((tag) => tag.toLocaleLowerCase()))]) {
       const displayName = rawTags.find((tag) => tag.toLocaleLowerCase() === name) ?? name
-      const tag = await findOrCreateDomainTag({ payload: ctx.payload, domainId: ctx.tenant.id, name: displayName, actor: { userId: ctx.user.id, characterId: context.activeCharacter.id } })
-      await attachDocumentTag({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, tagId: tag.id, actor: { userId: ctx.user.id, characterId: context.activeCharacter.id } })
+      const tag = await findOrCreateDomainTag({ payload: ctx.payload, domainId: ctx.tenant.id, name: displayName, actor: { userId: ctx.user.id, characterId: activeCharacterId } })
+      await attachDocumentTag({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, tagId: tag.id, actor: { userId: ctx.user.id, characterId: activeCharacterId } })
     }
   }
-  if (created.lifecycle === 'filed') await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'filed', actorUserId: ctx.user.id, actorCharacterId: context.activeCharacter.id, context: { reason: 'filing-policy' }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id) })
+  if (created.lifecycle === 'filed') await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'filed', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { reason: 'filing-policy' }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id) })
   redirect(`${ctx.basePath}/documents/${created.id}/edit`)
 }
 
@@ -275,16 +332,14 @@ export async function importMarkdownAction(formData: FormData): Promise<void> {
 
   const { payload, user, tenant } = ctx
   const activeContext = await getActiveContext()
-  if (!activeContext.activeCharacter || activeContext.tenant?.slug !== tenantSlug) redirect(`/domain/${tenantSlug}/records?error=character`)
-  const membership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: tenant.id } }, { character: { equals: activeContext.activeCharacter.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
-  if (!membership.docs[0]) redirect(`/domain/${tenantSlug}/records?error=character`)
+  const activeCharacterId = activeContext.tenant?.slug === tenantSlug ? activeContext.activeCharacter?.id : undefined
   const documentType = await plainTextTypeId(payload, tenant.id)
   if (!documentType) redirect(`/domain/${tenantSlug}/records?error=type`)
   const folder = await tenantFolderId(payload, tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
 
   const created = await payload.create({
     collection: 'documents',
-    context: { preparedByCharacterId: activeContext.activeCharacter.id, actorUserId: user.id },
+    context: activeCharacterId ? { preparedByCharacterId: activeCharacterId, actorUserId: user.id } : { allowUserCreate: true, actorUserId: user.id },
     data: {
       domain: tenant.id,
       ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}),
@@ -299,7 +354,7 @@ export async function importMarkdownAction(formData: FormData): Promise<void> {
       folder,
     },
   })
-  await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: created.id, eventType: 'created', actorUserId: user.id, actorCharacterId: activeContext.activeCharacter.id, revisionId: await latestDocumentRevisionId(payload, created.id), context: { sourceKind: 'markdown-import' } })
+  await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: created.id, eventType: 'created', actorUserId: user.id, actorCharacterId: activeCharacterId, revisionId: await latestDocumentRevisionId(payload, created.id), context: { sourceKind: 'markdown-import' } })
   redirect(`${ctx.basePath}/documents/${created.id}`)
 }
 

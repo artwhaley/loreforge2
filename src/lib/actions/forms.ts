@@ -63,12 +63,10 @@ export async function submitReportFormAction(
   })
   if (!memberships.docs[0]) return { ok: false, message: 'Not authorized.' }
 
-  // Form submissions are document authoring too: require an explicitly
-  // selected Character that is an active member of this Domain.
+  // Form submissions are document authoring too. An acting Character is
+  // optional; when selected, it becomes the visible Prepared by credit.
   const activeContext = await getActiveContext()
-  if (!activeContext.activeCharacter || activeContext.tenant?.slug !== tenantSlug) return { ok: false, message: 'Select an active Character before submitting.' }
-  const domainMembership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: tenant.id } }, { character: { equals: activeContext.activeCharacter.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
-  if (!domainMembership.docs[0]) return { ok: false, message: 'The selected Character is not an active Domain member.' }
+  const activeCharacterId = activeContext.tenant?.slug === tenantSlug ? activeContext.activeCharacter?.id : undefined
 
   // The form itself must belong to the active tenant.
   const forms = await payload.find({
@@ -105,7 +103,7 @@ export async function submitReportFormAction(
     payload,
     tenant: { id: Number(tenant.id), slug: tenant.slug },
     user: { id: Number(user.id) },
-    actorCharacterId: Number(activeContext.activeCharacter.id),
+    actorCharacterId: activeCharacterId == null ? undefined : Number(activeCharacterId),
     form: {
       id: form.id,
       title: form.title,
