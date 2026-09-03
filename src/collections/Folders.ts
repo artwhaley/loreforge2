@@ -63,7 +63,7 @@ export const Folders: CollectionConfig = {
       required: false,
       admin: { hidden: true },
     },
-    { name: 'subdomain', type: 'relationship', relationTo: 'subdomains', label: 'Subdomain' },
+    { name: 'subdomain', type: 'relationship', relationTo: 'subdomains', label: 'Department' },
     {
       name: 'name',
       type: 'text',

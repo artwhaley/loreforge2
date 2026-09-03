@@ -16,7 +16,7 @@ export const Roles: CollectionConfig = {
       const subdomainId = relationId(data?.subdomain ?? originalDoc?.subdomain)
       if (subdomainId) {
         const subdomain = await req.payload.findByID({ collection: 'subdomains', id: subdomainId, depth: 0 })
-        if (relationId(subdomain.domain) !== domainId) throw new Error('A Role Subdomain must belong to the same Domain.')
+        if (relationId(subdomain.domain) !== domainId) throw new Error('A Role Department must belong to the same Domain.')
       }
       const parentRoleId = relationId(data?.parentRole ?? originalDoc?.parentRole)
       const parent = parentRoleId ? await req.payload.findByID({ collection: 'roles', id: parentRoleId, depth: 0 }) : null
@@ -31,7 +31,7 @@ export const Roles: CollectionConfig = {
   },
   fields: [
     { name: 'domain', type: 'relationship', relationTo: 'domains', required: true, index: true },
-    { name: 'subdomain', type: 'relationship', relationTo: 'subdomains', index: true },
+    { name: 'subdomain', type: 'relationship', relationTo: 'subdomains', index: true, label: 'Department' },
     { name: 'name', type: 'text', required: true },
     { name: 'parentRole', type: 'relationship', relationTo: 'roles', label: 'Immediate superior' },
     { name: 'active', type: 'checkbox', defaultValue: true },

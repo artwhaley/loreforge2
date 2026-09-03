@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 export const Subdomains: CollectionConfig = {
   slug: 'subdomains',
+  labels: { singular: 'Department', plural: 'Departments' },
   admin: { useAsTitle: 'name', defaultColumns: ['name', 'domain', 'headCharacter', 'publicListing'] },
   timestamps: true,
   indexes: [{ unique: true, fields: ['domain', 'slug'] }],

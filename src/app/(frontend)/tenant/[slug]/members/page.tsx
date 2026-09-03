@@ -38,8 +38,8 @@ export default async function DomainMembersPage({ params }: Props) {
       <section>
         <p><a href={`/domain/${slug}`}>← Domain home</a></p>
         <h1>Domain members</h1>
-        <p>Characters belong to this Domain independently of their controlling account, local alias, Subdomain membership, and Roles.</p>
-        {role === 'admin' ? <p><strong>Lifecycle:</strong> removing Domain membership also deactivates this Character's Subdomain memberships and Role assignments. Re-adding the Domain never restores those narrower grants automatically.</p> : null}
+        <p>Characters belong to this Domain independently of their controlling account, local alias, Department membership, and Roles.</p>
+        {role === 'admin' ? <p><strong>Lifecycle:</strong> removing Domain membership also deactivates this Character's Department memberships and Role assignments. Re-adding the Domain never restores those narrower grants automatically.</p> : null}
         {role === 'admin' ? (
           <form action="/api/domain-memberships" method="post">
             <input type="hidden" name="domainSlug" value={slug} />
@@ -48,7 +48,7 @@ export default async function DomainMembersPage({ params }: Props) {
           </form>
         ) : null}
         <table>
-          <thead><tr><th>Character</th><th>Domain-local alias</th><th>Controlling User</th><th>Domain membership</th><th>Subdomains</th><th>Roles</th>{role === 'admin' ? <th>Actions</th> : null}</tr></thead>
+          <thead><tr><th>Character</th><th>Domain-local alias</th><th>Controlling User</th><th>Domain membership</th><th>Departments</th><th>Roles</th>{role === 'admin' ? <th>Actions</th> : null}</tr></thead>
           <tbody>
             {rows.map(({ membership, character, localContext, controllingUser }) => (
               <tr key={membership.id}>
@@ -64,7 +64,7 @@ export default async function DomainMembersPage({ params }: Props) {
           </tbody>
         </table>
         {rows.length === 0 ? <p>No active Character members yet.</p> : null}
-        <p><a href={`/domain/${slug}/subdomains`}>View Subdomains</a></p>
+        <p><a href={`/domain/${slug}/departments`}>View Departments</a></p>
       </section>
     </TenantShell>
   )

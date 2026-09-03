@@ -12,7 +12,7 @@ test('rejects role parent cycles and cross-Domain parents', () => {
 
 test('accepts a scoped folder only in the Role branch', () => {
   assert.equal(assertRoleAssignment({ characterId: 10, roleId: 2, scopeFolderId: 23 }, role(2, 3, 2), { id: 23, domainId: 3, subdomainId: 2 }), true)
-  assert.throws(() => assertRoleAssignment({ characterId: 10, roleId: 2, scopeFolderId: 9 }, role(2, 3, 2), { id: 9, domainId: 3, subdomainId: 1 }), /Subdomain branch/)
+  assert.throws(() => assertRoleAssignment({ characterId: 10, roleId: 2, scopeFolderId: 9 }, role(2, 3, 2), { id: 9, domainId: 3, subdomainId: 1 }), /Department branch/)
 })
 
 test('allows a Character to hold distinct Roles', () => {

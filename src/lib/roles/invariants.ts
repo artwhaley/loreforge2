@@ -7,7 +7,7 @@ const same = (a: unknown, b: unknown) => String(a) === String(b)
 /** Validate role ownership and immediate-superior hierarchy. */
 export function assertRoleHierarchy(role: RoleLike, parent: RoleLike | null, allRoles: RoleLike[]): true {
   if (parent && !same(role.domainId, parent.domainId)) throw new Error('A Role parent must belong to the same Domain.')
-  if (role.subdomainId && parent?.subdomainId && !same(role.subdomainId, parent.subdomainId)) throw new Error('A Subdomain Role cannot inherit from a different Subdomain.')
+  if (role.subdomainId && parent?.subdomainId && !same(role.subdomainId, parent.subdomainId)) throw new Error('A Department Role cannot inherit from a different Department.')
   const byId = new Map(allRoles.map((candidate) => [String(candidate.id), candidate]))
   let current = parent
   const seen = new Set<string>()
@@ -26,7 +26,7 @@ export function assertRoleAssignment(input: RoleAssignmentInput, role: RoleLike,
   if (!input.characterId || !input.roleId) throw new Error('Character and Role are required for an assignment.')
   if (scopeFolder) {
     if (!same(scopeFolder.domainId, role.domainId)) throw new Error('A Role scope Folder must belong to the Role Domain.')
-    if (role.subdomainId && !same(scopeFolder.subdomainId, role.subdomainId)) throw new Error('A Role scope Folder must belong to the Role Subdomain branch.')
+    if (role.subdomainId && !same(scopeFolder.subdomainId, role.subdomainId)) throw new Error('A Role scope Folder must belong to the Role Department branch.')
   }
   return true
 }

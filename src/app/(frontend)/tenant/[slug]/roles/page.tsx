@@ -51,7 +51,7 @@ export default async function RolesPage({ params }: Props) {
       <section>
         <p><a href={`/domain/${slug}`}>← Domain home</a></p>
         <h1>Roles</h1>
-        <p>Roles are Character assignments. Membership, Subdomain membership, and Role assignment remain separate records. Each active assignment row is one independent grant; a Character may have the same Role across many folder scopes.</p>
+        <p>Roles are Character assignments. Domain membership, Department membership, and Role assignment remain separate records. Each active assignment row is one independent grant; a Character may have the same Role across many folder scopes.</p>
         {roles.docs.length === 0 ? <p>No Roles have been configured.</p> : <ul>
           {roles.docs.map((item) => {
             const parent = relationId(item.parentRole)
