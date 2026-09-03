@@ -37,7 +37,7 @@ Run the server with `npm run dev` (the script pins `PAYLOAD_PUSH=false`) and ope
 
 ### 2. Character links, tags, and provenance
 
-1. Open **Records → New document** (`/domain/ar/records/new`). The top-bar **Acting as** selector is optional; if a Character is selected it appears as an automatic, non-editable **Prepared by** credit, and if no Character is selected the document can still be created without that credit.
+1. Open **Records → New document** (`/domain/ar/records/new`). Choose a Document Type, enter a Title and body, and leave Destination at **Domain Root** or choose a Folder. The top-bar **Acting as** selector is optional; if a Character is selected it appears as an automatic, non-editable **Prepared by** credit, and if no Character is selected the document can still be created without that credit.
 2. Create an Incident Report. Under **Concerns**, search for any Character, add several chips, and give each chip its own relationship (`perp`, `victim`, `witness`). Also type a name that does not exist and choose **Add as a new unlinked Character**.
 3. Open the created record. Verify Prepared by (when selected), Concerns, Tags, and the History/provenance actor are separate concepts. The automatic Prepared by credit must not offer a working Remove action; newly created concern Characters must have no Domain/Role membership.
 
