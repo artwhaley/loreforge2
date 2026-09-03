@@ -12,6 +12,7 @@ import { renderMarkdown } from '@/lib/markdown/render'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 import { getDocumentCharacterLinks, getDocumentTags } from '@/lib/documents/links'
 import { getDocumentRelationships } from '@/lib/documents/relationships'
+import { resolveCrossDomainType } from '@/lib/documents/operationInvariants'
 
 import styles from './document.module.scss'
 
@@ -42,6 +43,23 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
   const [characterLinks, tagLinks, relationshipLinks, shareRules] = await Promise.all([getDocumentCharacterLinks(payload, doc.id), getDocumentTags(payload, doc.id), getDocumentRelationships(payload, doc.id).catch(() => ({ docs: [] })), payload.find({ collection: 'permission-rules', where: { and: [{ resourceType: { equals: 'Document' } }, { resource: { equals: doc.id } }, { active: { equals: true } }] }, depth: 1, limit: 100, overrideAccess: true }).catch(() => ({ docs: [] }))])
   const flatFolders = flattenFolderTree(buildFolderTree(folders))
   const folderIdValue = typeof doc.folder === 'object' ? doc.folder?.id ?? '' : doc.folder ?? ''
+  const sourceType = typeof doc.documentType === 'object' ? doc.documentType : await payload.findByID({ collection: 'document-types', id: doc.documentType, depth: 0, overrideAccess: true }).catch(() => null)
+  const destinationDomainIds = domains.filter((item) => Number(item.id) !== Number(tenant.id)).map((item) => Number(item.id))
+  const [destinationTypeRows, destinationTagRows] = destinationDomainIds.length > 0
+    ? await Promise.all([
+        payload.find({ collection: 'document-types', where: { and: [{ domain: { in: destinationDomainIds } }, { active: { equals: true } }] }, depth: 0, limit: 5000, overrideAccess: true }),
+        payload.find({ collection: 'tags', where: { domain: { in: destinationDomainIds } }, depth: 0, limit: 5000, overrideAccess: true }).catch(() => ({ docs: [] })),
+      ])
+    : [{ docs: [] }, { docs: [] }]
+  const sourceTagNames = tagLinks.docs.map((link) => typeof link.tag === 'object' ? link.tag.name : '').filter(Boolean)
+  const mappingPreview = domains.filter((item) => Number(item.id) !== Number(tenant.id)).map((destination) => {
+    const types = destinationTypeRows.docs.filter((type) => Number(typeof type.domain === 'object' ? type.domain.id : type.domain) === Number(destination.id))
+    const plain = types.find((type) => type.name.toLocaleLowerCase() === 'plain text')?.id ?? null
+    const mappedTypeId = sourceType?.name ? resolveCrossDomainType(sourceType.name, types.map((type) => ({ id: Number(type.id), name: type.name, active: type.active })), plain) : null
+    const mappedType = types.find((type) => Number(type.id) === Number(mappedTypeId))
+    const tags = destinationTagRows.docs.filter((tag) => Number(typeof tag.domain === 'object' ? tag.domain.id : tag.domain) === Number(destination.id))
+    return { destination, typeLabel: mappedType ? `${mappedType.name}${Number(mappedType.id) === Number(plain) && sourceType?.name.toLocaleLowerCase() !== 'plain text' ? ' (Plain Text fallback)' : ' (exact name)'}` : 'No compatible active Type', tagRows: sourceTagNames.map((name) => ({ name, match: tags.find((tag) => tag.name.toLocaleLowerCase() === name.toLocaleLowerCase())?.name ?? null })) }
+  })
 
   const tokens = resolveThemeTokens(tenant)
   const html = renderMarkdown(doc.body)
@@ -122,6 +140,8 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
               Move
             </button>
           </form>
+
+          {mappingPreview.length > 0 ? <details className={styles.moveForm}><summary>Cross-Domain mapping preview</summary><p>Review the selected destination's Type and Tag mapping before confirming Copy or Move. Unmatched Tags are dropped; Domain-local shares are not carried over.</p>{mappingPreview.map(({ destination, typeLabel, tagRows }) => <section key={destination.id}><strong>{destination.name}</strong><div>Type: {sourceType?.name ?? 'Source Type'} → {typeLabel}</div>{tagRows.length > 0 ? <ul>{tagRows.map((tag) => <li key={`${destination.id}-${tag.name}`}>Tag {tag.name} → {tag.match ?? 'dropped (no exact match)'}</li>)}</ul> : <div>Tags: none</div>}</section>)}</details> : null}
 
           {user ? <form action={copyDocumentAction} className={styles.moveForm}><input type="hidden" name="tenantSlug" value={tenant.slug} /><input type="hidden" name="documentId" value={doc.id} /><label className={styles.moveLabel} htmlFor="copy-domain">Copy to:</label><select id="copy-domain" name="destinationDomainSlug" className={styles.moveSelect} defaultValue={tenant.slug}>{domains.map((item) => <option key={item.id} value={item.slug}>{item.name}</option>)}</select><label><input type="checkbox" name="confirmCrossDomain" value="1" /> Confirm if another Domain</label><button type="submit" className={styles.action}>Create independent copy</button></form> : null}
 
