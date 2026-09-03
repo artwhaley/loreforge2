@@ -1,6 +1,6 @@
 # Phase 5 Orchestrator — Archive Relationships, Tags, Character Links, Copy/Move/Share
 
-**Status:** blocked until P04-GATE owner-approved state is explicitly approved.
+**Status:** READY — P04-GATE was owner-approved on 2026-09-03; Phase 5 has not begun.
 
 ## Phase outcome
 Add structured Character links, tags, grouped/supersedes relationships, and rigorously distinct Copy, Move, and Share behavior.

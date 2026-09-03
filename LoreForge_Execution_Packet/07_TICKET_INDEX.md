@@ -5,7 +5,7 @@
 This index is navigation only. `01_ORCHESTRATOR.md`, each phase's `00_PHASE_ORCHESTRATOR.md`, and the ticket itself control execution.
 
 ## Global execution rule
-- The current continuation point is Phase 4 after recorded owner approval of P03-GATE and `CC-2026-09-02-01`; the original Phase 1 kickoff is historical.
+- The current continuation point is Phase 5 after recorded owner approval of P04-GATE and `CC-2026-09-03-02`; the original Phase 1 kickoff is historical.
 - Every later phase requires explicit owner approval of the previous phase gate.
 - One ticket = one bounded change = one separate commit.
 - Review gates are hard stops and may not be self-approved.

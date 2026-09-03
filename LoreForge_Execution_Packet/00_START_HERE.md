@@ -33,11 +33,11 @@ Do not begin work if it reports FAIL. The validator checks exact byte hashes for
 
 ## Current continuation instruction
 
-Phases 1–3 have been executed and owner-approved in the working repository. Confirm `execution-notes/P03-GATE.md` records `APPROVED_BY_OWNER` and that the checked-out source includes change `CC-2026-09-02-01`; do not restart completed phases from the original spike.
+Phases 1–4 have been executed and owner-approved in the working repository. Confirm `execution-notes/P04-GATE.md` records `APPROVED_BY_OWNER` and that the checked-out source includes changes `CC-2026-09-02-01` and `CC-2026-09-03-02`; do not restart completed phases from the original spike.
 
-> **Phase 4 — User-first Shell, Document Types, Lifecycle, Revisions, and Provenance**
+> **Phase 5 — Archive Relationships, Tags, Character Links, Copy/Move/Share**
 
-Create `phase-04-user-first-shell-document-lifecycle` only from the approved Phase 3 state containing this packet amendment. Execute the Phase 4 orchestrator's exact order: `P04-T00`, `P04-T05`, `P04-T06`, `P04-T01`, `P04-T02`, `P04-T03`, `P04-T04`, then `P04-GATE`. **Stop there.** Do not begin Phase 5 until the project owner explicitly approves Review Gate 4.
+Create `phase-05-document-relations-copy-share` only from the approved Phase 4 state. Execute the Phase 5 orchestrator's exact order: `P05-T01`, `P05-T02`, `P05-T03`, `P05-T04`, then `P05-GATE`. **Stop there.** Do not begin Phase 6 until the project owner explicitly approves Review Gate 5.
 
 The original P00/Phase 1 kickoff remains historical evidence of how the project began; it is not the current continuation point.
 

@@ -78,3 +78,14 @@ Hard stop. Executor reports; owner approves. No self-approval.
 - **Frozen replacement:** one selected Domain, optional eligible acting Character, capability-driven management links, stable Domain primary navigation, branded platform home/login/dashboard, Character-centered People workspace, and full-page Document creation as defined in `02_FROZEN_PRODUCT_DECISIONS.md` and `03_ARCHITECTURE_CONTRACT.md`.
 - **Execution:** Phase 4 begins with P04-T00, P04-T05, and P04-T06 before the existing lifecycle sequence. Phase 5 distinguishes Prepared by/Concerns links; Phases 6–8 and 11 hydrate the approved surfaces; P13-T00 adds Domain notices before activity projection.
 - **Non-change:** User-level Domain authority remains distinct from Character identity; server authorization remains authoritative; internal `subdomain` schema may remain; pricing/providers remain owner-gated.
+
+### CC-2026-09-03-02 — Phase 4 navigation and workflow closeout
+
+- **Authority:** explicit owner direction and P04-GATE approval on 2026-09-03.
+- **Dashboard:** the signed-in Loreforge dashboard must expose the active Character selector directly; managing or switching Characters must not require navigating through Account tabs.
+- **Record creation:** New document and Import notecard are one visible action group on Records because both create a Record.
+- **Management strip:** omit redundant “Manage [Domain]” copy. Review is not an administration destination and must not appear in the management strip or as an admin-only Review Queue shortcut on a Document.
+- **Vocabulary:** every customer-visible reference uses Department(s). Internal `subdomain` collection, field, helper, and compatibility-route names remain unchanged until an explicitly authorized schema migration.
+- **Brand boundary:** Loreforge platform styling remains scoped to platform-owned pages. It must not replace, modify, or leak into a Domain's stored theme or Domain shell.
+- **Deferred placement:** lifecycle review machinery remains intact, but its durable user-facing entry belongs to the future Inbox workflow. This change does not invent Inbox behavior early or alter interim server authorization before the authorization phase.
+- **Phase gate:** Phase 4 is owner-approved after these corrections; Phase 5 is the current continuation point.

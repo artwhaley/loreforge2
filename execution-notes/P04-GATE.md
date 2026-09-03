@@ -2,7 +2,7 @@
 
 ## Status
 
-`PENDING_OWNER_REVIEW` — implementation and automated checks are complete; this gate is not self-approved.
+`APPROVED_BY_OWNER` — the owner accepted Phase 4 on 2026-09-03 after the closeout corrections recorded below.
 
 ## Ordered implementation commits
 
@@ -14,6 +14,8 @@
 - `3d3265b` — P04-T03 provenance collection and timeline
 - `74e0fdf`, `9f349b3`, `5a55e0c` — P04-T04 workflow, soft delete/restore, and direct-API lifecycle guard
 - `cbf4813` — P04-GATE direct Document/revision read boundary hardening
+- `96b76e9` — P04-GATE owner-requested branding and workflow closeout corrections
+- `fdf50aa` — P04-GATE customer-visible Department vocabulary enforcement
 
 ## Automated evidence
 
@@ -21,6 +23,7 @@
 - `npx tsc --noEmit`: passed.
 - `npm run build` with `PAYLOAD_PUSH=false`: passed; all customer and legacy compatibility routes compiled, including `/domain/[slug]/review` and `/domain/[slug]/documents/[id]/history`.
 - HTTP smoke: signed-out `/`, `/about`, `/subscriptions`, `/create-account` returned 200; authenticated admin after selecting `ar` returned 200 for Domain Home, Departments, Records, and Review Queue. An officer forged lifecycle PATCH against a Filed record was rejected by the server hook (HTTP 500 fail-closed; no state change).
+- Closeout HTTP smoke: authenticated dashboard exposes its Character selector directly; Records groups New document with Import notecard; the management strip has no redundant Domain label and no Review link; Document actions no longer expose an admin-only Review Queue shortcut.
 
 ## Schema/migration delta from the Phase 3 spike
 
@@ -30,15 +33,15 @@
 - Added append-only `document_provenance_events` (Domain, Document, actor User/Character, event type, occurred timestamp, context, revision ID, source descriptor). Seed creates an idempotent origin event for existing Domain Documents.
 - No destructive Document delete path remains in normal application code; soft delete/restore retains the same ID, versions, and events.
 
-## Human-only acceptance still required
+## Owner acceptance
 
-The owner/reviewer must verify the clerk workflow in the running browser:
+The owner completed the Phase 4 browser review and explicitly accepted the phase after requesting these final workflow corrections:
 
-1. Signed out at `/`: Loreforge branding, embedded customer login, About/Subscriptions/Create account links. Log in with `admin@example.test` / `test-password-123`; select `Ar` in the single Domain selector and confirm the acting Character selector is separate. Confirm there is no Administration mode or second Domain selector, and the account menu exposes logout.
-2. In `Ar`, verify stable Home/About/Departments/Records navigation and the conditional Manage bar. Open People, select a Character, and confirm Departments/Roles are managed from that Character workspace; ordinary members do not see management links.
-3. Open Records → New document. Choose Plain Text, enter a title/body, create, and verify the record opens in the editor with a lifecycle badge. Edit and save once; open History and verify a revision plus a readable timeline entry.
-4. Set a Domain Type to review-required (or use the review-required fixture if present), create a record, and verify it is Pending Review and body controls are read-only. As the supervisor, use Review to approve; separately reject another record with a note and confirm it returns to Draft and becomes editable.
-5. From a Filed record, Lock then verify body/title editing is blocked; Unlock and verify editing resumes. Open History and preview an older revision; restore it and confirm the revision count grows and the restored body is current.
-6. Soft-delete a record, confirm it disappears from Records/search, open its direct History URL, restore it, and verify the same record ID and prior timeline remain.
+- the Loreforge dashboard exposes the Character selector directly;
+- New document and Import notecard are adjacent because both create Records;
+- the capability-driven management strip contains only useful destinations, with no redundant “Manage [Domain]” label;
+- Review is not presented as administration. The temporary Review Queue route and lifecycle machinery remain available for later Inbox integration, but management navigation and the admin-only Document shortcut no longer expose it.
+- the remaining customer-facing Subdomain labels were corrected to Department while internal compatibility names were preserved;
+- source and rendered-token checks confirmed Loreforge platform branding did not change or leak into the Ar Domain theme.
 
-Any ambiguity or P0/P1 defect found in those checks must remain a gate blocker rather than being silently resolved in a later phase. Stop after this report; Phase 5 requires explicit owner approval.
+No unresolved P0/P1 blocker remains for Phase 4. Phase 5 is authorized but has not begun.
