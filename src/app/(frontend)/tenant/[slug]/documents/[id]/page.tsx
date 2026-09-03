@@ -11,6 +11,7 @@ import { getDocumentForTenant, getFoldersForTenant } from '@/lib/tenant/queries'
 import { renderMarkdown } from '@/lib/markdown/render'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 import { getDocumentCharacterLinks, getDocumentTags } from '@/lib/documents/links'
+import { getDocumentRelationships } from '@/lib/documents/relationships'
 
 import styles from './document.module.scss'
 
@@ -37,7 +38,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
 
   const folders = await getFoldersForTenant(tenant)
   const payload = await (await import('@/lib/payload')).getLorePayload()
-  const [characterLinks, tagLinks] = await Promise.all([getDocumentCharacterLinks(payload, doc.id), getDocumentTags(payload, doc.id)])
+  const [characterLinks, tagLinks, relationshipLinks] = await Promise.all([getDocumentCharacterLinks(payload, doc.id), getDocumentTags(payload, doc.id), getDocumentRelationships(payload, doc.id).catch(() => ({ docs: [] }))])
   const flatFolders = flattenFolderTree(buildFolderTree(folders))
   const folderIdValue = typeof doc.folder === 'object' ? doc.folder?.id ?? '' : doc.folder ?? ''
 
@@ -169,6 +170,8 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
           <div><h2>Concerns</h2><ul>{characterLinks.docs.filter((link) => link.kind === 'concerns').map((link) => <li key={link.id}>{typeof link.character === 'object' ? link.character.name : `Character ${link.character}`}{link.relationshipLabel ? ` · ${link.relationshipLabel}` : ''}{role === 'admin' ? <form action="/api/document-links" method="post" style={{ display: 'inline' }}><input type="hidden" name="domainSlug" value={tenant.slug} /><input type="hidden" name="documentId" value={doc.id} /><input type="hidden" name="characterId" value={typeof link.character === 'object' ? link.character.id : link.character} /><input type="hidden" name="kind" value="concerns" /><input type="hidden" name="action" value="remove" /><button type="submit">Remove</button></form> : null}</li>)}</ul>{role === 'admin' ? <form action="/api/document-links" method="post"><input type="hidden" name="domainSlug" value={tenant.slug} /><input type="hidden" name="documentId" value={doc.id} /><input type="hidden" name="kind" value="concerns" /><input name="characterId" type="number" min="1" required placeholder="Character ID" /><input name="relationshipLabel" placeholder="Relationship (optional)" /><button type="submit">Add concern</button></form> : null}</div>
           <div><h2>Tags</h2><ul>{tagLinks.docs.map((link) => <li key={link.id}>{typeof link.tag === 'object' ? link.tag.name : `Tag ${link.tag}`}{role === 'admin' ? <form action="/api/document-tags" method="post" style={{ display: 'inline' }}><input type="hidden" name="domainSlug" value={tenant.slug} /><input type="hidden" name="documentId" value={doc.id} /><input type="hidden" name="tagId" value={typeof link.tag === 'object' ? link.tag.id : link.tag} /><input type="hidden" name="action" value="remove" /><button type="submit">Remove</button></form> : null}</li>)}</ul>{role === 'admin' ? <form action="/api/document-tags" method="post"><input type="hidden" name="domainSlug" value={tenant.slug} /><input type="hidden" name="documentId" value={doc.id} /><input name="tagName" required placeholder="Add tag" /><button type="submit">Add tag</button></form> : null}</div>
         </section>
+
+        <section className={styles.metadata} aria-label="Document relationships"><div><h2>Grouped and supersedes</h2><ul>{relationshipLinks.docs.map((link) => { const other = String(link.source) === String(doc.id) ? link.target : link.source; const otherName = typeof other === 'object' ? other.title : `Document ${other}`; return <li key={link.id}>{link.kind === 'grouped' ? `Grouped${link.label ? ` · ${link.label}` : ''}` : String(link.source) === String(doc.id) ? 'Supersedes' : 'Superseded by'} · {otherName}{role === 'admin' ? <form action="/api/document-relationships" method="post" style={{ display: 'inline' }}><input type="hidden" name="domainSlug" value={tenant.slug} /><input type="hidden" name="documentId" value={doc.id} /><input type="hidden" name="relationshipId" value={link.id} /><input type="hidden" name="action" value="remove" /><button type="submit">Remove</button></form> : null}</li> })}</ul>{role === 'admin' ? <form action="/api/document-relationships" method="post"><input type="hidden" name="domainSlug" value={tenant.slug} /><input type="hidden" name="documentId" value={doc.id} /><input name="targetId" type="number" min="1" required placeholder="Related Document ID" /><select name="kind" defaultValue="grouped"><option value="grouped">Grouped</option><option value="supersedes">This record supersedes it</option></select><input name="label" placeholder="Grouped label (required for Grouped)" /><button type="submit">Add relationship</button></form> : null}</div></section>
 
         {source === '1' ? (
           <pre className={styles.source}>{doc.body}</pre>

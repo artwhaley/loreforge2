@@ -82,6 +82,7 @@ export interface Config {
     'document-character-links': DocumentCharacterLink;
     tags: Tag;
     'document-tags': DocumentTag;
+    'document-relationships': DocumentRelationship;
     'document-types': DocumentType;
     'document-provenance-events': DocumentProvenanceEvent;
     tenants: Tenant;
@@ -114,6 +115,7 @@ export interface Config {
     'document-character-links': DocumentCharacterLinksSelect<false> | DocumentCharacterLinksSelect<true>;
     tags: TagsSelect<false> | TagsSelect<true>;
     'document-tags': DocumentTagsSelect<false> | DocumentTagsSelect<true>;
+    'document-relationships': DocumentRelationshipsSelect<false> | DocumentRelationshipsSelect<true>;
     'document-types': DocumentTypesSelect<false> | DocumentTypesSelect<true>;
     'document-provenance-events': DocumentProvenanceEventsSelect<false> | DocumentProvenanceEventsSelect<true>;
     tenants: TenantsSelect<false> | TenantsSelect<true>;
@@ -631,6 +633,22 @@ export interface DocumentTag {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "document-relationships".
+ */
+export interface DocumentRelationship {
+  id: number;
+  domain: number | Domain;
+  source: number | Document;
+  target: number | Document;
+  kind: 'grouped' | 'supersedes';
+  label?: string | null;
+  actorUser: number | User;
+  actorCharacter?: (number | null) | Character;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "document-provenance-events".
  */
 export interface DocumentProvenanceEvent {
@@ -964,6 +982,10 @@ export interface PayloadLockedDocument {
         value: number | DocumentTag;
       } | null)
     | ({
+        relationTo: 'document-relationships';
+        value: number | DocumentRelationship;
+      } | null)
+    | ({
         relationTo: 'document-types';
         value: number | DocumentType;
       } | null)
@@ -1295,6 +1317,21 @@ export interface DocumentTagsSelect<T extends boolean = true> {
   domain?: T;
   document?: T;
   tag?: T;
+  actorUser?: T;
+  actorCharacter?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "document-relationships_select".
+ */
+export interface DocumentRelationshipsSelect<T extends boolean = true> {
+  domain?: T;
+  source?: T;
+  target?: T;
+  kind?: T;
+  label?: T;
   actorUser?: T;
   actorCharacter?: T;
   updatedAt?: T;
