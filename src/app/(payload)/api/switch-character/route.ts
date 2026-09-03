@@ -4,7 +4,7 @@ import { getPayload } from 'payload'
 
 import config from '@payload-config'
 
-import { ACTIVE_CHARACTER_COOKIE, ACTIVE_TENANT_COOKIE, ADMINISTRATION_CONTEXT_COOKIE } from '@/lib/tenant/activeTenant'
+import { ACTIVE_CHARACTER_COOKIE, ACTIVE_TENANT_COOKIE } from '@/lib/tenant/activeTenant'
 
 export async function POST(request: Request) {
   const payload = await getPayload({ config })
@@ -18,8 +18,6 @@ export async function POST(request: Request) {
 
   if (!rawCharacterId) {
     response.cookies.delete(ACTIVE_CHARACTER_COOKIE)
-    response.cookies.delete(ACTIVE_TENANT_COOKIE)
-    response.cookies.delete(ADMINISTRATION_CONTEXT_COOKIE)
     return response
   }
 
@@ -32,13 +30,22 @@ export async function POST(request: Request) {
     return response
   }
 
-  // A Character change never carries the old Domain across the identity seam.
   response.cookies.set(ACTIVE_CHARACTER_COOKIE, String(character.id), {
     httpOnly: true,
     sameSite: 'lax',
     path: '/',
   })
-  response.cookies.delete(ACTIVE_TENANT_COOKIE)
-  response.cookies.delete(ADMINISTRATION_CONTEXT_COOKIE)
+  // Keep the selected Domain only when this Character is eligible there. The
+  // Character switch never silently changes Domain context.
+  const cookieStore = await cookies()
+  const tenantSlug = cookieStore.get(ACTIVE_TENANT_COOKIE)?.value
+  if (tenantSlug) {
+    const domains = await payload.find({ collection: 'domains', where: { slug: { equals: tenantSlug } }, depth: 0, limit: 1 })
+    const domain = domains.docs[0]
+    if (domain) {
+      const membership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domain.id } }, { character: { equals: character.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
+      if (!membership.docs[0]) response.cookies.delete(ACTIVE_CHARACTER_COOKIE)
+    }
+  }
   return response
 }

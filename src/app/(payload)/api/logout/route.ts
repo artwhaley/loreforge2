@@ -3,7 +3,7 @@ import { createLocalReq, getPayload, logoutOperation } from 'payload'
 
 import config from '@payload-config'
 
-import { ACTIVE_CHARACTER_COOKIE, ACTIVE_TENANT_COOKIE, ADMINISTRATION_CONTEXT_COOKIE } from '@/lib/tenant/activeTenant'
+import { ACTIVE_CHARACTER_COOKIE, ACTIVE_TENANT_COOKIE } from '@/lib/tenant/activeTenant'
 
 export async function POST(request: Request) {
   const payload = await getPayload({ config })
@@ -22,6 +22,5 @@ export async function POST(request: Request) {
   response.cookies.set(`${payload.config.cookiePrefix}-token`, '', { expires: new Date(0), maxAge: 0, httpOnly: true, path: '/' })
   response.cookies.delete(ACTIVE_CHARACTER_COOKIE)
   response.cookies.delete(ACTIVE_TENANT_COOKIE)
-  response.cookies.delete(ADMINISTRATION_CONTEXT_COOKIE)
   return response
 }

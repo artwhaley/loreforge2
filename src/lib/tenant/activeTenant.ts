@@ -5,7 +5,6 @@ import type { Character, Domain, Tenant } from '@/payload-types'
 
 export const ACTIVE_TENANT_COOKIE = 'sl-civic-active-tenant'
 export const ACTIVE_CHARACTER_COOKIE = 'sl-civic-active-character'
-export const ADMINISTRATION_CONTEXT_COOKIE = 'sl-civic-administration'
 
 export type ContextUser = { id: number; name?: string; email?: string }
 
@@ -24,8 +23,9 @@ export type ActiveContext = {
  * A future hostname/custom-domain resolver can replace this single function
  * without changing the content model or any calling components.
  *
- * Always validates that the current user is a member of the tenant, so an
- * arbitrary cookie value cannot expose another city's content.
+ * Always validates that the current user participates in or manages the
+ * selected Domain, so an arbitrary cookie value cannot expose another city's
+ * content.
  */
 export async function getActiveContext(): Promise<ActiveContext> {
   const payload = await getLorePayload()
@@ -55,14 +55,13 @@ export async function getActiveContext(): Promise<ActiveContext> {
     : null
 
   const cookieValue = cookieStore.get(ACTIVE_TENANT_COOKIE)?.value
-  const administrationMode = cookieStore.get(ADMINISTRATION_CONTEXT_COOKIE)?.value === '1'
 
   if (!cookieValue) {
     return { tenant: null, role: null, user: contextUser, activeCharacter, characters }
   }
 
-  // P02-T02 deliberately clears Domain when Character changes. P02-T03 now
-  // validates the selected Domain against the active Character membership.
+  // The selected Domain is independent of the acting Character. Character
+  // eligibility is checked below without silently selecting another identity.
   const tenants = await payload.find({
     collection: 'domains',
     where: { slug: { equals: cookieValue } },
@@ -74,7 +73,9 @@ export async function getActiveContext(): Promise<ActiveContext> {
     return { tenant: null, role: null, user: contextUser, activeCharacter, characters }
   }
 
-  // Membership check: only members/admins of this tenant may activate it.
+  // A Domain can be selected by a User who manages it even when they have no
+  // participating Character. Character participation remains a separate,
+  // narrower requirement for roleplay actions.
   const domainAdmins = await payload.find({
     collection: 'domain-admins',
     where: { and: [{ domain: { equals: tenant.id } }, { user: { equals: user.id } }, { status: { equals: 'active' } }] },
@@ -82,40 +83,25 @@ export async function getActiveContext(): Promise<ActiveContext> {
     limit: 1,
   })
   const isDomainAdmin = Number(tenant.ownerUser && typeof tenant.ownerUser === 'object' ? tenant.ownerUser.id : tenant.ownerUser) === Number(user.id) || domainAdmins.docs.length > 0
-  if (administrationMode && isDomainAdmin) {
-    return { tenant, role: 'admin', user: contextUser, activeCharacter: null, characters }
-  }
-  if (!activeCharacter) {
-    return { tenant: null, role: null, user: contextUser, activeCharacter: null, characters }
-  }
+  const activeMembership = activeCharacter
+    ? await payload.find({
+        collection: 'domain-memberships',
+        where: { and: [{ character: { equals: activeCharacter.id } }, { or: [{ domain: { equals: tenant.id } }, { tenant: { equals: tenant.id } }] }, { status: { equals: 'active' } }] },
+        depth: 0,
+        limit: 1,
+      })
+    : { docs: [] }
 
-  const memberships = await payload.find({
-    collection: 'domain-memberships',
-    where: {
-      and: [
-        { character: { equals: activeCharacter.id } },
-        { or: [{ domain: { equals: tenant.id } }, { tenant: { equals: tenant.id } }] },
-        { status: { equals: 'active' } },
-      ],
-    },
-    depth: 0,
-    limit: 1,
-  })
-  const membership = memberships.docs[0]
-  if (!membership) {
-    return { tenant: null, role: null, user: contextUser, activeCharacter, characters }
-  }
+  const eligibleActiveCharacter = activeMembership.docs[0] ? activeCharacter : null
+  if (isDomainAdmin) return { tenant, role: 'admin', user: contextUser, activeCharacter: eligibleActiveCharacter, characters }
 
-  // An active Character Domain membership grants the read-only member view.
-  // User-level owner/admin authority is exposed only after an explicit
-  // Administration context switch above.
-  return {
-    tenant,
-    role: 'member',
-    user: contextUser,
-    activeCharacter,
-    characters,
-  }
+  const controlledIds = characters.map((character) => character.id)
+  const anyMembership = controlledIds.length
+    ? await payload.find({ collection: 'domain-memberships', where: { and: [{ character: { in: controlledIds } }, { or: [{ domain: { equals: tenant.id } }, { tenant: { equals: tenant.id } }] }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
+    : { docs: [] }
+  if (anyMembership.docs.length === 0) return { tenant: null, role: null, user: contextUser, activeCharacter: null, characters }
+
+  return { tenant, role: 'member', user: contextUser, activeCharacter: eligibleActiveCharacter, characters }
 }
 
 export async function getActiveTenant(): Promise<{

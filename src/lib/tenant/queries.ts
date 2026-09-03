@@ -156,27 +156,29 @@ export async function getTenantsForUser(userId: number | string): Promise<Domain
     depth: 0,
     limit: 100,
   })
-  if (characters.docs.length === 0) return []
-
-  const membershipResults = await Promise.all(
-    characters.docs.map((character) =>
-      payload.find({
-        collection: 'domain-memberships',
-        where: {
-          and: [{ character: { equals: character.id } }, { status: { equals: 'active' } }],
-        },
-        depth: 1,
-        limit: 100,
-      }),
-    ),
-  )
   const tenantsById = new Map<string, DomainRecord>()
-  for (const result of membershipResults) {
-    for (const membership of result.docs) {
-      const tenant = membership.domain ?? membership.tenant
-      if (tenant && typeof tenant === 'object') tenantsById.set(String(tenant.id), tenant as DomainRecord)
+  if (characters.docs.length > 0) {
+    const membershipResults = await Promise.all(
+      characters.docs.map((character) =>
+        payload.find({
+          collection: 'domain-memberships',
+          where: { and: [{ character: { equals: character.id } }, { status: { equals: 'active' } }] },
+          depth: 1,
+          limit: 100,
+        }),
+      ),
+    )
+    for (const result of membershipResults) {
+      for (const membership of result.docs) {
+        const tenant = membership.domain ?? membership.tenant
+        if (tenant && typeof tenant === 'object') tenantsById.set(String(tenant.id), tenant as DomainRecord)
+      }
     }
   }
+  // User-level ownership/administration is a Domain relationship, not a
+  // substitute Character membership. It still belongs in the one selector.
+  const managed = await getAdministrationDomainsForUser(userId)
+  for (const tenant of managed) tenantsById.set(String(tenant.id), tenant)
   return [...tenantsById.values()].sort((a, b) => a.name.localeCompare(b.name))
 }
 

@@ -4,7 +4,7 @@ import { getPayload } from 'payload'
 
 import config from '@payload-config'
 
-import { ACTIVE_CHARACTER_COOKIE, ACTIVE_TENANT_COOKIE, ADMINISTRATION_CONTEXT_COOKIE } from '@/lib/tenant/activeTenant'
+import { ACTIVE_CHARACTER_COOKIE, ACTIVE_TENANT_COOKIE } from '@/lib/tenant/activeTenant'
 
 export async function POST(request: Request) {
   const payload = await getPayload({ config })
@@ -15,8 +15,7 @@ export async function POST(request: Request) {
   const cookieStore = await cookies()
   const activeCharacterId = cookieStore.get(ACTIVE_CHARACTER_COOKIE)?.value
 
-  const administrationMode = cookieStore.get(ADMINISTRATION_CONTEXT_COOKIE)?.value === '1'
-  if (user && slug && (activeCharacterId || administrationMode)) {
+  if (user && slug) {
     // Validate membership before accepting the switch.
     const tenants = await payload.find({
       collection: 'domains',
@@ -41,14 +40,16 @@ export async function POST(request: Request) {
       const admins = await payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: tenant.id } }, { user: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
       const ownerId = typeof tenant.ownerUser === 'object' ? tenant.ownerUser?.id : tenant.ownerUser
       const isAdmin = String(ownerId) === String(user.id) || admins.docs.length > 0
-      if (memberships.docs.length > 0 || (administrationMode && isAdmin)) {
+      if (memberships.docs.length > 0 || isAdmin) {
         const res = NextResponse.redirect(new URL(`/domain/${slug}`, request.url), 303)
         res.cookies.set(ACTIVE_TENANT_COOKIE, slug, {
           httpOnly: true,
           sameSite: 'lax',
           path: '/',
         })
-        if (administrationMode) res.cookies.set(ADMINISTRATION_CONTEXT_COOKIE, '1', { httpOnly: true, sameSite: 'lax', path: '/' })
+        // Preserve the acting Character only when it is a member of the
+        // destination Domain. Managed-only selection intentionally clears it.
+        if (!memberships.docs.length) res.cookies.delete(ACTIVE_CHARACTER_COOKIE)
         return res
       }
     }

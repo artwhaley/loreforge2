@@ -1,115 +1,61 @@
+import Link from 'next/link'
+
+import { PlatformShell, platformStyles as styles } from '@/components/platform/PlatformShell'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
-import { getLorePayload } from '@/lib/payload'
 import { getAdministrationDomainsForUser, getTenantsForUser } from '@/lib/tenant/queries'
 
 export const dynamic = 'force-dynamic'
 
-export default async function HomePage() {
+type Props = { searchParams?: Promise<{ error?: string }> }
+
+export default async function HomePage({ searchParams }: Props) {
   const context = await getActiveContext()
-  const user = context.user
-  const payload = await getLorePayload()
+  const error = (await searchParams)?.error
 
-  let userCount: number | null = null
-  let dbOk = true
-  try {
-    const result = await payload.count({ collection: 'users' })
-    userCount = result.totalDocs
-  } catch (err) {
-    console.error('Health check failed to query local database:', err)
-    dbOk = false
+  if (!context.user) {
+    return (
+      <PlatformShell>
+        <section className={styles.hero}>
+          <div>
+            <p className={styles.eyebrow}>Loreforge · the crafted archive</p>
+            <h1 className={styles.heroTitle}>Build worlds that remember.</h1>
+            <p className={styles.heroCopy}>A calm, character-aware home for the records, departments, and stories that make a world feel lived in.</p>
+            <div className={styles.actions}><Link href="/about" className={styles.secondary}>Explore Loreforge</Link><Link href="/create-account" className={styles.primary}>Create your account</Link></div>
+          </div>
+          <div className={styles.loginCard} id="login">
+            <h2>Welcome back</h2><p>Sign in to continue to your domains and characters.</p>
+            {error ? <p className={styles.error} role="alert">We couldn’t sign you in with those details. Check your email and password and try again.</p> : null}
+            <form action="/api/customer-login" method="post">
+              <div className={styles.field}><label htmlFor="email">Email</label><input id="email" name="email" type="email" autoComplete="email" required /></div>
+              <div className={styles.field}><label htmlFor="password">Password</label><input id="password" name="password" type="password" autoComplete="current-password" required /></div>
+              <label className={styles.remember}><input name="remember" value="1" type="checkbox" /> Remember me on this device</label>
+              <button className={`${styles.primary} ${styles.loginButton}`} type="submit">Sign in</button>
+            </form>
+            <div className={styles.formLinks}><Link href="/forgot-password">Forgot password?</Link><Link href="/create-account">Create account</Link></div>
+          </div>
+        </section>
+        <section className={styles.section}>
+          <p className={styles.eyebrow}>Made for communities</p><h2 className={styles.sectionTitle}>A living archive, with a human front door.</h2>
+          <p className={styles.sectionLead}>Loreforge keeps the platform simple at the top level, then lets each Domain develop its own character, departments, records, and visual language.</p>
+          <div className={styles.cards}><article className={styles.card}><h3>Characters first</h3><p>Keep the person, the roleplay identity, and the Domain relationship clear.</p></article><article className={styles.card}><h3>Records that endure</h3><p>Write, organize, review, and revisit the material your world depends on.</p></article><article className={styles.card}><h3>Your world’s tone</h3><p>Give each Domain its own presence while Loreforge stays recognizable underneath.</p></article></div>
+        </section>
+      </PlatformShell>
+    )
   }
 
-  // Domains the logged-in user belongs to (MVP entry point into Domain sites).
-  let domains: Array<{ slug: string; name: string }> = []
-  let administrationDomains: Array<{ slug: string; name: string }> = []
-  if (user) {
-    domains = (await getTenantsForUser(user.id)).map((t) => ({ slug: t.slug, name: t.name }))
-    administrationDomains = (await getAdministrationDomainsForUser(user.id)).map((t) => ({ slug: t.slug, name: t.name }))
-  }
+  const [domains, managed] = await Promise.all([getTenantsForUser(context.user.id), getAdministrationDomainsForUser(context.user.id)])
+  const byId = new Map([...domains, ...managed].map((domain) => [String(domain.id), domain]))
+  const allDomains = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name))
+  const activeDomain = context.tenant
 
   return (
-    <main>
-      <h1>SL Civic Archive</h1>
-      <p>Local MVP spike — Ticket 01: Domain-themed document slice.</p>
-
-      {user ? (
-        <section>
-          <div><strong>{user.name ?? user.email}</strong>{' '}<form action="/api/logout" method="post" style={{ display: 'inline' }}><button type="submit">Log out</button></form></div>
-          <h2>Choose your Character</h2>
-          <p>
-            {context.activeCharacter
-              ? `Acting as ${context.activeCharacter.name}.`
-              : 'No Character is active. Choose one to enter a Domain as that roleplay identity.'}
-          </p>
-          <form action="/api/switch-character" method="post">
-            <label htmlFor="home-character-switcher">Acting as: </label>
-            <select
-              id="home-character-switcher"
-              name="characterId"
-              defaultValue={context.activeCharacter?.id ?? ''}
-            >
-              <option value="">No active Character</option>
-              {context.characters.map((character) => (
-                <option key={character.id} value={character.id}>
-                  {character.name}
-                </option>
-              ))}
-            </select>{' '}
-            <button type="submit">Set Character</button>
-          </form>
-          {context.characters.length > 0 ? (
-            <ul>
-              {context.characters.map((character) => (
-                <li key={character.id}>
-                  <a href={`/characters/${character.id}`}>{character.name}</a>
-                  {character.id === context.activeCharacter?.id ? ' (active)' : ''}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-
-          <h2>Your Domains</h2>
-          {!context.activeCharacter ? (
-            <p>Select an active Character before choosing a Domain.</p>
-          ) : domains.length === 0 ? (
-            <p>No Domain memberships for this account.</p>
-          ) : (
-            <ul>
-              {domains.map((domain) => (
-                <li key={domain.slug}>
-                  <form action="/api/switch-tenant" method="post" style={{ display: 'inline' }}>
-                    <input type="hidden" name="tenantSlug" value={domain.slug} />
-                    <button type="submit">{domain.name}</button>
-                  </form>
-                </li>
-              ))}
-            </ul>
-          )}
-          {administrationDomains.length > 0 ? <>
-            <h2>Administration</h2>
-            <p>Account-level Domain management is separate from acting as a Character.</p>
-            <ul>{administrationDomains.map((domain) => <li key={domain.slug}><form action="/api/switch-administration" method="post" style={{ display: 'inline' }}><input type="hidden" name="domainSlug" value={domain.slug} /><button type="submit">Manage {domain.name}</button></form></li>)}</ul>
-          </> : null}
-        </section>
-      ) : (
-        <p>
-          <a href="/admin/login">Log in</a> to access your Domain archive.{' '}
-          <strong>Test login:</strong> <code>admin@example.test</code> /{' '}
-          <code>test-password-123</code>
-        </p>
-      )}
-
-      <hr />
-      <ul>
-        <li>Next.js: running</li>
-        <li>
-          Payload: running — <a href="/admin">admin</a>
-        </li>
-        <li>
-          SQLite: {dbOk ? 'connected' : 'ERROR querying database'} (users in DB:{' '}
-          {userCount ?? 'unknown'})
-        </li>
-      </ul>
-    </main>
+    <PlatformShell>
+      <div className={styles.dashboardHeader}><div><p className={styles.eyebrow}>Your Loreforge</p><h1 className={styles.sectionTitle}>Welcome back, {context.user.name ?? context.user.email}</h1><p className={styles.dashboardGreeting}>{context.activeCharacter ? `Acting as ${context.activeCharacter.name}.` : 'No participating Character is active.'}</p></div><div className={styles.actions}><Link href="/account" className={styles.secondary}>Account</Link><form action="/api/logout" method="post"><button type="submit" className={styles.textButton}>Log out</button></form></div></div>
+      <nav className={styles.subnav} aria-label="Account navigation"><Link href="/">Dashboard</Link><Link href="/account">Account</Link><Link href="/account/characters">Characters</Link></nav>
+      <div className={styles.dashboardGrid}>
+        <section className={styles.panel}><h2>Your Domains</h2>{allDomains.length ? <ul className={styles.domainList}>{allDomains.map((domain) => <li key={domain.id}><form action="/api/switch-tenant" method="post"><input type="hidden" name="tenantSlug" value={domain.slug} /><button type="submit" className={styles.domainLink}><span>{domain.name}</span><span className={styles.badge}>{managed.some((item) => String(item.id) === String(domain.id)) ? 'Managed' : 'Participating'}</span></button></form></li>)}</ul> : <div className={styles.emptyCard}>Your Domains will appear here when a Character joins one.</div>}</section>
+        <section className={styles.panel}><h2>Continue working</h2><div className={styles.emptyCard}>{activeDomain ? <>You’re currently viewing <strong>{activeDomain.name}</strong>. Open its <Link href={`/domain/${activeDomain.slug}`}>Domain Home</Link> to continue.</> : 'Choose a Domain above to pick up where you left off.'}</div><h2 style={{ marginTop: '1.5rem' }}>For you</h2><div className={styles.emptyCard}>Your notices and watched activity will appear here. Nothing new yet.</div></section>
+      </div>
+    </PlatformShell>
   )
 }
