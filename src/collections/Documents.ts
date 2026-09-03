@@ -1,6 +1,9 @@
 import type { CollectionConfig } from 'payload'
 
+import { authorizeInterimOperation } from '@/lib/authorization/interim'
 import { assertLifecycleTransition, canEditDocumentBody, type Lifecycle } from '@/lib/documents/lifecycle'
+
+const relationId = (value: unknown): number | null => value && typeof value === 'object' && 'id' in value ? Number((value as { id: number | string }).id) : value === null || value === undefined || value === '' ? null : Number(value)
 
 export const Documents: CollectionConfig = {
   slug: 'documents',
@@ -17,8 +20,9 @@ export const Documents: CollectionConfig = {
   },
   hooks: {
     beforeChange: [
-      ({ data, originalDoc, operation }) => {
+      async ({ data, originalDoc, operation, req }) => {
         const folder = data?.folder ?? originalDoc?.folder
+        const domainId = relationId(data?.domain ?? originalDoc?.domain)
         if (folder === null || folder === undefined || folder === '') {
           throw new Error('Every Document must belong to a Folder; use the Domain Root when no branch is selected.')
         }
@@ -28,6 +32,12 @@ export const Documents: CollectionConfig = {
         const to = String(data?.lifecycle ?? originalDoc?.lifecycle ?? 'draft') as Lifecycle
         if (operation === 'update') {
           assertLifecycleTransition(from, to)
+          const isPrivilegedTransition = from !== to && to !== 'pending_review'
+          if (isPrivilegedTransition && !(req.context as Record<string, unknown> | undefined)?.interimWorkflowAuthorized) {
+            if (!req.user?.id || !domainId) throw new Error('A verified Domain supervisor is required for this lifecycle transition.')
+            const authorized = await authorizeInterimOperation(req.payload, { userId: req.user.id }, domainId)
+            if (authorized !== true) throw new Error(authorized)
+          }
           if (data?.body !== undefined && data.body !== originalDoc?.body && !canEditDocumentBody(from)) throw new Error('This Document is not editable in its current lifecycle state.')
         }
         return data

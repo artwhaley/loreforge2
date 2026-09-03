@@ -81,7 +81,7 @@ export async function restoreDocumentVersionAction(formData: FormData): Promise<
     if (!version || String(version.parent) !== String(current.id)) redirect(destination + '?error=wrong-document')
     if (!canEditDocumentBody(version.version.lifecycle)) redirect(destination + '?error=version-read-only')
 
-    await payload.restoreVersion({ collection: 'documents', id: versionId, depth: 0 })
+    await payload.restoreVersion({ collection: 'documents', id: versionId, depth: 0, context: { interimWorkflowAuthorized: true } })
     await recordDocumentProvenance({ payload, domainId: domain.id, documentId: current.id, eventType: 'restored', actorUserId: user.id, context: { restoredVersionId: versionId }, revisionId: await latestDocumentRevisionId(payload, current.id) })
     redirect(destination)
   }
@@ -113,7 +113,7 @@ export async function restoreDocumentVersionAction(formData: FormData): Promise<
   const version = await payload.findVersionByID({ collection: 'documents', id: versionId, depth: 0, disableErrors: true })
   if (!version || String(version.parent) !== String(current.id)) redirect(destination + '?error=wrong-document')
   if (!canEditDocumentBody(version.version.lifecycle)) redirect(destination + '?error=version-read-only')
-  await payload.restoreVersion({ collection: 'documents', id: versionId, depth: 0 })
+  await payload.restoreVersion({ collection: 'documents', id: versionId, depth: 0, context: { interimWorkflowAuthorized: true } })
   await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: current.id, eventType: 'restored', actorUserId: user.id, context: { restoredVersionId: versionId }, revisionId: await latestDocumentRevisionId(payload, current.id) })
   redirect(destination)
 }

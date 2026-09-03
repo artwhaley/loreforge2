@@ -400,7 +400,7 @@ for (const document of existingDocuments.docs) {
   const typeId = domainEntry ? documentTypesByDomain[domainEntry[0]]?.id : null
   if (!typeId) continue
   const sourceKind = document.origin === 'markdown-import' ? 'markdown-import' : document.origin === 'form' ? 'form' : 'web'
-  await payload.update({ collection: 'documents', id: document.id, data: { documentType: document.documentType ?? typeId, sourceKind: document.sourceKind ?? sourceKind, lifecycle: document.lifecycle ?? 'filed', publicAccess: document.publicAccess ?? 'inherit' }, depth: 0 })
+  await payload.update({ collection: 'documents', id: document.id, data: { documentType: document.documentType ?? typeId, sourceKind: document.sourceKind ?? sourceKind, lifecycle: document.lifecycle ?? 'filed', publicAccess: document.publicAccess ?? 'inherit' }, depth: 0, context: { interimWorkflowAuthorized: true } })
 }
 const existingFolders = await payload.find({ collection: 'folders', depth: 0, limit: 5000 })
 for (const folder of existingFolders.docs) if (!folder.filingPolicy) await payload.update({ collection: 'folders', id: folder.id, data: { filingPolicy: 'inherit' }, depth: 0 })

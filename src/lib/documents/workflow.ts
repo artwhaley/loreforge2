@@ -32,7 +32,7 @@ export async function transitionDocument(args: WorkflowActor & { operation: Work
   if (!document) throw new Error('Document not found.')
   if (document.lifecycle !== transition.from) throw new Error(`This record is ${document.lifecycle}; it cannot be ${args.operation}.`)
   assertLifecycleTransition(document.lifecycle, transition.to)
-  await args.payload.update({ collection: 'documents', id: document.id, data: { lifecycle: transition.to }, depth: 0 })
+  await args.payload.update({ collection: 'documents', id: document.id, data: { lifecycle: transition.to }, depth: 0, context: { interimWorkflowAuthorized: true } })
   await recordDocumentProvenance({
     payload: args.payload,
     domainId: args.domainId,

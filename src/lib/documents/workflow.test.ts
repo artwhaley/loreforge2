@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { transitionDocument, type WorkflowOperation } from './workflow'
+import { Documents } from '@/collections/Documents'
 
 function fakePayload(initialLifecycle: string, failUpdate = false) {
   const updates: any[] = []
@@ -37,4 +38,18 @@ test('failed lifecycle mutation does not append a misleading event', async () =>
   const { payload, events } = fakePayload('filed', true)
   await assert.rejects(() => transitionDocument({ payload, userId: 2, domainId: 4, documentId: 12, operation: 'lock' }))
   assert.equal(events.length, 0)
+})
+
+test('direct lifecycle mutation requires interim supervisor authority', async () => {
+  const beforeChange = Documents.hooks?.beforeChange?.[0] as any
+  const payload = {
+    findByID: async () => ({ id: 4, ownerUser: 10 }),
+    find: async () => ({ docs: [] }),
+  }
+  await assert.rejects(() => beforeChange({
+    data: { domain: 4, folder: 1, lifecycle: 'locked' },
+    originalDoc: { domain: 4, folder: 1, lifecycle: 'filed' },
+    operation: 'update',
+    req: { payload, user: { id: 11 }, context: {} },
+  }), /Owner or an operational Domain Admin/)
 })
