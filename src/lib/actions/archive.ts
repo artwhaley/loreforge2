@@ -223,24 +223,13 @@ export async function moveDocumentAction(formData: FormData): Promise<void> {
   revalidatePath(recordsPath(ctx))
 }
 
-/** Delete a document and return to the archive. */
+/**
+ * Legacy action name retained for old forms. It delegates to the reversible
+ * workflow so no normal application path can permanently delete a Document.
+ */
 export async function deleteDocumentAction(formData: FormData): Promise<void> {
-  const tenantSlug = String(formData.get('tenantSlug') ?? '')
-  const documentId = Number(formData.get('documentId'))
-  const ctx = await getMemberTenant(tenantSlug)
-  if (!ctx || !documentId) redirect(`/domain/${tenantSlug}/records`)
-
-  const { payload, tenant } = ctx
-  const doc = await payload.find({
-    collection: 'documents',
-    where: domainAndIdWhere(tenant.id, documentId),
-    depth: 0,
-    limit: 1,
-  })
-  if (doc.docs[0]) {
-    await payload.delete({ collection: 'documents', id: documentId })
-  }
-  redirect(recordsPath(ctx))
+  const { softDeleteDocumentAction } = await import('@/lib/actions/documentWorkflow')
+  return softDeleteDocumentAction(formData)
 }
 
 /** Import pasted (notecard) Markdown as a normal archive document. */
