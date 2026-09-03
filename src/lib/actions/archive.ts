@@ -14,6 +14,8 @@ import { resolveFilingPolicy, type FilingPolicy } from '@/lib/documents/lifecycl
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
 import { attachDocumentCharacterLink, attachDocumentTag, findOrCreateDomainTag } from '@/lib/documents/links'
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { moveDocument } from '@/lib/documents/move'
+import { copyDocument } from '@/lib/documents/copy'
 import { domainAndIdWhere } from '@/lib/tenant/scope'
 import type { Domain, Tenant } from '@/payload-types'
 
@@ -221,22 +223,31 @@ export async function moveDocumentAction(formData: FormData): Promise<void> {
   if (!ctx || !documentId) redirect(`/domain/${tenantSlug}/records`)
 
   const { payload, tenant } = ctx
-  const folder = await tenantFolderId(payload, tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
-
-  const doc = await payload.find({
-    collection: 'documents',
-    where: domainAndIdWhere(tenant.id, documentId),
-    depth: 0,
-    limit: 1,
-  })
-  if (doc.docs[0]) {
-    const previousFolder = typeof doc.docs[0].folder === 'object' ? doc.docs[0].folder?.id : doc.docs[0].folder
-    await payload.update({ collection: 'documents', id: documentId, data: { folder } })
-    const destinationFolder = folder ? await payload.findByID({ collection: 'folders', id: folder, depth: 0 }).catch(() => null) : null
-    await recordDocumentProvenance({ payload, domainId: tenant.id, documentId, eventType: 'moved', actorUserId: ctx.user.id, context: { fromFolderId: previousFolder ?? null, toFolderId: folder, folderName: destinationFolder?.name ?? 'Domain Root' }, revisionId: await latestDocumentRevisionId(payload, documentId) })
-  }
+  const destinationDomainSlug = String(formData.get('destinationDomainSlug') ?? tenantSlug)
+  const destinationResult = await payload.find({ collection: 'domains', where: { slug: { equals: destinationDomainSlug } }, depth: 0, limit: 1 })
+  const destinationDomain = destinationResult.docs[0]
+  if (!destinationDomain) redirect(`${ctx.basePath}/documents/${documentId}`)
+  const folder = await tenantFolderId(payload, destinationDomain.id, destinationDomain.id === tenant.id ? ctx.legacyTenantId : undefined, String(formData.get('folderId') ?? ''))
+  if (!folder) redirect(`${ctx.basePath}/documents/${documentId}`)
+  try { await moveDocument({ payload, documentId, sourceDomainId: tenant.id, destinationDomainId: destinationDomain.id, destinationFolderId: folder, actorUserId: ctx.user.id, actorCharacterId: (await getActiveContext()).activeCharacter?.id, confirmCrossDomain: formData.get('confirmCrossDomain') === '1' }) } catch { /* customer redirect remains stable */ }
+  revalidatePath(`/domain/${destinationDomain.slug}/documents/${documentId}`)
   revalidatePath(`${ctx.basePath}/documents/${documentId}`)
   revalidatePath(recordsPath(ctx))
+}
+
+/** Copy an independent Document through the same interim administrative seam. */
+export async function copyDocumentAction(formData: FormData): Promise<void> {
+  const tenantSlug = String(formData.get('tenantSlug') ?? '')
+  const documentId = Number(formData.get('documentId'))
+  const destinationDomainSlug = String(formData.get('destinationDomainSlug') ?? tenantSlug)
+  const ctx = await getMemberTenant(tenantSlug)
+  if (!ctx || !documentId) redirect(`/domain/${tenantSlug}/records`)
+  const destination = await ctx.payload.find({ collection: 'domains', where: { slug: { equals: destinationDomainSlug } }, depth: 0, limit: 1 })
+  if (!destination.docs[0]) redirect(`${ctx.basePath}/documents/${documentId}`)
+  let copied: Awaited<ReturnType<typeof copyDocument>> | null = null
+  try { copied = await copyDocument({ payload: ctx.payload, sourceDocumentId: documentId, destinationDomainId: destination.docs[0].id, destinationFolderId: String(formData.get('destinationFolderId') ?? '') || null, actorUserId: ctx.user.id, actorCharacterId: (await getActiveContext()).activeCharacter?.id, confirmCrossDomain: formData.get('confirmCrossDomain') === '1' }) } catch { /* customer redirect remains stable */ }
+  if (copied) redirect(`/domain/${destination.docs[0].slug}/documents/${copied.id}`)
+  redirect(`${ctx.basePath}/documents/${documentId}`)
 }
 
 /**

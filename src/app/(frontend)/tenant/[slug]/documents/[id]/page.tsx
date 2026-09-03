@@ -2,12 +2,12 @@ import { notFound } from 'next/navigation'
 
 import { CopyMarkdownButton } from '@/components/archive/CopyMarkdownButton'
 import { TenantShell } from '@/components/theme/TenantShell'
-import { moveDocumentAction } from '@/lib/actions/archive'
+import { copyDocumentAction, moveDocumentAction } from '@/lib/actions/archive'
 import { documentWorkflowAction, softDeleteDocumentAction } from '@/lib/actions/documentWorkflow'
 import { buildFolderTree, flattenFolderTree } from '@/lib/archive/folderTree'
 import { originLabel } from '@/lib/origin'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
-import { getDocumentForTenant, getFoldersForTenant } from '@/lib/tenant/queries'
+import { getDocumentForTenant, getFoldersForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 import { renderMarkdown } from '@/lib/markdown/render'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 import { getDocumentCharacterLinks, getDocumentTags } from '@/lib/documents/links'
@@ -37,6 +37,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
   }
 
   const folders = await getFoldersForTenant(tenant)
+  const domains = user ? await getTenantsForUser(user.id) : []
   const payload = await (await import('@/lib/payload')).getLorePayload()
   const [characterLinks, tagLinks, relationshipLinks] = await Promise.all([getDocumentCharacterLinks(payload, doc.id), getDocumentTags(payload, doc.id), getDocumentRelationships(payload, doc.id).catch(() => ({ docs: [] }))])
   const flatFolders = flattenFolderTree(buildFolderTree(folders))
@@ -96,6 +97,8 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
           <form action={moveDocumentAction} className={styles.moveForm}>
             <input type="hidden" name="tenantSlug" value={tenant.slug} />
             <input type="hidden" name="documentId" value={doc.id} />
+            <label className={styles.moveLabel} htmlFor="move-domain">Move to Domain:</label>
+            <select id="move-domain" name="destinationDomainSlug" className={styles.moveSelect} defaultValue={tenant.slug}>{domains.map((item) => <option key={item.id} value={item.slug}>{item.name}</option>)}</select>
             <label className={styles.moveLabel} htmlFor="move-folder">
               Move to:
             </label>
@@ -113,10 +116,13 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
                 </option>
               ))}
             </select>
+            <label><input type="checkbox" name="confirmCrossDomain" value="1" /> Confirm if another Domain</label>
             <button type="submit" className={styles.action}>
               Move
             </button>
           </form>
+
+          {user ? <form action={copyDocumentAction} className={styles.moveForm}><input type="hidden" name="tenantSlug" value={tenant.slug} /><input type="hidden" name="documentId" value={doc.id} /><label className={styles.moveLabel} htmlFor="copy-domain">Copy to:</label><select id="copy-domain" name="destinationDomainSlug" className={styles.moveSelect} defaultValue={tenant.slug}>{domains.map((item) => <option key={item.id} value={item.slug}>{item.name}</option>)}</select><label><input type="checkbox" name="confirmCrossDomain" value="1" /> Confirm if another Domain</label><button type="submit" className={styles.action}>Create independent copy</button></form> : null}
 
           <form action={softDeleteDocumentAction} className={styles.deleteForm}>
             <input type="hidden" name="tenantSlug" value={tenant.slug} />
