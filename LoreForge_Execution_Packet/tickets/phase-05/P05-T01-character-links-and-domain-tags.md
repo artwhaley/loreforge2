@@ -48,7 +48,7 @@ Add typed Character credits/subject links and Domain tags beside Markdown withou
 - All mutations Domain-scoped and provenance-recorded.
 
 ## Manual acceptance
-- Create an Incident Report as Varro, retain Varro as non-removable Prepared by, add another preparer, and add controlled plus unclaimed Characters under Concerns with a relationship label; browse each Character and see the record where access permits.
+- Create an Incident Report as the seeded admin-controlled **Lucan** (or **Elara**), retain that Character as the non-removable Prepared by credit, add controlled plus unclaimed Characters under Concerns with a relationship label; browse each Character and see the record where access permits. **Varro** remains the role fixture for later authorization scenarios but is not a controlling-user Character in the local login fixture.
 - Create a new ad-hoc tag during filing and reuse it from autocomplete.
 
 ## Guardrails / non-goals

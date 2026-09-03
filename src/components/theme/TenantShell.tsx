@@ -4,6 +4,7 @@ import type { Character, Tenant } from '@/payload-types'
 import { mediaSrc } from '@/lib/theme/fonts'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { getCharactersForTenant, getTenantsForUser } from '@/lib/tenant/queries'
+import { CharacterSwitcher } from './CharacterSwitcher'
 
 import styles from './TenantShell.module.scss'
 
@@ -44,14 +45,7 @@ export async function TenantShell({ tenant, cssVars, role, switcherTenants, acti
           </select>
           <button type="submit" className={styles.contextButton} disabled={resolvedTenants.length === 0}>Switch</button>
         </form>
-        <form action="/api/switch-character" method="post" className={styles.contextControl}>
-          <label htmlFor="character-switcher" className={styles.contextLabel}>Acting as</label>
-          <select id="character-switcher" name="characterId" defaultValue={resolvedActiveCharacter?.id ?? ''} className={styles.contextSelect}>
-            <option value="">No participating Character</option>
-            {resolvedCharacters.map((character) => <option key={character.id} value={character.id}>{character.name}</option>)}
-          </select>
-          <button type="submit" className={styles.contextButton}>Switch</button>
-        </form>
+        <CharacterSwitcher characters={resolvedCharacters} activeCharacter={resolvedActiveCharacter} />
         {context.user ? <div className={styles.accountControls}><details className={styles.accountMenu}><summary>{context.user.name ?? context.user.email}</summary><div className={styles.accountPopover}><Link href="/">Dashboard</Link><Link href="/account">Account</Link><Link href="/account/characters">Characters</Link><form action="/api/logout" method="post"><button type="submit" className={styles.logoutButton}>Log out</button></form></div></details></div> : null}
       </div>
       <header className={styles.header}>

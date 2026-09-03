@@ -671,6 +671,13 @@ for (const fixture of arFolderFixtures) {
 // --- Institutional Role hierarchy and scoped assignments (Phase 3) ---
 const arDomain = domainsBySlug.ar
 const arSubdomainId = (slug: string) => subdomainsByKey[`ar:${slug}`]?.id
+// Keep the document-authoring gate executable: the seeded admin controls two
+// Characters that are active Ar members, so the Acting as selector can be
+// used for Prepared by without granting institutional Roles to the test user.
+for (const characterId of [charactersByKey.lucan.id, charactersByKey.elara.id]) {
+  const existing = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: arDomain.id } }, { character: { equals: characterId } }] }, depth: 0, limit: 1 })
+  if (!existing.docs[0]) await payload.create({ collection: 'domain-memberships', data: { domain: arDomain.id, character: characterId, status: 'active', addedBy: usersByEmail['admin@example.test'].id, note: 'Phase 5 document-authoring fixture membership.' } })
+}
 const roleFixtures = [
   { key: 'head-scribe', name: 'Head Scribe', subdomain: 'scribes', parent: null },
   { key: 'assistant-head-scribe', name: 'Assistant Head Scribe', subdomain: 'scribes', parent: 'head-scribe' },

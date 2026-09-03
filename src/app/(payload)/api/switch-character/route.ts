@@ -12,8 +12,15 @@ export async function POST(request: Request) {
   const formData = await request.formData()
   const rawCharacterId = String(formData.get('characterId') ?? '')
   const characterId = Number(rawCharacterId)
+  const requestedReturnTo = String(formData.get('returnTo') ?? '')
+  const returnTo = requestedReturnTo.startsWith('/') && !requestedReturnTo.startsWith('//') ? requestedReturnTo : '/'
+  const wantsJson = request.headers.get('x-loreforge-character-switch') === 'fetch' || request.headers.get('accept')?.includes('application/json')
+  const finish = (target: string, response?: NextResponse) => {
+    if (wantsJson) return NextResponse.json({ redirectTo: target }, response ? { headers: response.headers } : undefined)
+    return NextResponse.redirect(new URL(target, request.url), 303)
+  }
 
-  const response = NextResponse.redirect(new URL('/', request.url), 303)
+  const response = wantsJson ? NextResponse.json({ redirectTo: returnTo }) : NextResponse.redirect(new URL(returnTo, request.url), 303)
   if (!user) return response
 
   if (!rawCharacterId) {
@@ -21,14 +28,12 @@ export async function POST(request: Request) {
     return response
   }
 
-  if (!Number.isFinite(characterId)) return response
+  if (!Number.isFinite(characterId)) return finish('/')
 
-  const character = await payload.findByID({ collection: 'characters', id: characterId, depth: 0 })
-  if (!character) return response
+  const character = await payload.findByID({ collection: 'characters', id: characterId, depth: 0 }).catch(() => null)
+  if (!character) return finish('/')
   const controlledBy = typeof character.controlledBy === 'object' ? character.controlledBy?.id : character.controlledBy
-  if (character.status !== 'active' || String(controlledBy) !== String(user.id)) {
-    return response
-  }
+  if (character.status !== 'active' || String(controlledBy) !== String(user.id)) return finish('/')
 
   response.cookies.set(ACTIVE_CHARACTER_COOKIE, String(character.id), {
     httpOnly: true,
@@ -44,8 +49,12 @@ export async function POST(request: Request) {
     const domain = domains.docs[0]
     if (domain) {
       const membership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domain.id } }, { character: { equals: character.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
-      if (!membership.docs[0]) response.cookies.delete(ACTIVE_CHARACTER_COOKIE)
+      if (!membership.docs[0]) {
+        response.cookies.delete(ACTIVE_CHARACTER_COOKIE)
+        return finish('/', response)
+      }
     }
   }
+  if (wantsJson) return NextResponse.json({ redirectTo: returnTo }, { headers: response.headers })
   return response
 }

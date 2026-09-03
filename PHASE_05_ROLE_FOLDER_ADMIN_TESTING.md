@@ -4,6 +4,10 @@ The local server runs at `http://localhost:3055`. Log in at `/` with
 `admin@example.test` / `test-password-123`, select **Ar**, and keep the
 admin account active for these checks.
 
+For document creation, the seeded admin can act as **Lucan** or **Elara**;
+both are active Ar members. If you change the Acting as selection from a
+document editor, the switch stays on that editor and preserves its fields.
+
 ## Role manager
 
 1. Use the management bar under the Ar header and choose **Roles**.

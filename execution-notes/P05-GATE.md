@@ -25,7 +25,7 @@
 
 ## Manual owner gate
 
-Run the server with `npm run dev` (the script pins `PAYLOAD_PUSH=false`) and open `http://localhost:3055/`. Sign in on the Loreforge home page with the seeded admin account (`admin@example.test` / `test-password-123`). Use the top context bar to choose **Ar** and an acting Character controlled by that account (for example **Lucan**). The top bar's **Domain** and **Acting as** controls remain available on every branded Domain page.
+Run the server with `npm run dev` (the script pins `PAYLOAD_PUSH=false`) and open `http://localhost:3055/`. Sign in on the Loreforge home page with the seeded admin account (`admin@example.test` / `test-password-123`). Use the top context bar to choose **Ar** and an acting Character controlled by that account (**Lucan** or **Elara**; both are seeded as active Ar members). The top bar's **Domain** and **Acting as** controls remain available on every branded Domain page. If no Character is selected, document creation is still allowed for this Domain Owner, but there will be no Prepared by credit.
 
 ### 1. Corrected Character workspace
 
@@ -38,7 +38,7 @@ Run the server with `npm run dev` (the script pins `PAYLOAD_PUSH=false`) and ope
 
 ### 2. Character links, tags, and provenance
 
-1. Open **Records → New document** (`/domain/ar/records/new`). Choose a Document Type, enter a Title and body, and leave Destination at **Domain Root** or choose a Folder. The top-bar **Acting as** selector is optional; if a Character is selected it appears as an automatic, non-editable **Prepared by** credit, and if no Character is selected the document can still be created without that credit.
+1. Open **Records → New document** (`/domain/ar/records/new`). Choose a Document Type, enter a Title and body, and leave Destination at **Domain Root** or choose a Folder. The top-bar **Acting as** selector is optional; if a Character is selected it appears as an automatic, non-editable **Prepared by** credit, and if no Character is selected the document can still be created without that credit. If you arrive here before selecting a Character, use the **Acting as** selector in the page header; the switch is in-place and returns to this exact editor without clearing entered fields. It only returns to `/` when the selected Character is not an active member of the current Domain.
 2. Create an Incident Report. Under **Concerns**, search for any Character, add several chips, and give each chip its own relationship (`perp`, `victim`, `witness`). Also type a name that does not exist and choose **Add as a new unlinked Character**.
 3. Open the created record. Verify Prepared by (when selected), Concerns, Tags, and the History/provenance actor are separate concepts. The automatic Prepared by credit must not offer a working Remove action; newly created concern Characters must have no Domain/Role membership.
 
