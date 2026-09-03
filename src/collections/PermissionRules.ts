@@ -34,6 +34,10 @@ export const PermissionRules: CollectionConfig = {
         const folder = await req.payload.findByID({ collection: 'folders', id: resourceId, depth: 0 })
         if (relationId(folder.domain) !== domainId) throw new Error('Folder access must stay inside the rule Domain.')
       }
+      if ((principalType === 'Character' || principalType === 'User') && resourceType === 'Document') {
+        const document = await req.payload.findByID({ collection: 'documents', id: resourceId, depth: 0, overrideAccess: true })
+        if (relationId(document.domain) !== domainId) throw new Error('Document sharing must stay inside the rule Domain.')
+      }
       return data
     }],
   },

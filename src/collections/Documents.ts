@@ -3,6 +3,7 @@ import type { CollectionConfig } from 'payload'
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
 import { assertLifecycleTransition, canEditDocumentBody, type Lifecycle } from '@/lib/documents/lifecycle'
 import { ensurePreparedBy } from '@/lib/documents/links'
+import { authorizeSharedDocumentAccess } from '@/lib/documents/sharing'
 
 const relationId = (value: unknown): number | null => value && typeof value === 'object' && 'id' in value ? Number((value as { id: number | string }).id) : value === null || value === undefined || value === '' ? null : Number(value)
 
@@ -31,6 +32,7 @@ export const Documents: CollectionConfig = {
         if (ownerId && Number(ownerId) === Number(req.user.id)) return true
         const admins = await req.payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: domainId } }, { user: { equals: req.user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true })
         if (admins.docs.length > 0) return true
+        if (await authorizeSharedDocumentAccess({ payload: req.payload, documentId: id, userId: req.user.id, capability: 'read' })) return true
         const controlled = await req.payload.find({ collection: 'characters', where: { and: [{ controlledBy: { equals: req.user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 200, overrideAccess: true })
         if (controlled.docs.length === 0) return false
         const memberships = await req.payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domainId } }, { character: { in: controlled.docs.map((character) => character.id) } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true })
