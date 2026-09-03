@@ -12,6 +12,7 @@
 - `aa9a2a9` — P05-T04 follow-up hardening: strict Character-authored creation context, form/import/copy identity checks, independent Folder search, and cleanup of Domain-local shares during cross-Domain Move.
 - `86531f7` — P05-T04 follow-up: reject copies whose acting Character is not an active member of the destination Domain before creating anything.
 - `9cd9225` — P05-T03 follow-up: render Type/Tag mapping and drop previews before cross-Domain confirmation.
+- `4615a9d` — P05-T01 follow-up: fix the Character workspace checkbox boundary, make Acting-as/Prepared-by optional, and replace the Concerns checkbox list with any-Character search/chips and unlinked Character creation.
 
 ## Automated evidence
 
@@ -36,9 +37,9 @@ Run the server with `npm run dev` (the script pins `PAYLOAD_PUSH=false`) and ope
 
 ### 2. Character links, tags, and provenance
 
-1. Open **Records → New document** (`/domain/ar/records/new`) with an active participating Character selected in the top bar.
-2. Create an Incident Report. The active Character must remain checked and marked required under **Prepared by**; add another preparer, add controlled/unclaimed Characters under **Concerns**, enter a relationship label, and add a new tag.
-3. Open the created record. Verify Prepared by, Concerns, Tags, and the History/provenance actor are separate concepts. The required Prepared by credit must not offer a working Remove action.
+1. Open **Records → New document** (`/domain/ar/records/new`). The top-bar **Acting as** selector is optional; if a Character is selected it appears as an automatic, non-editable **Prepared by** credit, and if no Character is selected the document can still be created without that credit.
+2. Create an Incident Report. Under **Concerns**, search for any Character, add several chips, and give each chip its own relationship (`perp`, `victim`, `witness`). Also type a name that does not exist and choose **Add as a new unlinked Character**.
+3. Open the created record. Verify Prepared by (when selected), Concerns, Tags, and the History/provenance actor are separate concepts. The automatic Prepared by credit must not offer a working Remove action; newly created concern Characters must have no Domain/Role membership.
 
 ### 3. Grouped and Supersedes
 
