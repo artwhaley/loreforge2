@@ -10,6 +10,7 @@ import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getDocumentForTenant, getFoldersForTenant } from '@/lib/tenant/queries'
 import { renderMarkdown } from '@/lib/markdown/render'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
+import { getDocumentCharacterLinks, getDocumentTags } from '@/lib/documents/links'
 
 import styles from './document.module.scss'
 
@@ -35,6 +36,8 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
   }
 
   const folders = await getFoldersForTenant(tenant)
+  const payload = await (await import('@/lib/payload')).getLorePayload()
+  const [characterLinks, tagLinks] = await Promise.all([getDocumentCharacterLinks(payload, doc.id), getDocumentTags(payload, doc.id)])
   const flatFolders = flattenFolderTree(buildFolderTree(folders))
   const folderIdValue = typeof doc.folder === 'object' ? doc.folder?.id ?? '' : doc.folder ?? ''
 
@@ -160,6 +163,12 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
             <span className={styles.origin}>{doc.lifecycle.replace('_', ' ')}</span>
           </div>
         </header>
+
+        <section className={styles.metadata} aria-label="Record relationships and tags">
+          <div><h2>Prepared by</h2><ul>{characterLinks.docs.filter((link) => link.kind === 'prepared_by').map((link) => <li key={link.id}>{typeof link.character === 'object' ? link.character.name : `Character ${link.character}`}{link.requiredByCreate ? ' (required)' : ''}{role === 'admin' ? <form action="/api/document-links" method="post" style={{ display: 'inline' }}><input type="hidden" name="domainSlug" value={tenant.slug} /><input type="hidden" name="documentId" value={doc.id} /><input type="hidden" name="characterId" value={typeof link.character === 'object' ? link.character.id : link.character} /><input type="hidden" name="kind" value="prepared_by" /><input type="hidden" name="action" value="remove" /><button type="submit" disabled={Boolean(link.requiredByCreate)}>Remove</button></form> : null}</li>)}</ul>{characterLinks.docs.every((link) => link.kind !== 'prepared_by') ? <p>No preparation credit recorded.</p> : null}</div>
+          <div><h2>Concerns</h2><ul>{characterLinks.docs.filter((link) => link.kind === 'concerns').map((link) => <li key={link.id}>{typeof link.character === 'object' ? link.character.name : `Character ${link.character}`}{link.relationshipLabel ? ` · ${link.relationshipLabel}` : ''}{role === 'admin' ? <form action="/api/document-links" method="post" style={{ display: 'inline' }}><input type="hidden" name="domainSlug" value={tenant.slug} /><input type="hidden" name="documentId" value={doc.id} /><input type="hidden" name="characterId" value={typeof link.character === 'object' ? link.character.id : link.character} /><input type="hidden" name="kind" value="concerns" /><input type="hidden" name="action" value="remove" /><button type="submit">Remove</button></form> : null}</li>)}</ul>{role === 'admin' ? <form action="/api/document-links" method="post"><input type="hidden" name="domainSlug" value={tenant.slug} /><input type="hidden" name="documentId" value={doc.id} /><input type="hidden" name="kind" value="concerns" /><input name="characterId" type="number" min="1" required placeholder="Character ID" /><input name="relationshipLabel" placeholder="Relationship (optional)" /><button type="submit">Add concern</button></form> : null}</div>
+          <div><h2>Tags</h2><ul>{tagLinks.docs.map((link) => <li key={link.id}>{typeof link.tag === 'object' ? link.tag.name : `Tag ${link.tag}`}{role === 'admin' ? <form action="/api/document-tags" method="post" style={{ display: 'inline' }}><input type="hidden" name="domainSlug" value={tenant.slug} /><input type="hidden" name="documentId" value={doc.id} /><input type="hidden" name="tagId" value={typeof link.tag === 'object' ? link.tag.id : link.tag} /><input type="hidden" name="action" value="remove" /><button type="submit">Remove</button></form> : null}</li>)}</ul>{role === 'admin' ? <form action="/api/document-tags" method="post"><input type="hidden" name="domainSlug" value={tenant.slug} /><input type="hidden" name="documentId" value={doc.id} /><input name="tagName" required placeholder="Add tag" /><button type="submit">Add tag</button></form> : null}</div>
+        </section>
 
         {source === '1' ? (
           <pre className={styles.source}>{doc.body}</pre>

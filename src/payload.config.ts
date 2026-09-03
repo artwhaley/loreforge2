@@ -22,6 +22,9 @@ import { RoleAssignments } from './collections/RoleAssignments'
 import { Roles } from './collections/Roles'
 import { Folders } from './collections/Folders'
 import { PermissionRules } from './collections/PermissionRules'
+import { DocumentCharacterLinks } from './collections/DocumentCharacterLinks'
+import { Tags } from './collections/Tags'
+import { DocumentTags } from './collections/DocumentTags'
 import { Media } from './collections/Media'
 import { Memberships } from './collections/Memberships'
 import { Pages } from './collections/Pages'
@@ -137,7 +140,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Characters, CharacterClaimRequests, CharacterMergeRequests, DomainCharacterContexts, DomainMemberships, Domains, DomainAdmins, Subdomains, Roles, RoleAssignments, PermissionRules, DocumentTypes, DocumentProvenanceEvents, Tenants, Memberships, Documents, Folders, Pages, Media],
+  collections: [Users, Characters, CharacterClaimRequests, CharacterMergeRequests, DomainCharacterContexts, DomainMemberships, Domains, DomainAdmins, Subdomains, Roles, RoleAssignments, PermissionRules, DocumentCharacterLinks, Tags, DocumentTags, DocumentTypes, DocumentProvenanceEvents, Tenants, Memberships, Documents, Folders, Pages, Media],
   plugins: [formBuilder],
   editor: lexicalEditor(),
   db: sqliteAdapter({

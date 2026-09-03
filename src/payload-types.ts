@@ -79,6 +79,9 @@ export interface Config {
     roles: Role;
     'role-assignments': RoleAssignment;
     'permission-rules': PermissionRule;
+    'document-character-links': DocumentCharacterLink;
+    tags: Tag;
+    'document-tags': DocumentTag;
     'document-types': DocumentType;
     'document-provenance-events': DocumentProvenanceEvent;
     tenants: Tenant;
@@ -108,6 +111,9 @@ export interface Config {
     roles: RolesSelect<false> | RolesSelect<true>;
     'role-assignments': RoleAssignmentsSelect<false> | RoleAssignmentsSelect<true>;
     'permission-rules': PermissionRulesSelect<false> | PermissionRulesSelect<true>;
+    'document-character-links': DocumentCharacterLinksSelect<false> | DocumentCharacterLinksSelect<true>;
+    tags: TagsSelect<false> | TagsSelect<true>;
+    'document-tags': DocumentTagsSelect<false> | DocumentTagsSelect<true>;
     'document-types': DocumentTypesSelect<false> | DocumentTypesSelect<true>;
     'document-provenance-events': DocumentProvenanceEventsSelect<false> | DocumentProvenanceEventsSelect<true>;
     tenants: TenantsSelect<false> | TenantsSelect<true>;
@@ -582,6 +588,49 @@ export interface DocumentType {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "document-character-links".
+ */
+export interface DocumentCharacterLink {
+  id: number;
+  domain: number | Domain;
+  document: number | Document;
+  character: number | Character;
+  kind: 'prepared_by' | 'concerns';
+  relationshipLabel?: string | null;
+  requiredByCreate?: boolean | null;
+  actorUser?: (number | null) | User;
+  actorCharacter?: (number | null) | Character;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tags".
+ */
+export interface Tag {
+  id: number;
+  domain: number | Domain;
+  name: string;
+  normalizedName: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "document-tags".
+ */
+export interface DocumentTag {
+  id: number;
+  domain: number | Domain;
+  document: number | Document;
+  tag: number | Tag;
+  actorUser?: (number | null) | User;
+  actorCharacter?: (number | null) | Character;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "document-provenance-events".
  */
 export interface DocumentProvenanceEvent {
@@ -605,7 +654,17 @@ export interface DocumentProvenanceEvent {
     | 'relationship-added'
     | 'relationship-removed'
     | 'deleted'
-    | 'restored';
+    | 'restored'
+    | 'copied_from'
+    | 'copied_to'
+    | 'share_revoked'
+    | 'relationship_added'
+    | 'relationship_removed'
+    | 'character_link_changed'
+    | 'tag_changed'
+    | 'superseded'
+    | 'withdrawn'
+    | 'soft_deleted';
   occurredAt: string;
   /**
    * Structured before/after or workflow context.
@@ -891,6 +950,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'permission-rules';
         value: number | PermissionRule;
+      } | null)
+    | ({
+        relationTo: 'document-character-links';
+        value: number | DocumentCharacterLink;
+      } | null)
+    | ({
+        relationTo: 'tags';
+        value: number | Tag;
+      } | null)
+    | ({
+        relationTo: 'document-tags';
+        value: number | DocumentTag;
       } | null)
     | ({
         relationTo: 'document-types';
@@ -1184,6 +1255,46 @@ export interface PermissionRulesSelect<T extends boolean = true> {
   capability?: T;
   effect?: T;
   active?: T;
+  actorUser?: T;
+  actorCharacter?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "document-character-links_select".
+ */
+export interface DocumentCharacterLinksSelect<T extends boolean = true> {
+  domain?: T;
+  document?: T;
+  character?: T;
+  kind?: T;
+  relationshipLabel?: T;
+  requiredByCreate?: T;
+  actorUser?: T;
+  actorCharacter?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tags_select".
+ */
+export interface TagsSelect<T extends boolean = true> {
+  domain?: T;
+  name?: T;
+  normalizedName?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "document-tags_select".
+ */
+export interface DocumentTagsSelect<T extends boolean = true> {
+  domain?: T;
+  document?: T;
+  tag?: T;
   actorUser?: T;
   actorCharacter?: T;
   updatedAt?: T;

@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
 import { assertLifecycleTransition, canEditDocumentBody, type Lifecycle } from '@/lib/documents/lifecycle'
+import { ensurePreparedBy } from '@/lib/documents/links'
 
 const relationId = (value: unknown): number | null => value && typeof value === 'object' && 'id' in value ? Number((value as { id: number | string }).id) : value === null || value === undefined || value === '' ? null : Number(value)
 
@@ -65,9 +66,28 @@ export const Documents: CollectionConfig = {
           }
           if (data?.body !== undefined && data.body !== originalDoc?.body && !canEditDocumentBody(from)) throw new Error('This Document is not editable in its current lifecycle state.')
         }
+        if (operation === 'create' && req.user && !(req.context as Record<string, unknown> | undefined)?.preparedByCharacterId) {
+          throw new Error('Character-authored Documents require a Prepared by Character credit.')
+        }
         return data
       },
     ],
+    afterChange: [async ({ doc, operation, req }) => {
+      const context = req.context as Record<string, unknown> | undefined
+      const preparedByCharacterId = context?.preparedByCharacterId
+      const domainId = relationId(doc.domain)
+      if (operation === 'create' && domainId && preparedByCharacterId) {
+        await ensurePreparedBy({
+          payload: req.payload,
+          domainId,
+          documentId: doc.id,
+          characterId: Number(preparedByCharacterId),
+          actor: { userId: Number(req.user?.id ?? context?.actorUserId ?? 0), characterId: Number(preparedByCharacterId) },
+          skipAuthorization: true,
+        })
+      }
+      return doc
+    }],
   },
   fields: [
     {

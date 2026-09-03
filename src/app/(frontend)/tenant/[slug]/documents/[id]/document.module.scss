@@ -107,6 +107,26 @@
   font-size: 0.85rem;
 }
 
+.metadata {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0;
+  padding: 1rem;
+  border: 1px solid var(--tenant-accent);
+  background: var(--tenant-page-bg);
+}
+
+.metadata h2 {
+  margin: 0 0 .4rem;
+  font-family: var(--tenant-heading-font);
+  font-size: 1rem;
+  color: var(--tenant-primary);
+}
+
+.metadata ul { margin: 0 0 .5rem; padding-left: 1.1rem; }
+.metadata form { margin-left: .5rem; }
+
 .origin {
   text-transform: capitalize;
   background: var(--tenant-page-bg);

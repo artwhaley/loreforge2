@@ -12,6 +12,8 @@ import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { resolveFilingPolicy, type FilingPolicy } from '@/lib/documents/lifecycle'
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
+import { attachDocumentCharacterLink, attachDocumentTag, findOrCreateDomainTag } from '@/lib/documents/links'
+import { authorizeInterimOperation } from '@/lib/authorization/interim'
 import { domainAndIdWhere } from '@/lib/tenant/scope'
 import type { Domain, Tenant } from '@/payload-types'
 
@@ -173,8 +175,22 @@ export async function createDocumentFromEditorAction(formData: FormData): Promis
   const folderRecord = folder ? await ctx.payload.findByID({ collection: 'folders', id: folder, depth: 0 }).catch(() => null) : null
   const domainRecord = await ctx.payload.findByID({ collection: 'domains', id: ctx.tenant.id, depth: 0 })
   const policy = resolveFilingPolicy({ template: 'inherit', folder: (folderRecord?.filingPolicy ?? 'inherit') as FilingPolicy, documentType: selectedType.defaultFilingPolicy, domain: (domainRecord.defaultFilingPolicy ?? 'direct-file') as Exclude<FilingPolicy, 'inherit'> })
-  const created = await ctx.payload.create({ collection: 'documents', data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body, origin: 'web-editor', sourceKind: 'web', documentType: selectedType.id, lifecycle: policy === 'review-required' ? 'pending_review' : 'filed', publicAccess: 'inherit', createdBy: ctx.user.id, folder } })
+  const created = await ctx.payload.create({ collection: 'documents', context: { preparedByCharacterId: context.activeCharacter.id, actorUserId: ctx.user.id }, data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body, origin: 'web-editor', sourceKind: 'web', documentType: selectedType.id, lifecycle: policy === 'review-required' ? 'pending_review' : 'filed', publicAccess: 'inherit', createdBy: ctx.user.id, folder } })
   await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'created', actorUserId: ctx.user.id, actorCharacterId: context.activeCharacter.id, context: { lifecycle: created.lifecycle }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id) })
+  const interim = await authorizeInterimOperation(ctx.payload, { userId: ctx.user.id, activeCharacterId: context.activeCharacter.id }, ctx.tenant.id)
+  if (interim === true) {
+    const preparedByIds = formData.getAll('preparedByIds').map((value) => Number(value)).filter((id) => Number.isFinite(id) && id > 0)
+    const concernIds = formData.getAll('concernCharacterIds').map((value) => Number(value)).filter((id) => Number.isFinite(id) && id > 0)
+    for (const characterId of [...new Set(preparedByIds)]) if (characterId !== Number(context.activeCharacter.id)) await attachDocumentCharacterLink({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId, kind: 'prepared_by', actor: { userId: ctx.user.id, characterId: context.activeCharacter.id } })
+    const relationshipLabel = String(formData.get('concernsRelationship') ?? '').trim() || null
+    for (const characterId of [...new Set(concernIds)]) await attachDocumentCharacterLink({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId, kind: 'concerns', relationshipLabel, actor: { userId: ctx.user.id, characterId: context.activeCharacter.id } })
+    const rawTags = String(formData.get('tagNames') ?? '').split(',').map((name) => name.trim()).filter(Boolean)
+    for (const name of [...new Set(rawTags.map((tag) => tag.toLocaleLowerCase()))]) {
+      const displayName = rawTags.find((tag) => tag.toLocaleLowerCase() === name) ?? name
+      const tag = await findOrCreateDomainTag({ payload: ctx.payload, domainId: ctx.tenant.id, name: displayName, actor: { userId: ctx.user.id, characterId: context.activeCharacter.id } })
+      await attachDocumentTag({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, tagId: tag.id, actor: { userId: ctx.user.id, characterId: context.activeCharacter.id } })
+    }
+  }
   if (created.lifecycle === 'filed') await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'filed', actorUserId: ctx.user.id, actorCharacterId: context.activeCharacter.id, context: { reason: 'filing-policy' }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id) })
   redirect(`${ctx.basePath}/documents/${created.id}/edit`)
 }

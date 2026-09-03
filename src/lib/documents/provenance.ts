@@ -4,7 +4,9 @@ import type { Payload } from 'payload'
 export type ProvenanceEventType =
   | 'created' | 'edited' | 'submitted' | 'filed' | 'approved' | 'rejected'
   | 'locked' | 'unlocked' | 'moved' | 'copied' | 'shared'
-  | 'relationship-added' | 'relationship-removed' | 'deleted' | 'restored'
+  | 'copied_from' | 'copied_to' | 'share_revoked' | 'relationship-added' | 'relationship-removed'
+  | 'relationship_added' | 'relationship_removed' | 'character_link_changed' | 'tag_changed' | 'superseded'
+  | 'withdrawn' | 'soft_deleted' | 'deleted' | 'restored'
 
 export type ProvenanceContext = Record<string, unknown>
 
@@ -62,9 +64,17 @@ export function describeProvenanceEvent(eventType: ProvenanceEventType, context?
     case 'unlocked': return 'unlocked the record'
     case 'moved': return context?.folderName ? `moved the record to ${String(context.folderName)}` : 'moved the record'
     case 'copied': return 'created an independent copy of the record'
+    case 'copied_from': return 'created an independent copy of the record'
+    case 'copied_to': return 'was copied to another Domain'
     case 'shared': return 'shared the record'
+    case 'share_revoked': return 'revoked a record share'
+    case 'character_link_changed': return context?.action === 'detached' ? 'removed a Character link' : 'added a Character link'
+    case 'tag_changed': return context?.action === 'detached' ? 'removed a tag' : 'added a tag'
     case 'relationship-added': return 'added a record relationship'
     case 'relationship-removed': return 'removed a record relationship'
+    case 'relationship_added': return 'added a record relationship'
+    case 'relationship_removed': return 'removed a record relationship'
+    case 'superseded': return 'superseded an older record'
     case 'deleted': return 'soft-deleted the record'
     case 'restored': return 'restored the record'
     default: return 'changed the record'
