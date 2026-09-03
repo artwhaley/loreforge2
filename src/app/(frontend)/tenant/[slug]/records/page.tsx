@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 
 import { DeleteFolderButton } from '@/components/archive/DeleteFolderButton'
 import { TenantShell } from '@/components/theme/TenantShell'
-import { createDocumentAction, createFolderAction } from '@/lib/actions/archive'
+import { createFolderAction } from '@/lib/actions/archive'
 import { buildFolderTree, flattenFolderTree, folderPath } from '@/lib/archive/folderTree'
 import { originLabel } from '@/lib/origin'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
@@ -152,14 +152,7 @@ export default async function RecordsPage({ params, searchParams }: Props) {
               ) : null}
             </form>
 
-            <form action={createDocumentAction} className={styles.inlineForm}>
-              <input type="hidden" name="tenantSlug" value={tenant.slug} />
-              <input type="hidden" name="folderId" value={currentFolder?.id ?? ''} />
-              <input className={styles.inlineInput} name="title" placeholder="New record title" aria-label="New record title" />
-              <button type="submit" className={styles.inlineSubmit}>
-                New record
-              </button>
-            </form>
+            <a className={styles.toolLink} href={`${base}/records/new${currentFolder ? `?folder=${currentFolder.id}` : ''}`}>New document</a>
             <a className={styles.toolLink} href={`${base}/import`}>
               Import notecard
             </a>

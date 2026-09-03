@@ -9,6 +9,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 
 import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
+import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { domainAndIdWhere } from '@/lib/tenant/scope'
 import type { Domain, Tenant } from '@/payload-types'
 
@@ -134,6 +135,24 @@ export async function createDocumentAction(formData: FormData): Promise<void> {
       folder,
     },
   })
+  redirect(`${ctx.basePath}/documents/${created.id}/edit`)
+}
+
+/** Full-page customer document entry. The active Character is required for
+ * authoring; user-level Domain administration alone cannot create a record. */
+export async function createDocumentFromEditorAction(formData: FormData): Promise<void> {
+  const tenantSlug = String(formData.get('tenantSlug') ?? '')
+  const title = String(formData.get('title') ?? '').trim()
+  const body = canonicalizeMarkdown(String(formData.get('body') ?? '')).trim() || `# ${title}`
+  const ctx = await getMemberTenant(tenantSlug)
+  if (!ctx || !title) redirect(`/domain/${tenantSlug}/records/new?error=missing`)
+
+  const context = await getActiveContext()
+  if (!context.activeCharacter || context.tenant?.slug !== tenantSlug) redirect(`/domain/${tenantSlug}/records/new?error=character`)
+  const membership = await ctx.payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: ctx.tenant.id } }, { character: { equals: context.activeCharacter.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
+  if (!membership.docs[0]) redirect(`/domain/${tenantSlug}/records/new?error=character`)
+  const folder = await tenantFolderId(ctx.payload, ctx.tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
+  const created = await ctx.payload.create({ collection: 'documents', data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body, origin: 'web-editor', createdBy: ctx.user.id, folder } })
   redirect(`${ctx.basePath}/documents/${created.id}/edit`)
 }
 

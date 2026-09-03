@@ -34,6 +34,9 @@
   margin: 0 0 0.5rem;
 }
 
+.cardTitle a { color: inherit; text-decoration: none; }
+.cardTitle a:hover { text-decoration: underline; text-decoration-color: var(--tenant-accent); }
+
 .cardDesc {
   color: var(--tenant-primary);
   font-size: 0.95rem;
@@ -46,6 +49,9 @@
   color: var(--tenant-accent);
   font-weight: 600;
 }
+
+.cardMeta { margin: 0; color: var(--tenant-muted-text); font-size: .8rem; }
+.manageLink { color: var(--tenant-primary); font-weight: 700; }
 
 .empty {
   color: var(--tenant-muted-text);

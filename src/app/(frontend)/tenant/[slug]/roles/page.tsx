@@ -56,20 +56,20 @@ export default async function RolesPage({ params }: Props) {
           {roles.docs.map((item) => {
             const parent = relationId(item.parentRole)
             const subdomain = relationId(item.subdomain)
-            return <li key={item.id}><strong>{item.name}</strong>{parent ? ` — reports to ${roleName.get(parent) ?? 'Role ' + parent}` : ' — top-level'}{subdomain ? ` — ${subdomains.docs.find((s) => Number(s.id) === subdomain)?.name ?? 'Subdomain'}` : ' — Domain-wide'}</li>
+            const assignedCount = activeAssignments.filter((assignment) => relationId(assignment.role) === Number(item.id)).length
+            return <li key={item.id}><strong>{item.name}</strong>{parent ? ` — reports to ${roleName.get(parent) ?? 'Role ' + parent}` : ' — top-level'}{subdomain ? ` — ${subdomains.docs.find((s) => Number(s.id) === subdomain)?.name ?? 'Department'}` : ' — Domain-wide'} · {assignedCount} assigned · <a href={`/domain/${slug}/manage/people?q=${encodeURIComponent(item.name)}`}>View People</a></li>
           })}
         </ul>}
         {isAdmin ? <>
-          <h2>Create Role</h2>
-          <form action="/api/roles" method="post">
+          <details><summary>Create or assign Roles</summary>
+          <h2>Create Role</h2><form action="/api/roles" method="post">
             <input type="hidden" name="domainSlug" value={slug} />
             <input name="name" placeholder="Role name" aria-label="Role name" required />{' '}
             <select name="parentRoleId" defaultValue=""><option value="">No superior (top-level)</option>{roles.docs.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{' '}
             <select name="subdomainId" defaultValue=""><option value="">Domain-wide</option>{subdomains.docs.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{' '}
             <button type="submit">Create Role</button>
           </form>
-          <h2>Assign Role</h2>
-          <form action="/api/role-assignments" method="post">
+          <h2>Bulk assignment</h2><p>For one-person changes, use <a href={`/domain/${slug}/manage/people`}>People</a>. This bulk form remains for repeated assignments.</p><form action="/api/role-assignments" method="post">
             <input type="hidden" name="domainSlug" value={slug} />
             <input type="hidden" name="scopeInputMode" value="multi" />
             <select name="characterId" aria-label="Character" required><option value="">Choose Character</option>{assignableCharacters.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{' '}
@@ -77,8 +77,8 @@ export default async function RolesPage({ params }: Props) {
             <label>Folder scopes (select any number){' '}<select name="scopeFolderIds" aria-label="Folder scopes" multiple size={6}>{folders.docs.filter((item) => !item.systemManaged).map((item) => <option key={item.id} value={item.id}>{folderLabel(Number(item.id))}</option>)}</select></label>{' '}
             <label><input type="checkbox" name="domainWide" value="1" /> Domain-wide</label>{' '}
             <button type="submit">Assign Role</button>
-          </form>
-        </> : <p>Role management is available only in account-level Administration mode.</p>}
+          </form></details>
+        </> : null}
         <h2>Active assignments</h2>
         {activeAssignments.length === 0 ? <p>No active Role assignments.</p> : <table><thead><tr><th>Character</th><th>Role</th><th>Folder scope</th>{isAdmin ? <th>Actions</th> : null}</tr></thead><tbody>{activeAssignments.map((assignment) => { const character = relationId(assignment.character); const roleId = relationId(assignment.role); const scope = relationId(assignment.scopeFolder); return <tr key={assignment.id}><td>{characterName.get(character ?? -1) ?? `Character ${character ?? ''}`}</td><td>{roleName.get(roleId ?? -1) ?? `Role ${roleId ?? ''}`}</td><td>{scope ? folderLabel(scope) : 'Domain-wide'}</td>{isAdmin ? <td><form action="/api/role-assignments" method="post"><input type="hidden" name="domainSlug" value={slug} /><input type="hidden" name="characterId" value={character ?? ''} /><input type="hidden" name="roleId" value={roleId ?? ''} /><input type="hidden" name="scopeFolderId" value={scope ?? ''} /><input type="hidden" name="action" value="remove" /><button type="submit">Remove</button></form></td> : null}</tr> })}</tbody></table>}
         <p><a href={`/domain/${slug}/members`}>Open Domain member roster</a></p>
