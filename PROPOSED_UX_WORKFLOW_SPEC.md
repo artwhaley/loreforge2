@@ -1,8 +1,8 @@
 # LoreForge user-first navigation and workflow specification
 
-**Status:** Proposed for owner review  
+**Status:** Approved by owner on 2026-09-02; incorporated as execution-packet change `CC-2026-09-02-01`  
 **Date:** 2026-09-02  
-**Scope:** Product navigation, public/authenticated home surfaces, Domain navigation, customer administration, and document-creation entry flow. This document does not authorize implementation or silently change the execution packet until approved.
+**Scope:** Product navigation, public/authenticated home surfaces, Domain navigation, customer administration, and document-creation entry flow. The authoritative implementation requirements now live in the amended execution packet; this document remains the readable design rationale.
 
 ## 1. Product organizing principles
 
