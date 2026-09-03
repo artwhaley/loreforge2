@@ -577,22 +577,16 @@ payload.logger.info(
 
 // --- Subdomains and Character memberships (Phase 3) ---
 const subdomainFixtures = [
-  { domainSlug: 'ar', slug: 'scribes', name: 'Scribes', description: 'Records, deeds, and historical archives.', head: charactersByKey.elara.id, members: [charactersByKey.elara.id] },
-  { domainSlug: 'ar', slug: 'warriors', name: 'Warriors', description: 'Command, patrol, and battle records.', head: charactersByKey['alex-resident'].id, members: [charactersByKey['alex-resident'].id, charactersByKey.lucan.id] },
-  { domainSlug: 'ar', slug: 'magistrates', name: 'Magistrates', description: 'Courts, rulings, and civic judgment.', head: charactersByKey.lucan.id, members: [charactersByKey.lucan.id] },
+  { domainSlug: 'ar', slug: 'scribes', name: 'Scribes', description: 'Records, deeds, and historical archives.' },
+  { domainSlug: 'ar', slug: 'warriors', name: 'Warriors', description: 'Command, patrol, and battle records.' },
+  { domainSlug: 'ar', slug: 'magistrates', name: 'Magistrates', description: 'Courts, rulings, and civic judgment.' },
 ]
 const subdomainsByKey: Record<string, { id: number }> = {}
 for (const fixture of subdomainFixtures) {
   const domain = domainsBySlug[fixture.domainSlug]
   const existing = await payload.find({ collection: 'subdomains', where: { and: [{ domain: { equals: domain.id } }, { slug: { equals: fixture.slug } }] }, depth: 0, limit: 1 })
-  const subdomain = existing.docs[0] ?? await payload.create({ collection: 'subdomains', data: { domain: domain.id, slug: fixture.slug, name: fixture.name, description: fixture.description, headCharacter: fixture.head, adminCharacters: [fixture.head], publicListing: true } })
+  const subdomain = existing.docs[0] ?? await payload.create({ collection: 'subdomains', data: { domain: domain.id, slug: fixture.slug, name: fixture.name, description: fixture.description, publicListing: true } })
   subdomainsByKey[`${fixture.domainSlug}:${fixture.slug}`] = { id: subdomain.id }
-  for (const characterId of fixture.members) {
-    const domainMember = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domain.id } }, { character: { equals: characterId } }] }, depth: 0, limit: 1 })
-    if (!domainMember.docs[0]) await payload.create({ collection: 'domain-memberships', data: { domain: domain.id, character: characterId, status: 'active', addedBy: usersByEmail['admin@example.test'].id, note: 'Phase 3 Ar fixture membership.' } })
-    const member = await payload.find({ collection: 'subdomain-memberships', where: { and: [{ subdomain: { equals: subdomain.id } }, { character: { equals: characterId } }] }, depth: 0, limit: 1 })
-    if (!member.docs[0]) await payload.create({ collection: 'subdomain-memberships', data: { subdomain: subdomain.id, character: characterId, status: 'active', addedBy: usersByEmail['admin@example.test'].id } })
-  }
 }
 
 // --- Archive folders (Ticket 05) ---
@@ -679,11 +673,13 @@ const arDomain = domainsBySlug.ar
 const arSubdomainId = (slug: string) => subdomainsByKey[`ar:${slug}`]?.id
 const roleFixtures = [
   { key: 'head-scribe', name: 'Head Scribe', subdomain: 'scribes', parent: null },
-  { key: 'senior-scribe', name: 'Senior Scribe', subdomain: 'scribes', parent: 'head-scribe' },
-  { key: 'junior-scribe', name: 'Junior Scribe', subdomain: 'scribes', parent: 'senior-scribe' },
+  { key: 'assistant-head-scribe', name: 'Assistant Head Scribe', subdomain: 'scribes', parent: 'head-scribe' },
+  { key: 'property-records-clerk', name: 'Property Records Clerk', subdomain: 'scribes', parent: 'assistant-head-scribe' },
+  { key: 'historical-records-clerk', name: 'Historical Records Clerk', subdomain: 'scribes', parent: 'assistant-head-scribe' },
   { key: 'commander', name: 'Commander', subdomain: 'warriors', parent: null },
-  { key: 'captain', name: 'Captain', subdomain: 'warriors', parent: 'commander' },
-  { key: 'warrior', name: 'Warrior', subdomain: 'warriors', parent: 'captain' },
+  { key: 'first-captain', name: 'First Captain', subdomain: 'warriors', parent: 'commander' },
+  { key: 'second-captain', name: 'Second Captain', subdomain: 'warriors', parent: 'commander' },
+  { key: 'warrior', name: 'Warrior', subdomain: 'warriors', parent: 'commander' },
   { key: 'chief-magistrate', name: 'Chief Magistrate', subdomain: 'magistrates', parent: null },
   { key: 'magistrate', name: 'Magistrate', subdomain: 'magistrates', parent: 'chief-magistrate' },
   { key: 'clerk', name: 'Clerk', subdomain: 'magistrates', parent: 'chief-magistrate' },
@@ -696,16 +692,16 @@ for (const fixture of roleFixtures) {
 }
 const roleAssignments = [
   { character: 'kael', role: 'commander' },
-  { character: 'rarius', role: 'captain', scope: 'warriors/first-platoon' },
-  { character: 'tarl', role: 'captain', scope: 'warriors/second-platoon' },
+  { character: 'rarius', role: 'first-captain' },
+  { character: 'tarl', role: 'second-captain' },
   { character: 'varro', role: 'warrior' },
   { character: 'cassian', role: 'warrior' },
   { character: 'livia', role: 'magistrate' },
   { character: 'aren', role: 'warrior' },
   { character: 'aren', role: 'magistrate' },
   { character: 'marlen', role: 'head-scribe' },
-  { character: 'sera', role: 'junior-scribe', scope: 'scribes/property-records' },
-  { character: 'dorian', role: 'junior-scribe', scope: 'scribes/historical-records' },
+  { character: 'sera', role: 'property-records-clerk' },
+  { character: 'dorian', role: 'historical-records-clerk' },
 ]
 for (const assignment of roleAssignments) {
   const character = charactersByKey[assignment.character]
@@ -713,9 +709,8 @@ for (const assignment of roleAssignments) {
   if (!character || !role) continue
   const member = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: arDomain.id } }, { character: { equals: character.id } }] }, depth: 0, limit: 1 })
   if (!member.docs[0]) await payload.create({ collection: 'domain-memberships', data: { domain: arDomain.id, character: character.id, status: 'active', addedBy: usersByEmail['admin@example.test'].id, note: 'Phase 3 Role fixture membership.' } })
-  const scopeFolder = assignment.scope ? arFolderIds[assignment.scope] : null
-  const existing = await payload.find({ collection: 'role-assignments', where: { and: [{ character: { equals: character.id } }, { role: { equals: role.id } }, scopeFolder ? { scopeFolder: { equals: scopeFolder } } : { scopeFolder: { equals: null } }] }, depth: 0, limit: 1 })
-  if (!existing.docs[0]) await payload.create({ collection: 'role-assignments', data: { character: character.id, role: role.id, scopeFolder, status: 'active', assignedBy: usersByEmail['admin@example.test'].id } })
+  const existing = await payload.find({ collection: 'role-assignments', where: { and: [{ character: { equals: character.id } }, { role: { equals: role.id } }] }, depth: 0, limit: 1 })
+  if (!existing.docs[0]) await payload.create({ collection: 'role-assignments', data: { character: character.id, role: role.id, status: 'active', assignedBy: usersByEmail['admin@example.test'].id } })
 }
 
 // --- Shared fixture document (once per tenant) ---

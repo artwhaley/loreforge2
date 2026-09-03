@@ -3,16 +3,16 @@ import test from 'node:test'
 
 import { assertMultiRoleAssignment, assertRoleAssignment, assertRoleHierarchy } from './invariants'
 
-const role = (id: number, domainId = 3, subdomainId: number | null = null, parentRoleId: number | null = null) => ({ id, domainId, subdomainId, parentRoleId })
+const role = (id: number, domainId = 3, subdomainId: number | null = 7, parentRoleId: number | null = null) => ({ id, domainId, subdomainId, parentRoleId })
 
 test('rejects role parent cycles and cross-Domain parents', () => {
-  assert.throws(() => assertRoleHierarchy(role(2, 3, null, 1), role(1, 3, null, 2), [role(1, 3, null, 2), role(2, 3, null, 1)]), /acyclic/)
-  assert.throws(() => assertRoleHierarchy(role(2), role(1, 4), [role(1, 4)]), /same Domain/)
+  assert.throws(() => assertRoleHierarchy(role(2, 3, 7, 1), role(1, 3, 7, 2), [role(1, 3, 7, 2), role(2, 3, 7, 1)]), /acyclic/)
+  assert.throws(() => assertRoleHierarchy(role(2, 3, 7, 1), role(1, 4, 8), [role(1, 4, 8)]), /same Domain/)
 })
 
-test('accepts a scoped folder only in the Role branch', () => {
-  assert.equal(assertRoleAssignment({ characterId: 10, roleId: 2, scopeFolderId: 23 }, role(2, 3, 2), { id: 23, domainId: 3, subdomainId: 2 }), true)
-  assert.throws(() => assertRoleAssignment({ characterId: 10, roleId: 2, scopeFolderId: 9 }, role(2, 3, 2), { id: 9, domainId: 3, subdomainId: 1 }), /Department branch/)
+test('Role assignment has no Folder scope and requires a Department-owned Role', () => {
+  assert.equal(assertRoleAssignment({ characterId: 10, roleId: 2 }, role(2, 3, 2)), true)
+  assert.throws(() => assertRoleAssignment({ characterId: 10, roleId: 2 }, role(2, 3, null)), /Department-owned/)
 })
 
 test('allows a Character to hold distinct Roles', () => {

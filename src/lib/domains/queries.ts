@@ -1,5 +1,5 @@
 import { getLorePayload } from '@/lib/payload'
-import type { Character, Domain, DomainMembership, DomainCharacterContext, Subdomain, SubdomainMembership } from '@/payload-types'
+import type { Character, Domain, DomainMembership, DomainCharacterContext, Subdomain, RoleAssignment } from '@/payload-types'
 
 export type DomainMemberRow = {
   membership: DomainMembership
@@ -43,21 +43,16 @@ export async function getDomainMemberRows(domain: Domain): Promise<DomainMemberR
   })
 }
 
-export async function getSubdomainMemberships(subdomainId: number | string): Promise<SubdomainMembership[]> {
+/** Department participants are derived from active Department-owned RoleAssignments. */
+export async function getSubdomainMemberships(subdomainId: number | string): Promise<RoleAssignment[]> {
   const payload = await getLorePayload()
-  const result = await payload.find({ collection: 'subdomain-memberships', where: { and: [{ subdomain: { equals: subdomainId } }, { status: { equals: 'active' } }] }, depth: 1, limit: 500 })
-  if (result.docs.length === 0) return []
   const subdomain = await payload.findByID({ collection: 'subdomains', id: subdomainId, depth: 0 }).catch(() => null)
   const domainId = relationId(subdomain?.domain)
   if (!domainId) return []
-  const characterIds = result.docs.map((membership) => relationId(membership.character)).filter((id): id is number => id !== null)
-  if (characterIds.length === 0) return []
-  const domainMembers = await payload.find({
-    collection: 'domain-memberships',
-    where: { and: [{ domain: { equals: domainId } }, { character: { in: characterIds } }, { status: { equals: 'active' } }] },
-    depth: 0,
-    limit: 500,
-  })
+  const roles = await payload.find({ collection: 'roles', where: { and: [{ domain: { equals: domainId } }, { subdomain: { equals: subdomainId } }, { active: { equals: true } }] }, depth: 0, limit: 500 })
+  if (roles.docs.length === 0) return []
+  const assignments = await payload.find({ collection: 'role-assignments', where: { and: [{ role: { in: roles.docs.map((role) => role.id) } }, { status: { equals: 'active' } }] }, depth: 1, limit: 1000 })
+  const domainMembers = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domainId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1000 })
   const activeCharacterIds = new Set(domainMembers.docs.map((membership) => String(relationId(membership.character))))
-  return result.docs.filter((membership) => activeCharacterIds.has(String(relationId(membership.character))))
+  return assignments.docs.filter((assignment) => activeCharacterIds.has(String(relationId(assignment.character))))
 }

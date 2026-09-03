@@ -51,7 +51,7 @@ export default async function RolesPage({ params }: Props) {
       <section>
         <p><a href={`/domain/${slug}`}>← Domain home</a></p>
         <h1>Roles</h1>
-        <p>Roles are Character assignments. Domain membership, Department membership, and Role assignment remain separate records. Each active assignment row is one independent grant; a Character may have the same Role across many folder scopes.</p>
+        <p>Roles are Department-owned jobs. Characters receive Roles; Department participation is derived from those assignments. Folder access is managed separately on the Character workspace.</p>
         {roles.docs.length === 0 ? <p>No Roles have been configured.</p> : <ul>
           {roles.docs.map((item) => {
             const parent = relationId(item.parentRole)
@@ -66,21 +66,18 @@ export default async function RolesPage({ params }: Props) {
             <input type="hidden" name="domainSlug" value={slug} />
             <input name="name" placeholder="Role name" aria-label="Role name" required />{' '}
             <select name="parentRoleId" defaultValue=""><option value="">No superior (top-level)</option>{roles.docs.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{' '}
-            <select name="subdomainId" defaultValue=""><option value="">Domain-wide</option>{subdomains.docs.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{' '}
+            <select name="subdomainId" defaultValue="" required><option value="">Choose Department</option>{subdomains.docs.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{' '}
             <button type="submit">Create Role</button>
           </form>
           <h2>Bulk assignment</h2><p>For one-person changes, use <a href={`/domain/${slug}/manage/people`}>People</a>. This bulk form remains for repeated assignments.</p><form action="/api/role-assignments" method="post">
             <input type="hidden" name="domainSlug" value={slug} />
-            <input type="hidden" name="scopeInputMode" value="multi" />
             <select name="characterId" aria-label="Character" required><option value="">Choose Character</option>{assignableCharacters.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{' '}
             <select name="roleId" aria-label="Role" required><option value="">Choose Role</option>{roles.docs.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{' '}
-            <label>Folder scopes (select any number){' '}<select name="scopeFolderIds" aria-label="Folder scopes" multiple size={6}>{folders.docs.filter((item) => !item.systemManaged).map((item) => <option key={item.id} value={item.id}>{folderLabel(Number(item.id))}</option>)}</select></label>{' '}
-            <label><input type="checkbox" name="domainWide" value="1" /> Domain-wide</label>{' '}
             <button type="submit">Assign Role</button>
           </form></details>
         </> : null}
         <h2>Active assignments</h2>
-        {activeAssignments.length === 0 ? <p>No active Role assignments.</p> : <table><thead><tr><th>Character</th><th>Role</th><th>Folder scope</th>{isAdmin ? <th>Actions</th> : null}</tr></thead><tbody>{activeAssignments.map((assignment) => { const character = relationId(assignment.character); const roleId = relationId(assignment.role); const scope = relationId(assignment.scopeFolder); return <tr key={assignment.id}><td>{characterName.get(character ?? -1) ?? `Character ${character ?? ''}`}</td><td>{roleName.get(roleId ?? -1) ?? `Role ${roleId ?? ''}`}</td><td>{scope ? folderLabel(scope) : 'Domain-wide'}</td>{isAdmin ? <td><form action="/api/role-assignments" method="post"><input type="hidden" name="domainSlug" value={slug} /><input type="hidden" name="characterId" value={character ?? ''} /><input type="hidden" name="roleId" value={roleId ?? ''} /><input type="hidden" name="scopeFolderId" value={scope ?? ''} /><input type="hidden" name="action" value="remove" /><button type="submit">Remove</button></form></td> : null}</tr> })}</tbody></table>}
+        {activeAssignments.length === 0 ? <p>No active Role assignments.</p> : <table><thead><tr><th>Character</th><th>Role</th>{isAdmin ? <th>Actions</th> : null}</tr></thead><tbody>{activeAssignments.map((assignment) => { const character = relationId(assignment.character); const roleId = relationId(assignment.role); return <tr key={assignment.id}><td>{characterName.get(character ?? -1) ?? `Character ${character ?? ''}`}</td><td>{roleName.get(roleId ?? -1) ?? `Role ${roleId ?? ''}`}</td>{isAdmin ? <td><form action="/api/role-assignments" method="post"><input type="hidden" name="domainSlug" value={slug} /><input type="hidden" name="characterId" value={character ?? ''} /><input type="hidden" name="roleId" value={roleId ?? ''} /><input type="hidden" name="action" value="remove" /><button type="submit">Remove</button></form></td> : null}</tr> })}</tbody></table>}
         <p><a href={`/domain/${slug}/members`}>Open Domain member roster</a></p>
       </section>
     </TenantShell>

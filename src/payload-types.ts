@@ -76,9 +76,9 @@ export interface Config {
     domains: Domain;
     'domain-admins': DomainAdmin;
     subdomains: Subdomain;
-    'subdomain-memberships': SubdomainMembership;
     roles: Role;
     'role-assignments': RoleAssignment;
+    'permission-rules': PermissionRule;
     'document-types': DocumentType;
     'document-provenance-events': DocumentProvenanceEvent;
     tenants: Tenant;
@@ -105,9 +105,9 @@ export interface Config {
     domains: DomainsSelect<false> | DomainsSelect<true>;
     'domain-admins': DomainAdminsSelect<false> | DomainAdminsSelect<true>;
     subdomains: SubdomainsSelect<false> | SubdomainsSelect<true>;
-    'subdomain-memberships': SubdomainMembershipsSelect<false> | SubdomainMembershipsSelect<true>;
     roles: RolesSelect<false> | RolesSelect<true>;
     'role-assignments': RoleAssignmentsSelect<false> | RoleAssignmentsSelect<true>;
+    'permission-rules': PermissionRulesSelect<false> | PermissionRulesSelect<true>;
     'document-types': DocumentTypesSelect<false> | DocumentTypesSelect<true>;
     'document-provenance-events': DocumentProvenanceEventsSelect<false> | DocumentProvenanceEventsSelect<true>;
     tenants: TenantsSelect<false> | TenantsSelect<true>;
@@ -414,23 +414,7 @@ export interface Subdomain {
   slug: string;
   description?: string | null;
   sortOrder?: number | null;
-  headCharacter?: (number | null) | Character;
-  adminCharacters?: (number | Character)[] | null;
   publicListing?: boolean | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "subdomain-memberships".
- */
-export interface SubdomainMembership {
-  id: number;
-  subdomain: number | Subdomain;
-  character: number | Character;
-  status: 'active' | 'inactive';
-  addedBy?: (number | null) | User;
-  note?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -441,7 +425,7 @@ export interface SubdomainMembership {
 export interface Role {
   id: number;
   domain: number | Domain;
-  subdomain?: (number | null) | Subdomain;
+  subdomain: number | Subdomain;
   name: string;
   parentRole?: (number | null) | Role;
   active?: boolean | null;
@@ -457,12 +441,69 @@ export interface RoleAssignment {
   id: number;
   character: number | Character;
   role: number | Role;
-  scopeFolder?: (number | null) | Folder;
   status: 'active' | 'inactive';
   startsAt?: string | null;
   endsAt?: string | null;
   assignedBy: number | User;
   assignedByCharacter?: (number | null) | Character;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "permission-rules".
+ */
+export interface PermissionRule {
+  id: number;
+  domain: number | Domain;
+  principalType: 'Character' | 'User' | 'Role' | 'DomainMembership';
+  principal:
+    | {
+        relationTo: 'characters';
+        value: number | Character;
+      }
+    | {
+        relationTo: 'users';
+        value: number | User;
+      }
+    | {
+        relationTo: 'roles';
+        value: number | Role;
+      }
+    | {
+        relationTo: 'domain-memberships';
+        value: number | DomainMembership;
+      };
+  resourceType: 'Domain' | 'Subdomain' | 'Folder' | 'Document';
+  resource:
+    | {
+        relationTo: 'domains';
+        value: number | Domain;
+      }
+    | {
+        relationTo: 'subdomains';
+        value: number | Subdomain;
+      }
+    | {
+        relationTo: 'folders';
+        value: number | Folder;
+      }
+    | {
+        relationTo: 'documents';
+        value: number | Document;
+      };
+  capability:
+    | 'read'
+    | 'create_document'
+    | 'edit_document'
+    | 'manage_access'
+    | 'manage_roles'
+    | 'assign_roles'
+    | 'assign_subordinates';
+  effect: 'grant' | 'deny';
+  active?: boolean | null;
+  actorUser: number | User;
+  actorCharacter?: (number | null) | Character;
   updatedAt: string;
   createdAt: string;
 }
@@ -486,6 +527,40 @@ export interface Folder {
    */
   systemManaged?: boolean | null;
   filingPolicy: 'inherit' | 'direct-file' | 'review-required';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "documents".
+ */
+export interface Document {
+  id: number;
+  /**
+   * Canonical Domain relationship. Populated by the Phase 3 migration.
+   */
+  domain?: (number | null) | Domain;
+  tenant?: (number | null) | Tenant;
+  documentType: number | DocumentType;
+  /**
+   * Archive folder. Leave empty to file at the root.
+   */
+  folder?: (number | null) | Folder;
+  title: string;
+  /**
+   * Canonical Markdown body. Presentation (theme) is applied by the tenant, never stored here.
+   */
+  body: string;
+  origin: 'web-editor' | 'markdown-import' | 'form';
+  sourceKind: 'web' | 'markdown-import' | 'form' | 'copy' | 'correspondence' | 'second-life';
+  lifecycle: 'draft' | 'pending_review' | 'filed' | 'locked';
+  publicAccess: 'inherit' | 'private' | 'public';
+  softDeletedAt?: string | null;
+  softDeletedBy?: (number | null) | User;
+  /**
+   * Author, if known
+   */
+  createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
@@ -552,40 +627,6 @@ export interface DocumentProvenanceEvent {
    * External source identity, such as a future bridge event.
    */
   sourceDescriptor?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "documents".
- */
-export interface Document {
-  id: number;
-  /**
-   * Canonical Domain relationship. Populated by the Phase 3 migration.
-   */
-  domain?: (number | null) | Domain;
-  tenant?: (number | null) | Tenant;
-  documentType: number | DocumentType;
-  /**
-   * Archive folder. Leave empty to file at the root.
-   */
-  folder?: (number | null) | Folder;
-  title: string;
-  /**
-   * Canonical Markdown body. Presentation (theme) is applied by the tenant, never stored here.
-   */
-  body: string;
-  origin: 'web-editor' | 'markdown-import' | 'form';
-  sourceKind: 'web' | 'markdown-import' | 'form' | 'copy' | 'correspondence' | 'second-life';
-  lifecycle: 'draft' | 'pending_review' | 'filed' | 'locked';
-  publicAccess: 'inherit' | 'private' | 'public';
-  softDeletedAt?: string | null;
-  softDeletedBy?: (number | null) | User;
-  /**
-   * Author, if known
-   */
-  createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
@@ -840,16 +881,16 @@ export interface PayloadLockedDocument {
         value: number | Subdomain;
       } | null)
     | ({
-        relationTo: 'subdomain-memberships';
-        value: number | SubdomainMembership;
-      } | null)
-    | ({
         relationTo: 'roles';
         value: number | Role;
       } | null)
     | ({
         relationTo: 'role-assignments';
         value: number | RoleAssignment;
+      } | null)
+    | ({
+        relationTo: 'permission-rules';
+        value: number | PermissionRule;
       } | null)
     | ({
         relationTo: 'document-types';
@@ -1097,22 +1138,7 @@ export interface SubdomainsSelect<T extends boolean = true> {
   slug?: T;
   description?: T;
   sortOrder?: T;
-  headCharacter?: T;
-  adminCharacters?: T;
   publicListing?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "subdomain-memberships_select".
- */
-export interface SubdomainMembershipsSelect<T extends boolean = true> {
-  subdomain?: T;
-  character?: T;
-  status?: T;
-  addedBy?: T;
-  note?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1137,12 +1163,29 @@ export interface RolesSelect<T extends boolean = true> {
 export interface RoleAssignmentsSelect<T extends boolean = true> {
   character?: T;
   role?: T;
-  scopeFolder?: T;
   status?: T;
   startsAt?: T;
   endsAt?: T;
   assignedBy?: T;
   assignedByCharacter?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "permission-rules_select".
+ */
+export interface PermissionRulesSelect<T extends boolean = true> {
+  domain?: T;
+  principalType?: T;
+  principal?: T;
+  resourceType?: T;
+  resource?: T;
+  capability?: T;
+  effect?: T;
+  active?: T;
+  actorUser?: T;
+  actorCharacter?: T;
   updatedAt?: T;
   createdAt?: T;
 }

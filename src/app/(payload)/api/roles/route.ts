@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const name = String(form.get('name') ?? '').trim()
   const parentRoleId = idOf(form.get('parentRoleId'))
   const subdomainId = idOf(form.get('subdomainId'))
-  if (!user || !domainSlug || !name) return NextResponse.redirect(new URL('/', request.url), 303)
+  if (!user || !domainSlug || !name || !subdomainId) return NextResponse.redirect(new URL('/', request.url), 303)
   const domains = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
   const domain = domains.docs[0]
   if (!domain) return NextResponse.redirect(new URL('/', request.url), 303)

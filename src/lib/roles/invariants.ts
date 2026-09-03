@@ -1,13 +1,13 @@
 export type RoleLike = { id: number | string; domainId: number | string; subdomainId?: number | string | null; parentRoleId?: number | string | null }
-export type RoleAssignmentInput = { characterId: number | string; roleId: number | string; scopeFolderId?: number | string | null }
-export type FolderLike = { id: number | string; domainId: number | string; subdomainId?: number | string | null; parentId?: number | string | null }
+export type RoleAssignmentInput = { characterId: number | string; roleId: number | string }
 
 const same = (a: unknown, b: unknown) => String(a) === String(b)
 
 /** Validate role ownership and immediate-superior hierarchy. */
 export function assertRoleHierarchy(role: RoleLike, parent: RoleLike | null, allRoles: RoleLike[]): true {
   if (parent && !same(role.domainId, parent.domainId)) throw new Error('A Role parent must belong to the same Domain.')
-  if (role.subdomainId && parent?.subdomainId && !same(role.subdomainId, parent.subdomainId)) throw new Error('A Department Role cannot inherit from a different Department.')
+  if (!role.subdomainId) throw new Error('Every Role must belong to a Department.')
+  if (parent && (!parent.subdomainId || !same(role.subdomainId, parent.subdomainId))) throw new Error('A Department Role cannot inherit from a different Department.')
   const byId = new Map(allRoles.map((candidate) => [String(candidate.id), candidate]))
   let current = parent
   const seen = new Set<string>()
@@ -21,13 +21,10 @@ export function assertRoleHierarchy(role: RoleLike, parent: RoleLike | null, all
   return true
 }
 
-/** A scoped assignment is valid only inside the Role's Domain/Subdomain branch. */
-export function assertRoleAssignment(input: RoleAssignmentInput, role: RoleLike, scopeFolder: FolderLike | null): true {
+/** Role assignment has no resource or Folder scope. */
+export function assertRoleAssignment(input: RoleAssignmentInput, role: RoleLike): true {
   if (!input.characterId || !input.roleId) throw new Error('Character and Role are required for an assignment.')
-  if (scopeFolder) {
-    if (!same(scopeFolder.domainId, role.domainId)) throw new Error('A Role scope Folder must belong to the Role Domain.')
-    if (role.subdomainId && !same(scopeFolder.subdomainId, role.subdomainId)) throw new Error('A Role scope Folder must belong to the Role Department branch.')
-  }
+  if (!role.subdomainId) throw new Error('A Role assignment requires a Department-owned Role.')
   return true
 }
 
