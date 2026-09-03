@@ -13,10 +13,11 @@
 - `ea9d4ba` — P04-T02 revisions, edit guards, history, restore
 - `3d3265b` — P04-T03 provenance collection and timeline
 - `74e0fdf`, `9f349b3`, `5a55e0c` — P04-T04 workflow, soft delete/restore, and direct-API lifecycle guard
+- `cbf4813` — P04-GATE direct Document/revision read boundary hardening
 
 ## Automated evidence
 
-- `npm test`: 58 passed, 0 failed.
+- `npm test`: 59 passed, 0 failed.
 - `npx tsc --noEmit`: passed.
 - `npm run build` with `PAYLOAD_PUSH=false`: passed; all customer and legacy compatibility routes compiled, including `/domain/[slug]/review` and `/domain/[slug]/documents/[id]/history`.
 - HTTP smoke: signed-out `/`, `/about`, `/subscriptions`, `/create-account` returned 200; authenticated admin after selecting `ar` returned 200 for Domain Home, Departments, Records, and Review Queue. An officer forged lifecycle PATCH against a Filed record was rejected by the server hook (HTTP 500 fail-closed; no state change).
