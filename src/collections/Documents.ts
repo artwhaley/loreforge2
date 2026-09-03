@@ -14,6 +14,31 @@ export const Documents: CollectionConfig = {
   timestamps: true,
   versions: { maxPerDoc: 0 },
   access: {
+    // Direct REST/revision reads must prove the caller can read this exact
+    // Document. Internal server queries use Local API overrideAccess after
+    // their own tenant boundary has been established.
+    read: async ({ req, id }) => {
+      if (!req.user || id === undefined || id === null) return false
+      const currentResult = await req.payload.find({ collection: 'documents', where: { id: { equals: id } }, depth: 0, limit: 1, overrideAccess: true })
+      const current = currentResult.docs[0]
+      if (!current || current.softDeletedAt) return false
+      const domainId = relationId(current.domain)
+      const tenantId = relationId(current.tenant)
+      if (domainId) {
+        const domain = await req.payload.findByID({ collection: 'domains', id: domainId, depth: 0, overrideAccess: true }).catch(() => null)
+        const ownerId = relationId(domain?.ownerUser)
+        if (ownerId && Number(ownerId) === Number(req.user.id)) return true
+        const admins = await req.payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: domainId } }, { user: { equals: req.user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true })
+        if (admins.docs.length > 0) return true
+        const controlled = await req.payload.find({ collection: 'characters', where: { and: [{ controlledBy: { equals: req.user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 200, overrideAccess: true })
+        if (controlled.docs.length === 0) return false
+        const memberships = await req.payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domainId } }, { character: { in: controlled.docs.map((character) => character.id) } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true })
+        return memberships.docs.length > 0
+      }
+      if (!tenantId) return false
+      const memberships = await req.payload.find({ collection: 'memberships', where: { and: [{ tenant: { equals: tenantId } }, { user: { equals: req.user.id } }] }, depth: 0, limit: 1, overrideAccess: true })
+      return memberships.docs.length > 0
+    },
     // Permanent deletion is never an ordinary Domain action. P04 workflow
     // uses softDeletedAt/softDeletedBy and a reversible restore path.
     delete: () => false,

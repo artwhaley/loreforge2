@@ -53,3 +53,16 @@ test('direct lifecycle mutation requires interim supervisor authority', async ()
     req: { payload, user: { id: 11 }, context: {} },
   }), /Owner or an operational Domain Admin/)
 })
+
+test('direct Document reads fail closed for guessed revision callers', async () => {
+  const read = Documents.access?.read as any
+  const payload = {
+    find: async (args: any) => {
+      if (args.collection === 'documents') return { docs: [{ id: 12, domain: 4, lifecycle: 'filed' }] }
+      return { docs: [] }
+    },
+    findByID: async () => ({ id: 4, ownerUser: 10 }),
+  }
+  assert.equal(await read({ req: { user: { id: 11 }, payload }, id: 12 }), false)
+  assert.equal(await read({ req: { user: { id: 10 }, payload }, id: 12 }), true)
+})
