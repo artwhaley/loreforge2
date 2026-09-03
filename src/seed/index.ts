@@ -374,11 +374,35 @@ const domainFixtures = [
 ]
 for (const fixture of domainFixtures) {
   const existing = await payload.find({ collection: 'domains', where: { slug: { equals: fixture.slug } }, depth: 0, limit: 1 })
-  const domain = existing.docs[0] ?? await payload.create({ collection: 'domains', data: { ...fixture, kind: 'community', lifecycle: 'active', publicEnabled: false, allowCrossDomainMove: false } })
+  const domain = existing.docs[0] ?? await payload.create({ collection: 'domains', data: { ...fixture, kind: 'community', lifecycle: 'active', defaultFilingPolicy: 'direct-file', publicEnabled: false, allowCrossDomainMove: false } })
+  if (!domain.defaultFilingPolicy) await payload.update({ collection: 'domains', id: domain.id, data: { defaultFilingPolicy: 'direct-file' } })
   domainsBySlug[fixture.slug] = { id: domain.id, tenantId: 'tenantId' in fixture ? fixture.tenantId : undefined }
   const admin = await payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: domain.id } }, { user: { equals: fixture.ownerUser } }] }, depth: 0, limit: 1 })
   if (!admin.docs[0]) await payload.create({ collection: 'domain-admins', data: { domain: domain.id, user: fixture.ownerUser, status: 'active', addedBy: fixture.ownerUser } })
 }
+
+// --- Seed one active Plain Text Document Type per Domain (Phase 4) ---
+const documentTypesByDomain: Record<string, { id: number }> = {}
+for (const [slug, domain] of Object.entries(domainsBySlug)) {
+  const existing = await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: domain.id } }, { name: { equals: 'Plain Text' } }] }, depth: 0, limit: 1 })
+  const type = existing.docs[0] ?? await payload.create({ collection: 'document-types', data: { domain: domain.id, name: 'Plain Text', description: 'A freeform Markdown record.', active: true, defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit' } })
+  documentTypesByDomain[slug] = { id: type.id }
+}
+
+// Backfill new required Document fields on the spike records while retaining
+// their canonical Markdown bodies. Existing records are treated as Filed
+// archive material; newly authored records begin as Draft.
+const existingDocuments = await payload.find({ collection: 'documents', depth: 0, limit: 5000 })
+for (const document of existingDocuments.docs) {
+  const domainId = typeof document.domain === 'object' ? document.domain?.id : document.domain
+  const domainEntry = Object.entries(domainsBySlug).find(([, value]) => Number(value.id) === Number(domainId))
+  const typeId = domainEntry ? documentTypesByDomain[domainEntry[0]]?.id : null
+  if (!typeId) continue
+  const sourceKind = document.origin === 'markdown-import' ? 'markdown-import' : document.origin === 'form' ? 'form' : 'web'
+  await payload.update({ collection: 'documents', id: document.id, data: { documentType: document.documentType ?? typeId, sourceKind: document.sourceKind ?? sourceKind, lifecycle: document.lifecycle ?? 'filed', publicAccess: document.publicAccess ?? 'inherit' }, depth: 0 })
+}
+const existingFolders = await payload.find({ collection: 'folders', depth: 0, limit: 5000 })
+for (const folder of existingFolders.docs) if (!folder.filingPolicy) await payload.update({ collection: 'folders', id: folder.id, data: { filingPolicy: 'inherit' }, depth: 0 })
 
 // --- Theme media assets + tenant attachment ---
 for (const asset of MEDIA_ASSETS) {
@@ -602,6 +626,7 @@ for (const [tenantSlug, files] of Object.entries(FOLDER_TREES)) {
         tenant: tenantsBySlug[tenantSlug].id,
         name: file.name,
         parent: file.parentPath ? (folderIds[tenantSlug][file.parentPath] ?? null) : null,
+        filingPolicy: 'inherit',
       },
     })
     folderIds[tenantSlug][file.path] = created.id
@@ -613,7 +638,7 @@ for (const [tenantSlug, files] of Object.entries(FOLDER_TREES)) {
 const rootFolderIds: Record<string, number> = {}
 for (const [domainSlug, domainRef] of Object.entries(domainsBySlug)) {
   const existingRoot = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domainRef.id } }, { systemManaged: { equals: true } }, { parent: { equals: null } }] }, depth: 0, limit: 1 })
-  const root = existingRoot.docs[0] ?? await payload.create({ collection: 'folders', data: { domain: domainRef.id, tenant: domainRef.tenantId ?? null, name: 'Domain Root', parent: null, systemManaged: true } })
+  const root = existingRoot.docs[0] ?? await payload.create({ collection: 'folders', draft: false, data: { domain: domainRef.id, tenant: domainRef.tenantId ?? null, name: 'Domain Root', parent: null, systemManaged: true, filingPolicy: 'inherit' } })
   rootFolderIds[domainSlug] = root.id
   const topLevel = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domainRef.id } }, { parent: { equals: null } }] }, depth: 0, limit: 500 })
   for (const folder of topLevel.docs) {
@@ -644,7 +669,7 @@ for (const fixture of arFolderFixtures) {
   const parentId = fixture.parent ? arFolderIds[fixture.parent] : rootFolderIds.ar
   const subdomain = subdomainsByKey[`ar:${fixture.subdomain}`]
   const existing = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domainsBySlug.ar.id } }, { name: { equals: fixture.name } }, { parent: { equals: parentId } }] }, depth: 0, limit: 1 })
-  const folder = existing.docs[0] ?? await payload.create({ collection: 'folders', data: { domain: domainsBySlug.ar.id, tenant: domainsBySlug.ar.tenantId ?? null, name: fixture.name, parent: parentId, subdomain: subdomain?.id ?? null, systemManaged: false } })
+  const folder = existing.docs[0] ?? await payload.create({ collection: 'folders', draft: false, data: { domain: domainsBySlug.ar.id, tenant: domainsBySlug.ar.tenantId ?? null, name: fixture.name, parent: parentId, subdomain: subdomain?.id ?? null, systemManaged: false, filingPolicy: 'inherit' } })
   arFolderIds[fixture.path] = folder.id
 }
 
@@ -732,6 +757,10 @@ for (const tenant of TENANTS) {
       title: 'Incident Report 2026-014',
       body: SHARED_INCIDENT_REPORT,
       origin: 'web-editor',
+      sourceKind: 'web',
+      documentType: documentTypesByDomain[tenant.slug].id,
+      lifecycle: 'filed',
+      publicAccess: 'inherit',
       createdBy: usersByEmail['officer@example.test'].id,
       folder: folderId ?? rootFolderIds[tenant.slug] ?? null,
     },
@@ -764,6 +793,10 @@ if (stressTenant) {
         title: 'City Council Meeting Notes',
         body: EDITOR_STRESS_DOC,
         origin: 'web-editor',
+        sourceKind: 'web',
+        documentType: documentTypesByDomain.ravenhurst.id,
+        lifecycle: 'draft',
+        publicAccess: 'inherit',
         createdBy: usersByEmail['admin@example.test'].id,
         folder: rootFolderIds.ravenhurst,
       },
@@ -795,6 +828,10 @@ if (importTenant) {
         title: 'Patrol Contact Report',
         body: SL_NOTECARD,
         origin: 'markdown-import',
+        sourceKind: 'markdown-import',
+        documentType: documentTypesByDomain.ravenhurst.id,
+        lifecycle: 'filed',
+        publicAccess: 'inherit',
         createdBy: usersByEmail['officer@example.test'].id,
         folder: importFolder,
       },

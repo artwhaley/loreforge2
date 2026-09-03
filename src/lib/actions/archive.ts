@@ -10,6 +10,7 @@ import config from '@/payload.config'
 
 import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
+import { resolveFilingPolicy, type FilingPolicy } from '@/lib/documents/lifecycle'
 import { domainAndIdWhere } from '@/lib/tenant/scope'
 import type { Domain, Tenant } from '@/payload-types'
 
@@ -19,6 +20,11 @@ type MemberTenant = {
   tenant: Domain | Tenant
   basePath: string
   legacyTenantId?: number
+}
+
+async function plainTextTypeId(payload: MemberTenant['payload'], domainId: number): Promise<number | null> {
+  const result = await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: domainId } }, { name: { equals: 'Plain Text' } }, { active: { equals: true } }] }, depth: 0, limit: 1 })
+  return result.docs[0]?.id ?? null
 }
 
 /** Resolve the active user and a tenant they are a member of, or null. */
@@ -120,6 +126,8 @@ export async function createDocumentAction(formData: FormData): Promise<void> {
   if (!ctx || !title) redirect(`/domain/${tenantSlug}/records`)
 
   const { payload, user, tenant } = ctx
+  const documentType = await plainTextTypeId(payload, tenant.id)
+  if (!documentType) redirect(`/domain/${tenantSlug}/records/new?error=type`)
   const folder = await tenantFolderId(payload, tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
 
   const created = await payload.create({
@@ -131,6 +139,10 @@ export async function createDocumentAction(formData: FormData): Promise<void> {
       // Placeholder so the required body is non-empty; the editor opens on it.
       body: `# ${title}\n\n`,
       origin: 'web-editor',
+      sourceKind: 'web',
+      documentType,
+      lifecycle: 'draft',
+      publicAccess: 'inherit',
       createdBy: user.id,
       folder,
     },
@@ -152,7 +164,14 @@ export async function createDocumentFromEditorAction(formData: FormData): Promis
   const membership = await ctx.payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: ctx.tenant.id } }, { character: { equals: context.activeCharacter.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
   if (!membership.docs[0]) redirect(`/domain/${tenantSlug}/records/new?error=character`)
   const folder = await tenantFolderId(ctx.payload, ctx.tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
-  const created = await ctx.payload.create({ collection: 'documents', data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body, origin: 'web-editor', createdBy: ctx.user.id, folder } })
+  const requestedTypeId = Number(formData.get('documentTypeId') ?? '')
+  const typeResult = await ctx.payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: ctx.tenant.id } }, { active: { equals: true } }] }, depth: 0, limit: 500 })
+  const selectedType = typeResult.docs.find((item) => Number(item.id) === requestedTypeId) ?? typeResult.docs.find((item) => item.name.toLowerCase() === 'plain text')
+  if (!selectedType) redirect(`/domain/${tenantSlug}/records/new?error=type`)
+  const folderRecord = folder ? await ctx.payload.findByID({ collection: 'folders', id: folder, depth: 0 }).catch(() => null) : null
+  const domainRecord = await ctx.payload.findByID({ collection: 'domains', id: ctx.tenant.id, depth: 0 })
+  const policy = resolveFilingPolicy({ template: 'inherit', folder: (folderRecord?.filingPolicy ?? 'inherit') as FilingPolicy, documentType: selectedType.defaultFilingPolicy, domain: (domainRecord.defaultFilingPolicy ?? 'direct-file') as Exclude<FilingPolicy, 'inherit'> })
+  const created = await ctx.payload.create({ collection: 'documents', data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body, origin: 'web-editor', sourceKind: 'web', documentType: selectedType.id, lifecycle: policy === 'review-required' ? 'pending_review' : 'filed', publicAccess: 'inherit', createdBy: ctx.user.id, folder } })
   redirect(`${ctx.basePath}/documents/${created.id}/edit`)
 }
 
@@ -168,7 +187,8 @@ export async function createFolderAction(formData: FormData): Promise<void> {
 
   await payload.create({
     collection: 'folders',
-    data: { domain: tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), name, parent },
+    draft: false,
+    data: { domain: tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), name, parent, filingPolicy: 'inherit' },
   })
   revalidatePath(recordsPath(ctx))
 }
@@ -226,6 +246,8 @@ export async function importMarkdownAction(formData: FormData): Promise<void> {
   if (!ctx || !title || !body) redirect('/admin/login')
 
   const { payload, user, tenant } = ctx
+  const documentType = await plainTextTypeId(payload, tenant.id)
+  if (!documentType) redirect(`/domain/${tenantSlug}/records?error=type`)
   const folder = await tenantFolderId(payload, tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
 
   const created = await payload.create({
@@ -236,6 +258,10 @@ export async function importMarkdownAction(formData: FormData): Promise<void> {
       title,
       body,
       origin: 'markdown-import',
+      sourceKind: 'markdown-import',
+      documentType,
+      lifecycle: 'draft',
+      publicAccess: 'inherit',
       createdBy: user.id,
       folder,
     },

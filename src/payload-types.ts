@@ -79,6 +79,7 @@ export interface Config {
     'subdomain-memberships': SubdomainMembership;
     roles: Role;
     'role-assignments': RoleAssignment;
+    'document-types': DocumentType;
     tenants: Tenant;
     memberships: Membership;
     documents: Document;
@@ -106,6 +107,7 @@ export interface Config {
     'subdomain-memberships': SubdomainMembershipsSelect<false> | SubdomainMembershipsSelect<true>;
     roles: RolesSelect<false> | RolesSelect<true>;
     'role-assignments': RoleAssignmentsSelect<false> | RoleAssignmentsSelect<true>;
+    'document-types': DocumentTypesSelect<false> | DocumentTypesSelect<true>;
     tenants: TenantsSelect<false> | TenantsSelect<true>;
     memberships: MembershipsSelect<false> | MembershipsSelect<true>;
     documents: DocumentsSelect<false> | DocumentsSelect<true>;
@@ -350,6 +352,7 @@ export interface Domain {
   ownerUser?: (number | null) | User;
   ownerCharacter?: (number | null) | Character;
   lifecycle: 'active' | 'grace' | 'read-only' | 'suspended' | 'archived';
+  defaultFilingPolicy: 'direct-file' | 'review-required';
   motto?: string | null;
   preset: 'heritage' | 'modern';
   primaryColor: string;
@@ -480,6 +483,23 @@ export interface Folder {
    * Domain root folders are protected from normal deletion or movement.
    */
   systemManaged?: boolean | null;
+  filingPolicy: 'inherit' | 'direct-file' | 'review-required';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "document-types".
+ */
+export interface DocumentType {
+  id: number;
+  domain: number | Domain;
+  name: string;
+  description?: string | null;
+  active?: boolean | null;
+  defaultFilingPolicy: 'direct-file' | 'review-required';
+  defaultFolder?: (number | null) | Folder;
+  templateFilingPolicy: 'inherit' | 'direct-file' | 'review-required';
   updatedAt: string;
   createdAt: string;
 }
@@ -506,6 +526,7 @@ export interface Document {
    */
   domain?: (number | null) | Domain;
   tenant?: (number | null) | Tenant;
+  documentType: number | DocumentType;
   /**
    * Archive folder. Leave empty to file at the root.
    */
@@ -516,6 +537,11 @@ export interface Document {
    */
   body: string;
   origin: 'web-editor' | 'markdown-import' | 'form';
+  sourceKind: 'web' | 'markdown-import' | 'form' | 'copy' | 'correspondence' | 'second-life';
+  lifecycle: 'draft' | 'pending_review' | 'filed' | 'locked';
+  publicAccess: 'inherit' | 'private' | 'public';
+  softDeletedAt?: string | null;
+  softDeletedBy?: (number | null) | User;
   /**
    * Author, if known
    */
@@ -774,6 +800,10 @@ export interface PayloadLockedDocument {
         value: number | RoleAssignment;
       } | null)
     | ({
+        relationTo: 'document-types';
+        value: number | DocumentType;
+      } | null)
+    | ({
         relationTo: 'tenants';
         value: number | Tenant;
       } | null)
@@ -971,6 +1001,7 @@ export interface DomainsSelect<T extends boolean = true> {
   ownerUser?: T;
   ownerCharacter?: T;
   lifecycle?: T;
+  defaultFilingPolicy?: T;
   motto?: T;
   preset?: T;
   primaryColor?: T;
@@ -1061,6 +1092,21 @@ export interface RoleAssignmentsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "document-types_select".
+ */
+export interface DocumentTypesSelect<T extends boolean = true> {
+  domain?: T;
+  name?: T;
+  description?: T;
+  active?: T;
+  defaultFilingPolicy?: T;
+  defaultFolder?: T;
+  templateFilingPolicy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "tenants_select".
  */
 export interface TenantsSelect<T extends boolean = true> {
@@ -1097,10 +1143,16 @@ export interface MembershipsSelect<T extends boolean = true> {
 export interface DocumentsSelect<T extends boolean = true> {
   domain?: T;
   tenant?: T;
+  documentType?: T;
   folder?: T;
   title?: T;
   body?: T;
   origin?: T;
+  sourceKind?: T;
+  lifecycle?: T;
+  publicAccess?: T;
+  softDeletedAt?: T;
+  softDeletedBy?: T;
   createdBy?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -1117,6 +1169,7 @@ export interface FoldersSelect<T extends boolean = true> {
   parent?: T;
   sortOrder?: T;
   systemManaged?: T;
+  filingPolicy?: T;
   updatedAt?: T;
   createdAt?: T;
 }

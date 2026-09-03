@@ -31,6 +31,7 @@ export const Domains: CollectionConfig = {
     { name: 'ownerUser', type: 'relationship', relationTo: 'users', label: 'Owner User', index: true },
     { name: 'ownerCharacter', type: 'relationship', relationTo: 'characters', label: 'Owner Character', index: true },
     { name: 'lifecycle', type: 'select', required: true, defaultValue: 'active', options: [{ label: 'Active', value: 'active' }, { label: 'Grace', value: 'grace' }, { label: 'Read-only', value: 'read-only' }, { label: 'Suspended', value: 'suspended' }, { label: 'Archived / Closed', value: 'archived' }] },
+    { name: 'defaultFilingPolicy', type: 'select', required: true, defaultValue: 'direct-file', options: [{ label: 'Direct file', value: 'direct-file' }, { label: 'Review required', value: 'review-required' }] },
     { name: 'motto', type: 'text' },
     { name: 'preset', type: 'select', label: 'Theme preset', options: [{ label: 'Heritage (traditional civic)', value: 'heritage' }, { label: 'Modern (coastal metropolitan)', value: 'modern' }], defaultValue: 'heritage', required: true },
     { name: 'primaryColor', type: 'text', label: 'Primary color', defaultValue: '#243145', required: true },

@@ -1,5 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
+import { assertLifecycleTransition, canEditDocumentBody, type Lifecycle } from '@/lib/documents/lifecycle'
+
 export const Documents: CollectionConfig = {
   slug: 'documents',
   admin: {
@@ -7,12 +9,21 @@ export const Documents: CollectionConfig = {
     defaultColumns: ['title', 'tenant', 'origin', 'updatedAt'],
   },
   timestamps: true,
+  versions: { maxPerDoc: 0 },
   hooks: {
     beforeChange: [
       ({ data, originalDoc, operation }) => {
         const folder = data?.folder ?? originalDoc?.folder
         if (folder === null || folder === undefined || folder === '') {
           throw new Error('Every Document must belong to a Folder; use the Domain Root when no branch is selected.')
+        }
+        const documentType = data?.documentType ?? originalDoc?.documentType
+        if (operation === 'create' && (documentType === null || documentType === undefined || documentType === '')) throw new Error('Every Document must have a Document Type.')
+        const from = String(originalDoc?.lifecycle ?? 'draft') as Lifecycle
+        const to = String(data?.lifecycle ?? originalDoc?.lifecycle ?? 'draft') as Lifecycle
+        if (operation === 'update') {
+          assertLifecycleTransition(from, to)
+          if (data?.body !== undefined && data.body !== originalDoc?.body && !canEditDocumentBody(from)) throw new Error('This Document is not editable in its current lifecycle state.')
         }
         return data
       },
@@ -32,6 +43,14 @@ export const Documents: CollectionConfig = {
       relationTo: 'tenants',
       required: false,
       admin: { hidden: true },
+    },
+    {
+      name: 'documentType',
+      type: 'relationship',
+      relationTo: 'document-types',
+      required: true,
+      index: true,
+      label: 'Document Type',
     },
     {
       name: 'folder',
@@ -68,6 +87,35 @@ export const Documents: CollectionConfig = {
         { label: 'Form', value: 'form' },
       ],
     },
+    {
+      name: 'sourceKind',
+      type: 'select',
+      required: true,
+      defaultValue: 'web',
+      options: [
+        { label: 'Web', value: 'web' },
+        { label: 'Markdown import', value: 'markdown-import' },
+        { label: 'Form', value: 'form' },
+        { label: 'Copy', value: 'copy' },
+        { label: 'Correspondence', value: 'correspondence' },
+        { label: 'Second Life', value: 'second-life' },
+      ],
+    },
+    {
+      name: 'lifecycle',
+      type: 'select',
+      required: true,
+      defaultValue: 'draft',
+      options: [
+        { label: 'Draft', value: 'draft' },
+        { label: 'Pending Review', value: 'pending_review' },
+        { label: 'Filed', value: 'filed' },
+        { label: 'Locked', value: 'locked' },
+      ],
+    },
+    { name: 'publicAccess', type: 'select', required: true, defaultValue: 'inherit', options: [{ label: 'Inherit', value: 'inherit' }, { label: 'Private', value: 'private' }, { label: 'Public', value: 'public' }] },
+    { name: 'softDeletedAt', type: 'date', admin: { readOnly: true } },
+    { name: 'softDeletedBy', type: 'relationship', relationTo: 'users', admin: { readOnly: true } },
     {
       name: 'createdBy',
       type: 'relationship',

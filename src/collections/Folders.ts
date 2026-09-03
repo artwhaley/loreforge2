@@ -80,5 +80,6 @@ export const Folders: CollectionConfig = {
       type: 'number',
     },
     { name: 'systemManaged', type: 'checkbox', defaultValue: false, admin: { description: 'Domain root folders are protected from normal deletion or movement.' } },
+    { name: 'filingPolicy', type: 'select', required: true, defaultValue: 'inherit', options: [{ label: 'Inherit', value: 'inherit' }, { label: 'Direct file', value: 'direct-file' }, { label: 'Review required', value: 'review-required' }] },
   ],
 }

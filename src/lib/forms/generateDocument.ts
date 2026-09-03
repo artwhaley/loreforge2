@@ -79,6 +79,10 @@ export async function generateDocumentFromSubmission(args: {
     folder = roots.docs[0]?.id ?? null
   }
 
+  const typeResult = await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: tenant.id } }, { name: { equals: 'Plain Text' } }, { active: { equals: true } }] }, depth: 0, limit: 1 })
+  const documentType = typeResult.docs[0]?.id
+  if (!documentType) throw new Error('The Domain has no active Plain Text Document Type.')
+
   const created = await payload.create({
     collection: 'documents',
     data: {
@@ -88,6 +92,10 @@ export async function generateDocumentFromSubmission(args: {
       title,
       body,
       origin: 'form',
+      sourceKind: 'form',
+      documentType,
+      lifecycle: 'draft',
+      publicAccess: 'inherit',
       createdBy: user.id,
     },
     depth: 0,
