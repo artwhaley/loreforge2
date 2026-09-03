@@ -9,6 +9,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 
 import { generateDocumentFromSubmission, type FormAnswers } from '@/lib/forms/generateDocument'
+import { getActiveContext } from '@/lib/tenant/activeTenant'
 
 export type FormSubmitState = {
   ok: boolean
@@ -62,6 +63,13 @@ export async function submitReportFormAction(
   })
   if (!memberships.docs[0]) return { ok: false, message: 'Not authorized.' }
 
+  // Form submissions are document authoring too: require an explicitly
+  // selected Character that is an active member of this Domain.
+  const activeContext = await getActiveContext()
+  if (!activeContext.activeCharacter || activeContext.tenant?.slug !== tenantSlug) return { ok: false, message: 'Select an active Character before submitting.' }
+  const domainMembership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: tenant.id } }, { character: { equals: activeContext.activeCharacter.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
+  if (!domainMembership.docs[0]) return { ok: false, message: 'The selected Character is not an active Domain member.' }
+
   // The form itself must belong to the active tenant.
   const forms = await payload.find({
     collection: 'forms',
@@ -97,6 +105,7 @@ export async function submitReportFormAction(
     payload,
     tenant: { id: Number(tenant.id), slug: tenant.slug },
     user: { id: Number(user.id) },
+    actorCharacterId: Number(activeContext.activeCharacter.id),
     form: {
       id: form.id,
       title: form.title,

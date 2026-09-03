@@ -31,6 +31,7 @@ async function destinationFolder(payload: Payload, domainId: number | string, fo
 
 export async function copyDocument(args: { payload: Payload; sourceDocumentId: number | string; destinationDomainId: number | string; destinationFolderId?: number | string | null; actorUserId: number | string; actorCharacterId?: number | string | null; confirmCrossDomain?: boolean }) {
   const { payload, sourceDocumentId, destinationDomainId, actorUserId, actorCharacterId } = args
+  if (actorCharacterId == null || actorCharacterId === '') throw new Error('An acting Character is required to copy a Document.')
   const source = await payload.findByID({ collection: 'documents', id: sourceDocumentId, depth: 1, overrideAccess: true })
   if (!source) throw new Error('Source Document not found.')
   const sourceDomainId = idOf(source.domain)
@@ -49,7 +50,7 @@ export async function copyDocument(args: { payload: Payload; sourceDocumentId: n
   const destinationTypeId = crossDomain ? resolveCrossDomainType(sourceType.name, destinationTypes.docs.map((type) => ({ id: type.id, name: type.name, active: type.active })), plain) : Number(sourceType.id)
   if (!destinationTypeId) throw new Error('No compatible destination Document Type exists.')
   const bodyHash = createHash('sha256').update(source.body).digest('hex')
-  const created = await payload.create({ collection: 'documents', context: { preparedByCharacterId: actorCharacterId ?? undefined, actorUserId }, overrideAccess: true, data: { domain: Number(destinationDomainId), title: source.title, body: source.body, origin: 'web-editor', sourceKind: 'copy', documentType: destinationTypeId, lifecycle: copyLifecycle(destinationDomain.kind), publicAccess: 'inherit', createdBy: Number(actorUserId), folder: folder.id } })
+  const created = await payload.create({ collection: 'documents', context: { preparedByCharacterId: Number(actorCharacterId), actorUserId }, overrideAccess: true, data: { domain: Number(destinationDomainId), title: source.title, body: source.body, origin: 'web-editor', sourceKind: 'copy', documentType: destinationTypeId, lifecycle: copyLifecycle(destinationDomain.kind), publicAccess: 'inherit', createdBy: Number(actorUserId), folder: folder.id } })
   const sourceLinks = await getDocumentCharacterLinks(payload, source.id)
   for (const link of sourceLinks.docs) {
     const characterId = idOf(link.character)

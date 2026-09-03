@@ -54,10 +54,11 @@ export async function generateDocumentFromSubmission(args: {
   payload: Payload
   tenant: { id: number; slug: string }
   user: { id: number }
+  actorCharacterId: number
   form: FormArchiveMetadata
   answers: FormAnswers
 }): Promise<GeneratedDocument> {
-  const { payload, tenant, user, form, answers } = args
+  const { payload, tenant, user, actorCharacterId, form, answers } = args
 
   const title = renderTemplate(form.archive.titleTemplate, answers).trim()
   const body = canonicalizeMarkdown(
@@ -86,6 +87,7 @@ export async function generateDocumentFromSubmission(args: {
 
   const created = await payload.create({
     collection: 'documents',
+    context: { preparedByCharacterId: actorCharacterId, actorUserId: user.id },
     data: {
       domain: tenant.id,
       tenant: tenant.id,
@@ -108,6 +110,7 @@ export async function generateDocumentFromSubmission(args: {
     documentId: created.id,
     eventType: 'created',
     actorUserId: user.id,
+    actorCharacterId,
     context: { sourceKind: 'form' },
     revisionId: await latestDocumentRevisionId(payload, created.id),
   })

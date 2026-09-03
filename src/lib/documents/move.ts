@@ -48,9 +48,14 @@ export async function moveDocument(args: { payload: Payload; documentId: number 
       if (mapped) await payload.update({ collection: 'document-tags', id: tagLink.id, overrideAccess: true, data: { domain: Number(destinationDomainId), tag: mapped.id } })
       else await payload.delete({ collection: 'document-tags', id: tagLink.id, overrideAccess: true })
     }
+    // Document shares are Domain-local grants. They must not remain pointed
+    // at a Document after its Domain changes; the owner can re-share it in
+    // the destination Domain explicitly.
+    const sourceShares = await payload.find({ collection: 'permission-rules', where: { and: [{ domain: { equals: sourceDomainId } }, { resourceType: { equals: 'Document' } }, { resource: { equals: document.id } }] }, depth: 0, limit: 5000, overrideAccess: true }).catch(() => ({ docs: [] }))
+    for (const share of sourceShares.docs) await payload.delete({ collection: 'permission-rules', id: share.id, overrideAccess: true })
     await payload.update({ collection: 'documents', id: document.id, overrideAccess: true, data: { domain: Number(destinationDomainId), folder: Number(destinationFolder.id), documentType: typeId } })
     await recordDocumentProvenance({ payload, domainId: sourceDomainId, documentId: document.id, eventType: 'moved', actorUserId, actorCharacterId, context: { destinationDomainId: Number(destinationDomainId), destinationFolderId: Number(destinationFolder.id), crossDomain: true, sourceAuditPointer: true }, revisionId: await latestDocumentRevisionId(payload, document.id) })
-    await recordDocumentProvenance({ payload, domainId: destinationDomainId, documentId: document.id, eventType: 'moved', actorUserId, actorCharacterId, context: { sourceDomainId: Number(sourceDomainId), sourceAuditPointer: true }, revisionId: await latestDocumentRevisionId(payload, document.id) })
+    await recordDocumentProvenance({ payload, domainId: destinationDomainId, documentId: document.id, eventType: 'moved', actorUserId, actorCharacterId, context: { sourceDomainId: Number(sourceDomainId), sourceAuditPointer: true, removedDomainLocalShares: sourceShares.docs.length }, revisionId: await latestDocumentRevisionId(payload, document.id) })
     return document
   }
   const previousFolderId = idOf(document.folder)

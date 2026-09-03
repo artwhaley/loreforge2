@@ -68,7 +68,12 @@ export const Documents: CollectionConfig = {
           }
           if (data?.body !== undefined && data.body !== originalDoc?.body && !canEditDocumentBody(from)) throw new Error('This Document is not editable in its current lifecycle state.')
         }
-        if (operation === 'create' && req.user && !(req.context as Record<string, unknown> | undefined)?.preparedByCharacterId) {
+        const context = req.context as Record<string, unknown> | undefined
+        // Every normal application-created Document must carry an acting
+        // Character credit. Seeders/migrations may opt into the explicit
+        // system seam; a missing request user must never be an accidental
+        // bypass of this invariant.
+        if (operation === 'create' && !context?.allowSystemCreate && !context?.preparedByCharacterId) {
           throw new Error('Character-authored Documents require a Prepared by Character credit.')
         }
         return data

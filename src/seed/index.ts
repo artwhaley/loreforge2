@@ -747,6 +747,7 @@ for (const tenant of TENANTS) {
   }
   await payload.create({
     collection: 'documents',
+    context: { allowSystemCreate: true },
     data: {
       domain: domainsBySlug[tenant.slug].id,
       tenant: tenantsBySlug[tenant.slug].id,
@@ -783,6 +784,7 @@ if (stressTenant) {
   } else {
     await payload.create({
       collection: 'documents',
+      context: { allowSystemCreate: true },
       data: {
         domain: domainsBySlug.ravenhurst.id,
         tenant: stressTenant.id,
@@ -818,6 +820,7 @@ if (importTenant) {
   } else {
     await payload.create({
       collection: 'documents',
+      context: { allowSystemCreate: true },
       data: {
         domain: domainsBySlug.ravenhurst.id,
         tenant: importTenant.id,

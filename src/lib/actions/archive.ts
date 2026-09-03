@@ -131,12 +131,17 @@ export async function createDocumentAction(formData: FormData): Promise<void> {
   if (!ctx || !title) redirect(`/domain/${tenantSlug}/records`)
 
   const { payload, user, tenant } = ctx
+  const activeContext = await getActiveContext()
+  if (!activeContext.activeCharacter || activeContext.tenant?.slug !== tenantSlug) redirect(`/domain/${tenantSlug}/records/new?error=character`)
+  const membership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: tenant.id } }, { character: { equals: activeContext.activeCharacter.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
+  if (!membership.docs[0]) redirect(`/domain/${tenantSlug}/records/new?error=character`)
   const documentType = await plainTextTypeId(payload, tenant.id)
   if (!documentType) redirect(`/domain/${tenantSlug}/records/new?error=type`)
   const folder = await tenantFolderId(payload, tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
 
   const created = await payload.create({
     collection: 'documents',
+    context: { preparedByCharacterId: activeContext.activeCharacter.id, actorUserId: user.id },
     data: {
       domain: tenant.id,
       ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}),
@@ -266,15 +271,20 @@ export async function importMarkdownAction(formData: FormData): Promise<void> {
   // Form serialization turns textareas into CRLF; store canonical LF.
   const body = canonicalizeMarkdown(String(formData.get('body') ?? '')).trim()
   const ctx = await getMemberTenant(tenantSlug)
-  if (!ctx || !title || !body) redirect('/admin/login')
+  if (!ctx || !title || !body) redirect(`/domain/${tenantSlug}/records?error=missing`)
 
   const { payload, user, tenant } = ctx
+  const activeContext = await getActiveContext()
+  if (!activeContext.activeCharacter || activeContext.tenant?.slug !== tenantSlug) redirect(`/domain/${tenantSlug}/records?error=character`)
+  const membership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: tenant.id } }, { character: { equals: activeContext.activeCharacter.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
+  if (!membership.docs[0]) redirect(`/domain/${tenantSlug}/records?error=character`)
   const documentType = await plainTextTypeId(payload, tenant.id)
   if (!documentType) redirect(`/domain/${tenantSlug}/records?error=type`)
   const folder = await tenantFolderId(payload, tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
 
   const created = await payload.create({
     collection: 'documents',
+    context: { preparedByCharacterId: activeContext.activeCharacter.id, actorUserId: user.id },
     data: {
       domain: tenant.id,
       ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}),
@@ -289,7 +299,7 @@ export async function importMarkdownAction(formData: FormData): Promise<void> {
       folder,
     },
   })
-  await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: created.id, eventType: 'created', actorUserId: user.id, revisionId: await latestDocumentRevisionId(payload, created.id), context: { sourceKind: 'markdown-import' } })
+  await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: created.id, eventType: 'created', actorUserId: user.id, actorCharacterId: activeContext.activeCharacter.id, revisionId: await latestDocumentRevisionId(payload, created.id), context: { sourceKind: 'markdown-import' } })
   redirect(`${ctx.basePath}/documents/${created.id}`)
 }
 
