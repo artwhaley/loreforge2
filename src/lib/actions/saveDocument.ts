@@ -7,6 +7,8 @@ import config from '@/payload.config'
 
 import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 import { canEditDocumentBody } from '@/lib/documents/lifecycle'
+import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
+import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { domainAndIdWhere, tenantAndIdWhere } from '@/lib/tenant/scope'
 
 /**
@@ -50,6 +52,9 @@ export async function saveDocumentAction(input: {
     if (existing.docs.length === 0) return { ok: false }
     if (!canEditDocumentBody(existing.docs[0].lifecycle)) return { ok: false }
     await payload.update({ collection: 'documents', id: documentId, data: { title, body: canonicalizeMarkdown(body) }, depth: 0 })
+    const activeContext = await getActiveContext()
+    const actorCharacter = activeContext.tenant?.slug === tenantSlug ? activeContext.activeCharacter : null
+    await recordDocumentProvenance({ payload, domainId: domain.id, documentId, eventType: 'edited', actorUserId: user.id, actorCharacterId: actorCharacter?.id, context: { fields: ['title', 'body'] }, revisionId: await latestDocumentRevisionId(payload, documentId) })
     payload.logger.info(`Saved document ${documentId}`)
     return { ok: true }
   }

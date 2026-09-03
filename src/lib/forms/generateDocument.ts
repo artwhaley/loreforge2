@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
+import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
 
 /**
  * The Ticket 07 design seam: form template + submitted answers -> archive
@@ -99,6 +100,16 @@ export async function generateDocumentFromSubmission(args: {
       createdBy: user.id,
     },
     depth: 0,
+  })
+
+  await recordDocumentProvenance({
+    payload,
+    domainId: tenant.id,
+    documentId: created.id,
+    eventType: 'created',
+    actorUserId: user.id,
+    context: { sourceKind: 'form' },
+    revisionId: await latestDocumentRevisionId(payload, created.id),
   })
 
   return { id: Number(created.id), title, body }

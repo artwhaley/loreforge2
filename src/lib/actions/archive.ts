@@ -11,6 +11,7 @@ import config from '@/payload.config'
 import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { resolveFilingPolicy, type FilingPolicy } from '@/lib/documents/lifecycle'
+import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
 import { domainAndIdWhere } from '@/lib/tenant/scope'
 import type { Domain, Tenant } from '@/payload-types'
 
@@ -147,6 +148,7 @@ export async function createDocumentAction(formData: FormData): Promise<void> {
       folder,
     },
   })
+  await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: created.id, eventType: 'created', actorUserId: user.id, revisionId: await latestDocumentRevisionId(payload, created.id) })
   redirect(`${ctx.basePath}/documents/${created.id}/edit`)
 }
 
@@ -172,6 +174,8 @@ export async function createDocumentFromEditorAction(formData: FormData): Promis
   const domainRecord = await ctx.payload.findByID({ collection: 'domains', id: ctx.tenant.id, depth: 0 })
   const policy = resolveFilingPolicy({ template: 'inherit', folder: (folderRecord?.filingPolicy ?? 'inherit') as FilingPolicy, documentType: selectedType.defaultFilingPolicy, domain: (domainRecord.defaultFilingPolicy ?? 'direct-file') as Exclude<FilingPolicy, 'inherit'> })
   const created = await ctx.payload.create({ collection: 'documents', data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body, origin: 'web-editor', sourceKind: 'web', documentType: selectedType.id, lifecycle: policy === 'review-required' ? 'pending_review' : 'filed', publicAccess: 'inherit', createdBy: ctx.user.id, folder } })
+  await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'created', actorUserId: ctx.user.id, actorCharacterId: context.activeCharacter.id, context: { lifecycle: created.lifecycle }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id) })
+  if (created.lifecycle === 'filed') await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'filed', actorUserId: ctx.user.id, actorCharacterId: context.activeCharacter.id, context: { reason: 'filing-policy' }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id) })
   redirect(`${ctx.basePath}/documents/${created.id}/edit`)
 }
 
@@ -210,7 +214,10 @@ export async function moveDocumentAction(formData: FormData): Promise<void> {
     limit: 1,
   })
   if (doc.docs[0]) {
+    const previousFolder = typeof doc.docs[0].folder === 'object' ? doc.docs[0].folder?.id : doc.docs[0].folder
     await payload.update({ collection: 'documents', id: documentId, data: { folder } })
+    const destinationFolder = folder ? await payload.findByID({ collection: 'folders', id: folder, depth: 0 }).catch(() => null) : null
+    await recordDocumentProvenance({ payload, domainId: tenant.id, documentId, eventType: 'moved', actorUserId: ctx.user.id, context: { fromFolderId: previousFolder ?? null, toFolderId: folder, folderName: destinationFolder?.name ?? 'Domain Root' }, revisionId: await latestDocumentRevisionId(payload, documentId) })
   }
   revalidatePath(`${ctx.basePath}/documents/${documentId}`)
   revalidatePath(recordsPath(ctx))
@@ -266,6 +273,7 @@ export async function importMarkdownAction(formData: FormData): Promise<void> {
       folder,
     },
   })
+  await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: created.id, eventType: 'created', actorUserId: user.id, revisionId: await latestDocumentRevisionId(payload, created.id), context: { sourceKind: 'markdown-import' } })
   redirect(`${ctx.basePath}/documents/${created.id}`)
 }
 

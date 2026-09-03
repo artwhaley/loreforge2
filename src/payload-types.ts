@@ -80,6 +80,7 @@ export interface Config {
     roles: Role;
     'role-assignments': RoleAssignment;
     'document-types': DocumentType;
+    'document-provenance-events': DocumentProvenanceEvent;
     tenants: Tenant;
     memberships: Membership;
     documents: Document;
@@ -108,6 +109,7 @@ export interface Config {
     roles: RolesSelect<false> | RolesSelect<true>;
     'role-assignments': RoleAssignmentsSelect<false> | RoleAssignmentsSelect<true>;
     'document-types': DocumentTypesSelect<false> | DocumentTypesSelect<true>;
+    'document-provenance-events': DocumentProvenanceEventsSelect<false> | DocumentProvenanceEventsSelect<true>;
     tenants: TenantsSelect<false> | TenantsSelect<true>;
     memberships: MembershipsSelect<false> | MembershipsSelect<true>;
     documents: DocumentsSelect<false> | DocumentsSelect<true>;
@@ -505,13 +507,51 @@ export interface DocumentType {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "memberships".
+ * via the `definition` "document-provenance-events".
  */
-export interface Membership {
+export interface DocumentProvenanceEvent {
   id: number;
-  user: number | User;
-  tenant: number | Tenant;
-  role: 'admin' | 'member';
+  domain: number | Domain;
+  document: number | Document;
+  actorUser?: (number | null) | User;
+  actorCharacter?: (number | null) | Character;
+  eventType:
+    | 'created'
+    | 'edited'
+    | 'submitted'
+    | 'filed'
+    | 'approved'
+    | 'rejected'
+    | 'locked'
+    | 'unlocked'
+    | 'moved'
+    | 'copied'
+    | 'shared'
+    | 'relationship-added'
+    | 'relationship-removed'
+    | 'deleted'
+    | 'restored';
+  occurredAt: string;
+  /**
+   * Structured before/after or workflow context.
+   */
+  context?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Payload revision ID, when available.
+   */
+  revisionId?: string | null;
+  /**
+   * External source identity, such as a future bridge event.
+   */
+  sourceDescriptor?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -546,6 +586,18 @@ export interface Document {
    * Author, if known
    */
   createdBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "memberships".
+ */
+export interface Membership {
+  id: number;
+  user: number | User;
+  tenant: number | Tenant;
+  role: 'admin' | 'member';
   updatedAt: string;
   createdAt: string;
 }
@@ -802,6 +854,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'document-types';
         value: number | DocumentType;
+      } | null)
+    | ({
+        relationTo: 'document-provenance-events';
+        value: number | DocumentProvenanceEvent;
       } | null)
     | ({
         relationTo: 'tenants';
@@ -1102,6 +1158,23 @@ export interface DocumentTypesSelect<T extends boolean = true> {
   defaultFilingPolicy?: T;
   defaultFolder?: T;
   templateFilingPolicy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "document-provenance-events_select".
+ */
+export interface DocumentProvenanceEventsSelect<T extends boolean = true> {
+  domain?: T;
+  document?: T;
+  actorUser?: T;
+  actorCharacter?: T;
+  eventType?: T;
+  occurredAt?: T;
+  context?: T;
+  revisionId?: T;
+  sourceDescriptor?: T;
   updatedAt?: T;
   createdAt?: T;
 }

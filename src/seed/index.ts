@@ -13,6 +13,7 @@ import sharp from 'sharp'
 
 import config from '@/payload.config'
 import { planMembershipMigration } from '@/lib/characters/membershipMigration'
+import { recordDocumentProvenance, latestDocumentRevisionId } from '@/lib/documents/provenance'
 
 const TEST_USERS = [
   {
@@ -978,6 +979,20 @@ for (const page of PAGES) {
     },
   })
   payload.logger.info(`Created page ${page.slug} for ${page.tenantSlug}`)
+}
+
+// --- Provenance backfill (Phase 4) ---
+// Existing fixture records predate the event stream. Create one idempotent
+// origin event for each Domain document so history is complete without
+// rewriting Markdown or inventing an actor for later changes.
+const provenanceDocuments = await payload.find({ collection: 'documents', depth: 0, limit: 5000 })
+for (const document of provenanceDocuments.docs) {
+  const domainId = typeof document.domain === 'object' ? document.domain?.id : document.domain
+  if (!domainId) continue
+  const existingEvent = await payload.find({ collection: 'document-provenance-events', where: { and: [{ domain: { equals: domainId } }, { document: { equals: document.id } }, { eventType: { equals: 'created' } }] }, depth: 0, limit: 1, overrideAccess: true })
+  if (existingEvent.docs[0]) continue
+  const createdBy = typeof document.createdBy === 'object' ? document.createdBy?.id : document.createdBy
+  await recordDocumentProvenance({ payload, domainId, documentId: document.id, eventType: 'created', actorUserId: createdBy, context: { backfill: true, sourceKind: document.sourceKind }, revisionId: await latestDocumentRevisionId(payload, document.id), sourceDescriptor: 'phase-4-seed-backfill' })
 }
 
 payload.logger.info('Seed complete.')

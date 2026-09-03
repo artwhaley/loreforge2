@@ -5,6 +5,7 @@ import { restoreDocumentVersionAction } from '@/lib/actions/documentVersions'
 import { canEditDocumentBody } from '@/lib/documents/lifecycle'
 import { renderMarkdown } from '@/lib/markdown/render'
 import { getLorePayload } from '@/lib/payload'
+import { describeProvenanceEvent, provenanceTimelineSort, type ProvenanceEventType } from '@/lib/documents/provenance'
 import { getDocumentForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
@@ -34,6 +35,14 @@ export default async function DocumentHistoryPage({ params, searchParams }: Prop
     depth: 0,
     limit: 200,
     sort: '-createdAt',
+  })
+  const events = await payload.find({
+    collection: 'document-provenance-events',
+    overrideAccess: true,
+    where: { and: [{ domain: { equals: tenant.id } }, { document: { equals: document.id } }] },
+    depth: 1,
+    limit: 200,
+    sort: provenanceTimelineSort,
   })
 
   const selected = query?.revision
@@ -83,6 +92,27 @@ export default async function DocumentHistoryPage({ params, searchParams }: Prop
                       {snapshot.title || document.title}
                     </a>{' '}
                     <small>· {revision.createdAt ? new Date(revision.createdAt).toLocaleString() : 'Unknown time'} · {labelLifecycle(snapshot.lifecycle)}</small>
+                  </li>
+                )
+              })}
+            </ol>
+          )}
+        </section>
+
+        <section aria-labelledby="timeline-heading" style={{ marginTop: '2rem' }}>
+          <h2 id="timeline-heading">Timeline ({events.docs.length})</h2>
+          {events.docs.length === 0 ? <p>No provenance events have been recorded yet.</p> : (
+            <ol style={{ display: 'grid', gap: '.8rem', paddingLeft: '1.25rem' }}>
+              {events.docs.map((event) => {
+                const actorUser = typeof event.actorUser === 'object' ? event.actorUser?.name : null
+                const actorCharacter = typeof event.actorCharacter === 'object' ? event.actorCharacter?.name : null
+                const actor = [actorUser, actorCharacter].filter(Boolean).join(' · ') || 'System'
+                const context = event.context && typeof event.context === 'object' && !Array.isArray(event.context) ? event.context as Record<string, unknown> : undefined
+                return (
+                  <li key={event.id}>
+                    <strong>{actor}</strong> {describeProvenanceEvent(event.eventType as ProvenanceEventType, context)}{' '}
+                    <small>{event.occurredAt ? new Date(event.occurredAt).toLocaleString() : 'Unknown time'}</small>
+                    {event.revisionId ? <> · <a href={`${base}/history?revision=${encodeURIComponent(event.revisionId)}`}>View revision</a></> : null}
                   </li>
                 )
               })}
