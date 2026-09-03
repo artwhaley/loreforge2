@@ -31,9 +31,10 @@ Run the server with `npm run dev` (the script pins `PAYLOAD_PUSH=false`) and ope
 
 1. Select **People** in the management bar, or open `/domain/ar/manage/people`.
 2. Type `Sera` into **Find a Character**. Select the result shown beneath the search field; do not use a raw collection/admin page.
-3. In Sera's workspace, leave **Held roles** selected and record the current roles. Switch to **Roles I can assign**, check one Scribe role, and confirm the inline checkbox returns to the workspace.
-4. In **Folder access**, search `Deeds`. Change Read and Write independently and press that row's **Save** button. Confirm the Role list and role-assignment count are unchanged.
-5. Use **Remove from Domain**, then add Sera back. Confirm Domain membership is Active after re-add but no prior Department participation, Role, or direct Folder override returns.
+3. Confirm the header shows Sera's large Domain-local name with the controlling account/Unclaimed status in small right-aligned text, and that **Remove from Domain** is immediately below it. The old Overview copy, History section, and in-page section navigation must be absent.
+4. In **Roles**, confirm each Department is a collapsible drawer and nested Roles line up hierarchically. Collapse and reopen a Department, expand a nested Role branch, search for a Role, and switch between **All roles** and **Held only**. Check one Role and confirm the assignment posts without a Server Component runtime error.
+5. In **Folder access**, confirm the file-explorer tree has collapsible folders, a search field, and independent Read/Write checkboxes. Inherited permissions appear checked and muted; clicking one creates an explicit Allow or Deny state. Save a row and confirm the Role tree is unchanged.
+6. Use **Remove from Domain**, then verify the Character workspace is no longer reachable and the member cleanup behavior remains intact when the Character is re-added.
 
 ### 2. Character links, tags, and provenance
 
