@@ -11,6 +11,8 @@ corrective).
 | `a0216cb` | P06R: neutral form-schema sizing hints and auto-layout rendering | `src/lib/forms/schema.ts`, `schema.test.ts`, `layout.ts` (new), `layout.test.ts` (new), `src/lib/templates/compose.ts`, `src/lib/forms/generateDocument.ts`, `src/lib/actions/archive.ts`, `src/lib/actions/forms.ts`, `package.json`, `package-lock.json` |
 | `db42f38` | P06R: rebuild the Form Studio as a drag-and-drop visual builder | Studio UI (`src/components/forms/FormStudio/*`), `FieldControl.*`, `CharacterFieldPicker.tsx` (extracted), `FillForm.tsx`, `NewDocumentForm.tsx`, `src/lib/actions/templates.ts`, Forms routes incl. new `[formId]/edit/page.tsx`, deletion of legacy `tenant/[slug]/forms/*` shims and the old `FormStudio.tsx` |
 | `c204cfe` | P06R: fix form-filing FK crash and add a multiple-Characters question (follow-up) | `generateDocument.ts`, `schema.ts`, `layout.ts`, `compose.ts`, `actions/forms.ts`, `actions/archive.ts`, `CharacterFieldPicker.tsx`, `FieldControl.tsx`, `NewDocumentForm.tsx`, `[formId]/page.tsx`, FormStudio `toolbox`/`inspector`/`recordPreview`, `schema.test.ts`, `layout.test.ts` |
+| `aa5ac4f` | P06R: join the caller's transaction inside link/tag collection hooks (follow-up) | `collections/DocumentCharacterLinks.ts`, `collections/DocumentTags.ts` |
+| `d608433` | P06R: add a Time question type alongside Date (follow-up) | `schema.ts`, `schema.test.ts`, `layout.test.ts`, `FieldControl.tsx`, FormStudio `toolbox`/`inspector`/`recordPreview`, `[formId]/page.tsx` |
 
 ## New dependency (owner-authorized)
 
@@ -47,20 +49,27 @@ adoption. Recorded as the authorized exception in `00_START_HERE.md`.
   `tenants` column — new records are scoped by `domain`, ending the
   `FOREIGN KEY constraint failed` crash for Domains without a legacy tenant
   row.
+- (Follow-up) DocumentCharacterLinks / DocumentTags hook lookups carry `req`,
+  so they join the caller's transaction; atomic filings no longer throw
+  `Not Found` against their own uncommitted Document.
 - (Follow-up) A `characters` (multiple pick) question type: answer arrays,
   names joined in the record body, one Character link per choice.
+- (Follow-up) A `time` question type (native time input) beside `date`;
+  time answers never name records.
 - Pre-corrective forms that are edited are re-laid-out by the auto-layout
   composer (their previously hand-written body templates are regenerated from
   the question list on save).
 
 ## Verification evidence (run at commit time)
 
-- `npm test`: 112 pass / 0 fail.
+- `npm test`: 114 pass / 0 fail.
 - `npx tsc --noEmit`: clean.
 - `eslint` on all changed files: clean.
+- Filing sequence replayed on a scratch copy of the live DB: in-transaction
+  Document + Prepared-by credit commits (pre-fix: `Not Found`).
 - Dev-server smoke requests to `/domain/{slug}/forms`,
   `/domain/{slug}/forms/new`, `/domain/{slug}/forms/1/edit`,
   `/domain/{slug}/forms/1` returned auth-shielded responses (no 500 /
   compile errors).
 - Manual acceptance: **not yet run** — see `01_MANUAL_ACCEPTANCE.md`
-  (Scenario D added for the filing fix and the multiple-Characters question).
+  (Scenarios D/E added for the filing fixes, multiple-Characters, and Time).

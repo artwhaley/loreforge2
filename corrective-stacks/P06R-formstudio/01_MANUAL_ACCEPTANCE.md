@@ -83,6 +83,22 @@ alone, matching every other create path.
 4. Mark the Witnesses question required, save, then submit it empty: the
    inline error must preserve every other entered value (chips included).
 
+## Scenario E — follow-up: Time question + full filing retest
+
+The filing crash chain is now fixed twice over (legacy-tenant FK, then
+in-transaction hook visibility — `Not Found`). Both were verified by
+replaying the exact failing sequence on a scratch copy of the live DB. The
+final check must be a real end-to-end filing in a browser.
+
+1. In the studio, add a **Time** question ("At what time?") right after a
+   Date question; give it width Short. Save and confirm the record preview
+   shows a sample time.
+2. As a member with an acting Character, fill the form completely — Date,
+   Time, one or more Character picks — and submit.
+3. You must land on the finished record (no server error anywhere in the
+   filing), with the time reading `HH:MM`, every Character name shown, and
+   the acting Character visible as the Prepared-by credit.
+
 ## Keyboard-only pass (repeat scenario A #6)
 
 Add, edit, move up/down, remove, and save entirely without a mouse.
@@ -108,4 +124,7 @@ Add, edit, move up/down, remove, and save entirely without a mouse.
 | D: multi-Character chips picker on fill | | |
 | D: every chosen Character linked with the label | | |
 | D: multi required-miss error preserves entries | | |
+| E: Time question in studio + record preview | | |
+| E: end-to-end filing with Date + Time + Characters lands on the record | | |
+| E: Prepared-by credit present on the filed record | | |
 | Keyboard: full flow without a mouse | | |

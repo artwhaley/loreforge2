@@ -48,9 +48,9 @@ open-source field.
 
 ## Evidence
 
-- `npm test` — 112 pass / 0 fail (schema/adapter/compose/resolve tests were
+- `npm test` — 114 pass / 0 fail (schema/adapter/compose/resolve tests were
   previously omitted from the runner and are now included with the new
-  layout tests; follow-up added multi-Character cases).
+  layout tests; follow-ups added multi-Character and Time cases).
 - `npx tsc --noEmit` — clean.
 - `eslint` changed files — clean.
 - Dev-server smoke requests to the four Forms routes returned auth-shielded
@@ -83,8 +83,30 @@ Character link per selection. The Form Studio exposes it as a new
 label etc.); fills and records/new render it through the shared
 `FieldControl`.
 
-Verification at commit: `npm test` 112 pass / 0 fail, `tsc --noEmit` clean,
-`eslint` clean. Manual scenario added as Scenario D in
+## Follow-up 2 (2026-09-04): transaction-visibility crash + Time question
+
+The next filing retest crashed with `Not Found` from
+`DocumentCharacterLinks.beforeChange`. Root cause: inside the atomic filing
+transaction the hook looked the just-created Document up WITHOUT `req`, so
+Payload auto-committed a separate read that could not see the uncommitted
+row (`src/lib/db/transactions.ts` documents the rule). The same latent bug
+sat in `DocumentTags.beforeChange` (tags attach inside the same atomic
+create flow). Fix (`aa5ac4f`): hook lookups now pass `req` and join the
+caller's transaction.
+
+Verified empirically by replaying the failing sequence on a scratch copy of
+the live DB (document create + Prepared-by credit in one transaction):
+pre-fix the probe threw `Not Found` exactly like the owner's crash;
+post-fix the Document and its credit commit together.
+
+The owner also asked for a time picker. Added a `time` question type beside
+`date` (`d608433`): native time input on fills and the studio canvas, a
+Time toolbox tile, time default answers in the inspector, sample time in
+the record preview. Time answers never name records, matching checkbox and
+Character questions.
+
+Verification at commit: `npm test` 114 pass / 0 fail, `tsc --noEmit` clean,
+`eslint` clean. Manual scenarios added as Scenarios D and E in
 `corrective-stacks/P06R-formstudio/01_MANUAL_ACCEPTANCE.md`.
 
 ## Deferred / notes
