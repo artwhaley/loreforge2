@@ -29,3 +29,13 @@ Branch: `phase-05-remediation`
 The working tree was clean when this evidence was recorded. The live server
 handoff is intentionally performed after this note is committed so its
 readiness can be recorded below without changing application data.
+
+## Server handoff
+
+Normal startup was launched hidden with `npm run dev` (`PAYLOAD_PUSH=false`);
+the Next process is listening on port 3055 (PID 33344). Logs are in
+`dev-phase5.log` and `dev-phase5-error.log`. The public `/` check returned 200.
+Using the seeded admin login through `/api/customer-login`, then selecting Ar
+through `/api/switch-tenant`, authenticated checks returned 200 for
+`/domain/ar`, `/domain/ar/records`, and `/domain/ar/manage/people`. The server
+is left running for owner validation.
