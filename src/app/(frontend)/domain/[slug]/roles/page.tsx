@@ -8,6 +8,7 @@ import { getLorePayload } from '@/lib/payload'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getTenantsForUser } from '@/lib/tenant/queries'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
+import { isAllowed } from '@/lib/authz/evaluate'
 
 type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<{ roleId?: string }> }
 export const dynamic = 'force-dynamic'
@@ -25,8 +26,8 @@ function toFolderNode(node: ReturnType<typeof buildFolderTree>[number]): FolderT
 export default async function RolesPage({ params, searchParams }: Props) {
   const { slug } = await params
   const query = await searchParams
-  const { tenant, role: contextRole, user } = await getActiveTenant()
-  if (!tenant || tenant.slug !== slug || contextRole !== 'admin') notFound()
+  const { tenant, role: contextRole, user, activeCharacter } = await getActiveTenant()
+  if (!tenant || tenant.slug !== slug) notFound()
   const payload = await getLorePayload()
   const [departments, roles, assignments, memberships, characters, folders, permissionRules, domains] = await Promise.all([
     payload.find({ collection: 'subdomains', where: { domain: { equals: tenant.id } }, depth: 0, limit: 500, sort: 'name' }),
@@ -38,6 +39,9 @@ export default async function RolesPage({ params, searchParams }: Props) {
     payload.find({ collection: 'permission-rules', where: { and: [{ domain: { equals: tenant.id } }, { principalType: { equals: 'Role' } }, { resourceType: { equals: 'Folder' } }] }, depth: 0, limit: 10000 }).catch(() => ({ docs: [] })),
     user ? getTenantsForUser(user.id) : Promise.resolve([]),
   ])
+
+  const roleScopeAllowed = Boolean(user && ((contextRole === 'admin') || (await Promise.all(departments.docs.map((department) => isAllowed({ payload, actor: { userId: user.id, activeCharacterId: activeCharacter?.id ?? null }, domainId: tenant.id, capability: 'manage_roles', resource: { type: 'Subdomain', id: department.id } })))).some(Boolean)))
+  if (!roleScopeAllowed) notFound()
 
   const roleById = new Map(roles.docs.map((item) => [Number(item.id), item]))
   const roleNodes = new Map<number, RoleTreeNode>()
@@ -96,7 +100,7 @@ export default async function RolesPage({ params, searchParams }: Props) {
     <section>
       <p><a href={`/domain/${slug}`}>← Domain home</a></p>
       <h1>Roles</h1>
-      <RoleManager domainSlug={slug} departments={roleDepartments} roleRecords={roleRecords} holdersByRole={holdersByRole} folders={folderNodes} folderStatesByRole={folderStatesByRole} initialRoleId={initialRoleId} />
+    <RoleManager domainSlug={slug} departments={roleDepartments} roleRecords={roleRecords} holdersByRole={holdersByRole} folders={folderNodes} folderStatesByRole={folderStatesByRole} initialRoleId={initialRoleId} />
     </section>
   </TenantShell>
 }

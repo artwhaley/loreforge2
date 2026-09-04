@@ -9,9 +9,8 @@ export const Roles: CollectionConfig = {
   slug: 'roles',
   admin: { useAsTitle: 'name', defaultColumns: ['name', 'domain', 'subdomain', 'parentRole', 'active'] },
   timestamps: true,
-  // Interim authority boundary (P05R-T01): Role definitions mutate only
-  // through the sanctioned roles route/service after authorizeInterimOperation.
-  // Direct REST/GraphQL/Admin access is denied for ordinary callers.
+  // Role definitions mutate only through the guarded domain services. Direct
+  // REST/GraphQL/Admin access is denied for ordinary callers.
   access: {
     read: () => false,
     create: () => false,

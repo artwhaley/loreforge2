@@ -12,6 +12,7 @@ export const DomainCharacterContexts: CollectionConfig = {
     defaultColumns: ['tenant', 'character', 'localDisplayName', 'updatedAt'],
   },
   timestamps: true,
+  access: { read: ({ req }) => Boolean((req.user as { isPlatformAdmin?: boolean } | null)?.isPlatformAdmin), create: () => false, update: () => false, delete: () => false },
   fields: [
     {
       name: 'domain',

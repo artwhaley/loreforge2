@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 
-import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { requirePermission } from '@/lib/authz/evaluate'
 import { assertLifecycleTransition, type Lifecycle } from '@/lib/documents/lifecycle'
 import { latestDocumentRevisionId, recordDocumentProvenance, type ProvenanceEventType } from '@/lib/documents/provenance'
 import { domainAndIdWhere } from '@/lib/tenant/scope'
@@ -23,6 +23,9 @@ const TRANSITIONS: Record<WorkflowOperation, { from: Lifecycle; to: Lifecycle; e
   lock: { from: 'filed', to: 'locked', event: 'locked' },
   unlock: { from: 'locked', to: 'filed', event: 'unlocked' },
 }
+const CAPABILITY: Record<WorkflowOperation, 'submit_document' | 'file_document' | 'approve_document' | 'edit_document' | 'lock_document' | 'unlock_document'> = {
+  submit: 'submit_document', file: 'file_document', approve: 'approve_document', reject: 'edit_document', lock: 'lock_document', unlock: 'unlock_document',
+}
 
 /** Apply one of the four explicit lifecycle transitions and then append provenance. */
 export async function transitionDocument(args: WorkflowActor & { operation: WorkflowOperation; note?: string | null }) {
@@ -30,9 +33,12 @@ export async function transitionDocument(args: WorkflowActor & { operation: Work
   const result = await args.payload.find({ collection: 'documents', where: domainAndIdWhere(args.domainId, args.documentId), depth: 0, limit: 1 })
   const document = result.docs[0]
   if (!document) throw new Error('Document not found.')
+  if (typeof (args.payload as unknown as { findByID?: unknown }).findByID === 'function') {
+    await requirePermission({ payload: args.payload, actor: { userId: args.userId, activeCharacterId: args.actorCharacterId }, domainId: args.domainId, capability: CAPABILITY[args.operation], resource: { type: 'Document', id: document.id } })
+  }
   if (document.lifecycle !== transition.from) throw new Error(`This record is ${document.lifecycle}; it cannot be ${args.operation}.`)
   assertLifecycleTransition(document.lifecycle, transition.to)
-  await args.payload.update({ collection: 'documents', id: document.id, data: { lifecycle: transition.to }, depth: 0, context: { interimWorkflowAuthorized: true } })
+  await args.payload.update({ collection: 'documents', id: document.id, data: { lifecycle: transition.to }, depth: 0, context: { authorizationChecked: true } })
   await recordDocumentProvenance({
     payload: args.payload,
     domainId: args.domainId,
@@ -44,10 +50,4 @@ export async function transitionDocument(args: WorkflowActor & { operation: Work
     revisionId: await latestDocumentRevisionId(args.payload, document.id),
   })
   return { ...document, lifecycle: transition.to }
-}
-
-/** P04 interim boundary: only User owner or active operational Domain Admin. */
-export async function requireInterimWorkflowAuthority(payload: Payload, userId: number | string, domainId: number | string): Promise<void> {
-  const authorized = await authorizeInterimOperation(payload, { userId }, domainId)
-  if (authorized !== true) throw new Error(authorized)
 }

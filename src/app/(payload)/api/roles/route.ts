@@ -3,7 +3,7 @@ import { getPayload } from 'payload'
 
 import config from '@payload-config'
 
-import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { assertCanCreateRole } from '@/lib/authz/delegation'
 import { recordDomainAudit } from '@/lib/domains/domainAudit'
 import { assertRoleHierarchy } from '@/lib/roles/invariants'
 import { runInTransaction } from '@/lib/db/transactions'
@@ -26,12 +26,12 @@ export async function POST(request: Request) {
   const domains = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
   const domain = domains.docs[0]
   if (!domain) return NextResponse.redirect(new URL('/', request.url), 303)
-  if (await authorizeInterimOperation(payload, { userId: user.id }, domain.id) !== true) return NextResponse.redirect(new URL(destination, request.url), 303)
   if (action === 'delete') {
     const roleId = Number(form.get('roleId') ?? '')
     if (!Number.isFinite(roleId)) return NextResponse.redirect(new URL(destination, request.url), 303)
     const role = await payload.findByID({ collection: 'roles', id: roleId, depth: 0 }).catch(() => null)
     if (!role || idOf(role.domain) !== Number(domain.id) || role.system) return NextResponse.redirect(new URL(destination, request.url), 303)
+    try { await assertCanCreateRole(payload, { actor: { userId: user.id }, domainId: domain.id, departmentId: idOf(role.subdomain) ?? 0 }) } catch { return NextResponse.redirect(new URL(destination, request.url), 303) }
     const children = await payload.find({ collection: 'roles', where: { and: [{ parentRole: { equals: roleId } }, { active: { equals: true } }] }, depth: 0, limit: 1 })
     if (children.docs.length > 0) return NextResponse.redirect(new URL(destination, request.url), 303)
     try {
@@ -68,6 +68,7 @@ export async function POST(request: Request) {
     const subdomain = await payload.findByID({ collection: 'subdomains', id: subdomainId, depth: 0 }).catch(() => null)
     if (!subdomain || idOf(subdomain.domain) !== Number(domain.id)) return NextResponse.redirect(new URL(destination, request.url), 303)
   }
+  try { await assertCanCreateRole(payload, { actor: { userId: user.id }, domainId: domain.id, departmentId: subdomainId }) } catch { return NextResponse.redirect(new URL(destination, request.url), 303) }
   try {
     assertRoleHierarchy(
       { id: 'new', domainId: domain.id, subdomainId, parentRoleId },

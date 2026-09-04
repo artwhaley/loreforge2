@@ -6,6 +6,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 
 import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
+import { isAllowed } from '@/lib/authz/evaluate'
 
 /**
  * Save an informational page's title and canonical Markdown body.
@@ -30,7 +31,7 @@ export async function savePageAction(input: {
   }
 
   const tenants = await payload.find({
-    collection: 'tenants',
+    collection: 'domains',
     where: { slug: { equals: tenantSlug } },
     depth: 0,
     limit: 1,
@@ -40,22 +41,12 @@ export async function savePageAction(input: {
     return { ok: false }
   }
 
-  const memberships = await payload.find({
-    collection: 'memberships',
-    where: {
-      and: [{ user: { equals: user.id } }, { tenant: { equals: tenant.id } }],
-    },
-    depth: 0,
-    limit: 1,
-  })
-  if (memberships.docs.length === 0) {
-    return { ok: false } // not a member of this tenant
-  }
+  if (!await isAllowed({ payload, actor: { userId: user.id }, domainId: tenant.id, capability: 'manage_domain_appearance', resource: { type: 'Domain', id: tenant.id } })) return { ok: false }
 
   const existing = await payload.find({
     collection: 'pages',
     where: {
-      and: [{ tenant: { equals: tenant.id } }, { id: { equals: pageId } }],
+      and: [{ or: [{ domain: { equals: tenant.id } }, { tenant: { equals: tenant.id } }] }, { id: { equals: pageId } }],
     },
     depth: 0,
     limit: 1,

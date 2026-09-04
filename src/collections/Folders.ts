@@ -24,8 +24,8 @@ export const Folders: CollectionConfig = {
     // Read stays as today: public Folder reads are a tracked concern
     // (DEF-AUTH-01/DEF-PUBLIC-01), not redesigned here. Mutations are closed:
     // customer Folder CRUD flows exclusively through the guarded /api/folders
-    // route after authorizeInterimOperation (P05R-T01).
-    read: () => true,
+    // route after evaluator authorization.
+    read: ({ req }) => Boolean((req.user as { isPlatformAdmin?: boolean } | null)?.isPlatformAdmin),
     create: () => false,
     update: () => false,
     delete: () => false,

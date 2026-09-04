@@ -5,6 +5,7 @@ export const Subdomains: CollectionConfig = {
   labels: { singular: 'Department', plural: 'Departments' },
   admin: { useAsTitle: 'name', defaultColumns: ['name', 'domain', 'publicListing'] },
   timestamps: true,
+  access: { read: ({ req }) => Boolean((req.user as { isPlatformAdmin?: boolean } | null)?.isPlatformAdmin), create: () => false, update: () => false, delete: () => false },
   indexes: [{ unique: true, fields: ['domain', 'slug'] }],
   fields: [
     { name: 'domain', type: 'relationship', relationTo: 'domains', required: true, label: 'Domain' },

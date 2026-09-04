@@ -5,6 +5,7 @@ import config from '@payload-config'
 
 import { ensureDomainCharacterContext } from '@/lib/characters/localContext'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
+import { isAllowed } from '@/lib/authz/evaluate'
 
 export async function POST(request: Request) {
   const payload = await getPayload({ config })
@@ -21,10 +22,11 @@ export async function POST(request: Request) {
   if (!context.tenant || context.tenant.slug !== tenantSlug) {
     return NextResponse.redirect(new URL(redirectTo, request.url), 303)
   }
+  if (!await isAllowed({ payload, actor: { userId: user.id, activeCharacterId: context.activeCharacter?.id }, domainId: context.tenant.id, capability: 'manage_members', resource: { type: 'Domain', id: context.tenant.id } })) return NextResponse.redirect(new URL(redirectTo, request.url), 303)
   const existing = await payload.find({
     collection: 'domain-character-contexts',
     where: {
-      and: [{ tenant: { equals: context.tenant.id } }, { character: { equals: characterId } }],
+      and: [{ or: [{ domain: { equals: context.tenant.id } }, { tenant: { equals: context.tenant.id } }] }, { character: { equals: characterId } }],
     },
     depth: 0,
     limit: 1,
@@ -42,7 +44,7 @@ export async function POST(request: Request) {
       const created = await payload.find({
         collection: 'domain-character-contexts',
         where: {
-          and: [{ tenant: { equals: context.tenant.id } }, { character: { equals: characterId } }],
+          and: [{ or: [{ domain: { equals: context.tenant.id } }, { tenant: { equals: context.tenant.id } }] }, { character: { equals: characterId } }],
         },
         depth: 0,
         limit: 1,

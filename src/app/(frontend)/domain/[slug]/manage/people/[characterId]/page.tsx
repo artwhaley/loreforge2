@@ -7,7 +7,8 @@ import { getTenantsForUser } from '@/lib/tenant/queries'
 import { buildFolderTree } from '@/lib/archive/folderTree'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 import { FolderTree, RoleTree, type FolderTreeNode, type PermissionState, type RoleDepartment, type RoleTreeNode } from '@/components/people/PersonAccessTrees'
-import { computeAssignableRoleIds } from '@/lib/people/participation'
+import { canAssignRole } from '@/lib/authz/delegation'
+import { isAllowed } from '@/lib/authz/evaluate'
 import styles from '@/components/people/PersonWorkspace.module.scss'
 
 type Props = { params: Promise<{ slug: string; characterId: string }>; searchParams?: Promise<{ roleFilter?: string }> }
@@ -28,8 +29,11 @@ export default async function PersonWorkspacePage({ params, searchParams }: Prop
   const query = await searchParams
   const roleFilter = query?.roleFilter === 'held' ? 'held' : 'assignable'
   const { tenant, role: contextRole, user, activeCharacter } = await getActiveTenant()
-  if (!tenant || tenant.slug !== slug || contextRole !== 'admin' || !Number.isFinite(characterId)) notFound()
+  if (!tenant || tenant.slug !== slug || !Number.isFinite(characterId)) notFound()
   const payload = await getLorePayload()
+  const actor = { userId: user?.id ?? 0, activeCharacterId: activeCharacter?.id ?? null }
+  const workspaceAllowed = contextRole === 'admin' || Boolean(user && (await Promise.all(['manage_members', 'manage_roles', 'manage_access'].map((capability) => isAllowed({ payload, actor, domainId: tenant.id, capability, resource: { type: 'Domain', id: tenant.id } })))).some(Boolean))
+  if (!workspaceAllowed) notFound()
   const [character, membershipRows, contexts, departments, roles, assignments, folders, permissionRules, domains] = await Promise.all([
     payload.findByID({ collection: 'characters', id: characterId, depth: 1 }).catch(() => null),
     payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: tenant.id } }, { character: { equals: characterId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 }),
@@ -45,31 +49,7 @@ export default async function PersonWorkspacePage({ params, searchParams }: Prop
   const localContext = contexts.docs[0]
   const roleById = new Map(roles.docs.map((item) => [String(item.id), item]))
   const assignedRoleIds = new Set(assignments.docs.map((assignment) => String(relationId(assignment.role))))
-  // P05R-T03 B: "Roles I can assign" — conservative interim derivation. The
-  // workspace is admin-gated, so Domain Owners / operational Domain Admins see
-  // every in-Domain Role; anyone else would only assign Roles in Departments
-  // where they already hold a Role (or same-Department descendants of Roles
-  // they hold). P07-T03 replaces this calculation with the final evaluator.
-  const ownerId = typeof (tenant as { ownerUser?: unknown }).ownerUser === 'object' ? ((tenant as { ownerUser: { id?: number } }).ownerUser)?.id : (tenant as { ownerUser?: unknown }).ownerUser
-  const adminRows = user
-    ? await payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: tenant.id } }, { user: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
-    : { docs: [] }
-  const viewerIsAdmin = Boolean(user && (String(ownerId) === String(user.id) || adminRows.docs.length > 0))
-  let actorHeldRoleIds: Array<number | string> = []
-  if (user && !viewerIsAdmin) {
-    const actorCharacters = await payload.find({ collection: 'characters', where: { and: [{ controlledBy: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 200 })
-    const actorCharacterIds = actorCharacters.docs.map((item) => item.id)
-    if (actorCharacterIds.length > 0) {
-      const actorAssignments = await payload.find({ collection: 'role-assignments', where: { and: [{ character: { in: actorCharacterIds } }, { status: { equals: 'active' } }] }, depth: 0, limit: 2000 })
-      const domainRoleIds = new Set(roles.docs.map((item) => String(item.id)))
-      actorHeldRoleIds = actorAssignments.docs.map((assignment) => relationId(assignment.role)).filter((roleId): roleId is number => roleId !== null && domainRoleIds.has(String(roleId)))
-    }
-  }
-  const assignableRoleIds = computeAssignableRoleIds({
-    viewerIsAdmin,
-    roles: roles.docs.map((item) => ({ id: item.id, departmentId: relationId(item.subdomain), parentRoleId: relationId(item.parentRole) })),
-    actorHeldRoleIds,
-  })
+  const assignableRoleIds = new Set((await Promise.all(roles.docs.map(async (item) => (user && await canAssignRole(payload, { actor: { userId: user.id, activeCharacterId: activeCharacter?.id ?? null }, domainId: tenant.id, targetRoleId: item.id }) ? Number(item.id) : null)))).filter((id): id is number => id !== null))
   const assignedRules = permissionRules.docs.filter((rule) => polyId(rule.principal) === characterId && rule.resourceType === 'Folder' && rule.active !== false)
   const ruleFor = (folderId: number, capabilities: string[]) => assignedRules.find((rule) => polyId(rule.resource) === folderId && capabilities.includes(rule.capability))
   const folderTree = buildFolderTree(folders.docs)

@@ -30,6 +30,8 @@ export async function canAssignRole(payload: Payload, args: { actor: PermissionA
   if (!target || !target.active) return false
   const direct = await evaluatePermission({ payload, actor: args.actor, domainId: args.domainId, capability: 'assign_roles', resource: { type: 'Subdomain', id: target.departmentId } })
   if (direct.allowed) return true
+  const subordinate = await evaluatePermission({ payload, actor: args.actor, domainId: args.domainId, capability: 'assign_subordinates', resource: { type: 'Subdomain', id: target.departmentId } })
+  if (!subordinate.allowed) return false
   const assignments: { docs: Array<{ role: unknown }> } = args.actor.activeCharacterId == null ? { docs: [] } : await payload.find({ collection: 'role-assignments', where: { and: [{ character: { equals: args.actor.activeCharacterId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 10000, overrideAccess: true })
   const held = assignments.docs.map((row) => Number(row.role && typeof row.role === 'object' && 'id' in row.role ? (row.role as { id: number | string }).id : row.role)).filter((id) => Number.isFinite(id))
   return held.some((heldId) => roles.find((role) => role.id === heldId)?.departmentId === target.departmentId && isRoleDescendant(target.id, heldId, roles))

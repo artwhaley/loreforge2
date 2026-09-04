@@ -3,7 +3,7 @@ import { getPayload } from 'payload'
 
 import config from '@payload-config'
 
-import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { assertCanDelegate } from '@/lib/authz/delegation'
 import { recordDomainAudit } from '@/lib/domains/domainAudit'
 import { runInTransaction } from '@/lib/db/transactions'
 
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   if (!user || !domainSlug || !Number.isFinite(principalId) || !Number.isFinite(folderId)) return NextResponse.redirect(new URL('/', request.url), 303)
   const domainResult = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
   const domain = domainResult.docs[0]
-  if (!domain || await authorizeInterimOperation(payload, { userId: user.id }, domain.id) !== true) return NextResponse.redirect(new URL(destination, request.url), 303)
+  if (!domain) return NextResponse.redirect(new URL(destination, request.url), 303)
   const [principal, folder] = await Promise.all([
     payload.findByID({ collection: principalType === 'Role' ? 'roles' : 'characters', id: principalId, depth: 0 }).catch(() => null),
     payload.findByID({ collection: 'folders', id: folderId, depth: 0 }).catch(() => null),
@@ -38,6 +38,15 @@ export async function POST(request: Request) {
     const membership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domain.id } }, { character: { equals: principalId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
     if (!membership.docs[0]) return NextResponse.redirect(new URL(destination, request.url), 303)
   } else if (idOf(principalRecord.domain) !== Number(domain.id)) return NextResponse.redirect(new URL(destination, request.url), 303)
+  try {
+    const actor = { userId: user.id }
+    await assertCanDelegate(payload, actor, domain.id, 'read', { type: 'Folder', id: folder.id }, readState === 'inherit' ? 'revoke' : readState === 'grant' ? 'grant' : 'deny')
+    if (writeState !== 'inherit') {
+      const operation = writeState === 'grant' ? 'grant' : 'deny'
+      await assertCanDelegate(payload, actor, domain.id, 'create_document', { type: 'Folder', id: folder.id }, operation)
+      await assertCanDelegate(payload, actor, domain.id, 'edit_document', { type: 'Folder', id: folder.id }, operation)
+    } else await assertCanDelegate(payload, actor, domain.id, 'edit_document', { type: 'Folder', id: folder.id }, 'revoke')
+  } catch { return NextResponse.redirect(new URL(destination, request.url), 303) }
   try {
     await runInTransaction(payload, async (transactionID) => {
       const req = { transactionID }

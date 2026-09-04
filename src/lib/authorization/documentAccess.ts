@@ -1,7 +1,7 @@
 import type { Payload, User } from 'payload'
 
 import { canEditDocumentBody, type Lifecycle } from '@/lib/documents/lifecycle'
-import { authorizeSharedDocumentAccess } from '@/lib/documents/sharing'
+import { evaluatePermission } from '@/lib/authz/evaluate'
 
 const relationId = (value: unknown): number | null => value && typeof value === 'object' && 'id' in value ? Number((value as { id: number | string }).id) : value === null || value === undefined || value === '' ? null : Number(value)
 
@@ -17,8 +17,7 @@ export type InterimDocumentContext = {
  * `.update`, and `.readVersions` so the three cannot drift.
  *
  * Read: owner / operational DomainAdmin / active controlled-Character member /
- * (document-scoped Share grant) of the Document's Domain; legacy Tenant branch
- * preserved for migration-era records.
+ * of the Document's Domain. Share remains deferred by the owner decision.
  *
  * Update: same read decision plus lifecycle editability of the *persisted*
  * document — Locked and Pending-Review records are not editable through a raw
@@ -43,28 +42,21 @@ export async function canAccessDocument(args: {
   if (!current) return false
   if (current.softDeletedAt) return false
   const domainId = relationId(current.domain)
-  const tenantId = relationId(current.tenant)
-
-  if (domainId) {
-    const domain = await payload.findByID({ collection: 'domains', id: domainId, depth: 0, overrideAccess: true }).catch(() => null) as unknown as ({ ownerUser?: unknown } & Record<string, unknown>) | null
-    const ownerId = relationId(domain?.ownerUser)
-    if (ownerId && Number(ownerId) === Number(user.id)) return capability !== 'update' || lifecycleEditable(current.lifecycle)
-    const admins = await payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: domainId } }, { user: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true })
-    if (admins.docs.length > 0) return capability !== 'update' || lifecycleEditable(current.lifecycle)
-    if (capability === 'read') {
-      if (await authorizeSharedDocumentAccess({ payload, documentId, userId: user.id, capability: 'read' })) return true
-    }
-    const controlled = await payload.find({ collection: 'characters', where: { and: [{ controlledBy: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 200, overrideAccess: true })
-    if (controlled.docs.length === 0) return false
-    const memberships = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domainId } }, { character: { in: controlled.docs.map((character) => character.id) } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true })
-    if (memberships.docs.length === 0) return false
-    // Interim seam: any active member may create and edit editable Documents.
-    return capability !== 'update' || lifecycleEditable(current.lifecycle)
+  if (!domainId) return false
+  const decision = await evaluatePermission({
+    payload,
+    actor: { userId: user.id },
+    domainId,
+    capability: capability === 'read' ? 'read' : 'edit_document',
+    resource: { type: 'Domain', id: domainId },
+  })
+  if (decision.allowed) return capability !== 'update' || lifecycleEditable(current.lifecycle)
+  const controlled = await payload.find({ collection: 'characters', where: { and: [{ controlledBy: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 200, overrideAccess: true })
+  for (const character of controlled.docs) {
+    const acting = await evaluatePermission({ payload, actor: { userId: user.id, activeCharacterId: character.id }, domainId, capability: capability === 'read' ? 'read' : 'edit_document', resource: { type: 'Document', id: documentId } })
+    if (acting.allowed) return capability !== 'update' || lifecycleEditable(current.lifecycle)
   }
-  if (!tenantId) return false
-  const memberships = await payload.find({ collection: 'memberships', where: { and: [{ tenant: { equals: tenantId } }, { user: { equals: user.id } }] }, depth: 0, limit: 1, overrideAccess: true })
-  if (memberships.docs.length === 0) return false
-  return capability !== 'update' || lifecycleEditable(current.lifecycle)
+  return false
 }
 
 /**
@@ -96,26 +88,17 @@ export async function canAccessDocumentVersion(args: {
 /**
  * Query constraint used by Payload's version-list operation. The list access
  * callback has no version id, so constrain versions by the parent Documents
- * the user may read. This is intentionally the same interim Domain boundary
- * as canAccessDocument; it does not invent P07 evaluator semantics.
+ * the user may read through the shared evaluator.
  */
 export async function readableVersionParentQuery(args: {
   payload: Payload
   user: Pick<User, 'id'>
 }): Promise<{ parent: { in: Array<number | string> } }> {
   const { payload, user } = args
-  const ownedDomains = await payload.find({ collection: 'domains', where: { ownerUser: { equals: user.id } }, depth: 0, limit: 5000, overrideAccess: true })
-  const administeredDomains = await payload.find({ collection: 'domain-admins', where: { and: [{ user: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 5000, overrideAccess: true })
-  const controlled = await payload.find({ collection: 'characters', where: { and: [{ controlledBy: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 5000, overrideAccess: true })
-  const memberships = controlled.docs.length === 0 ? { docs: [] } : await payload.find({ collection: 'domain-memberships', where: { and: [{ character: { in: controlled.docs.map((character) => character.id) } }, { status: { equals: 'active' } }] }, depth: 0, limit: 5000, overrideAccess: true })
-  const domainIds = new Set<number>([
-    ...ownedDomains.docs.map((domain) => Number(domain.id)),
-    ...administeredDomains.docs.map((admin) => Number(relationId((admin as { domain?: unknown }).domain))).filter(Number.isFinite),
-    ...memberships.docs.map((membership) => Number(relationId((membership as { domain?: unknown }).domain))).filter(Number.isFinite),
-  ])
-  if (domainIds.size === 0) return { parent: { in: [] } }
-  const docs = await payload.find({ collection: 'documents', where: { and: [{ domain: { in: [...domainIds] } }, { softDeletedAt: { exists: false } }] }, depth: 0, limit: 10000, overrideAccess: true })
-  return { parent: { in: docs.docs.map((document) => document.id) } }
+  const docs = await payload.find({ collection: 'documents', where: { softDeletedAt: { exists: false } }, depth: 0, limit: 10000, overrideAccess: true })
+  const visible: number[] = []
+  for (const document of docs.docs) if (await canAccessDocument({ payload, user, documentId: document.id, capability: 'read' })) visible.push(Number(document.id))
+  return { parent: { in: visible } }
 }
 
 function lifecycleEditable(lifecycle: unknown): boolean {

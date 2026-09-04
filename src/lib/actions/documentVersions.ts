@@ -7,8 +7,8 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { canEditDocumentBody } from '@/lib/documents/lifecycle'
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
-import { requireInterimWorkflowAuthority } from '@/lib/documents/workflow'
-import { domainAndIdWhere, tenantAndIdWhere } from '@/lib/tenant/scope'
+import { requirePermission } from '@/lib/authz/evaluate'
+import { domainAndIdWhere } from '@/lib/tenant/scope'
 
 function historyPath(tenantSlug: string, documentId: string | number, error?: string): string {
   const suffix = error ? `?error=${encodeURIComponent(error)}` : ''
@@ -43,30 +43,6 @@ export async function restoreDocumentVersionAction(formData: FormData): Promise<
   })
   const domain = domainResult.docs[0]
   if (domain) {
-    try { await requireInterimWorkflowAuthority(payload, user.id, domain.id) } catch { redirect(destination + '?error=forbidden') }
-    const ownerId = typeof domain.ownerUser === 'object' ? domain.ownerUser?.id : domain.ownerUser
-    const admins = await payload.find({
-      collection: 'domain-admins',
-      where: { and: [{ domain: { equals: domain.id } }, { user: { equals: user.id } }, { status: { equals: 'active' } }] },
-      depth: 0,
-      limit: 1,
-    })
-    const controlled = await payload.find({
-      collection: 'characters',
-      where: { and: [{ controlledBy: { equals: user.id } }, { status: { equals: 'active' } }] },
-      depth: 0,
-      limit: 200,
-    })
-    const memberships = controlled.docs.length
-      ? await payload.find({
-          collection: 'domain-memberships',
-          where: { and: [{ domain: { equals: domain.id } }, { character: { in: controlled.docs.map((character) => character.id) } }, { status: { equals: 'active' } }] },
-          depth: 0,
-          limit: 1,
-        })
-      : { docs: [] }
-    if (Number(ownerId) !== Number(user.id) && admins.docs.length === 0 && memberships.docs.length === 0) redirect(destination + '?error=forbidden')
-
     const currentResult = await payload.find({
       collection: 'documents',
       where: domainAndIdWhere(domain.id, documentId),
@@ -75,45 +51,17 @@ export async function restoreDocumentVersionAction(formData: FormData): Promise<
     })
     const current = currentResult.docs[0]
     if (!current) redirect(destination + '?error=not-found')
+    try { await requirePermission({ payload, actor: { userId: user.id }, domainId: domain.id, capability: 'restore_document', resource: { type: 'Document', id: current.id } }) } catch { redirect(destination + '?error=forbidden') }
     if (!canEditDocumentBody(current.lifecycle)) redirect(destination + '?error=current-read-only')
 
     const version = await payload.findVersionByID({ collection: 'documents', id: versionId, depth: 0, disableErrors: true })
     if (!version || String(version.parent) !== String(current.id)) redirect(destination + '?error=wrong-document')
     if (!canEditDocumentBody(version.version.lifecycle)) redirect(destination + '?error=version-read-only')
 
-    await payload.restoreVersion({ collection: 'documents', id: versionId, depth: 0, context: { interimWorkflowAuthorized: true } })
+    await payload.restoreVersion({ collection: 'documents', id: versionId, depth: 0, context: { authorizationChecked: true } })
     await recordDocumentProvenance({ payload, domainId: domain.id, documentId: current.id, eventType: 'restored', actorUserId: user.id, context: { restoredVersionId: versionId }, revisionId: await latestDocumentRevisionId(payload, current.id) })
     redirect(destination)
   }
 
-  const tenantResult = await payload.find({
-    collection: 'tenants',
-    where: { slug: { equals: tenantSlug } },
-    depth: 0,
-    limit: 1,
-  })
-  const tenant = tenantResult.docs[0]
-  if (!tenant) redirect(destination + '?error=not-found')
-  const memberships = await payload.find({
-    collection: 'memberships',
-    where: { and: [{ user: { equals: user.id } }, { tenant: { equals: tenant.id } }] },
-    depth: 0,
-    limit: 1,
-  })
-  if (memberships.docs.length === 0) redirect(destination + '?error=forbidden')
-  const currentResult = await payload.find({
-    collection: 'documents',
-    where: tenantAndIdWhere(tenant.id, documentId),
-    depth: 0,
-    limit: 1,
-  })
-  const current = currentResult.docs[0]
-  if (!current) redirect(destination + '?error=not-found')
-  if (!canEditDocumentBody(current.lifecycle)) redirect(destination + '?error=current-read-only')
-  const version = await payload.findVersionByID({ collection: 'documents', id: versionId, depth: 0, disableErrors: true })
-  if (!version || String(version.parent) !== String(current.id)) redirect(destination + '?error=wrong-document')
-  if (!canEditDocumentBody(version.version.lifecycle)) redirect(destination + '?error=version-read-only')
-  await payload.restoreVersion({ collection: 'documents', id: versionId, depth: 0, context: { interimWorkflowAuthorized: true } })
-  await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: current.id, eventType: 'restored', actorUserId: user.id, context: { restoredVersionId: versionId }, revisionId: await latestDocumentRevisionId(payload, current.id) })
-  redirect(destination)
+  redirect(destination + '?error=not-found')
 }

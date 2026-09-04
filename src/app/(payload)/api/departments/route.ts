@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
 import config from '@payload-config'
-import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { isAllowed } from '@/lib/authz/evaluate'
 
 export async function POST(request: Request) {
   const payload = await getPayload({ config })
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   const domainSlug = String(form.get('domainSlug') ?? '')
   const domainResult = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
   const domain = domainResult.docs[0]
-  if (!user || !domain || await authorizeInterimOperation(payload, { userId: user.id }, domain.id) !== true) return NextResponse.redirect(new URL(`/domain/${domainSlug}/departments`, request.url), 303)
+  if (!user || !domain || !await isAllowed({ payload, actor: { userId: user.id }, domainId: domain.id, capability: 'manage_subdomain', resource: { type: 'Domain', id: domain.id } })) return NextResponse.redirect(new URL(`/domain/${domainSlug}/departments`, request.url), 303)
   const action = String(form.get('action') ?? 'create')
   try {
     if (action === 'archive') {

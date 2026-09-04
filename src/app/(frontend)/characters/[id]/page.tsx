@@ -24,7 +24,7 @@ export default async function CharacterProfilePage({ params }: Props) {
   const localContexts = tenant
     ? await payload.find({
         collection: 'domain-character-contexts',
-        where: { and: [{ tenant: { equals: tenant.id } }, { character: { equals: character.id } }] },
+        where: { and: [{ or: [{ domain: { equals: tenant.id } }, { tenant: { equals: tenant.id } }] }, { character: { equals: character.id } }] },
         depth: 0,
         limit: 1,
       })
@@ -33,7 +33,7 @@ export default async function CharacterProfilePage({ params }: Props) {
   const pendingClaims = tenant
     ? await payload.find({
         collection: 'character-claim-requests',
-        where: { and: [{ character: { equals: character.id } }, { tenant: { equals: tenant.id } }, { status: { equals: 'pending' } }] },
+        where: { and: [{ character: { equals: character.id } }, { domain: { equals: tenant.id } }, { status: { equals: 'pending' } }] },
         depth: 1,
         limit: 20,
       })
@@ -41,7 +41,7 @@ export default async function CharacterProfilePage({ params }: Props) {
   const existingClaim = tenant && context.user
     ? await payload.find({
         collection: 'character-claim-requests',
-        where: { and: [{ character: { equals: character.id } }, { tenant: { equals: tenant.id } }, { claimant: { equals: context.user.id } }, { status: { equals: 'pending' } }] },
+        where: { and: [{ character: { equals: character.id } }, { domain: { equals: tenant.id } }, { claimant: { equals: context.user.id } }, { status: { equals: 'pending' } }] },
         depth: 0,
         limit: 1,
       })

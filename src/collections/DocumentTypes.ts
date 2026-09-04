@@ -7,6 +7,7 @@ export const DocumentTypes: CollectionConfig = {
   slug: 'document-types',
   admin: { useAsTitle: 'name', defaultColumns: ['name', 'domain', 'active', 'defaultFilingPolicy'] },
   timestamps: true,
+  access: { read: ({ req }) => Boolean((req.user as { isPlatformAdmin?: boolean } | null)?.isPlatformAdmin), create: () => false, update: () => false, delete: () => false },
   hooks: {
     beforeChange: [async ({ data, originalDoc, operation, req }) => {
       const domainId = relationId(data?.domain ?? originalDoc?.domain)

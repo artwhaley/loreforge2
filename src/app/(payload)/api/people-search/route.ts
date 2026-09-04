@@ -3,7 +3,7 @@ import { getPayload } from 'payload'
 
 import config from '@payload-config'
 
-import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { isAllowed } from '@/lib/authz/evaluate'
 
 const idOf = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   if (!user || !domainSlug || !query) return NextResponse.json({ results: [] })
   const domainResult = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
   const domain = domainResult.docs[0]
-  if (!domain || await authorizeInterimOperation(payload, { userId: user.id }, domain.id) !== true) return NextResponse.json({ results: [] }, { status: 403 })
+  if (!domain || !await isAllowed({ payload, actor: { userId: user.id }, domainId: domain.id, capability: 'manage_members', resource: { type: 'Domain', id: domain.id } })) return NextResponse.json({ results: [] }, { status: 403 })
   const memberships = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domain.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1000 })
   const characterIds = memberships.docs.map((membership) => idOf(membership.character)).filter((id): id is number => id !== null)
   if (characterIds.length === 0) return NextResponse.json({ results: [] })

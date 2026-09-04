@@ -9,8 +9,7 @@ export const RoleAssignments: CollectionConfig = {
   slug: 'role-assignments',
   admin: { useAsTitle: 'character', defaultColumns: ['character', 'role', 'status', 'assignedBy'] },
   timestamps: true,
-  // Interim authority boundary (P05R-T01): RoleAssignments mutate only through
-  // sanctioned server routes/actions after authorizeInterimOperation. Direct
+  // RoleAssignments mutate only through sanctioned server routes/actions. Direct
   // REST/GraphQL/Admin create/update/delete and cross-Domain reads are denied;
   // internal callers use the Local API (overrideAccess default) after their
   // own server-side authorization.

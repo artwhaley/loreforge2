@@ -14,7 +14,7 @@ import { canSupersedeDocument, resolveFilingPolicy, type FilingPolicy } from '@/
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
 import { attachDocumentCharacterLink, attachDocumentTag, ensurePreparedBy, findOrCreateDomainTag } from '@/lib/documents/links'
 import { addDocumentRelationship, runInTransaction } from '@/lib/documents/relationships'
-import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { evaluatePermission } from '@/lib/authz/evaluate'
 import { domainAndIdWhere } from '@/lib/tenant/scope'
 import { assertFormSchema } from '@/lib/forms/schema'
 import { renderNeutralTemplate } from '@/lib/forms/generateDocument'
@@ -124,35 +124,17 @@ async function getMemberTenant(tenantSlug: string): Promise<MemberTenant | null>
     const isManager = Number(ownerId) === Number(user.id) || domainAdmins.docs.length > 0
     if (!isManager && member.docs.length === 0) return null
 
-    const legacy = await payload.find({ collection: 'tenants', where: { slug: { equals: tenantSlug } }, depth: 0, limit: 1 })
     return {
       payload,
       user: { id: Number(user.id) },
       tenant: domain,
       basePath: `/domain/${domain.slug}`,
-      legacyTenantId: legacy.docs[0]?.id,
+      legacyTenantId: undefined,
       isManager,
     }
   }
 
-  const tenants = await payload.find({ collection: 'tenants', where: { slug: { equals: tenantSlug } }, depth: 0, limit: 1 })
-  const tenant = tenants.docs[0]
-  if (!tenant) return null
-
-  const memberships = await payload.find({
-    collection: 'memberships',
-    where: {
-      and: [{ user: { equals: user.id } }, { tenant: { equals: tenant.id } }],
-    },
-    depth: 0,
-    limit: 1,
-  })
-  if (!memberships.docs[0]) return null
-
-  // P05R-T06 A: /tenant customer URLs are retired; every live path builds
-  // /domain/* (even for un-migrated legacy orgs, which land on the same
-  // customer surface via the compatibility shim).
-  return { payload, user: { id: Number(user.id) }, tenant, basePath: `/domain/${tenant.slug}`, legacyTenantId: tenant.id, isManager: false }
+  return null
 }
 
 /**
@@ -313,14 +295,16 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   const typeResult = selectedType ? { docs: [selectedType] } : await ctx.payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: ctx.tenant.id } }, { active: { equals: true } }] }, depth: 0, limit: 500 })
   selectedType = selectedType ?? (typeResult.docs.find((item) => Number(item.id) === requestedTypeId) ?? typeResult.docs.find((item) => String(item.name ?? '').toLowerCase() === 'plain text')) as typeof selectedType
   if (!selectedType) return { error: 'type', values }
-  const interim = await authorizeInterimOperation(ctx.payload, { userId: ctx.user.id, activeCharacterId }, ctx.tenant.id)
+  const actor = { userId: ctx.user.id, activeCharacterId }
+  const createDecision = await evaluatePermission({ payload: ctx.payload, actor, domainId: ctx.tenant.id, capability: 'create_document', resource: { type: 'Folder', id: folder } })
+  if (!createDecision.allowed) return { error: 'authorization', values }
   concernEntries.push(...formCharacterEntries)
-  if (concernEntries.length > 0 && interim !== true && concernEntries.some((entry) => entry.newName)) return { error: 'authorization', values }
-  // P05R-T02 A: superseding requires the interim decision BEFORE the successor
-  // is created — a non-admin member must not be able to file a near-duplicate
-  // that only fails relationship authorization afterwards.
-  if (superseding && interim !== true) return { error: 'authorization', values }
-  if (interim === true || formCharacterEntries.length > 0) {
+  if (concernEntries.length > 0 && !ctx.isManager && concernEntries.some((entry) => entry.newName)) return { error: 'authorization', values }
+  if (superseding) {
+    const previousDecision = await evaluatePermission({ payload: ctx.payload, actor, domainId: ctx.tenant.id, capability: 'edit_document', resource: { type: 'Document', id: supersedesDocumentId } })
+    if (!previousDecision.allowed) return { error: 'authorization', values }
+  }
+  if (concernEntries.length > 0) {
     const requestedCharacterIds = [...new Set(concernEntries.flatMap((entry) => entry.characterId ? [entry.characterId] : []))]
     if (requestedCharacterIds.length > 0) {
       const characterRows = await ctx.payload.find({ collection: 'characters', where: { and: [{ id: { in: requestedCharacterIds } }, { status: { equals: 'active' } }] }, depth: 0, limit: requestedCharacterIds.length, overrideAccess: true })
@@ -346,7 +330,7 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
     await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'created', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { lifecycle: created.lifecycle, ...(selectedTemplate ? { templateId: Number(selectedTemplate.id), sourceKind: selectedTemplate.kind } : {}) }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id, transactionID ?? undefined), transactionID })
     if (created.lifecycle === 'filed') await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'filed', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { reason: 'filing-policy' }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id, transactionID ?? undefined), transactionID })
     if (activeCharacterId) await ensurePreparedBy({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
-    if (interim === true || formCharacterEntries.length > 0) {
+    if (concernEntries.length > 0) {
       for (const entry of concernEntries) {
         let characterId = entry.characterId
         if (!characterId && entry.newName) {

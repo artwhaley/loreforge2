@@ -8,7 +8,7 @@ import config from '@/payload.config'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { domainAndIdWhere } from '@/lib/tenant/scope'
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
-import { requireInterimWorkflowAuthority, transitionDocument, type WorkflowOperation } from '@/lib/documents/workflow'
+import { transitionDocument, type WorkflowOperation } from '@/lib/documents/workflow'
 
 type DomainActionContext = {
   payload: Awaited<ReturnType<typeof getPayload>>
@@ -53,13 +53,7 @@ export async function documentWorkflowAction(formData: FormData): Promise<void> 
   const current = await ctx.payload.find({ collection: 'documents', where: domainAndIdWhere(ctx.domain.id, documentId), depth: 0, limit: 1 })
   if (!current.docs[0] || current.docs[0].softDeletedAt) redirect(destination + '?error=not-found')
 
-  // Submit is a Character-scoped action for ordinary members. All supervisory
-  // transitions (including direct file) remain behind the pre-P07 boundary.
-  if (operation !== 'submit') {
-    try { await requireInterimWorkflowAuthority(ctx.payload, ctx.userId, ctx.domain.id) } catch { redirect(destination + '?error=forbidden') }
-  } else if (!ctx.actorCharacterId) {
-    try { await requireInterimWorkflowAuthority(ctx.payload, ctx.userId, ctx.domain.id) } catch { redirect(destination + '?error=character-required') }
-  }
+  if (operation === 'submit' && !ctx.actorCharacterId) redirect(destination + '?error=character-required')
 
   try {
     await transitionDocument({ payload: ctx.payload, userId: ctx.userId, domainId: ctx.domain.id, documentId, actorCharacterId: ctx.actorCharacterId, operation, note })
@@ -83,7 +77,7 @@ export async function softDeleteDocumentAction(formData: FormData): Promise<void
   // Character must never bypass the interim boundary, so every delete requires
   // the same authority as restore (which has always enforced this check): only
   // the Domain Owner or an operational Domain Admin may delete a record.
-  try { await requireInterimWorkflowAuthority(ctx.payload, ctx.userId, ctx.domain.id) } catch { redirect(`/domain/${tenantSlug}/records?error=forbidden`) }
+  try { const { requirePermission } = await import('@/lib/authz/evaluate'); await requirePermission({ payload: ctx.payload, actor: { userId: ctx.userId, activeCharacterId: ctx.actorCharacterId }, domainId: ctx.domain.id, capability: 'delete_document', resource: { type: 'Document', id: document.id } }) } catch { redirect(`/domain/${tenantSlug}/records?error=forbidden`) }
   await ctx.payload.update({ collection: 'documents', id: document.id, data: { softDeletedAt: new Date().toISOString(), softDeletedBy: ctx.userId }, depth: 0 })
   await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.domain.id, documentId: document.id, eventType: 'soft_deleted', actorUserId: ctx.userId, actorCharacterId: ctx.actorCharacterId, context: { soft: true }, revisionId: await latestDocumentRevisionId(ctx.payload, document.id) })
   redirect(`/domain/${tenantSlug}/records`)
@@ -96,7 +90,7 @@ export async function restoreSoftDeletedDocumentAction(formData: FormData): Prom
   const destination = reviewPath(tenantSlug, documentId)
   const ctx = await resolveDomainAction(tenantSlug)
   if (!ctx || !documentId) redirect('/')
-  try { await requireInterimWorkflowAuthority(ctx.payload, ctx.userId, ctx.domain.id) } catch { redirect(destination + '?error=forbidden') }
+  try { const { requirePermission } = await import('@/lib/authz/evaluate'); await requirePermission({ payload: ctx.payload, actor: { userId: ctx.userId, activeCharacterId: ctx.actorCharacterId }, domainId: ctx.domain.id, capability: 'restore_document', resource: { type: 'Document', id: documentId } }) } catch { redirect(destination + '?error=forbidden') }
   const result = await ctx.payload.find({ collection: 'documents', where: domainAndIdWhere(ctx.domain.id, documentId), depth: 0, limit: 1 })
   const document = result.docs[0]
   if (!document) redirect(destination + '?error=not-found')

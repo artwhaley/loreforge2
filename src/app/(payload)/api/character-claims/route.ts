@@ -4,7 +4,8 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 
 import { applyClaimDecision } from '@/lib/characters/claims'
-import { getActiveContext, getActiveTenant } from '@/lib/tenant/activeTenant'
+import { getActiveContext } from '@/lib/tenant/activeTenant'
+import { isAllowed } from '@/lib/authz/evaluate'
 
 const relationId = (value: unknown): number =>
   typeof value === 'object' && value !== null && 'id' in value
@@ -25,9 +26,9 @@ export async function POST(request: Request) {
   }
 
   const character = await payload.findByID({ collection: 'characters', id: characterId, depth: 0 })
-  const tenants = await payload.find({ collection: 'tenants', where: { slug: { equals: tenantSlug } }, depth: 0, limit: 1 })
-  const tenant = tenants.docs[0]
-  if (!character || !tenant) return NextResponse.redirect(new URL('/', request.url), 303)
+  const domains = await payload.find({ collection: 'domains', where: { slug: { equals: tenantSlug } }, depth: 0, limit: 1 })
+  const domain = domains.docs[0]
+  if (!character || !domain) return NextResponse.redirect(new URL('/', request.url), 303)
 
   if (action === 'request') {
     if (character.status !== 'active' || character.controlledBy !== null && character.controlledBy !== undefined) {
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
         and: [
           { character: { equals: character.id } },
           { claimant: { equals: user.id } },
-          { tenant: { equals: tenant.id } },
+          { domain: { equals: domain.id } },
           { status: { equals: 'pending' } },
         ],
       },
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
         data: {
           character: character.id,
           claimant: user.id,
-          tenant: tenant.id,
+          domain: domain.id,
           status: 'pending',
           requestedAt: new Date().toISOString(),
         },
@@ -75,15 +76,8 @@ export async function POST(request: Request) {
     })
     const claim = claims.docs[0]
     if (!claim) return NextResponse.redirect(new URL(redirectTo, request.url), 303)
-    const claimTenantId = relationId(claim.tenant)
-    const actorMembership = await payload.find({
-      collection: 'memberships',
-      where: {
-        and: [{ user: { equals: user.id } }, { tenant: { equals: claimTenantId } }, { role: { equals: 'admin' } }],
-      },
-      depth: 0,
-      limit: 1,
-    })
+    const claimDomainId = relationId(claim.domain) ?? relationId(claim.tenant)
+    const authorized = await isAllowed({ payload, actor: { userId: user.id }, domainId: claimDomainId, capability: 'manage_claims', resource: { type: 'Domain', id: claimDomainId } })
     const currentCharacter = await payload.findByID({ collection: 'characters', id: relationId(claim.character), depth: 0 })
     const currentController =
       typeof currentCharacter.controlledBy === 'object'
@@ -93,7 +87,7 @@ export async function POST(request: Request) {
       { status: claim.status, characterControlledBy: currentController },
       decision,
       relationId(claim.claimant),
-      { userId: user.id, isLegacyDomainAdmin: actorMembership.docs.length > 0 },
+      { userId: user.id, authorized },
     )
     if (typeof result === 'string') return NextResponse.redirect(new URL(redirectTo, request.url), 303)
 

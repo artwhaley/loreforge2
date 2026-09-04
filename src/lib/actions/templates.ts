@@ -7,7 +7,7 @@ import { getPayload } from 'payload'
 
 import config from '@/payload.config'
 import { assertFormSchema } from '@/lib/forms/schema'
-import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { isAllowed } from '@/lib/authz/evaluate'
 
 export type TemplateActionState = { error?: string; ok?: boolean }
 
@@ -18,8 +18,8 @@ async function managerContext(domainSlug: string) {
   const domains = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1, overrideAccess: true })
   const domain = domains.docs[0]
   if (!domain) return { payload, user, domain: null, error: 'Domain not found.' }
-  const authority = await authorizeInterimOperation(payload, { userId: user.id }, domain.id)
-  if (authority !== true) return { payload, user, domain, error: authority }
+  const authority = await isAllowed({ payload, actor: { userId: user.id }, domainId: domain.id, capability: 'manage_templates', resource: { type: 'Domain', id: domain.id } })
+  if (!authority) return { payload, user, domain, error: 'You cannot manage Templates in this Domain.' }
   return { payload, user, domain, error: null }
 }
 

@@ -3,7 +3,8 @@ import { getPayload } from 'payload'
 
 import config from '@payload-config'
 
-import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { canAssignRole } from '@/lib/authz/delegation'
+import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { recordDomainAudit } from '@/lib/domains/domainAudit'
 import { assertRoleAssignment } from '@/lib/roles/invariants'
 import { runInTransaction } from '@/lib/db/transactions'
@@ -27,7 +28,9 @@ export async function POST(request: Request) {
   if (!user || !domainSlug || characterIds.length === 0 || !Number.isFinite(roleId)) return NextResponse.redirect(new URL('/', request.url), 303)
   const domains = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
   const domain = domains.docs[0]
-  if (!domain || await authorizeInterimOperation(payload, { userId: user.id }, domain.id) !== true) return NextResponse.redirect(new URL(destination, request.url), 303)
+  const active = await getActiveContext().catch(() => ({ tenant: null, activeCharacter: null }))
+  const activeCharacterId = active.tenant?.slug === domainSlug ? active.activeCharacter?.id ?? null : null
+  if (!domain || !(await canAssignRole(payload, { actor: { userId: user.id, activeCharacterId }, domainId: domain.id, targetRoleId: roleId }))) return NextResponse.redirect(new URL(destination, request.url), 303)
   const role = await payload.findByID({ collection: 'roles', id: roleId, depth: 0 }).catch(() => null)
   if (!role || idOf(role.domain) !== Number(domain.id) || !idOf(role.subdomain) || role.active === false) return NextResponse.redirect(new URL(destination, request.url), 303)
   try {

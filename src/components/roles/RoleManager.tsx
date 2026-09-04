@@ -130,7 +130,7 @@ export function RoleManager({ domainSlug, departments, roleRecords, holdersByRol
 
     {selectedRole ? <section className={styles.roleDetail} aria-labelledby="role-detail-heading">
       <section className={styles.holdersPanel}><div className={styles.detailHeading}><h2 id="role-detail-heading">People with {selectedRole.name}</h2><span>{holdersByRole[String(selectedRole.id)]?.length ?? 0} active holders</span></div>{(holdersByRole[String(selectedRole.id)]?.length ?? 0) > 0 ? <ul className={styles.holderList}>{holdersByRole[String(selectedRole.id)]!.map((holder) => <li key={holder.id} className={styles.holderChip}><a href={`/domain/${domainSlug}/manage/people/${holder.id}`}>{holder.name}</a></li>)}</ul> : <p>No active people hold this role.</p>}</section>
-      <FolderTree domainSlug={domainSlug} principalType="Role" principalId={selectedRole.id} heading="Default folder access" description="Defaults for this Role; P07 will define how they apply to current and future assignments." folders={applyFolderStates(folders, folderStatesByRole[String(selectedRole.id)] ?? {})} />
+      <FolderTree domainSlug={domainSlug} principalType="Role" principalId={selectedRole.id} heading="Default folder access" description="Default access for this Role." folders={applyFolderStates(folders, folderStatesByRole[String(selectedRole.id)] ?? {})} />
     </section> : <p className={styles.muted}>Select a role to see its holders and default folder access.</p>}
     {selectedRecord ? <span className={styles.muted} hidden>{selectedRecord.parentRoleId}</span> : null}
   </div>

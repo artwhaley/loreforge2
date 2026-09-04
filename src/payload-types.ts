@@ -177,6 +177,10 @@ export interface User {
   id: number;
   name: string;
   /**
+   * Explicit platform authority; every use is audited.
+   */
+  isPlatformAdmin?: boolean | null;
+  /**
    * Optional identity placeholder. Verification is not enabled yet.
    */
   slAvatarUUID?: string | null;
@@ -272,13 +276,43 @@ export interface CharacterClaimRequest {
   id: number;
   character: number | Character;
   claimant: number | User;
-  tenant: number | Tenant;
+  domain: number | Domain;
+  tenant?: (number | null) | Tenant;
   status: 'pending' | 'approved' | 'rejected' | 'cancelled';
   requestedAt: string;
   decidedAt?: string | null;
   decidedBy?: (number | null) | User;
   decidingCharacter?: (number | null) | Character;
   decisionNote?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "domains".
+ */
+export interface Domain {
+  id: number;
+  name: string;
+  slug: string;
+  kind: 'community' | 'personal';
+  ownerUser?: (number | null) | User;
+  ownerCharacter?: (number | null) | Character;
+  lifecycle: 'active' | 'grace' | 'read-only' | 'suspended' | 'archived';
+  defaultFilingPolicy: 'direct-file' | 'review-required';
+  motto?: string | null;
+  preset: 'heritage' | 'modern';
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  headingFontKey: 'georgia' | 'palatino' | 'verdana' | 'trebuchet';
+  bodyFontKey: 'verdana' | 'georgia' | 'trebuchet' | 'tahoma';
+  logo?: (number | null) | Media;
+  banner?: (number | null) | Media;
+  publicEnabled?: boolean | null;
+  installedPackKey?: string | null;
+  installedPackVersion?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -351,35 +385,6 @@ export interface DomainCharacterContext {
   character: number | Character;
   localDisplayName: string;
   localNote?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "domains".
- */
-export interface Domain {
-  id: number;
-  name: string;
-  slug: string;
-  kind: 'community' | 'personal';
-  ownerUser?: (number | null) | User;
-  ownerCharacter?: (number | null) | Character;
-  lifecycle: 'active' | 'grace' | 'read-only' | 'suspended' | 'archived';
-  defaultFilingPolicy: 'direct-file' | 'review-required';
-  motto?: string | null;
-  preset: 'heritage' | 'modern';
-  primaryColor: string;
-  secondaryColor: string;
-  accentColor: string;
-  backgroundColor: string;
-  headingFontKey: 'georgia' | 'palatino' | 'verdana' | 'trebuchet';
-  bodyFontKey: 'verdana' | 'georgia' | 'trebuchet' | 'tahoma';
-  logo?: (number | null) | Media;
-  banner?: (number | null) | Media;
-  publicEnabled?: boolean | null;
-  installedPackKey?: string | null;
-  installedPackVersion?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1175,6 +1180,7 @@ export interface PayloadMigration {
  */
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
+  isPlatformAdmin?: T;
   slAvatarUUID?: T;
   slAvatarName?: T;
   slVerificationState?: T;
@@ -1224,6 +1230,7 @@ export interface CharactersSelect<T extends boolean = true> {
 export interface CharacterClaimRequestsSelect<T extends boolean = true> {
   character?: T;
   claimant?: T;
+  domain?: T;
   tenant?: T;
   status?: T;
   requestedAt?: T;

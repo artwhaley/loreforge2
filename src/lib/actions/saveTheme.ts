@@ -5,7 +5,8 @@ import { getPayload } from 'payload'
 
 import config from '@/payload.config'
 
-import type { Tenant } from '@/payload-types'
+import type { Domain } from '@/payload-types'
+import { isAllowed } from '@/lib/authz/evaluate'
 import { isValidThemeInput, type ThemeInput } from '@/lib/theme/input'
 
 /**
@@ -25,27 +26,17 @@ export async function saveThemeAction(input: {
   if (!user) return { ok: false }
 
   const tenants = await payload.find({
-    collection: 'tenants',
+    collection: 'domains',
     where: { slug: { equals: tenantSlug } },
     depth: 0,
     limit: 1,
   })
   const tenant = tenants.docs[0]
   if (!tenant) return { ok: false }
-
-  const memberships = await payload.find({
-    collection: 'memberships',
-    where: {
-      and: [{ user: { equals: user.id } }, { tenant: { equals: tenant.id } }],
-    },
-    depth: 0,
-    limit: 1,
-  })
-  const membership = memberships.docs[0]
-  if (!membership || membership.role !== 'admin') return { ok: false }
+  if (!await isAllowed({ payload, actor: { userId: user.id }, domainId: tenant.id, capability: 'manage_domain_appearance', resource: { type: 'Domain', id: tenant.id } })) return { ok: false }
 
   await payload.update({
-    collection: 'tenants',
+    collection: 'domains',
     id: tenant.id,
     data: {
       preset: theme.preset,
@@ -53,8 +44,8 @@ export async function saveThemeAction(input: {
       secondaryColor: theme.secondaryColor,
       accentColor: theme.accentColor,
       backgroundColor: theme.backgroundColor,
-      headingFontKey: theme.headingFontKey as Tenant['headingFontKey'],
-      bodyFontKey: theme.bodyFontKey as Tenant['bodyFontKey'],
+      headingFontKey: theme.headingFontKey as Domain['headingFontKey'],
+      bodyFontKey: theme.bodyFontKey as Domain['bodyFontKey'],
     },
     depth: 0,
   })

@@ -69,12 +69,16 @@ export async function evaluatePermission(args: { payload: Payload; actor: Permis
   const domainId = Number(args.domainId)
   if (!Number.isInteger(domainId) || !isCapability(args.capability)) return { allowed: false, reason: 'Invalid Domain or capability.', trace: [] }
   const capability = args.capability as Capability
+  const tree = await resolveResourceTree(args.payload, args.resource).catch(() => null)
+  if (!tree) return { allowed: false, reason: 'Resource not found.', trace: ['Resource lookup failed.'] }
+  if (tree.domainId !== domainId) return { allowed: false, reason: 'Resource belongs to another Domain.', trace: ['Cross-Domain resource rejected.'] }
   const authority = await domainAuthority(args.payload, args.actor, domainId)
-  if (authority.kind) return { allowed: true, reason: authority.reason ?? 'Administrative authority.', trace: [authority.reason ?? 'Administrative authority.'] }
+  if (authority.kind) {
+    if (authority.kind === 'platform') (args.payload as unknown as { logger?: { info?: (message: string) => void } }).logger?.info?.(`P07-AUTHZ platform_admin_bypass actorUser=${args.actor.userId} domain=${domainId} capability=${capability} resource=${args.resource.type}:${args.resource.id}`)
+    return { allowed: true, reason: authority.reason ?? 'Administrative authority.', trace: [authority.reason ?? 'Administrative authority.'] }
+  }
   const actorState = await activeCharacterState(args.payload, args.actor, domainId)
   if (!actorState) return { allowed: false, reason: 'An active member Character is required.', trace: ['No active Character/Domain membership tuple.'] }
-  const tree = await resolveResourceTree(args.payload, args.resource)
-  if (tree.domainId !== domainId) return { allowed: false, reason: 'Resource belongs to another Domain.', trace: ['Cross-Domain resource rejected.'] }
   const roles = await getRoleTree(args.payload, domainId)
   const assignments = await args.payload.find({ collection: 'role-assignments', where: { and: [{ character: { equals: actorState.characterId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 10000, overrideAccess: true })
   const heldRoleIds = assignments.docs.map((assignment) => Number(idOf(assignment.role))).filter((id) => Number.isFinite(id) && roles.some((role) => role.id === id && role.active))
@@ -114,4 +118,3 @@ export async function requirePermission(args: Parameters<typeof evaluatePermissi
 }
 
 export async function isAllowed(args: Parameters<typeof evaluatePermission>[0]): Promise<boolean> { return (await evaluatePermission(args)).allowed }
-

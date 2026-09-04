@@ -7,9 +7,9 @@ export type ClaimState = {
 
 export function canApproveClaim(
   claim: ClaimState,
-  actor: { userId: number | string; isLegacyDomainAdmin: boolean },
+  actor: { userId: number | string; authorized?: boolean; isLegacyDomainAdmin?: boolean },
 ): string | true {
-  if (!actor.isLegacyDomainAdmin) return 'Only the authorized Domain admin may decide this claim during Phase 2.'
+  if (!(actor.authorized ?? actor.isLegacyDomainAdmin ?? false)) return 'Only an authorized Domain admin/claim manager may decide this claim.'
   if (claim.status !== 'pending') return 'Only pending claims may be decided.'
   if (claim.characterControlledBy !== null && claim.characterControlledBy !== undefined) {
     return 'A claim cannot be approved after the Character is controlled.'
@@ -21,7 +21,7 @@ export function applyClaimDecision(
   claim: ClaimState,
   decision: 'approved' | 'rejected',
   claimantUserId: number | string,
-  actor: { userId: number | string; isLegacyDomainAdmin: boolean },
+  actor: { userId: number | string; authorized?: boolean; isLegacyDomainAdmin?: boolean },
 ): { status: ClaimStatus; characterControlledBy: number | string | null } | string {
   const allowed = canApproveClaim(claim, actor)
   if (allowed !== true) return allowed

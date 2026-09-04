@@ -5,6 +5,7 @@ import { getPayload } from 'payload'
 
 import config from '@/payload.config'
 import { validateThemeAsset } from '@/lib/media/validateThemeAsset'
+import { isAllowed } from '@/lib/authz/evaluate'
 
 const KIND_TO_FIELD = { logo: 'logo', banner: 'banner' } as const
 
@@ -32,7 +33,7 @@ export async function uploadThemeAssetAction(formData: FormData): Promise<{
   if (!user) return { ok: false }
 
   const tenants = await payload.find({
-    collection: 'tenants',
+    collection: 'domains',
     where: { slug: { equals: tenantSlug } },
     depth: 0,
     limit: 1,
@@ -40,16 +41,7 @@ export async function uploadThemeAssetAction(formData: FormData): Promise<{
   const tenant = tenants.docs[0]
   if (!tenant) return { ok: false }
 
-  const memberships = await payload.find({
-    collection: 'memberships',
-    where: {
-      and: [{ user: { equals: user.id } }, { tenant: { equals: tenant.id } }],
-    },
-    depth: 0,
-    limit: 1,
-  })
-  const membership = memberships.docs[0]
-  if (!membership || membership.role !== 'admin') return { ok: false }
+  if (!await isAllowed({ payload, actor: { userId: user.id }, domainId: tenant.id, capability: 'manage_domain_appearance', resource: { type: 'Domain', id: tenant.id } })) return { ok: false }
 
   const validated = await validateThemeAsset(file)
   if (!validated) return { ok: false, error: 'Use a JPEG, PNG, or WebP image up to 4096×4096 and 5 MiB.' }
@@ -66,7 +58,7 @@ export async function uploadThemeAssetAction(formData: FormData): Promise<{
   })
 
   await payload.update({
-    collection: 'tenants',
+    collection: 'domains',
     id: tenant.id,
     data: { [KIND_TO_FIELD[kind]]: media.id },
     depth: 0,

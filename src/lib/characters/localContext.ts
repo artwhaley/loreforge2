@@ -15,7 +15,7 @@ export async function ensureDomainCharacterContext(
   const existing = await payload.find({
     collection: 'domain-character-contexts',
     where: {
-      and: [{ tenant: { equals: tenantId } }, { character: { equals: characterId } }],
+      and: [{ or: [{ domain: { equals: tenantId } }, { tenant: { equals: tenantId } }] }, { character: { equals: characterId } }],
     },
     depth: 0,
     limit: 1,
@@ -25,7 +25,7 @@ export async function ensureDomainCharacterContext(
   return payload.create({
     collection: 'domain-character-contexts',
     data: {
-      tenant: Number(tenantId),
+      domain: Number(tenantId),
       character: Number(characterId),
       localDisplayName: globalName,
     },

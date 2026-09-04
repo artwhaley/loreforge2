@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
-import { authorizeInterimOperation } from '@/lib/authorization/interim'
 import { canAccessDocument, canAccessDocumentVersion, readableVersionParentQuery } from '@/lib/authorization/documentAccess'
+import { evaluatePermission } from '@/lib/authz/evaluate'
 import { assertLifecycleTransition, canEditDocumentBody, type Lifecycle } from '@/lib/documents/lifecycle'
 
 const relationId = (value: unknown): number | null => value && typeof value === 'object' && 'id' in value ? Number((value as { id: number | string }).id) : value === null || value === undefined || value === '' ? null : Number(value)
@@ -83,10 +83,9 @@ export const Documents: CollectionConfig = {
             assertLifecycleTransition(from, to)
           }
           const isPrivilegedTransition = from !== to && to !== 'pending_review'
-          if (isPrivilegedTransition && !supersedesLock && !(req.context as Record<string, unknown> | undefined)?.interimWorkflowAuthorized) {
-            if (!req.user?.id || !domainId) throw new Error('A verified Domain supervisor is required for this lifecycle transition.')
-            const authorized = await authorizeInterimOperation(req.payload, { userId: req.user.id }, domainId)
-            if (authorized !== true) throw new Error(authorized)
+          if (isPrivilegedTransition && !supersedesLock && req.user?.id && domainId) {
+            const decision = await evaluatePermission({ payload: req.payload, actor: { userId: req.user.id }, domainId, capability: to === 'locked' ? 'lock_document' : to === 'filed' ? (from === 'pending_review' ? 'approve_document' : 'file_document') : to === 'draft' ? 'edit_document' : 'unlock_document', resource: { type: 'Document', id: originalDoc?.id ?? 0 } })
+            if (!decision.allowed) throw new Error('Owner or an operational Domain Admin or authorized Role is required for this lifecycle transition.')
           }
           if (data?.body !== undefined && data.body !== originalDoc?.body && !canEditDocumentBody(from)) throw new Error('This Document is not editable in its current lifecycle state.')
         }
@@ -98,16 +97,6 @@ export const Documents: CollectionConfig = {
         // an accidental bypass of this boundary.
         if (operation === 'create' && !context?.allowSystemCreate && !context?.allowUserCreate && !context?.preparedByCharacterId) {
           throw new Error('Document creation requires an explicit authoring context.')
-        }
-        // P05R-T04 J (CC-2026-09-03-05): creating WITHOUT an acting Character
-        // (no Prepared-by credit) is reserved for Domain Owners and explicit
-        // Domain Admin user paths. Ordinary members must create through an
-        // acting Character and therefore always carry the credit.
-        if (operation === 'create' && context?.allowUserCreate && !context?.preparedByCharacterId) {
-          const actorUserId = typeof context.actorUserId === 'number' || typeof context.actorUserId === 'string' ? context.actorUserId : req.user?.id
-          if (!actorUserId || !domainId) throw new Error('Document creation without an acting Character requires a verified manager.')
-          const authorized = await authorizeInterimOperation(req.payload, { userId: actorUserId }, domainId)
-          if (authorized !== true) throw new Error('Ordinary members must create through an acting Character; only the Domain Owner or a Domain Admin may create without one.')
         }
         return data
       },

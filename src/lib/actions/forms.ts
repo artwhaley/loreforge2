@@ -11,6 +11,7 @@ import config from '@/payload.config'
 import { generateDocumentFromSubmission, type FormAnswers } from '@/lib/forms/generateDocument'
 import { assertFormSchema, type FormFieldType } from '@/lib/forms/schema'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
+import { isAllowed } from '@/lib/authz/evaluate'
 
 export type FormSubmitState = {
   ok: boolean
@@ -57,14 +58,6 @@ export async function submitReportFormAction(
   const tenant = tenants.docs[0]
   if (!tenant) return { ok: false, message: 'Unknown tenant.' }
 
-  const memberships = await payload.find({
-    collection: 'memberships',
-    where: { and: [{ user: { equals: user.id } }, { tenant: { equals: tenant.id } }] },
-    depth: 0,
-    limit: 1,
-  })
-  if (!memberships.docs[0]) return { ok: false, message: 'Not authorized.' }
-
   // Form submissions are document authoring too. An acting Character is
   // optional; when selected, it becomes the visible Prepared by credit.
   const activeContext = await getActiveContext()
@@ -81,6 +74,8 @@ export async function submitReportFormAction(
   })
   const form = forms.docs[0]
   if (!form) return { ok: false, message: 'Form not found.' }
+  const destinationFolder = form.destinationFolder == null ? null : Number(typeof form.destinationFolder === 'object' ? form.destinationFolder.id : form.destinationFolder)
+  if (!destinationFolder || !await isAllowed({ payload, actor: { userId: user.id, activeCharacterId }, domainId: tenant.id, capability: 'create_document', resource: { type: 'Folder', id: destinationFolder } })) return { ok: false, message: 'Not authorized.' }
 
   const schema = assertFormSchema(form.formSchema)
 

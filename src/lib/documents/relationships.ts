@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 
-import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { requirePermission } from '@/lib/authz/evaluate'
 import { runInTransaction } from '@/lib/db/transactions'
 import { canSupersedeDocument } from '@/lib/documents/lifecycle'
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
@@ -17,9 +17,8 @@ type RelationshipActor = { userId: number | string; characterId?: number | strin
 // module so domain services can reuse it without importing the documents layer.
 export { runInTransaction }
 
-async function requireAdmin(payload: Payload, actor: RelationshipActor, domainId: number | string) {
-  const authorized = await authorizeInterimOperation(payload, { userId: actor.userId, activeCharacterId: actor.characterId }, domainId)
-  if (authorized !== true) throw new Error(authorized)
+async function requireAdmin(payload: Payload, actor: RelationshipActor, domainId: number | string, documentIds: Array<number | string>) {
+  for (const documentId of documentIds) await requirePermission({ payload, actor: { userId: actor.userId, activeCharacterId: actor.characterId }, domainId, capability: 'edit_document', resource: { type: 'Document', id: documentId } })
 }
 
 async function getDocument(payload: Payload, id: number | string, domainId: number | string, transactionID?: number | string | null) {
@@ -65,7 +64,7 @@ export async function addDocumentRelationship(args: {
   if (kind === 'supersedes' && !canSupersedeDocument(String(target.lifecycle))) {
     throw new Error('Only Filed or already-Locked records may be superseded; Draft records are edited, not superseded.')
   }
-  if (!args.skipAuthorization) await requireAdmin(payload, actor, domainId)
+  if (!args.skipAuthorization) await requireAdmin(payload, actor, domainId, [sourceId, targetId])
 
   // P05R-T02 B: everything after the preflights is ONE real DB transaction —
   // the edge, the predecessor lock, and the provenance on both records commit
@@ -119,7 +118,7 @@ export async function removeDocumentRelationship(args: { payload: Payload; domai
   const { payload, domainId, relationshipId, actor } = args
   const relation = await payload.findByID({ collection: 'document-relationships', id: relationshipId, depth: 0, overrideAccess: true })
   if (!relation || idOf(relation.domain) !== Number(domainId)) throw new Error('Relationship not found.')
-  if (!args.skipAuthorization) await requireAdmin(payload, actor, domainId)
+  if (!args.skipAuthorization) await requireAdmin(payload, actor, domainId, [idOf(relation.source) ?? '', idOf(relation.target) ?? ''])
   const sourceId = idOf(relation.source)
   const targetId = idOf(relation.target)
   const kind = String(relation.kind ?? 'supersedes')
@@ -138,7 +137,7 @@ export async function removeDocumentRelationship(args: { payload: Payload; domai
           // an ordinary privileged transition.
           const restoreLifecycle = priorLifecycle === 'locked' ? 'locked' : 'filed'
           if (restoreLifecycle !== 'locked') {
-            await payload.update({ collection: 'documents', id: targetId, overrideAccess: true, req: txReq, context: { interimWorkflowAuthorized: true }, data: { lifecycle: restoreLifecycle } })
+            await payload.update({ collection: 'documents', id: targetId, overrideAccess: true, req: txReq, context: { authorizationChecked: true }, data: { lifecycle: restoreLifecycle } })
             await recordDocumentProvenance({ payload, domainId, documentId: targetId, eventType: 'unlocked', actorUserId: actor.userId, actorCharacterId: actor.characterId, context: { reason: 'supersession-corrected', relationshipId: Number(relationshipId) }, revisionId: await latestDocumentRevisionId(payload, targetId, transactionID), transactionID })
           }
         }

@@ -11,7 +11,7 @@ export const DomainMemberships: CollectionConfig = {
   },
   timestamps: true,
   // Interim authority boundary (P05R-T01): memberships change only through
-  // the sanctioned /api/domain-memberships route after authorizeInterimOperation.
+  // the sanctioned /api/domain-memberships route after evaluator authorization.
   // Direct REST/GraphQL/Admin create/update/delete is denied so no caller can
   // self-enroll a Character or flip a status to trigger/evade the removal
   // cascade, and no caller can read another Domain's roster rows directly.

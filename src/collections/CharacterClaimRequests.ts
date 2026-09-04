@@ -7,6 +7,7 @@ export const CharacterClaimRequests: CollectionConfig = {
     defaultColumns: ['character', 'claimant', 'tenant', 'status', 'requestedAt'],
   },
   timestamps: true,
+  access: { read: ({ req }) => Boolean((req.user as { isPlatformAdmin?: boolean } | null)?.isPlatformAdmin), create: () => false, update: () => false, delete: () => false },
   fields: [
     {
       name: 'character',
@@ -23,10 +24,18 @@ export const CharacterClaimRequests: CollectionConfig = {
       index: true,
     },
     {
+      name: 'domain',
+      type: 'relationship',
+      relationTo: 'domains',
+      required: true,
+      index: true,
+      label: 'Domain',
+    },
+    {
       name: 'tenant',
       type: 'relationship',
       relationTo: 'tenants',
-      required: true,
+      required: false,
       index: true,
       label: 'Domain context',
     },

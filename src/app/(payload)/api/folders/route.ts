@@ -3,7 +3,7 @@ import { getPayload } from 'payload'
 
 import config from '@payload-config'
 
-import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { isAllowed } from '@/lib/authz/evaluate'
 import { assertFolderPlacement } from '@/lib/archive/folderInvariants'
 
 const idOf = (value: unknown): number | null => {
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   if (!user || !domainSlug) return NextResponse.redirect(new URL('/', request.url), 303)
   const domainResult = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
   const domain = domainResult.docs[0]
-  if (!domain || await authorizeInterimOperation(payload, { userId: user.id }, domain.id) !== true) return NextResponse.redirect(new URL(returnTo, request.url), 303)
+  if (!domain || !await isAllowed({ payload, actor: { userId: user.id }, domainId: domain.id, capability: 'manage_folders', resource: { type: 'Domain', id: domain.id } })) return NextResponse.redirect(new URL(returnTo, request.url), 303)
 
   if (action === 'create') {
     const name = String(form.get('name') ?? '').trim()

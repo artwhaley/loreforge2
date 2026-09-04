@@ -3,7 +3,7 @@ import { getPayload } from 'payload'
 
 import config from '@payload-config'
 
-import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { isAllowed } from '@/lib/authz/evaluate'
 import { recordDomainAudit } from '@/lib/domains/domainAudit'
 import { runInTransaction } from '@/lib/db/transactions'
 
@@ -18,8 +18,8 @@ export async function POST(request: Request) {
   const domains = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
   const domain = domains.docs[0]
   if (!domain) return NextResponse.redirect(new URL('/', request.url), 303)
-  const allowed = await authorizeInterimOperation(payload, { userId: user.id }, domain.id)
-  if (allowed !== true) return NextResponse.redirect(new URL(`/domain/${domainSlug}/members`, request.url), 303)
+  const allowed = await isAllowed({ payload, actor: { userId: user.id }, domainId: domain.id, capability: 'manage_members', resource: { type: 'Domain', id: domain.id } })
+  if (!allowed) return NextResponse.redirect(new URL(`/domain/${domainSlug}/members`, request.url), 303)
   const character = await payload.findByID({ collection: 'characters', id: characterId, depth: 0 })
   if (!character || character.status !== 'active') return NextResponse.redirect(new URL(`/domain/${domainSlug}/members`, request.url), 303)
   const existing = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domain.id } }, { character: { equals: character.id } }] }, depth: 0, limit: 1 })
