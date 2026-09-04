@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import type { ReactNode } from 'react'
 
 import { DeleteFolderButton } from '@/components/archive/DeleteFolderButton'
 import { TenantShell } from '@/components/theme/TenantShell'
@@ -13,6 +14,7 @@ import {
   getTenantsForUser,
   searchDocumentsForTenant,
 } from '@/lib/tenant/queries'
+import { getLorePayload } from '@/lib/payload'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 
 import styles from './records.module.scss'
@@ -66,7 +68,7 @@ export default async function RecordsPage({ params, searchParams }: Props) {
   }
   tree.forEach(collectParents)
 
-  const docs = query
+const docs = query
     ? await searchDocumentsForTenant(tenant, query)
     : currentFolder
       ? allDocs.filter((d) => {
@@ -74,6 +76,72 @@ export default async function RecordsPage({ params, searchParams }: Props) {
           return fid === currentFolder.id
         })
       : allDocs
+
+  // Build supersession trees from the complete Domain graph, then select the
+  // trees touched by the current folder/search result. A search hit on an old
+  // version therefore still renders its current parent and every older child.
+  const payload = await getLorePayload()
+  const relationships = await payload.find({
+    collection: 'document-relationships',
+    where: { and: [{ domain: { equals: tenant.id } }, { kind: { equals: 'supersedes' } }] },
+    depth: 0,
+    limit: 5000,
+    overrideAccess: true,
+  })
+  const newerByOlder = new Map<number, number>()
+  const olderByNewer = new Map<number, number>()
+  for (const relationship of relationships.docs) {
+    const newer = typeof relationship.source === 'object' ? relationship.source.id : relationship.source
+    const older = typeof relationship.target === 'object' ? relationship.target.id : relationship.target
+    if (newer && older) {
+      newerByOlder.set(Number(older), Number(newer))
+      olderByNewer.set(Number(newer), Number(older))
+    }
+  }
+  type RecordNode = { doc: (typeof allDocs)[number]; children: RecordNode[] }
+  const docsById = new Map(allDocs.map((document) => [Number(document.id), document]))
+  const rootFor = (documentId: number) => {
+    const visited = new Set<number>()
+    let current = documentId
+    while (newerByOlder.has(current) && !visited.has(current)) {
+      visited.add(current)
+      current = newerByOlder.get(current)!
+    }
+    return current
+  }
+  const buildTree = (documentId: number, visited = new Set<number>()): RecordNode | null => {
+    const document = docsById.get(documentId)
+    if (!document || visited.has(documentId)) return null
+    const nextVisited = new Set(visited).add(documentId)
+    const olderId = olderByNewer.get(documentId)
+    const child = olderId ? buildTree(olderId, nextVisited) : null
+    return { doc: document, children: child ? [child] : [] }
+  }
+  const selectedRoots = new Map<number, RecordNode>()
+  for (const document of docs) {
+    const rootId = rootFor(Number(document.id))
+    const treeNode = buildTree(rootId)
+    if (treeNode) selectedRoots.set(rootId, treeNode)
+  }
+  const recordDate = (value: unknown) => typeof value === 'string'
+    ? new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    : null
+  const renderRecordTree = (node: RecordNode, depth = 0): ReactNode => (
+    <li key={node.doc.id} className={styles.item} style={{ marginLeft: `${depth * 1.5}rem` }}>
+      <a className={styles.link} href={`${base}/documents/${node.doc.id}`}>
+        {node.doc.title}
+      </a>
+      <div className={styles.itemMeta}>
+        <span className={styles.origin}>{originLabel(node.doc.origin)}</span>
+        {recordDate(node.doc.updatedAt) ? <span>Updated {recordDate(node.doc.updatedAt)}</span> : null}
+      </div>
+      {node.children.length > 0 ? (
+        <ul className={styles.supersessionChildren} aria-label={`Older versions of ${node.doc.title}`}>
+          {node.children.map((child) => renderRecordTree(child, depth + 1))}
+        </ul>
+      ) : null}
+    </li>
+  )
 
   const breadcrumbs = currentFolder ? folderPath(folders, currentFolder.id) : []
   const crumbs = [...breadcrumbs, currentFolder].filter(Boolean) as typeof folders
@@ -179,26 +247,7 @@ export default async function RecordsPage({ params, searchParams }: Props) {
             </p>
           ) : (
             <ul className={styles.list}>
-              {docs.map((doc) => (
-                <li key={doc.id} className={styles.item}>
-                  <a className={styles.link} href={`${base}/documents/${doc.id}`}>
-                    {doc.title}
-                  </a>
-                  <div className={styles.itemMeta}>
-                    <span className={styles.origin}>{originLabel(doc.origin)}</span>
-                    {typeof doc.updatedAt === 'string' ? (
-                      <span>
-                        Updated{' '}
-                        {new Date(doc.updatedAt).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </span>
-                    ) : null}
-                  </div>
-                </li>
-              ))}
+              {[...selectedRoots.values()].map((treeNode) => renderRecordTree(treeNode))}
             </ul>
           )}
         </main>

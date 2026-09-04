@@ -226,6 +226,14 @@
   }
 }
 
+.supersessionChildren {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
 .link {
   font-family: var(--tenant-body-font);
   font-weight: 600;
