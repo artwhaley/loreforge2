@@ -12,3 +12,20 @@ CC-2026-09-03-04.
 
 P06 remains blocked until those checks and the owner approval are recorded.
 
+## Implementation commits
+
+Branch: `phase-05-remediation`
+
+| Ticket | Commit |
+|---|---|
+| P05R-T09 | `47da5b3` |
+| P05R-T10 | `8da8f44` |
+| P05R-T11 | `6f33da3` |
+| P05R-T12 | `b8cd221` |
+| P05R-T13 | `66d51d5` |
+| P05R-T14 | `831d340` |
+| P05R-T15 | `56ad299` |
+
+The working tree was clean when this evidence was recorded. The live server
+handoff is intentionally performed after this note is committed so its
+readiness can be recorded below without changing application data.
