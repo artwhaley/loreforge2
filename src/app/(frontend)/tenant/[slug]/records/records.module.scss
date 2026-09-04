@@ -62,6 +62,13 @@
 .nestedRecords { margin-left: 1.3rem; border-left: 1px solid color-mix(in srgb, var(--tenant-accent) 55%, #fff); }
 .emptyState { margin: 0; padding: 2.5rem 1rem; color: var(--tenant-muted-text); font-size: .85rem; text-align: center; }
 
+.contextMenu { position: fixed; z-index: 60; display: grid; min-width: 190px; gap: .2rem; padding: .35rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 80%, #fff); border-radius: 9px; background: var(--tenant-surface-bg); box-shadow: 0 10px 30px rgba(0, 0, 0, .2); }
+.contextMenu button, .contextMenu a { display: block; width: 100%; box-sizing: border-box; border: 0; border-radius: 6px; padding: .5rem .62rem; color: var(--tenant-primary); background: transparent; text-align: left; font: inherit; font-size: .8rem; text-decoration: none; cursor: pointer; }
+.contextMenu button:hover:not(:disabled), .contextMenu button:focus-visible, .contextMenu a:hover:not(.contextDisabled), .contextMenu a:focus-visible { background: color-mix(in srgb, var(--tenant-accent) 20%, var(--tenant-page-bg)); outline: 0; }
+.contextMenu button:disabled, .contextDisabled { opacity: .42; cursor: not-allowed !important; pointer-events: none; }
+.contextMenu .contextDanger { color: #8f2d21; }
+.contextMenu form { margin: 0; }
+
 .dialogBackdrop { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; padding: 1rem; background: rgba(20, 23, 25, .32); }
 .dialog { width: min(100%, 380px); border: 1px solid color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 13px; padding: 1.2rem; color: var(--tenant-primary); background: var(--tenant-surface-bg); box-shadow: 0 18px 48px rgba(0, 0, 0, .25); }
 .dialog h2 { margin: 0 0 .7rem; font-family: var(--tenant-heading-font); font-size: 1.25rem; }
