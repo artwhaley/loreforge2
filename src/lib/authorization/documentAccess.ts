@@ -67,6 +67,57 @@ export async function canAccessDocument(args: {
   return capability !== 'update' || lifecycleEditable(current.lifecycle)
 }
 
+/**
+ * Version IDs are a separate namespace from Document IDs. Payload calls the
+ * collection readVersions access function with the version ID for a detail
+ * request, while a version list has no id at all. Resolve the parent first and
+ * then reuse the exact current-document decision; never pass a version ID to
+ * canAccessDocument as if it were a Document ID.
+ */
+export async function canAccessDocumentVersion(args: {
+  payload: Payload
+  user: Pick<User, 'id'>
+  versionId: number | string
+}): Promise<boolean> {
+  const versions = await args.payload.findVersions({
+    collection: 'documents',
+    where: { id: { equals: args.versionId } },
+    depth: 0,
+    limit: 1,
+    overrideAccess: true,
+    pagination: false,
+  })
+  const parent = versions.docs[0]?.parent
+  const parentId = relationId(parent)
+  if (!parentId) return false
+  return canAccessDocument({ payload: args.payload, user: args.user, documentId: parentId, capability: 'read' })
+}
+
+/**
+ * Query constraint used by Payload's version-list operation. The list access
+ * callback has no version id, so constrain versions by the parent Documents
+ * the user may read. This is intentionally the same interim Domain boundary
+ * as canAccessDocument; it does not invent P07 evaluator semantics.
+ */
+export async function readableVersionParentQuery(args: {
+  payload: Payload
+  user: Pick<User, 'id'>
+}): Promise<{ parent: { in: Array<number | string> } }> {
+  const { payload, user } = args
+  const ownedDomains = await payload.find({ collection: 'domains', where: { ownerUser: { equals: user.id } }, depth: 0, limit: 5000, overrideAccess: true })
+  const administeredDomains = await payload.find({ collection: 'domain-admins', where: { and: [{ user: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 5000, overrideAccess: true })
+  const controlled = await payload.find({ collection: 'characters', where: { and: [{ controlledBy: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 5000, overrideAccess: true })
+  const memberships = controlled.docs.length === 0 ? { docs: [] } : await payload.find({ collection: 'domain-memberships', where: { and: [{ character: { in: controlled.docs.map((character) => character.id) } }, { status: { equals: 'active' } }] }, depth: 0, limit: 5000, overrideAccess: true })
+  const domainIds = new Set<number>([
+    ...ownedDomains.docs.map((domain) => Number(domain.id)),
+    ...administeredDomains.docs.map((admin) => Number(relationId((admin as { domain?: unknown }).domain))).filter(Number.isFinite),
+    ...memberships.docs.map((membership) => Number(relationId((membership as { domain?: unknown }).domain))).filter(Number.isFinite),
+  ])
+  if (domainIds.size === 0) return { parent: { in: [] } }
+  const docs = await payload.find({ collection: 'documents', where: { and: [{ domain: { in: [...domainIds] } }, { softDeletedAt: { exists: false } }] }, depth: 0, limit: 10000, overrideAccess: true })
+  return { parent: { in: docs.docs.map((document) => document.id) } }
+}
+
 function lifecycleEditable(lifecycle: unknown): boolean {
   return canEditDocumentBody(String(lifecycle ?? 'draft') as Lifecycle)
 }

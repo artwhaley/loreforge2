@@ -213,9 +213,12 @@ test('P05R-T01: authenticated user cannot read another Domain security rows, doc
   assert.ok(roleAssignmentRead <= 0, 'cross-Domain read of role-assignments must be denied')
   const docRead = await payload.findByID({ collection: 'documents', id: f.docBeta.id, depth: 0, overrideAccess: false, user: attacker }).then((doc) => (doc ? 'allowed' : 'denied')).catch(() => 'denied')
   assert.equal(docRead, 'denied', 'Beta Document must not be readable by a non-member')
-  // Version-history denial is asserted at the REST level (GET .../versions in
-  // the REST test below): Payload's Local API version reads do not consult
-  // readVersions for where-based lists in this adapter version.
+  const foreignVersions = await payload.findVersions({ collection: 'documents', where: { parent: { equals: f.docBeta.id } }, depth: 0, limit: 1, overrideAccess: true, pagination: false })
+  assert.ok(foreignVersions.docs[0]?.id, 'fixture has a foreign version to attack')
+  const localVersionRead = await payload.findVersionByID({ collection: 'documents', id: foreignVersions.docs[0].id, depth: 0, overrideAccess: false, user: attacker }).then(() => 'allowed').catch(() => 'denied')
+  assert.equal(localVersionRead, 'denied', 'version detail must authorize by parent Document')
+  const visibleVersions = await payload.findVersions({ collection: 'documents', where: { parent: { equals: f.docBeta.id } }, depth: 0, limit: 10, overrideAccess: false, user: attacker, pagination: false }).then((r) => r.docs.length).catch(() => -1)
+  assert.equal(visibleVersions, 0, 'version list must not return a foreign parent')
 })
 
 test('P05R-T01: cross-Domain folder re-file is rejected by the Documents hook even with authority', async () => {
@@ -244,7 +247,6 @@ test('P05R-T01: REST forged mutations and reads are denied; sanctioned seams kee
     ['DELETE', `/api/folders/${f.folderBeta.id}`, attackerToken],
     ['GET', '/api/role-assignments', attackerToken],
     ['GET', '/api/permission-rules', attackerToken],
-    ['GET', `/api/documents/${f.docBeta.id}/versions`, attackerToken],
   ]
   for (const [method, path, token, body] of forbidden) {
     const res = await api(method as 'GET')(path, token, body)
@@ -252,6 +254,10 @@ test('P05R-T01: REST forged mutations and reads are denied; sanctioned seams kee
     const isEmptyList = text.includes('"docs":[]')
     assert.ok(res.status >= 400 || isEmptyList, `${method} ${path} must be denied, got ${res.status}: ${text.slice(0, 140)}`)
   }
+  const versionList = await api('GET')('/api/documents/versions', attackerToken)
+  assert.equal(versionList.status, 200, 'an authenticated member may list readable version history')
+  const versionListBody = await versionList.json() as { docs?: Array<{ parent?: number; version?: { domain?: { id?: number } } }> }
+  assert.ok((versionListBody.docs ?? []).every((version) => Number(version.version?.domain?.id) !== Number(f.beta.id)), 'version list must exclude foreign Domain parents')
   // Owner of beta creating a role through the GENERATED endpoint is also
   // denied — Roles mutate only through the guarded /api/roles route.
   const betaGeneratedRole = await api('POST')('/api/roles', ownerBToken, { name: 'Sneaky', domain: f.beta.id })

@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
-import { canAccessDocument } from '@/lib/authorization/documentAccess'
+import { canAccessDocument, canAccessDocumentVersion, readableVersionParentQuery } from '@/lib/authorization/documentAccess'
 import { assertLifecycleTransition, canEditDocumentBody, type Lifecycle } from '@/lib/documents/lifecycle'
 
 const relationId = (value: unknown): number | null => value && typeof value === 'object' && 'id' in value ? Number((value as { id: number | string }).id) : value === null || value === undefined || value === '' ? null : Number(value)
@@ -30,8 +30,9 @@ export const Documents: CollectionConfig = {
       return canAccessDocument({ payload: req.payload, user: req.user, documentId: id, capability: 'update' })
     },
     readVersions: async ({ req, id }) => {
-      if (!req.user || id === undefined || id === null) return false
-      return canAccessDocument({ payload: req.payload, user: req.user, documentId: id, capability: 'read' })
+      if (!req.user) return false
+      if (id !== undefined && id !== null) return canAccessDocumentVersion({ payload: req.payload, user: req.user, versionId: id })
+      return readableVersionParentQuery({ payload: req.payload, user: req.user })
     },
     // Permanent deletion is never an ordinary Domain action. P04 workflow
     // uses softDeletedAt/softDeletedBy and a reversible restore path.
