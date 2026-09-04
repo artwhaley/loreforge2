@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
 import config from '@payload-config'
+import { documentMutationErrorCode } from '@/lib/documents/errorCodes'
 import { attachDocumentTag, detachDocumentTag, findOrCreateDomainTag } from '@/lib/documents/links'
 
 export async function POST(request: Request) {
@@ -28,8 +29,11 @@ export async function POST(request: Request) {
         await attachDocumentTag({ payload, domainId: domain.id, documentId, tagId: tag.id, actor })
       }
     }
-  } catch {
-    // Keep customer-facing output free of schema/provider details.
+  } catch (error) {
+    // P05R-T06 E: failures must visibly fail with a stable message code.
+    const code = documentMutationErrorCode(error)
+    const target = `${destination}${destination.includes('?') ? '&' : '?'}error=${code}`
+    return NextResponse.redirect(new URL(target, request.url), 303)
   }
   return NextResponse.redirect(new URL(destination, request.url), 303)
 }

@@ -227,3 +227,14 @@
   display: flex;
   justify-content: flex-end;
 }
+
+.errorNotice {
+  max-width: 960px;
+  width: 100%;
+  margin: 0 auto 1.25rem;
+  padding: 0.9rem 1.25rem;
+  border: 2px solid var(--tenant-accent);
+  background: var(--tenant-page-bg);
+  color: var(--tenant-primary);
+  font-weight: 600;
+}

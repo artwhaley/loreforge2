@@ -142,7 +142,10 @@ async function getMemberTenant(tenantSlug: string): Promise<MemberTenant | null>
   })
   if (!memberships.docs[0]) return null
 
-  return { payload, user: { id: Number(user.id) }, tenant, basePath: `/tenant/${tenant.slug}`, legacyTenantId: tenant.id, isManager: false }
+  // P05R-T06 A: /tenant customer URLs are retired; every live path builds
+  // /domain/* (even for un-migrated legacy orgs, which land on the same
+  // customer surface via the compatibility shim).
+  return { payload, user: { id: Number(user.id) }, tenant, basePath: `/domain/${tenant.slug}`, legacyTenantId: tenant.id, isManager: false }
 }
 
 /**

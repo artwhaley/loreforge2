@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
 import config from '@payload-config'
+import { documentMutationErrorCode } from '@/lib/documents/errorCodes'
 import { addDocumentRelationship, removeDocumentRelationship } from '@/lib/documents/relationships'
 
 export async function POST(request: Request) {
@@ -26,8 +27,12 @@ export async function POST(request: Request) {
       const kind = String(form.get('kind') ?? '') as 'supersedes'
       if (Number.isFinite(targetId) && kind === 'supersedes') await addDocumentRelationship({ payload, domainId: domain.id, sourceId: documentId, targetId, kind, actor })
     }
-  } catch {
-    // Do not expose authorization or provider details through a redirect.
+  } catch (error) {
+    // P05R-T06 E: failures must visibly fail with a stable message code;
+    // never expose authorization or provider details through the redirect.
+    const code = documentMutationErrorCode(error)
+    const target = `${destination}${destination.includes('?') ? '&' : '?'}error=${code}`
+    return NextResponse.redirect(new URL(target, request.url), 303)
   }
   return NextResponse.redirect(new URL(destination, request.url), 303)
 }

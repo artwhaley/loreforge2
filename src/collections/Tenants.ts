@@ -1,5 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
+// Legacy compatibility only (P05R-T06 D). New product code must not depend on
+// this model — Domains are the canonical unit. Removal is P10 work (DEF-TENANT-01).
 export const Tenants: CollectionConfig = {
   slug: 'tenants',
   admin: {

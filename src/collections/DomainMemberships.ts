@@ -65,6 +65,8 @@ export const DomainMemberships: CollectionConfig = {
       type: 'relationship',
       relationTo: 'tenants',
       required: false,
+      // Legacy compatibility only (P05R-T06 D). New product code must not
+      // depend on this field. Removal is P10 work (DEF-TENANT-01).
       label: 'Legacy Tenant (migration only)',
       admin: { hidden: true },
     },

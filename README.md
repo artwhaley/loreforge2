@@ -1,129 +1,93 @@
-# SL Civic Archive — MVP
+# LoreForge2 — Civic Archive (sl-civic-archive)
 
-Local proof of concept for a multi-tenant civic records/archive system aimed at Second Life
-roleplay communities. Spec and tickets live in `../sl-civic-archive-mvp-packet/`.
+LoreForge2 is a multi-tenant civic records and archive system for Second Life roleplay
+communities: Documents (records) live in a Domain, organized into Departments
+(Subdomains) and Folders, with Character-driven participation (Roles and RoleAssignments),
+workflow lifecycles (draft → review → filed/locked/superseded), provenance history,
+and a delegated-administration model that lands in Phase 7.
+
+**This is the successor to the SL Civic Archive MVP.** The old spike documentation is
+historical only — see [History](#history).
+
+## Canonical vocabulary
+
+- **Domain** — the top-level community unit (owner + Domain Admins, members, folders, documents).
+- **Department** (collection `subdomains`) — a Domain's organizational unit; Roles live here.
+- **Role / RoleAssignment** — Department-scoped institutional roles; a Character participates
+  in a Department exactly when they hold an active Role there.
+- **Folder** — filing hierarchy inside a Domain; direct access is granted per principal
+  via PermissionRules.
+- **Document** — the archived record; carries lifecycle, provenance, tags, character links,
+  and supersession relationships.
+- **Character** — a roleplay persona controlled by a User; participation and access are
+  Character-scoped, not User-scoped.
+
+Customer URLs are canonical under `/domain/{slug}/...`; `/tenant/{slug}/...` URLs are a
+legacy compatibility shim that redirects to `/domain`.
 
 ## Stack
 
-- Next.js 16 (App Router) + React + TypeScript
-- Payload CMS 3.88 integrated into the Next.js app
-- Payload official SQLite adapter (`@payloadcms/db-sqlite`) — one local DB file
+- Next.js (App Router) + React + TypeScript
+- Payload CMS (Local API + guarded Next.js route handlers; direct collection REST/GraphQL
+  writes are access-closed)
+- Payload official SQLite adapter (`@payloadcms/db-sqlite`) with WAL + real transactions
 - Local filesystem storage (no cloud services)
 
-> Note: dev/build scripts set `NODE_OPTIONS=--no-experimental-require-module` because the
-> current lexical editor package uses top-level await, which Node 24's `require()` path rejects.
-> `next dev` picks the first free port; check the console output for the actual URL.
+> `NODE_OPTIONS=--no-experimental-require-module` is set by the dev/build scripts because the
+> lexical editor package uses top-level await, which Node 24's `require()` path rejects.
 
-## Local setup
+## Setup
 
 ```bash
 npm install
-npm run dev        # pinned to http://localhost:3055
-npm run seed       # fixture users, tenants, memberships, documents, theme media
-npm test           # unit tests (tenant scoping + theme resolution)
+cp .env.example .env      # set DATABASE_URI and PAYLOAD_SECRET
+npm run dev               # http://localhost:3055 (pinned)
 ```
 
-Dev server port is pinned to **3055**; if it's taken, `npm run dev` fails loudly rather than silently picking another port.
-
-Reset: delete the SQLite file (see `payload.config.ts` for its path) and `public/media/*`, then re-run `npm run seed`.
-
-## Local test credentials (fixtures, not secrets)
-
-| User        | Email                 | Password            |
-| ----------- | --------------------- | ------------------- |
-| Morgan Vale | admin@example.test    | test-password-123   |
-| Alex Mercer | officer@example.test  | test-password-123   |
-
-## Seed / reset
+Seed and migration scripts run against `DATABASE_URI`:
 
 ```bash
-npm run seed
+PAYLOAD_PUSH=false npm run seed            # fixture Domains, Characters, Roles, Documents
+npm run migrate:phase5                     # Phase 3→5 model migration (tenants → Domains)
 ```
 
 To fully reset: stop the dev server, delete `sl-civic-archive.db*` from the project root and
-`public/media/*`, then run `npm run seed` again (the dev server also creates the DB on boot).
+`public/media/*`, then re-run the seed. If the Payload admin reports a missing import-map
+component after a fresh clone, run `npx payload generate:importmap` once.
 
-If the Payload admin reports a missing import-map component after a fresh clone (e.g. after the
-Form Builder plugin install), run `npx payload generate:importmap` once.
-
-## Local files (gitignored)
-
-- `sl-civic-archive.db` — SQLite database
-- `public/media/` — uploaded media (future tickets)
-
-## Ticket 01 scope
-
-Tenant-scoped civic sites. Both seeded cities render the same fixture Markdown with distinct
-branding through centralized theme tokens (`--tenant-*` CSS variables) driven by the tenant's
-theme settings. A server-side active-tenant resolver (cookie + verified membership) scopes every
-document query — the UI never filters by tenant. Tenant themes are flattened onto the `Tenants`
-collection for MVP (a dedicated Theme Studio arrives in Ticket 03).
-
-Routes: `/tenant/ravenhurst`, `/tenant/port-victoria` and their `.../records`, `.../about`,
-`.../departments`, and `.../documents/:id`. Switch cities via the "Viewing as" selector or the
-city buttons on the home page.
-
-## Ticket 04 scope
-
-Each tenant site is now a small believable city website built from a `Pages` collection (Home
-welcome prose + About), a fixture department directory, and the archive's Records route.Prose pages use the same Markdown editor as documents (WYSIWYG + safe source mode) and store canonical
-Markdown. Home is an application-owned layout: editable welcome prose (a `home` page) plus fixed
-quick-link modules and recent records. Routes: `/tenant/[slug]`, `.../about`, `.../departments`,
-`.../records`, `.../documents/:id`, and `.../pages/[pageSlug]/edit`.
-
-## Ticket 05 scope
-
-The archive is now a usable records system. A tenant-owned `Folders` collection (nullable parent)
-drives a nested folder navigator, and every document belongs to a folder (or the root). The
-`/tenant/[slug]/records` route is a two-pane file-explorer view: collapsible folders on the left and
-records on the right, with scoped search, a search-subfolders toggle, document-type filtering, and
-context-aware folder/record actions. Document viewers support Edit, Delete, lifecycle controls, and
-Markdown source; documents are never moved or copied across Domains. Server actions re-verify the
-session user for every create/delete operation, and deleting a non-empty folder is refused.
-Search is tenant-scoped over title and body (spec §7.5).
-
-## Ticket 06 scope
-
-Simulated Second Life Markdown round trip. `/tenant/[slug]/import` accepts a title, destination
-folder, and pasted Markdown, and creates a normal Document with origin `markdown-import` (no SL
-transport assumptions — just a paste surface). A "Load sample notecard" button fills the fixture.
-The Document editor retains a Markdown source view. All Markdown text boundaries (import + editor
-saves) canonicalize CRLF to LF so stored bodies stay canonical. Imported records are ordinary
-documents: editable and searchable. Cross-Domain delivery is deferred to correspondence/messaging;
-there is no cross-Domain document Copy or Move operation.
-
-## Ticket 07 scope
-
-Structured report forms via `@payloadcms/plugin-form-builder`, restricted to the five MVP field
-types (short text, long text, date, select, checkbox). Forms carry archive metadata (tenant,
-destination folder, `{{field}}` title/Markdown output templates). Form→Document generation lives
-in one explicit module (`src/lib/forms/generateDocument.ts`) — deliberately outside plugin
-callbacks/UI, so the authoring tool can be swapped without touching generation. Members fill
-forms from the tenant site (`/tenant/[slug]/forms`) with server-side required validation;
-submission creates an ordinary Document (`origin: form`) in its destination folder, editable,
-searchable, and exportable like any other record.
-
-Note for Windows/local dev: after adding the plugin, run `npx payload generate:importmap` (or let
-the dev server regenerate it) so the plugin's Lexical confirmation field resolves in the admin.
-
-## Ticket 08 scope
-
-Integration cleanup and the final acceptance run. The complete 27-step build-spec scenario passes
-from a clean local reset: admin (theme + WYSIWYG/source authoring + form authoring), member
-(form fill -> normal record), simulated SL (notecard import), and tenant separation (distinct
-branding, no cross-tenant leakage). Document origin badges were made consistent via
-`src/lib/origin.ts`. Product questions and deferred work are recorded in `MVP_REVIEW.md`.
-
-Known local quirk: on Windows the seed can transiently collide with a running dev server over
-schema/index creation — stop the dev server before `npm run seed`. Direct URL navigation to a
-tenant you are not currently switched to returns a 404 (by design; use the switcher) rather than
-leaking content.
-
-## Tests
+## Checks
 
 ```bash
-npm test
+npm test               # unit + pure-logic suites (78 tests)
+npm run test:security  # DB-backed suites: access boundary, supersession, people workspace, domain removal (25 tests)
+npx tsc --noEmit       # typecheck
 ```
 
-Covers the tenant scope helper, theme token resolution, and folder-tree helpers (cheap, important
-logic per spec §14).
+Schema changes: `npx payload generate:types` regenerates `src/payload-types.ts`.
+
+## Workflow / execution packet
+
+Authoritative architecture, frozen product decisions, and per-phase tickets live in
+`LoreForge_Execution_Packet/` (start at `00_START_HERE.md`). Phases execute ticket by
+ticket on their own branches with per-ticket commits, execution notes in
+`execution-notes/`, and a review-gate at each phase end. Packet integrity is enforced by
+`LoreForge_Execution_Packet/tools/validate_packet.py` (SHA256SUMS). The current remediation
+stack for Phase 5 audit findings lives in `../P05-corrective-stack/` (tickets `P05R-T00`
+through `P05R-GATE`).
+
+## Status
+
+- **Phase 5** (Document supersession + Character-driven access) implemented and remediated
+  (P05R stack). Document Sharing is explicitly deferred pending an ownership decision
+  (see `LoreForge_Execution_Packet/references/P07-D01-DOCUMENT-SHARING-DECISION.md`).
+- **Phase 6**: prepared-by / tagging / lifecycle correctness.
+- **Phase 7**: final authorization evaluator and delegated administration (replaces the
+  interim authority seams); requires the sharing decision before GATE closes.
+- Phase 10 tracks legacy-tenant (`DEF-TENANT-01`) and `Documents.origin` (`DEF-ORIGIN-01`)
+  removal.
+
+## History
+
+The original SL Civic Archive MVP (Ravenhurst multi-tenant spike, tickets 01–08, `tenants`/
+`memberships` models) is superseded by LoreForge2. Legacy models remain in the schema only
+for migration compatibility and are marked "Legacy compatibility only" at their definitions.

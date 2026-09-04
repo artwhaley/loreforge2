@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
 import config from '@payload-config'
+import { documentMutationErrorCode } from '@/lib/documents/errorCodes'
 import { attachDocumentCharacterLink, detachDocumentCharacterLink } from '@/lib/documents/links'
 
 export async function POST(request: Request) {
@@ -22,8 +23,11 @@ export async function POST(request: Request) {
     const actor = { userId: user.id }
     if (action === 'remove') await detachDocumentCharacterLink({ payload, domainId: domain.id, documentId, characterId, kind, actor })
     else await attachDocumentCharacterLink({ payload, domainId: domain.id, documentId, characterId, kind, relationshipLabel: String(form.get('relationshipLabel') ?? ''), actor })
-  } catch {
-    // Customer responses intentionally disclose no provider/schema details.
+  } catch (error) {
+    // P05R-T06 E: failures must visibly fail with a stable message code.
+    const code = documentMutationErrorCode(error)
+    const target = `${destination}${destination.includes('?') ? '&' : '?'}error=${code}`
+    return NextResponse.redirect(new URL(target, request.url), 303)
   }
   return NextResponse.redirect(new URL(destination, request.url), 303)
 }

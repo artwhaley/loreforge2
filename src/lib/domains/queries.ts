@@ -43,8 +43,12 @@ export async function getDomainMemberRows(domain: Domain): Promise<DomainMemberR
   })
 }
 
-/** Department participants are derived from active Department-owned RoleAssignments. */
-export async function getSubdomainMemberships(subdomainId: number | string): Promise<RoleAssignment[]> {
+/**
+ * Department participants: active RoleAssignments for Roles in the Department,
+ * restricted to Characters with active Domain membership. Named truthfully
+ * (P05R-T06 C) — it computes derived participation, not SubdomainMembership rows.
+ */
+export async function getDepartmentParticipants(subdomainId: number | string): Promise<RoleAssignment[]> {
   const payload = await getLorePayload()
   const subdomain = await payload.findByID({ collection: 'subdomains', id: subdomainId, depth: 0 }).catch(() => null)
   const domainId = relationId(subdomain?.domain)

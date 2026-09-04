@@ -133,6 +133,9 @@ export const Documents: CollectionConfig = {
       type: 'relationship',
       relationTo: 'tenants',
       required: false,
+      // Legacy compatibility only (P05R-T06 D). New product code must not
+      // depend on this field — Domains are canonical. Removal is P10 work
+      // (DEF-TENANT-01).
       admin: { hidden: true },
     },
     {
@@ -171,6 +174,8 @@ export const Documents: CollectionConfig = {
       type: 'select',
       required: true,
       defaultValue: 'web-editor',
+      // Legacy compatibility only (P05R-T06 D). New product code must not
+      // depend on this field. Removal is P10 work (DEF-ORIGIN-01).
       options: [
         { label: 'Web editor', value: 'web-editor' },
         { label: 'Markdown import', value: 'markdown-import' },

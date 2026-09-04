@@ -1,5 +1,8 @@
 import type { CollectionConfig } from 'payload'
 
+// Legacy compatibility only (P05R-T06 D). New product code must not depend on
+// this model — Domain membership is the canonical participation model. Removal
+// is P10 work (DEF-TENANT-01).
 export const Memberships: CollectionConfig = {
   slug: 'memberships',
   admin: {

@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation'
 
 type Props = { params: Promise<{ slug: string }> }
-export const dynamic = 'force-dynamic'
 
-export default async function SubdomainsPage({ params }: Props) {
-  const { slug } = await params
-  redirect(`/domain/${encodeURIComponent(slug)}/departments`)
+// Legacy compatibility shim (P05R-T06): /tenant/* customer URLs forward to
+// the canonical /domain/* surface. New work must not import from here.
+export default async function LegacyTenantRedirect({ params }: Props) {
+  const values = await params
+  redirect(`/domain/${values.slug}/subdomains`)
 }
