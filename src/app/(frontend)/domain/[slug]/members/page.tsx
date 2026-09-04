@@ -39,7 +39,7 @@ export default async function DomainMembersPage({ params }: Props) {
         <p><a href={`/domain/${slug}`}>← Domain home</a></p>
         <h1>Domain members</h1>
         <p>Characters belong to this Domain independently of their controlling account and local alias. Department participation is derived from the Roles each Character holds.</p>
-        {role === 'admin' ? <p><strong>Lifecycle:</strong> removing Domain membership removes this Character's Role assignments and direct Folder access. Re-adding the Domain starts clean.</p> : null}
+        {role === 'admin' ? <p><strong>Lifecycle:</strong> removing Domain membership removes this Character&apos;s Role assignments and direct Folder access. Re-adding the Domain starts clean.</p> : null}
         {role === 'admin' ? (
           <form action="/api/domain-memberships" method="post">
             <input type="hidden" name="domainSlug" value={slug} />

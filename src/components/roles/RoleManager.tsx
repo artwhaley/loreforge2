@@ -53,16 +53,19 @@ export function RoleManager({ domainSlug, departments, roleRecords, holdersByRol
 
   useEffect(() => {
     const value = query.trim()
-    if (!value || dialog !== 'assign') { setResults([]); return }
     const controller = new AbortController()
-    const timer = window.setTimeout(async () => {
-      try {
-        const response = await fetch(`/api/people-search?domainSlug=${encodeURIComponent(domainSlug)}&q=${encodeURIComponent(value)}`, { signal: controller.signal })
-        const body = await response.json() as { results?: SearchResult[] }
-        setResults(body.results ?? [])
-      } catch (error) {
-        if ((error as { name?: string }).name !== 'AbortError') setResults([])
-      }
+    // P05R-T08: the guard (empty query / not the assign dialog) clears stale
+    // results from inside the debounce callback, not synchronously in the
+    // effect body; results only render inside the assign dialog, so the
+    // 180ms clear is never visible.
+    const timer = window.setTimeout(() => {
+      if (!value || dialog !== 'assign') { setResults([]); return }
+      void fetch(`/api/people-search?domainSlug=${encodeURIComponent(domainSlug)}&q=${encodeURIComponent(value)}`, { signal: controller.signal })
+        .then((response) => response.json() as Promise<{ results?: SearchResult[] }>)
+        .then((body) => setResults(body.results ?? []))
+        .catch((error: unknown) => {
+          if ((error as { name?: string }).name !== 'AbortError') setResults([])
+        })
     }, 180)
     return () => { controller.abort(); window.clearTimeout(timer) }
   }, [domainSlug, dialog, query])

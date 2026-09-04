@@ -37,15 +37,24 @@ export function ConcernCharacterChips({ domainSlug, initialValue }: Props) {
   const [lastInitial, setLastInitial] = useState(initialValue)
   const selectedIds = useMemo(() => new Set(chips.flatMap((chip) => chip.characterId ? [chip.characterId] : [])), [chips])
 
-  useEffect(() => {
-    if (initialValue === lastInitial) return
+  // P05R-T08: re-sync chips when a freshly submitted form re-renders with a
+  // new initial value (adjust-during-render, guarded to converge).
+  if (initialValue !== lastInitial) {
     setLastInitial(initialValue)
     setChips(parseInitial(initialValue))
-  }, [initialValue, lastInitial])
+  }
+
+  // Clearing stale results when the input empties happens in the change
+  // handler below; this effect only ever fetches.
+  const handleQueryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const next = event.target.value
+    setQuery(next)
+    if (!next.trim()) setResults([])
+  }
 
   useEffect(() => {
     const value = query.trim()
-    if (!value) { setResults([]); return }
+    if (!value) return
     const controller = new AbortController()
     const timer = window.setTimeout(async () => {
       try {
@@ -77,7 +86,7 @@ export function ConcernCharacterChips({ domainSlug, initialValue }: Props) {
   return <fieldset style={{ display: 'grid', gap: '.55rem' }}>
     <legend><strong>Concerns</strong></legend>
     <small>Search any Character, or add a new unlinked Character by name. Each concern gets its own relationship.</small>
-    <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && results[0]) { event.preventDefault(); addExisting(results[0]) } }} placeholder="Search Characters or type a new name…" aria-label="Search Characters for Concerns" autoComplete="off" />
+    <input type="search" value={query} onChange={handleQueryChange} onKeyDown={(event) => { if (event.key === 'Enter' && results[0]) { event.preventDefault(); addExisting(results[0]) } }} placeholder="Search Characters or type a new name…" aria-label="Search Characters for Concerns" autoComplete="off" />
     {results.length > 0 ? <ul role="listbox" style={{ margin: 0, paddingLeft: '1.25rem' }}>{results.map((result) => <li key={result.id}><button type="button" onClick={() => addExisting(result)} disabled={selectedIds.has(result.id)}>{result.name}{selectedIds.has(result.id) ? ' (added)' : ''}</button></li>)}</ul> : null}
     {query.trim() && results.length === 0 ? <button type="button" onClick={addNew}>Add “{query.trim()}” as a new unlinked Character</button> : null}
     <div style={{ display: 'grid', gap: '.5rem' }} aria-label="Selected Concerns">

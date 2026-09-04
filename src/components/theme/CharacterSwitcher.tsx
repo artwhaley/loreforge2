@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import type { Character } from '@/payload-types'
 
@@ -13,9 +13,16 @@ export function CharacterSwitcher({ characters, activeCharacter }: { characters:
   const searchParams = useSearchParams()
   const [pending, setPending] = useState(false)
   const [selectedId, setSelectedId] = useState(String(activeCharacter?.id ?? ''))
+  const [lastActiveId, setLastActiveId] = useState(activeCharacter?.id)
   const returnTo = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
 
-  useEffect(() => { setSelectedId(String(activeCharacter?.id ?? '')) }, [activeCharacter?.id])
+  // P05R-T08: re-sync the select when the server-rendered active Character
+  // changes (page navigation), using the guarded adjust-during-render pattern
+  // instead of a setState-in-effect.
+  if (lastActiveId !== activeCharacter?.id) {
+    setLastActiveId(activeCharacter?.id)
+    setSelectedId(String(activeCharacter?.id ?? ''))
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()

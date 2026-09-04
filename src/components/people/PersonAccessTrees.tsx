@@ -104,23 +104,30 @@ export function RoleTree({ domainSlug, characterId, departments, initialMode = '
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(departments.map((department) => `department-${department.id}`)))
   const normalizedQuery = query.trim().toLocaleLowerCase()
   const visibleDepartments = useMemo(() => departments.map((department) => filterDepartment(department, normalizedQuery, mode)).filter((department): department is RoleDepartment => department !== null), [departments, mode, normalizedQuery])
-  useEffect(() => {
-    if (mode !== 'held' && !normalizedQuery) return
-    setExpanded((current) => {
-      const next = new Set(current)
-      for (const department of visibleDepartments) {
-        next.add(`department-${department.id}`)
-        const openBranch = (node: RoleTreeNode) => {
-          if (node.children.length > 0) {
-            next.add(`role-${node.id}`)
-            node.children.forEach(openBranch)
+  // P05R-T08: auto-expand filtered/'held' branches when the filter key changes,
+  // using the guarded adjust-during-render pattern (converges on the render
+  // that records the key) instead of a setState-in-effect.
+  const filterKey = `${mode}|${normalizedQuery}`
+  const [lastFilterKey, setLastFilterKey] = useState<string | null>(null)
+  if (lastFilterKey !== filterKey) {
+    setLastFilterKey(filterKey)
+    if (mode === 'held' || normalizedQuery) {
+      setExpanded((current) => {
+        const next = new Set(current)
+        for (const department of visibleDepartments) {
+          next.add(`department-${department.id}`)
+          const openBranch = (node: RoleTreeNode) => {
+            if (node.children.length > 0) {
+              next.add(`role-${node.id}`)
+              node.children.forEach(openBranch)
+            }
           }
+          department.roles.forEach(openBranch)
         }
-        department.roles.forEach(openBranch)
-      }
-      return next
-    })
-  }, [mode, normalizedQuery, visibleDepartments])
+        return next
+      })
+    }
+  }
   const displayedCount = visibleDepartments.reduce((result, department) => {
     const count = countRoles(department.roles)
     return { total: result.total + count.total, held: result.held + count.held }
@@ -179,7 +186,7 @@ function FolderNode({ node, domainSlug, principalType, principalId, expanded, to
   const isOpen = expanded.has(key)
   const [readState, setReadState] = useState<PermissionState>(node.readState)
   const [writeState, setWriteState] = useState<PermissionState>(node.writeState)
-  return <li className={styles.folderItem} role="treeitem" aria-expanded={hasChildren ? isOpen : undefined}>
+  return <li className={styles.folderItem} role="treeitem" aria-expanded={hasChildren ? isOpen : undefined} aria-selected={false}>
     <form action="/api/permission-rules" method="post" className={styles.folderRow}>
       <input type="hidden" name="domainSlug" value={domainSlug} /><input type="hidden" name={principalType === 'Role' ? 'roleId' : 'characterId'} value={principalId} /><input type="hidden" name="principalType" value={principalType} /><input type="hidden" name="folderId" value={node.id} /><input type="hidden" name="readState" value={readState} /><input type="hidden" name="writeState" value={writeState} />
       <div className={styles.folderIdentity}>{hasChildren ? <button type="button" className={styles.disclosure} aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${node.name}`} aria-expanded={isOpen} onClick={() => toggle(key)}>{isOpen ? '⌄' : '›'}</button> : <span className={styles.disclosureSpacer} aria-hidden="true" />}<span className={styles.folderIcon} aria-hidden="true">{node.systemManaged ? '⌂' : '▱'}</span><span className={styles.folderName}>{node.name}</span></div>

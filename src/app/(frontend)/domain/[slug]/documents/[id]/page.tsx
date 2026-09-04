@@ -187,7 +187,9 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
         </div>
 
         <div className={styles.bottomActions}>
-          {user && !isSuperseded && canSupersedeDocument(doc.lifecycle) ? (
+          {/* P05R-T08: supersede resolves to the interim admin boundary server-side, so the
+              affordance is admin-gated here too (matching Share and RecordsExplorer). */}
+          {role === 'admin' && !isSuperseded && canSupersedeDocument(doc.lifecycle) ? (
             <a className={styles.action} href={`/domain/${tenant.slug}/records/new?supersedes=${doc.id}`}>
               Create superseding document
             </a>
@@ -200,11 +202,14 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
             </span>
           ) : null}
 
-          <form action={softDeleteDocumentAction} className={styles.deleteForm}>
-            <input type="hidden" name="tenantSlug" value={tenant.slug} />
-            <input type="hidden" name="documentId" value={doc.id} />
-            <button type="submit" className={styles.deleteBtn}>Delete</button>
-          </form>
+          {/* P05R-T08: soft-delete is admin-only (server-enforced); render the control only for admins. */}
+          {role === 'admin' ? (
+            <form action={softDeleteDocumentAction} className={styles.deleteForm}>
+              <input type="hidden" name="tenantSlug" value={tenant.slug} />
+              <input type="hidden" name="documentId" value={doc.id} />
+              <button type="submit" className={styles.deleteBtn}>Delete</button>
+            </form>
+          ) : null}
         </div>
       </article>
     </TenantShell>

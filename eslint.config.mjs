@@ -1,11 +1,9 @@
-import { defineConfig } from 'eslint/config'
-import nextPlugin from 'eslint-config-next'
+import { defineConfig, globalIgnores } from 'eslint/config'
+// eslint-config-next@16 exports a flat config array (no legacy named presets).
+// The Next.js recommended preset ships as the `core-web-vitals` subpath export.
+import nextVitals from 'eslint-config-next/core-web-vitals'
 
-const eslintConfig = [
-  ...nextPlugin.configs['core-web-vitals'],
-  {
-    ignores: ['.next/**', 'node_modules/**', 'src/payload-types.ts', 'src/app/(payload)/**'],
-  },
-]
-
-export default eslintConfig
+export default defineConfig([
+  ...nextVitals,
+  globalIgnores(['.next/**', 'node_modules/**', 'src/payload-types.ts', 'src/app/(payload)/**']),
+])

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
@@ -49,7 +50,7 @@ export default async function CharacterProfilePage({ params }: Props) {
 
   return (
     <main style={{ maxWidth: 760, margin: '2rem auto', padding: '0 1.5rem' }}>
-      <p><a href="/">← Account home</a></p>
+      <p><Link href="/">← Account home</Link></p>
       <h1>{profile.name}</h1>
       <p>{profile.bio || 'No public profile has been written yet.'}</p>
       <p>

@@ -8,6 +8,7 @@
     "dev": "cross-env NODE_OPTIONS=--no-experimental-require-module PAYLOAD_PUSH=false next dev -p 3055",
     "start": "next start -p 3055",
     "generate:types": "payload generate:types",
+ "lint": "eslint .",
     "payload": "payload",
     "seed": "payload run ./src/seed/index.ts",
     "migrate:phase3": "payload run ./src/scripts/migratePhase3.ts",

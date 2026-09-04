@@ -79,9 +79,11 @@ export async function softDeleteDocumentAction(formData: FormData): Promise<void
   const result = await ctx.payload.find({ collection: 'documents', where: domainAndIdWhere(ctx.domain.id, documentId), depth: 0, limit: 1 })
   const document = result.docs[0]
   if (!document) redirect(`/domain/${tenantSlug}/records`)
-  if (!ctx.actorCharacterId) {
-    try { await requireInterimWorkflowAuthority(ctx.payload, ctx.userId, ctx.domain.id) } catch { redirect(`/domain/${tenantSlug}/records?error=forbidden`) }
-  }
+  // P05R-T08: soft-delete is NOT a Character-scoped action. Acting through a
+  // Character must never bypass the interim boundary, so every delete requires
+  // the same authority as restore (which has always enforced this check): only
+  // the Domain Owner or an operational Domain Admin may delete a record.
+  try { await requireInterimWorkflowAuthority(ctx.payload, ctx.userId, ctx.domain.id) } catch { redirect(`/domain/${tenantSlug}/records?error=forbidden`) }
   await ctx.payload.update({ collection: 'documents', id: document.id, data: { softDeletedAt: new Date().toISOString(), softDeletedBy: ctx.userId }, depth: 0 })
   await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.domain.id, documentId: document.id, eventType: 'soft_deleted', actorUserId: ctx.userId, actorCharacterId: ctx.actorCharacterId, context: { soft: true }, revisionId: await latestDocumentRevisionId(ctx.payload, document.id) })
   redirect(`/domain/${tenantSlug}/records`)

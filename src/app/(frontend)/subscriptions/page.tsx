@@ -12,7 +12,7 @@ export default function SubscriptionsPage() {
           <article className={styles.card} data-index="01 / Player">
             <h3>Player</h3>
             <p className={styles.planPrice}>$0.00 per month</p>
-            <p>Player accounts are free and allow unlimited character creation. Want to start filing documents, submitting reports, or stay informed on what's happening - make a free account and it's yours forever.</p>
+            <p>Player accounts are free and allow unlimited character creation. Want to start filing documents, submitting reports, or stay informed on what&apos;s happening - make a free account and it&apos;s yours forever.</p>
           </article>
           <article className={styles.card} data-index="2 / Community">
             <h3>Community</h3>

@@ -9,5 +9,5 @@ export async function authorizeInterimOperation(payload: Payload, actor: Interim
   const ownerId = typeof domain.ownerUser === 'object' ? domain.ownerUser?.id : domain.ownerUser
   if (String(ownerId) === String(actor.userId)) return true
   const admins = await payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: domain.id } }, { user: { equals: actor.userId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
-  return admins.docs.length > 0 ? true : 'Only the Domain Owner or an operational Domain Admin may perform this action during Phase 3.'
+  return admins.docs.length > 0 ? true : 'Only the Domain Owner or an operational Domain Admin may perform this action.'
 }

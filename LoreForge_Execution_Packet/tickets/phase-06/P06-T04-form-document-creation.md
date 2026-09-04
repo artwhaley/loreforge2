@@ -62,6 +62,7 @@ Complete form-first authoring so a filer fills a friendly form and receives an o
 - Regenerate Payload types after schema changes.
 - Commit this ticket separately and write its execution note before proceeding.
 - Forward-patch guardrails (P05R-T07): on form-created Documents the active member Character automatically becomes Prepared-by; Character form fields create Concerns, not Prepared-by credits; ordinary form authoring requires an active member Character; new code uses canonical `sourceKind`, never legacy `origin`.
+- Forward-patch guardrails (P05R-T08, DEF-TAGS-01, DEF-PREP-01, DEF-ATTACH-01): document-entry surfaces land the tag autocomplete/create-new picker (DEF-TAGS-01), an add-more-Prepared-by-credits control on the creation surface (DEF-PREP-01), and visible member tag/concern attach behavior instead of silent drops or bare rejections (DEF-ATTACH-01).
 
 ## Completion handoff
 - All required automated checks pass.

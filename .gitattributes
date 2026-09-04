@@ -1,0 +1,14 @@
+# P05R-T08: normalize text line endings.
+# The execution packet and execution notes carry byte-integrity checks
+# (SHA256SUMS.txt + tools/validate_packet.py). With core.autocrlf=true and no
+# attributes, a fresh Windows clone checks those files out as CRLF and the
+# validator reports FAIL against the LF-committed hashes. Pinning eol=lf for
+# both trees makes checkouts byte-stable on every OS.
+* text=auto
+LoreForge_Execution_Packet/** text eol=lf
+execution-notes/** text eol=lf
+# Archives must never pass through text filters (rule order: this wins over
+# the packet eol rule above). A zip whose header bytes contain no NUL can be
+# misdetected as text and corrupted by CRLF normalization otherwise. The
+# `binary` macro does not reset eol, so eol is explicitly unset too.
+*.zip binary -eol

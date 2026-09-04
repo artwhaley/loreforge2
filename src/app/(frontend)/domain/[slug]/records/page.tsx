@@ -73,6 +73,7 @@ export default async function RecordsPage({ params, searchParams }: Props) {
       initialSearch={typeof q === 'string' ? q.trim() : ''}
       canManageFolders={role === 'admin'}
       canActOnRecords={Boolean(user)}
+      canDeleteRecords={role === 'admin'}
     />
   </TenantShell>
 }
