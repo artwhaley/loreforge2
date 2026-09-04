@@ -247,6 +247,30 @@ test('P05R-T04 J: Prepared-by credit — owner may create without a Character, m
   )
 })
 
+test('P05R-T11: PermissionRule identity is storage-backed and Domain resources stay scoped', async () => {
+  const { payload } = f
+  await assert.rejects(
+    createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: charPrincipal, resourceType: 'Domain', resource: { relationTo: 'domains', value: f.beta.id }, capability: 'read', effect: 'grant' }),
+    /must belong to the rule Domain/,
+  )
+  const folders: Array<{ id: Id }> = []
+  for (let index = 0; index < 101; index += 1) {
+    folders.push(await payload.create({ collection: 'folders', data: { domain: f.domain.id, name: `Identity scale ${index}` } } as never) as { id: Id })
+  }
+  for (const folder of folders) {
+    await createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: charPrincipal, resourceType: 'Folder', resource: { relationTo: 'folders', value: folder.id }, capability: 'manage_folders', effect: 'grant' })
+  }
+  await assert.rejects(
+    createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: charPrincipal, resourceType: 'Folder', resource: { relationTo: 'folders', value: folders[0].id }, capability: 'manage_folders', effect: 'deny' }),
+    /DUPLICATE_EQUIVALENT_RULE/,
+    'duplicate identity remains rejected after the first 100 candidates',
+  )
+  await upsertPermissionRule({ payload, domainId: f.domain.id, principalType: 'Character', principal: charPrincipal, resourceType: 'Folder', resource: { relationTo: 'folders', value: folders[0].id }, capability: 'manage_folders', effect: 'deny', actorUser: f.owner.id })
+  const rows = await rulesMatching(payload, { principalType: 'Character', resourceType: 'Folder', capability: 'manage_folders', principal: charPrincipal, resource: { relationTo: 'folders', value: folders[0].id } })
+  assert.equal(rows.length, 1)
+  assert.equal(rows[0].effect, 'deny')
+})
+
 test('P05R-T04 G: attach and detach provenance contexts mirror each other', async () => {
   const { payload, makeDoc } = f
   const doc = await makeDoc('SymmetryDoc')

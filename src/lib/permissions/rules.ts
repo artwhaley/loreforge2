@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { isCapability } from '@/lib/permissions/capabilities'
+import { permissionRuleKey } from '@/collections/PermissionRules'
 
 /**
  * PermissionRule writer seam (P05R-T04 E).
@@ -35,9 +36,10 @@ export async function upsertPermissionRule(args: {
     if (typeof value === 'object' && value !== null && 'value' in value) return Number((value as { value: unknown }).value)
     return typeof value === 'object' && 'id' in value ? Number((value as { id: number | string }).id) : Number(value)
   }
+  const ruleKey = permissionRuleKey({ domainId: Number(domainId), principalType, principalRelation: principal.relationTo, principalId: Number(relationId(principal.value)), resourceType, resourceRelation: resource.relationTo, resourceId: Number(relationId(resource.value)), capability })
   const existing = await payload.find({
     collection: 'permission-rules',
-    where: { and: [{ domain: { equals: domainId } }, { principalType: { equals: principalType } }, { resourceType: { equals: resourceType } }, { capability: { equals: capability } }] },
+    where: { ruleKey: { equals: ruleKey } },
     depth: 0,
     limit: 100,
     overrideAccess: true,
@@ -53,7 +55,7 @@ export async function upsertPermissionRule(args: {
         collection: 'permission-rules',
         id: rule.id,
         overrideAccess: true,
-        data: { effect, active, actorUser: Number(actorUser), actorCharacter: actorCharacter == null ? undefined : Number(actorCharacter) },
+        data: { effect, active, actorUser: Number(actorUser), actorCharacter: actorCharacter == null ? undefined : Number(actorCharacter), ruleKey },
       } as never)
     }
   }
@@ -71,6 +73,7 @@ export async function upsertPermissionRule(args: {
       active,
       actorUser: Number(actorUser),
       actorCharacter: actorCharacter == null ? undefined : Number(actorCharacter),
+      ruleKey,
     },
   } as never)
 }
