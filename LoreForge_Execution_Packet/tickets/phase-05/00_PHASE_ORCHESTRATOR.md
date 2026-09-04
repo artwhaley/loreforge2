@@ -1,6 +1,6 @@
 # Phase 5 Orchestrator — Archive Relationships, Tags, Character Links, Supersedes/Share
 
-**Status:** READY — P04-GATE was owner-approved on 2026-09-03; Phase 5 has not begun.
+**Status:** IMPLEMENTED — Phase 5 owner validation is in progress. P05-T03 is retired; the remaining implementation tickets and owner corrections are delivered. P05-GATE is awaiting explicit owner acceptance.
 
 ## Phase outcome
 First correct the rejected Role/Department/Folder assignment model, then add structured Character links, tags, linear supersedes relationships, and same-document Share behavior.
@@ -11,9 +11,9 @@ Before implementation, read the packet root documents `00_START_HERE.md` through
 Do not reinterpret the full roadmap while executing this phase. If current source conflicts with a frozen decision, use Change Control and stop rather than inventing a compromise.
 
 ## Branch
-`phase-05-document-relations-copy-share`
+`phase-05-document-supersession-and-sharing`
 
-Create it only from the owner-approved previous state.
+Continue from this branch's current tip. It contains the Phase 5 work originally committed on the Phase 4 branch; do not restart from the earlier Phase 4 baseline.
 
 ## Ordered ticket sequence
 

@@ -17,20 +17,12 @@ export default async function HomePage({ searchParams }: Props) {
       <PlatformShell>
         <section className={styles.hero}>
           <div className={styles.heroContent}>
-            <p className={styles.eyebrow}>Loreforge · the crafted archive</p>
-            <h1 className={styles.heroTitle}>Build worlds that remember.</h1>
-            <p className={styles.heroCopy}>A calm, character-aware home for the records, departments, and stories that make a world feel lived in.</p>
+            <h1 className={styles.heroTitle}>Write a world worth remembering.</h1>
+            <p className={styles.heroCopy}>One place for all your static and living lore.</p>
             <div className={styles.actions}><Link href="/about" className={styles.secondary}>Explore Loreforge</Link><Link href="/create-account" className={styles.primary}>Create your account</Link></div>
           </div>
-          <div className={styles.heroDiagram} aria-hidden="true">
-            <span className={styles.diagramOrbit} />
-            <span className={styles.diagramAxis} />
-            <span className={styles.diagramFolio}><span /><span /><span /></span>
-            <span className={styles.diagramCaption}>CONSTRUCT / PRESERVE / CONNECT</span>
-          </div>
           <div className={styles.loginCard} id="login">
-            <span className={styles.panelIndex} aria-hidden="true">ACCESS / 01</span>
-            <h2>Welcome back</h2><p>Sign in to continue to your domains and characters.</p>
+            <h2>Welcome back</h2>
             {error ? <p className={styles.error} role="alert">We couldn’t sign you in with those details. Check your email and password and try again.</p> : null}
             <form action="/api/customer-login" method="post">
               <div className={styles.field}><label htmlFor="email">Email</label><input id="email" name="email" type="email" autoComplete="email" required /></div>
@@ -42,9 +34,9 @@ export default async function HomePage({ searchParams }: Props) {
           </div>
         </section>
         <section className={styles.section}>
-          <p className={styles.eyebrow}>Made for communities</p><h2 className={styles.sectionTitle}>A living archive, with a human front door.</h2>
-          <p className={styles.sectionLead}>Loreforge keeps the platform simple at the top level, then lets each Domain develop its own character, departments, records, and visual language.</p>
-          <div className={styles.cards}><article className={styles.card}><span className={styles.cardIndex}>01 / IDENTITY</span><h3>Characters first</h3><p>Keep the person, the roleplay identity, and the Domain relationship clear.</p></article><article className={styles.card}><span className={styles.cardIndex}>02 / MEMORY</span><h3>Records that endure</h3><p>Write, organize, review, and revisit the material your world depends on.</p></article><article className={styles.card}><span className={styles.cardIndex}>03 / PLACE</span><h3>Your world’s tone</h3><p>Give each Domain its own presence while Loreforge stays recognizable underneath.</p></article></div>
+          <p className={styles.eyebrow}>Made for Second Life</p><h2 className={styles.sectionTitle}>All your lore, records, and communication available in world and on the web.</h2>
+          <p className={styles.sectionLead}>Loreforge integrates seamlessly with SL Notecards. Whether you're happy with plain text or want to take advantage of our markdown features for rich formatting on the web.</p>
+          <div className={styles.cards}><article className={styles.card} data-index="01 / IDENTITY"><h3>Characters first</h3><p>Permissions are managed per character and per sim, but your records and work follow the character, not the account. Move to a different city with your personal history intact, or create a new character without old clutter in the way.</p></article><article className={styles.card} data-index="02 / MEMORY"><h3>Records that endure</h3><p>A rich persistent history with version control, history audits, and database backups so your world and work are safe.</p></article><article className={styles.card} data-index="03 / PLACE"><h3>A place that's yours</h3><p>Customize your community in both look and function. Whether you're running a kingdom, a city-state, or a modern Metropolis, the vibe is right because you set it.</p></article></div>
         </section>
       </PlatformShell>
     )

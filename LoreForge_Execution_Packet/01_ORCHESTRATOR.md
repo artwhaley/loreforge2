@@ -30,9 +30,9 @@ This sequence is retained for historical clean-start reconstruction. The current
 ## Current continuation — Phase 5
 
 1. Confirm the repository's `execution-notes/P04-GATE.md` is `APPROVED_BY_OWNER` and this packet contains `CC-2026-09-03-03`.
-2. Create `phase-05-document-relations-copy-share` from that approved state (the historical branch name is retained; Copy/Move implementation is retired by owner decision).
+2. Continue on `phase-05-document-supersession-and-sharing`, preserving the completed Phase 5 implementation and corrections.
 3. Read `tickets/phase-05/00_PHASE_ORCHESTRATOR.md` completely.
-4. Execute exactly: `P05-T00`, `P05-T01`, `P05-T02`, `P05-T03` (retired/no-op), `P05-T04`, `P05-GATE`.
+4. Resume owner validation at `P05-GATE` using `execution-notes/P05-GATE.md`. P05-T00/T01/T02/T04 are implemented; P05-T03 is retired. Address owner-reported defects without restarting completed tickets.
 5. Stop after `P05-GATE`; Phase 6 requires explicit owner approval.
 
 ## Ticket loop
@@ -66,7 +66,7 @@ For each implementation ticket:
 - P02 `phase-02-character-context`
 - P03 `phase-03-domain-subdomain-structure`
 - P04 `phase-04-user-first-shell-document-lifecycle`
-- P05 `phase-05-document-relations-copy-share`
+- P05 `phase-05-document-supersession-and-sharing`
 - P06 `phase-06-template-form-studio`
 - P07 `phase-07-authorization-delegation`
 - P08 `phase-08-branding-public-starter-packs`

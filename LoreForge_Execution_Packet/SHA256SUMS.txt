@@ -87,7 +87,7 @@ ab3b64b55a37dd2bdf015b91560307989f7ea77844e1b93963ce7c25fecb631f  ./tickets/phas
 acd528438d0c00b72dbfd444db84423e3ae942c2d8b59b03236516d1f9f74f1b  ./tickets/phase-04/P04-T03-document-provenance-and-history-timeline.md
 ae1fae1aef300045b570564da22a8790eeb56dd0bdbfb6ae644f38834b5d9d04  ./tickets/phase-04/P04-T02-payload-versions-and-edit-guards.md
 ae29dd0866c525a0568faf7b29428a4612bc1f00d9d62bd4d9e46136e769bc01  ./tickets/phase-03/P03-T01-domain-model-owner-and-admins.md
-815a9cf2a0608116029de102cb2e3db261956b5d96414f4e0e6aeecb192ef7db  ./07_TICKET_INDEX.md
+1c622f1c7e75a5c640a3d25d54ac731e3d886cf1516b42f3e5fdd0131a4941ee  ./07_TICKET_INDEX.md
 b022e8b59fd676f4c48e305f5c51beb28c97811574f93a98cacc01bdd42fd50c  ./04_SPIKE_BASELINE.md
 a3fe9d377214e53ca56e1bc6cc4590371d95dec5e10aca255f4f83b65b12dca8  ./05_FIXTURE_AND_ACCEPTANCE_CONTRACT.md
 b390ee6f6cdea21897654e8c98917de21070595608010fa620de620ac33d69f2  ./tickets/phase-15/P15-T00-sl-bridge-protocol-design.md
@@ -97,7 +97,7 @@ b483e71bb6a07b4ce3653446bf81822483ffca39a0adae0c4976cf2c3991442b  ./tickets/phas
 ef4fae0d3ca73ec97e082bc50c1ed3f5747f4966178a47d7a5811770bc6a78c3  ./tickets/phase-05/P05-T03-document-copy-and-move.md
 b586abf6135ed79c48113bf644311b0561b235b65f2c9a0813376d782fa76b4a  ./tickets/phase-13/P13-T00-domain-notices.md
 b5c7a0aa3bca190e0d679b8c47b1ea9bbb1af81619758ff7a3cb3d83a19c09e4  ./tickets/phase-01/P01-GATE-review-gate-1.md
-fdfbe006c5591cfda0899cd989dfe9e9bc51529d8f8b5f8b5a84fc2f61cda1e8  ./tickets/phase-05/00_PHASE_ORCHESTRATOR.md
+b0440bb4c078e97fe079120f0588dffffbed1f92f9344fbaaa15493cf45466a2  ./tickets/phase-05/00_PHASE_ORCHESTRATOR.md
 bd62df4d9f407310148568877299113cd3c061543d01c8c0b76f539ddd61c06a  ./tickets/phase-07/P07-T03-role-defaults-hierarchy-and-scoped-authority.md
 c0d9149c1d5afd7543ee81db4cb57dabfbfe8881a8670a13ecb9cbc524d5810a  ./tickets/phase-11/P11-T04-operator-jobs-errors-and-commercial-seams.md
 ca2e4af6ffe16c890bf1d2cc9fd0f7248c436f2cd8cd2a1c6b7a55cea7cf8f90  ./tickets/phase-01/00_PHASE_ORCHESTRATOR.md
@@ -106,12 +106,12 @@ cfba5220026d359bb207a43dec0035a349b351517defb2b70496f804ba2f2c28  ./tickets/phas
 d2c9eed9aa1c8060de1a1d354040f618cd0a977e90e688c0c9a991f61cba4fdb  ./tickets/phase-09/P09-T02-personal-document-share-and-private-ux.md
 d608601045c1779bd152be937e594d2d55320cda3f5a7f72622e5c63fdf791a8  ./tickets/phase-06/00_PHASE_ORCHESTRATOR.md
 d8d78197b94407e7cb3c0e0ecf4dfb9b2a9672884c48a82856c0dde820116f12  ./tickets/phase-01/P01-T01-markdown-dialect-and-render-safety.md
-bf7b28515c479d28489710d479b7b0a3ce77e5e8559023eece9a6c2d1ee8e6b7  ./01_ORCHESTRATOR.md
+884f83eff72d0a45b5184227223433a0720444c26aefeb5049acac2f0f186335  ./01_ORCHESTRATOR.md
 dbeaeb82d600d4ef4c2d9b705b818ed7574d0c7650c30ff7807f0c7af46703c8  ./tickets/phase-08/P08-T01-theme-studio-productization-and-vocabulary.md
 ddf6b38e94af9d29bea587038a2c594678a9fba90e7da0cb7f1777791b95aacd  ./tickets/phase-06/P06-GATE-review-gate-6.md
 de5145c1309bbbe6e2ac32e898aa4c5c8997c03502a51cfd0a8a18dfa8ca16b4  ./tickets/phase-02/P02-T03-character-domain-membership-and-local-context.md
 df0e6d6095fa162454274af70b15723ec2882f7a0beed10cfc908fc56d393e5c  ./references/SPIKE_MVP_REVIEW.md
-3678f3fdeedcc13099024aa7b12ebd0e067acf892b677dd72758e17d661ede19  ./00_START_HERE.md
+beef969db7501f01fe25c5df7cc41a37a1c0ff23161c34ee264f3099966d4857  ./00_START_HERE.md
 e667515ce3a35a75e3535db8adb47da175781ba502545e7cbc001994691bbefe  ./tickets/phase-12/P12-T02-public-and-permission-search-ux.md
 e8c3516fb1c6abe70078c842e312a46a035dfa92916367daae4b9591320d3ad7  ./tickets/phase-09/P09-GATE-review-gate-9.md
 e940e69faf1e6558d632bb52e3dc93a17910083e77223f70fc2a2e19a36d0a8e  ./tickets/phase-02/00_PHASE_ORCHESTRATOR.md

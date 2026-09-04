@@ -100,7 +100,7 @@ This index is navigation only. `01_ORCHESTRATOR.md`, each phase's `00_PHASE_ORCH
   _Human review of the approved customer shell/workflows and durable Document/Type/lifecycle/version/provenance foundation before relationships and templates build on it._
 
 ## Phase 5 — Archive Relationships, Tags, Character Links, Supersedes/Share
-- Branch: `phase-05-document-relations-copy-share`
+- Branch: `phase-05-document-supersession-and-sharing`
 - Orchestrator: `tickets/phase-05/00_PHASE_ORCHESTRATOR.md`
 
 - **P05-T00** — Correct Role, Department, and Folder assignment model

@@ -4,6 +4,8 @@
 
 ## Delivered commits
 
+- `c10ca00` — owner correction: document-first view, bottom Share action, superseding creation with prefilled content and locking, removal of Copy/Move/Grouped, and updated packet rules.
+
 - `d8b1bf1` — P05-T00 corrected Role, Department, and Folder assignment model.
 - `2b0fd91` — P05-T01 Character links and Domain Tags.
 - `253d504` — P05-T02 Supersedes relationships.
@@ -12,7 +14,7 @@
 
 ## Automated evidence
 
-- `npm test` — **64 passed, 0 failed**.
+- `npm test` — **62 passed, 0 failed** after retiring the Copy/Move tests.
 - `npx tsc --noEmit` — **passed**.
 - `npm run build` — **passed**; all Phase 5 routes compile, including links, tags, supersedes relationships, Share, and Character workspace routes.
 - `PAYLOAD_PUSH=false npm run migrate:phase5` — **passed**; no legacy `SubdomainMembership` table remained and role migration is idempotent.
