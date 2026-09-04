@@ -23,3 +23,32 @@ test('P06-T02 neutral schema rejects duplicate keys and select without options',
   assert.throws(() => assertFormSchema({ version: 1, fields: [{ key: 'bad-key', type: 'text', label: 'Bad' }] }))
 })
 
+test('P06R additive presentation hints round-trip and older schemas stay valid', () => {
+  const result = validateFormSchema({ version: 1, fields: [
+    { key: 'story', type: 'textarea', label: 'Story', help: 'Say what you saw.', width: 'medium', rows: 6, default: 'Nothing to report', required: true },
+    { key: 'consent', type: 'checkbox', label: 'Consent', default: true },
+  ] })
+  assert.equal(result.valid, true)
+  if (result.valid) {
+    assert.equal(result.value.fields[0].width, 'medium')
+    assert.equal(result.value.fields[0].rows, 6)
+    assert.equal(result.value.fields[0].help, 'Say what you saw.')
+    assert.equal(result.value.fields[0].default, 'Nothing to report')
+    assert.equal(result.value.fields[1].default, true)
+  }
+  // A schema stored before the hints existed (no width/rows) still validates
+  // and is not rewritten with invented values.
+  const legacy = validateFormSchema({ version: 1, fields: [{ key: 'story', type: 'textarea', label: 'Story' }] })
+  assert.equal(legacy.valid, true)
+  if (legacy.valid) assert.equal(legacy.value.fields[0].rows, undefined)
+})
+
+test('P06R rejects invalid width and rows values instead of coercing', () => {
+  const badWidth = validateFormSchema({ version: 1, fields: [{ key: 'q', type: 'text', label: 'Q', width: 'huge' }] })
+  assert.equal(badWidth.valid, false)
+  const badRows = validateFormSchema({ version: 1, fields: [{ key: 'q', type: 'textarea', label: 'Q', rows: 2 }] })
+  assert.equal(badRows.valid, false)
+  const floatRows = validateFormSchema({ version: 1, fields: [{ key: 'q', type: 'textarea', label: 'Q', rows: 4.5 }] })
+  assert.equal(floatRows.valid, false)
+})
+

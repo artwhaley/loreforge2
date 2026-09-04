@@ -47,14 +47,28 @@ export function escapeMarkdownValue(value: string | boolean | null | undefined):
   return String(value).replace(/[\\`*_{}\[\]()#+.!|>~-]/g, '\\$&')
 }
 
-export function renderTemplateTokens(template: string, answers: FormAnswers, schema?: LoreForgeFormSchema | unknown): string {
+/**
+ * Render {{token}} placeholders with submitted answers. `escapeMarkdown` is
+ * on for body Markdown (so filer text cannot restructure the document) and
+ * off for plain record titles (a date must read 2026-09-04, not
+ * 2026\-09\-04). Token/answer validation is identical either way.
+ */
+export function renderTemplateTokens(template: string, answers: FormAnswers, schema?: LoreForgeFormSchema | unknown, options?: { escapeMarkdown?: boolean }): string {
   const validated = schema === undefined ? undefined : assertFormSchema(schema)
   const allowed = validated ? new Set(validated.fields.map((field) => field.key)) : null
+  const escape = options?.escapeMarkdown !== false
   return template.replace(tokenPattern, (match, key: string) => {
     if (key === 'content') return match
     if (allowed && !allowed.has(key)) throw new Error(`Unknown template token {{${key}}}.`)
     if (!(key in answers)) throw new Error(`Missing answer for template token {{${key}}}.`)
-    return escapeMarkdownValue(answers[key])
+    return escape ? escapeMarkdownValue(answers[key]) : renderPlainValue(answers[key])
   })
+}
+
+/** Plain-text value rendering (no Markdown escaping) for record titles. */
+export function renderPlainValue(value: string | boolean | null | undefined): string {
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  return String(value)
 }
 

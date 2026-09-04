@@ -3,9 +3,10 @@ import type { Payload } from 'payload'
 import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
 import { composeTemplate, renderTemplateTokens } from '@/lib/templates/compose'
-import type { LoreForgeFormSchema } from './schema'
+import { displayAnswersForRender } from './layout'
 import { runInTransaction } from '@/lib/documents/relationships'
 import { attachDocumentCharacterLink, ensurePreparedBy } from '@/lib/documents/links'
+import type { FormAnswers, LoreForgeFormSchema } from './schema'
 
 /**
  * The Ticket 07 design seam: form template + submitted answers -> archive
@@ -24,8 +25,6 @@ export type FormArchiveMetadata = {
     markdownTemplate: string
   }
 }
-
-export type FormAnswers = Record<string, string | boolean | null | undefined>
 
 /** How a submitted value renders into Markdown: booleans as true/false. */
 function renderValue(value: string | boolean | null | undefined): string {
@@ -65,10 +64,39 @@ export function renderNeutralTemplate(template: NeutralTemplateMetadata, answers
   const composed = composeTemplate(template, lookup)
   const schema = template.kind === 'form' ? template.formSchema : undefined
   return {
-    title: renderTemplateTokens(composed.titleTemplate, answers, schema).trim(),
+    // Titles are plain text (never Markdown), so values are not escaped there:
+    // a date must read 2026-09-04, not 2026\-09\-04.
+    title: renderTemplateTokens(composed.titleTemplate, answers, schema, { escapeMarkdown: false }).trim(),
     body: canonicalizeMarkdown(renderTemplateTokens(composed.bodyTemplate, answers, schema)).trim(),
     chain: composed.chain,
   }
+}
+
+/**
+ * Answers as a generated record should *read* them: select answers become
+ * their display labels, checkbox strings normalize to booleans (Yes/No), and
+ * Character answers become the Character's name. Raw values (ids, option
+ * values) are untouched for the archive/index side-effects that consume them.
+ * Inactive or missing Characters keep their raw id here; the link step below
+ * rejects them with the authoritative error before anything is created.
+ */
+export async function answersForRecordRender(args: {
+  payload: Payload
+  schema: LoreForgeFormSchema
+  answers: FormAnswers
+}): Promise<Record<string, string | boolean>> {
+  const display = displayAnswersForRender(args.schema, args.answers)
+  for (const field of args.schema.fields) {
+    if (field.type !== 'character') continue
+    const raw = args.answers[field.key]
+    if (raw === undefined || raw === null || raw === '') continue
+    const characterId = Number(raw)
+    if (!Number.isFinite(characterId) || characterId <= 0) continue
+    const character = await args.payload.findByID({ collection: 'characters', id: characterId, depth: 0, overrideAccess: true }).catch(() => null)
+    if (character && character.status === 'active') display[field.key] = character.name
+    else display[field.key] = String(raw)
+  }
+  return display
 }
 
 export type GeneratedDocument = {
@@ -93,9 +121,17 @@ export async function generateDocumentFromSubmission(args: {
   const { payload, tenant, user, actorCharacterId, form, answers } = args
 
   const neutral = 'bodyTemplate' in form
-  const rendered = neutral
-    ? renderNeutralTemplate(form, answers)
-    : { title: renderTemplate((form as FormArchiveMetadata).archive.titleTemplate, answers).trim(), body: canonicalizeMarkdown(renderTemplate((form as FormArchiveMetadata).archive.markdownTemplate, answers)).trim(), chain: [] }
+  const schema: LoreForgeFormSchema = neutral ? (form.formSchema ? form.formSchema : { version: 1, fields: [] }) : { version: 1, fields: [] }
+  let rendered: { title: string; body: string; chain: Array<number | string> }
+  if (neutral) {
+    const renderAnswers = schema.fields.some((field) => field.type === 'character')
+      ? await answersForRecordRender({ payload, schema, answers })
+      : displayAnswersForRender(schema, answers)
+    rendered = renderNeutralTemplate(form, renderAnswers)
+  } else {
+    const legacy = form as FormArchiveMetadata
+    rendered = { title: renderTemplate(legacy.archive.titleTemplate, answers).trim(), body: canonicalizeMarkdown(renderTemplate(legacy.archive.markdownTemplate, answers)).trim(), chain: [] }
+  }
   const title = rendered.title
   const body = rendered.body
 
@@ -124,7 +160,6 @@ export async function generateDocumentFromSubmission(args: {
     const created = await payload.create({ collection: 'documents', context: actorCharacterId == null ? { allowUserCreate: true, actorUserId: user.id } : { preparedByCharacterId: actorCharacterId, actorUserId: user.id }, data: { domain: tenant.id, tenant: tenant.id, folder, title, body, origin: 'form', sourceKind: 'form', documentType, lifecycle: 'draft', publicAccess: 'inherit', createdBy: user.id }, depth: 0 })
     return { id: Number(created.id), title, body }
   }
-  const schema = form.formSchema ? form.formSchema : { version: 1, fields: [] }
   const lifecycle = form.lifecyclePolicy === 'review-required' ? 'pending_review' : 'filed'
   const created = await runInTransaction(payload, async (transactionID) => {
     const req = { transactionID }

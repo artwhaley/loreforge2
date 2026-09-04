@@ -8,6 +8,15 @@ export const FORM_SCHEMA_VERSION = 1 as const
 export const FORM_FIELD_TYPES = ['text', 'textarea', 'date', 'select', 'checkbox', 'character'] as const
 export type FormFieldType = (typeof FORM_FIELD_TYPES)[number]
 
+/**
+ * Presentation emphasis for a question on the member-facing form. Kept as
+ * optional presentation hints (never data semantics) so older stored schemas
+ * without them stay valid: 'short' and 'medium' cap the input width, 'full'
+ * (the default when absent) spans the whole row.
+ */
+export const FORM_FIELD_WIDTHS = ['short', 'medium', 'full'] as const
+export type FormFieldWidth = (typeof FORM_FIELD_WIDTHS)[number]
+
 export type FormOption = { label: string; value: string }
 
 export type LoreForgeFormField = {
@@ -18,6 +27,10 @@ export type LoreForgeFormField = {
   required?: boolean
   options?: FormOption[]
   default?: string | boolean
+  /** Height of a long-answer field in lines (3-24). Absent = renderer default. */
+  rows?: number
+  /** Visual width emphasis; absent = 'full'. */
+  width?: FormFieldWidth
   relationshipLabel?: string
 }
 
@@ -91,6 +104,20 @@ export function validateFormSchema(input: unknown): { valid: true; value: LoreFo
     if (defaultValue !== undefined && typeof defaultValue !== 'string' && typeof defaultValue !== 'boolean') issues.push(issue(`${path}.default`, 'Defaults must be text or boolean values.'))
     const relationshipLabel = item.relationshipLabel === undefined ? undefined : String(item.relationshipLabel).trim()
     if (type !== 'character' && relationshipLabel) issues.push(issue(`${path}.relationshipLabel`, 'Relationship labels are only valid for Character fields.'))
+    // Presentation hints (P06R): optional and additive, never structural. Any
+    // older stored schema without them remains valid and renders at defaults.
+    let width: FormFieldWidth | undefined
+    const widthRaw = item.width
+    if (widthRaw !== undefined) {
+      if ((FORM_FIELD_WIDTHS as readonly string[]).includes(String(widthRaw))) width = widthRaw as FormFieldWidth
+      else issues.push(issue(`${path}.width`, `Unsupported field width "${String(widthRaw)}".`))
+    }
+    let rows: number | undefined
+    const rowsRaw = item.rows
+    if (rowsRaw !== undefined) {
+      if (typeof rowsRaw !== 'number' || !Number.isInteger(rowsRaw) || rowsRaw < 3 || rowsRaw > 24) issues.push(issue(`${path}.rows`, 'Long-answer height must be a whole number of lines between 3 and 24.'))
+      else rows = rowsRaw
+    }
     fields.push({
       key,
       type,
@@ -99,6 +126,8 @@ export function validateFormSchema(input: unknown): { valid: true; value: LoreFo
       required,
       ...(options ? { options } : {}),
       ...(defaultValue !== undefined ? { default: defaultValue as string | boolean } : {}),
+      ...(width ? { width } : {}),
+      ...(rows !== undefined ? { rows } : {}),
       ...(relationshipLabel ? { relationshipLabel } : {}),
     })
   })

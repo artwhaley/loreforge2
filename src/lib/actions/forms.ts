@@ -8,8 +8,8 @@ import { getPayload } from 'payload'
 
 import config from '@/payload.config'
 
-import { generateDocumentFromSubmission, type FormAnswers } from '@/lib/forms/generateDocument'
-import { assertFormSchema, type FormFieldType } from '@/lib/forms/schema'
+import { generateDocumentFromSubmission } from '@/lib/forms/generateDocument'
+import { assertFormSchema, type FormAnswers, type FormFieldType, type FormFieldWidth } from '@/lib/forms/schema'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { isAllowed } from '@/lib/authz/evaluate'
 
@@ -27,6 +27,10 @@ export type FillField = {
   required: boolean
   options?: Array<{ label: string; value: string }>
   help?: string
+  default?: string | boolean
+  width?: FormFieldWidth
+  rows?: number
+  relationshipLabel?: string
 }
 
 /**

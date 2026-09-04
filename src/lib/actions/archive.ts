@@ -17,7 +17,7 @@ import { addDocumentRelationship, runInTransaction } from '@/lib/documents/relat
 import { evaluatePermission } from '@/lib/authz/evaluate'
 import { domainAndIdWhere } from '@/lib/tenant/scope'
 import { assertFormSchema } from '@/lib/forms/schema'
-import { renderNeutralTemplate } from '@/lib/forms/generateDocument'
+import { answersForRecordRender, renderNeutralTemplate } from '@/lib/forms/generateDocument'
 import { isTemplateAvailableAt } from '@/lib/templates/resolve'
 import type { Domain, Tenant } from '@/payload-types'
 
@@ -272,7 +272,10 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
       const missing = schema.fields.filter((field) => field.required && (answers[field.key] === undefined || answers[field.key] === null || answers[field.key] === '')).map((field) => field.label)
       if (missing.length > 0) return { error: 'form-validation', values }
       try {
-        const rendered = renderNeutralTemplate({ id: selectedTemplate.id, name: String(selectedTemplate.name), kind: 'form', titleTemplate: String(selectedTemplate.titleTemplate), bodyTemplate: String(selectedTemplate.bodyTemplate), formSchema: schema, baseTemplate: selectedTemplate.baseTemplate as never }, answers)
+        // Records read select labels, boolean checkboxes, and Character names;
+        // raw ids/option values are kept for the concern-link step below.
+        const renderAnswers = await answersForRecordRender({ payload: ctx.payload, schema, answers })
+        const rendered = renderNeutralTemplate({ id: selectedTemplate.id, name: String(selectedTemplate.name), kind: 'form', titleTemplate: String(selectedTemplate.titleTemplate), bodyTemplate: String(selectedTemplate.bodyTemplate), formSchema: schema, baseTemplate: selectedTemplate.baseTemplate as never }, renderAnswers)
         renderedBody = rendered.body
         for (const field of schema.fields) if (field.type === 'character') {
           const raw = String(answers[field.key] ?? '').trim()
