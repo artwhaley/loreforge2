@@ -1,10 +1,15 @@
 # Phase 05 review follow-up — executable corrective stack
 
-Status: READY TO EXECUTE; no implementation authorized or performed by writing this stack.
+Status: EXECUTED THROUGH T15; GATE2 WAITING_FOR_OWNER.
 Date: 2026-09-04.
 Baseline: phase-05-remediation at df94f23 (includes P05R-T08).
 Purpose: close R01–R10 from P05_CORRECTIVE_REVIEW.md, not restart Phase 5.
 This directory is the authoritative follow-up stack. Its tickets are self-contained; the external review is supporting evidence, not a required dependency.
+
+Execution record: T09–T15 have been implemented and verified on
+`phase-05-remediation`. Evidence is in `execution-notes/P05R-T09.md` through
+`execution-notes/P05R-T15.md`; the current acceptance state is recorded in
+`execution-notes/P05R-GATE2.md`. GATE2 remains owner-gated, so P06 is blocked.
 
 ## Executor kickoff
 
@@ -61,4 +66,3 @@ T09 has no dependency. Each later ticket depends on the preceding ticket. Work s
 ## Standard ticket handoff
 
 Every execution note includes scope/files, finding IDs, before/after regression evidence, transaction boundaries when relevant, fresh test results, schema changes queued for T14, remaining blockers, and the next ticket. An unresolved required item keeps the ticket open; an executor cannot invent a new deferral.
-
