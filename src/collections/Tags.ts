@@ -12,6 +12,15 @@ export const Tags: CollectionConfig = {
   admin: { useAsTitle: 'name', defaultColumns: ['name', 'domain'] },
   timestamps: true,
   indexes: [{ unique: true, fields: ['domain', 'normalizedName'] }],
+  // Interim authority boundary (P05R-T01): Tag vocabulary mutates through the
+  // sanctioned filing/link service only; direct REST/GraphQL/Admin access is
+  // denied for ordinary callers.
+  access: {
+    read: () => false,
+    create: () => false,
+    update: () => false,
+    delete: () => false,
+  },
   fields: [
     { name: 'domain', type: 'relationship', relationTo: 'domains', required: true, index: true },
     { name: 'name', type: 'text', required: true },

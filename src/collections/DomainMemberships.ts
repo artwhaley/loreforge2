@@ -10,6 +10,17 @@ export const DomainMemberships: CollectionConfig = {
     defaultColumns: ['tenant', 'character', 'status', 'updatedAt'],
   },
   timestamps: true,
+  // Interim authority boundary (P05R-T01): memberships change only through
+  // the sanctioned /api/domain-memberships route after authorizeInterimOperation.
+  // Direct REST/GraphQL/Admin create/update/delete is denied so no caller can
+  // self-enroll a Character or flip a status to trigger/evade the removal
+  // cascade, and no caller can read another Domain's roster rows directly.
+  access: {
+    read: () => false,
+    create: () => false,
+    update: () => false,
+    delete: () => false,
+  },
   hooks: {
     afterChange: [async ({ doc, previousDoc, req }) => {
       const domainId = relationId(doc.domain)

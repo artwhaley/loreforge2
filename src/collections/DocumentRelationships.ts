@@ -5,6 +5,15 @@ export const DocumentRelationships: CollectionConfig = {
   slug: 'document-relationships',
   admin: { useAsTitle: 'kind', defaultColumns: ['kind', 'source', 'target', 'actorUser'] },
   timestamps: true,
+  // Interim authority boundary (P05R-T01): supersession edges are created and
+  // corrected only through the sanctioned relationship service; direct
+  // REST/GraphQL/Admin access is denied so raw edge forging is impossible.
+  access: {
+    read: () => false,
+    create: () => false,
+    update: () => false,
+    delete: () => false,
+  },
   fields: [
     { name: 'domain', type: 'relationship', relationTo: 'domains', required: true, index: true },
     { name: 'source', type: 'relationship', relationTo: 'documents', required: true, index: true },

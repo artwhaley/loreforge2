@@ -11,6 +11,16 @@ export const PermissionRules: CollectionConfig = {
   slug: 'permission-rules',
   admin: { useAsTitle: 'capability', defaultColumns: ['domain', 'principalType', 'resourceType', 'capability', 'effect'] },
   timestamps: true,
+  // Interim authority boundary (P05R-T01): PermissionRule rows are security
+  // truth. They are written only by the sanctioned People-workspace route and
+  // read only by internal services; direct REST/GraphQL/Admin access is
+  // denied so no caller can self-grant or read another Domain's rules.
+  access: {
+    read: () => false,
+    create: () => false,
+    update: () => false,
+    delete: () => false,
+  },
   fields: [
     { name: 'domain', type: 'relationship', relationTo: 'domains', required: true, index: true },
     { name: 'principalType', type: 'select', required: true, options: [{ label: 'Character', value: 'Character' }, { label: 'User', value: 'User' }, { label: 'Role', value: 'Role' }, { label: 'Domain membership', value: 'DomainMembership' }] },

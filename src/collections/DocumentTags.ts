@@ -11,6 +11,14 @@ export const DocumentTags: CollectionConfig = {
   admin: { useAsTitle: 'document', defaultColumns: ['document', 'tag', 'domain'] },
   timestamps: true,
   indexes: [{ unique: true, fields: ['document', 'tag'] }],
+  // Interim authority boundary (P05R-T01): links mutate only through the
+  // sanctioned link service; direct REST/GraphQL/Admin access is denied.
+  access: {
+    read: () => false,
+    create: () => false,
+    update: () => false,
+    delete: () => false,
+  },
   fields: [
     { name: 'domain', type: 'relationship', relationTo: 'domains', required: true, index: true, admin: { readOnly: true } },
     { name: 'document', type: 'relationship', relationTo: 'documents', required: true, index: true },

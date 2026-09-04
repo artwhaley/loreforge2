@@ -1,9 +1,9 @@
 import type { CollectionConfig } from 'payload'
 
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { canAccessDocument } from '@/lib/authorization/documentAccess'
 import { assertLifecycleTransition, canEditDocumentBody, type Lifecycle } from '@/lib/documents/lifecycle'
 import { ensurePreparedBy } from '@/lib/documents/links'
-import { authorizeSharedDocumentAccess } from '@/lib/documents/sharing'
 
 const relationId = (value: unknown): number | null => value && typeof value === 'object' && 'id' in value ? Number((value as { id: number | string }).id) : value === null || value === undefined || value === '' ? null : Number(value)
 
@@ -16,31 +16,23 @@ export const Documents: CollectionConfig = {
   timestamps: true,
   versions: { maxPerDoc: 0 },
   access: {
-    // Direct REST/revision reads must prove the caller can read this exact
-    // Document. Internal server queries use Local API overrideAccess after
-    // their own tenant boundary has been established.
+    // Direct REST/GraphQL/revision reads, updates, and version reads must
+    // prove the caller can access this exact Document through the shared
+    // interim decision (src/lib/authorization/documentAccess.ts). Internal
+    // server queries use Local API overrideAccess after their own tenant
+    // boundary has been established; the Local API in Payload 3.88 defaults
+    // to overrideAccess, so these functions guard the HTTP surface.
     read: async ({ req, id }) => {
       if (!req.user || id === undefined || id === null) return false
-      const currentResult = await req.payload.find({ collection: 'documents', where: { id: { equals: id } }, depth: 0, limit: 1, overrideAccess: true })
-      const current = currentResult.docs[0]
-      if (!current || current.softDeletedAt) return false
-      const domainId = relationId(current.domain)
-      const tenantId = relationId(current.tenant)
-      if (domainId) {
-        const domain = await req.payload.findByID({ collection: 'domains', id: domainId, depth: 0, overrideAccess: true }).catch(() => null)
-        const ownerId = relationId(domain?.ownerUser)
-        if (ownerId && Number(ownerId) === Number(req.user.id)) return true
-        const admins = await req.payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: domainId } }, { user: { equals: req.user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true })
-        if (admins.docs.length > 0) return true
-        if (await authorizeSharedDocumentAccess({ payload: req.payload, documentId: id, userId: req.user.id, capability: 'read' })) return true
-        const controlled = await req.payload.find({ collection: 'characters', where: { and: [{ controlledBy: { equals: req.user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 200, overrideAccess: true })
-        if (controlled.docs.length === 0) return false
-        const memberships = await req.payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domainId } }, { character: { in: controlled.docs.map((character) => character.id) } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true })
-        return memberships.docs.length > 0
-      }
-      if (!tenantId) return false
-      const memberships = await req.payload.find({ collection: 'memberships', where: { and: [{ tenant: { equals: tenantId } }, { user: { equals: req.user.id } }] }, depth: 0, limit: 1, overrideAccess: true })
-      return memberships.docs.length > 0
+      return canAccessDocument({ payload: req.payload, user: req.user, documentId: id, capability: 'read' })
+    },
+    update: async ({ req, id }) => {
+      if (!req.user || id === undefined || id === null) return false
+      return canAccessDocument({ payload: req.payload, user: req.user, documentId: id, capability: 'update' })
+    },
+    readVersions: async ({ req, id }) => {
+      if (!req.user || id === undefined || id === null) return false
+      return canAccessDocument({ payload: req.payload, user: req.user, documentId: id, capability: 'read' })
     },
     // Permanent deletion is never an ordinary Domain action. P04 workflow
     // uses softDeletedAt/softDeletedBy and a reversible restore path.
@@ -53,6 +45,26 @@ export const Documents: CollectionConfig = {
         const domainId = relationId(data?.domain ?? originalDoc?.domain)
         if (folder === null || folder === undefined || folder === '') {
           throw new Error('Every Document must belong to a Folder; use the Domain Root when no branch is selected.')
+        }
+        // Defense in depth behind access.update: a Document may never be filed
+        // into a Folder outside its own Domain (or legacy Tenant). This also
+        // blocks cross-Domain re-file even when authority exists elsewhere.
+        if (operation === 'create' || data?.folder !== undefined) {
+          const folderId = relationId(folder)
+          if (folderId) {
+            const folderRecord = await req.payload.findByID({ collection: 'folders', id: folderId, depth: 0, overrideAccess: true }).catch(() => null) as { domain?: unknown; tenant?: unknown } | null
+            const folderDomainId = relationId(folderRecord?.domain)
+            if (domainId && folderDomainId && Number(folderDomainId) !== Number(domainId)) {
+              throw new Error('A Document cannot be filed into a Folder from another Domain.')
+            }
+            if (!domainId) {
+              const tenantId = relationId(data?.tenant ?? originalDoc?.tenant)
+              const folderTenantId = relationId(folderRecord?.tenant)
+              if (tenantId && folderTenantId && Number(folderTenantId) !== Number(tenantId)) {
+                throw new Error('A Document cannot be filed into a Folder from another Tenant.')
+              }
+            }
+          }
         }
         const documentType = data?.documentType ?? originalDoc?.documentType
         if (operation === 'create' && (documentType === null || documentType === undefined || documentType === '')) throw new Error('Every Document must have a Document Type.')

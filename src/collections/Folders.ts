@@ -21,7 +21,14 @@ export const Folders: CollectionConfig = {
     defaultColumns: ['name', 'tenant', 'parent'],
   },
   access: {
+    // Read stays as today: public Folder reads are a tracked concern
+    // (DEF-AUTH-01/DEF-PUBLIC-01), not redesigned here. Mutations are closed:
+    // customer Folder CRUD flows exclusively through the guarded /api/folders
+    // route after authorizeInterimOperation (P05R-T01).
     read: () => true,
+    create: () => false,
+    update: () => false,
+    delete: () => false,
   },
   timestamps: true,
   hooks: {
