@@ -27,8 +27,12 @@ export type FolderTreeNode = {
   systemManaged: boolean
   readState: PermissionState
   writeState: PermissionState
+  effectiveRead?: PermissionExplanation
+  effectiveWrite?: PermissionExplanation
   children: FolderTreeNode[]
 }
+
+export type PermissionExplanation = { allowed: boolean; source: string }
 
 export type PermissionState = 'inherit' | 'grant' | 'deny'
 
@@ -190,7 +194,7 @@ function FolderNode({ node, domainSlug, principalType, principalId, expanded, to
     <form action="/api/permission-rules" method="post" className={styles.folderRow}>
       <input type="hidden" name="domainSlug" value={domainSlug} /><input type="hidden" name={principalType === 'Role' ? 'roleId' : 'characterId'} value={principalId} /><input type="hidden" name="principalType" value={principalType} /><input type="hidden" name="folderId" value={node.id} /><input type="hidden" name="readState" value={readState} /><input type="hidden" name="writeState" value={writeState} />
       <div className={styles.folderIdentity}>{hasChildren ? <button type="button" className={styles.disclosure} aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${node.name}`} aria-expanded={isOpen} onClick={() => toggle(key)}>{isOpen ? '⌄' : '›'}</button> : <span className={styles.disclosureSpacer} aria-hidden="true" />}<span className={styles.folderIcon} aria-hidden="true">{node.systemManaged ? '⌂' : '▱'}</span><span className={styles.folderName}>{node.name}</span></div>
-      <div className={styles.permissionSet}><PermissionAxis label="Read" state={readState} onChange={setReadState} /><PermissionAxis label="Write" state={writeState} onChange={setWriteState} /></div>
+      <div className={styles.permissionSet}><PermissionAxis label="Read" state={readState} onChange={setReadState} /><PermissionAxis label="Write" state={writeState} onChange={setWriteState} />{node.effectiveRead || node.effectiveWrite ? <div className={styles.effectiveSummary}>{node.effectiveRead ? <span>Effective read: <strong>{node.effectiveRead.allowed ? 'Allowed' : 'Denied'}</strong> · {node.effectiveRead.source}</span> : null}{node.effectiveWrite ? <span>Effective write: <strong>{node.effectiveWrite.allowed ? 'Allowed' : 'Denied'}</strong> · {node.effectiveWrite.source}</span> : null}</div> : null}</div>
       <button type="submit" className={styles.saveButton}>Save</button>
     </form>
     {hasChildren && isOpen ? <ul className={styles.folderTree} role="group">{node.children.map((child) => <FolderNode key={`${principalType}-${principalId}-${child.id}`} node={child} domainSlug={domainSlug} principalType={principalType} principalId={principalId} expanded={expanded} toggle={toggle} />)}</ul> : null}

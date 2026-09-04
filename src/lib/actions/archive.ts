@@ -40,6 +40,7 @@ export type DocumentEditorActionState = {
     folderId: string
     concernLinks: string
     tagNames: string
+    preparedByCharacterIds: string
     templateId: string
     formAnswers: string
   }
@@ -53,6 +54,7 @@ function editorValues(formData: FormData): DocumentEditorActionState['values'] {
     folderId: String(formData.get('folderId') ?? ''),
     concernLinks: String(formData.get('concernLinks') ?? ''),
     tagNames: String(formData.get('tagNames') ?? ''),
+    preparedByCharacterIds: String(formData.get('preparedByCharacterIds') ?? ''),
     templateId: String(formData.get('templateId') ?? ''),
     formAnswers: String(formData.get('formAnswers') ?? ''),
   }
@@ -74,6 +76,19 @@ function parseConcernLinks(raw: string): ConcernSubmission[] | null {
       if ((!Number.isFinite(characterId) || characterId <= 0) && !newName) throw new Error('invalid')
       return { characterId: Number.isFinite(characterId) && characterId > 0 ? characterId : undefined, newName: newName || undefined, relationshipLabel: relationshipLabel || undefined }
     })
+  } catch {
+    return null
+  }
+}
+
+function parsePreparedByCharacterIds(raw: string): number[] | null {
+  if (!raw.trim()) return []
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return null
+    const ids = parsed.map((value) => Number(value))
+    if (ids.some((id) => !Number.isInteger(id) || id <= 0)) return null
+    return [...new Set(ids)]
   } catch {
     return null
   }
@@ -233,6 +248,8 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   if (!activeCharacterId && !ctx.isManager) return { error: 'character', values }
   const concernEntries = parseConcernLinks(values.concernLinks)
   if (!concernEntries) return { error: 'concerns', values }
+  const additionalPreparedByIds = parsePreparedByCharacterIds(values.preparedByCharacterIds)
+  if (!additionalPreparedByIds) return { error: 'prepared-by', values }
   const requestedTemplateId = Number(formData.get('templateId') ?? '')
   const templateResult = Number.isFinite(requestedTemplateId) && requestedTemplateId > 0
     ? await ctx.payload.find({ collection: 'templates', where: { and: [{ id: { equals: requestedTemplateId } }, { domain: { equals: ctx.tenant.id } }, { active: { equals: true } }] }, depth: 2, limit: 1, overrideAccess: true })
@@ -311,6 +328,13 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
       if (characterRows.docs.length !== requestedCharacterIds.length) return { error: 'concerns', values }
     }
   }
+  if (additionalPreparedByIds.length > 0) {
+    const [characters, memberships] = await Promise.all([
+      ctx.payload.find({ collection: 'characters', where: { and: [{ id: { in: additionalPreparedByIds } }, { status: { equals: 'active' } }] }, depth: 0, limit: additionalPreparedByIds.length, overrideAccess: true }),
+      ctx.payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: ctx.tenant.id } }, { character: { in: additionalPreparedByIds } }, { status: { equals: 'active' } }] }, depth: 0, limit: additionalPreparedByIds.length, overrideAccess: true }),
+    ])
+    if (characters.docs.length !== additionalPreparedByIds.length || memberships.docs.length !== additionalPreparedByIds.length) return { error: 'prepared-by', values }
+  }
   const folderRecord = folder ? await ctx.payload.findByID({ collection: 'folders', id: folder, depth: 0 }).catch(() => null) : null
   const domainRecord = await ctx.payload.findByID({ collection: 'domains', id: ctx.tenant.id, depth: 0 })
   const policy = resolveFilingPolicy({ template: (selectedTemplate?.lifecyclePolicy ?? 'inherit') as FilingPolicy, folder: (folderRecord?.filingPolicy ?? 'inherit') as FilingPolicy, documentType: selectedType.defaultFilingPolicy, domain: (domainRecord.defaultFilingPolicy ?? 'direct-file') as Exclude<FilingPolicy, 'inherit'> })
@@ -330,6 +354,9 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
     await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'created', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { lifecycle: created.lifecycle, ...(selectedTemplate ? { templateId: Number(selectedTemplate.id), sourceKind: selectedTemplate.kind } : {}) }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id, transactionID ?? undefined), transactionID })
     if (created.lifecycle === 'filed') await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'filed', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { reason: 'filing-policy' }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id, transactionID ?? undefined), transactionID })
     if (activeCharacterId) await ensurePreparedBy({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
+    for (const characterId of additionalPreparedByIds) {
+      await attachDocumentCharacterLink({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId, kind: 'prepared_by', actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
+    }
     if (concernEntries.length > 0) {
       for (const entry of concernEntries) {
         let characterId = entry.characterId
@@ -341,12 +368,17 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
         }
         if (characterId) await attachDocumentCharacterLink({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId, kind: 'concerns', relationshipLabel: entry.relationshipLabel, actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
       }
-      const rawTags = String(formData.get('tagNames') ?? '').split(',').map((name) => name.trim()).filter(Boolean)
-      for (const name of [...new Set(rawTags.map((tag) => tag.toLocaleLowerCase()))]) {
-        const displayName = rawTags.find((tag) => tag.toLocaleLowerCase() === name) ?? name
-        const tag = await findOrCreateDomainTag({ payload: ctx.payload, domainId: ctx.tenant.id, name: displayName, actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
-        await attachDocumentTag({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, tagId: tag.id, actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
-      }
+    }
+    // Tags are independent metadata; they must not disappear merely because
+    // this document has no Concerns entries.
+    const rawTags = String(formData.get('tagNames') ?? '').split(',').map((name) => name.trim()).filter(Boolean)
+    for (const name of [...new Set(rawTags.map((tag) => tag.toLocaleLowerCase()))]) {
+      const displayName = rawTags.find((tag) => tag.toLocaleLowerCase() === name) ?? name
+      // A filer who has already passed create_document may add metadata while
+      // creating the aggregate; the post-create Document edit check applies
+      // to later mutations through the tag route.
+      const tag = await findOrCreateDomainTag({ payload: ctx.payload, domainId: ctx.tenant.id, name: displayName, actor: { userId: ctx.user.id, characterId: activeCharacterId }, skipAuthorization: true, transactionID })
+      await attachDocumentTag({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, tagId: tag.id, actor: { userId: ctx.user.id, characterId: activeCharacterId }, skipAuthorization: true, transactionID })
     }
     return created
   }

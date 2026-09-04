@@ -16,7 +16,10 @@ async function requireDocumentEditor(payload: Payload, actor: LinkActor, domainI
   await requirePermission({ payload, actor: { userId: actor.userId, activeCharacterId: actor.characterId }, domainId, capability: 'edit_document', resource: { type: 'Document', id: documentId } })
 }
 async function requireTagManager(payload: Payload, actor: LinkActor, domainId: number | string, documentId: number | string) {
-  await requirePermission({ payload, actor: { userId: actor.userId, activeCharacterId: actor.characterId }, domainId, capability: 'manage_types_tags', resource: { type: 'Document', id: documentId } })
+  // P07-T02: attaching/removing a tag from a Document is an edit operation;
+  // managing the Domain vocabulary remains a separate capability for creating
+  // new tags outside a document-entry transaction.
+  await requireDocumentEditor(payload, actor, domainId, documentId)
 }
 async function requireDomainTagManager(payload: Payload, actor: LinkActor, domainId: number | string) {
   await requirePermission({ payload, actor: { userId: actor.userId, activeCharacterId: actor.characterId }, domainId, capability: 'manage_types_tags', resource: { type: 'Domain', id: domainId } })
@@ -87,11 +90,11 @@ export async function ensurePreparedBy(args: { payload: Payload; domainId: numbe
 export async function findOrCreateDomainTag(args: { payload: Payload; domainId: number | string; name: string; actor: LinkActor; skipAuthorization?: boolean; transactionID?: number | string | null }) {
   const name = args.name.trim()
   if (!name) throw new Error('Tag names cannot be blank.')
-  if (!args.skipAuthorization) await requireDomainTagManager(args.payload, args.actor, args.domainId)
   const normalizedName = normalizeTagName(name)
   const txReq = args.transactionID == null ? undefined : { transactionID: args.transactionID }
   const existing = await args.payload.find({ collection: 'tags', where: { and: [{ domain: { equals: args.domainId } }, { normalizedName: { equals: normalizedName } }] }, depth: 0, limit: 1, overrideAccess: true, req: txReq })
   if (existing.docs[0]) return existing.docs[0]
+  if (!args.skipAuthorization) await requireDomainTagManager(args.payload, args.actor, args.domainId)
   return args.payload.create({ collection: 'tags', overrideAccess: true, req: txReq, data: { domain: Number(args.domainId), name, normalizedName } })
 }
 

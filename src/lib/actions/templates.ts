@@ -8,6 +8,8 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { assertFormSchema } from '@/lib/forms/schema'
 import { isAllowed } from '@/lib/authz/evaluate'
+import { getActiveContext } from '@/lib/tenant/activeTenant'
+import { isTemplateAvailableAt } from '@/lib/templates/resolve'
 
 export type TemplateActionState = { error?: string; ok?: boolean }
 
@@ -18,7 +20,8 @@ async function managerContext(domainSlug: string) {
   const domains = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1, overrideAccess: true })
   const domain = domains.docs[0]
   if (!domain) return { payload, user, domain: null, error: 'Domain not found.' }
-  const authority = await isAllowed({ payload, actor: { userId: user.id }, domainId: domain.id, capability: 'manage_templates', resource: { type: 'Domain', id: domain.id } })
+  const active = await getActiveContext()
+  const authority = await isAllowed({ payload, actor: { userId: user.id, activeCharacterId: active.tenant?.slug === domainSlug ? active.activeCharacter?.id ?? null : null }, domainId: domain.id, capability: 'manage_templates', resource: { type: 'Domain', id: domain.id } })
   if (!authority) return { payload, user, domain, error: 'You cannot manage Templates in this Domain.' }
   return { payload, user, domain, error: null }
 }
@@ -43,6 +46,15 @@ export async function createFormTemplateAction(_previous: TemplateActionState, f
   let schema: ReturnType<typeof assertFormSchema>
   try { schema = assertFormSchema(parseJson(formData.get('formSchema'))) } catch (error) { return { error: error instanceof Error ? error.message : 'The form fields are invalid.' } }
   try {
+    if (baseTemplateId) {
+      const [baseResult, folderResult] = await Promise.all([
+        ctx.payload.find({ collection: 'templates', where: { and: [{ id: { equals: baseTemplateId } }, { domain: { equals: ctx.domain.id } }, { active: { equals: true } }] }, depth: 0, limit: 1, overrideAccess: true }),
+        ctx.payload.find({ collection: 'folders', where: { domain: { equals: ctx.domain.id } }, depth: 0, limit: 10000, overrideAccess: true }),
+      ])
+      const base = baseResult.docs[0]
+      const scope = folderResult.docs.find((folder) => Number(folder.id) === scopeFolder)
+      if (!base || !scope || !isTemplateAvailableAt(base as never, scope as never, folderResult.docs as never)) return { error: 'Base Template is not available at the selected Folder.' }
+    }
     await ctx.payload.create({
       collection: 'templates',
       overrideAccess: true,

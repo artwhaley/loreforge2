@@ -7,7 +7,8 @@ import { getLorePayload } from '@/lib/payload'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getTenantsForUser } from '@/lib/tenant/queries'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
-import { isAllowed } from '@/lib/authz/evaluate'
+import { isAllowed, type PermissionDecision } from '@/lib/authz/evaluate'
+import { resolveFolderAccessTree } from '@/lib/authz/folderAccess'
 
 type Props = { params: Promise<{ slug: string }> }
 export const dynamic = 'force-dynamic'
@@ -26,7 +27,15 @@ export default async function ManageFoldersPage({ params }: Props) {
     payload.find({ collection: 'folders', where: { domain: { equals: tenant.id } }, depth: 0, limit: 2000, sort: 'name' }),
     user ? getTenantsForUser(user.id) : Promise.resolve([]),
   ])
-  const toNode = (node: ReturnType<typeof buildFolderTree>[number]): AdminFolderNode => ({ id: Number(node.folder.id), name: node.folder.name, systemManaged: Boolean(node.folder.systemManaged), children: node.children.map(toNode) })
+  const effectiveTree = await resolveFolderAccessTree({ payload, domainId: tenant.id, actor, folders: folders.docs as unknown as Array<Record<string, unknown>> })
+  const effectiveById = new Map<number, (typeof effectiveTree)[number]>()
+  const indexEffective = (node: (typeof effectiveTree)[number]) => { effectiveById.set(node.folderId, node); node.children.forEach(indexEffective) }
+  effectiveTree.forEach(indexEffective)
+  const toNode = (node: ReturnType<typeof buildFolderTree>[number]): AdminFolderNode => {
+    const effective = effectiveById.get(Number(node.folder.id))
+    const source = (decision: PermissionDecision) => decision.matchedRule ? `${decision.matchedRule.principalType} rule` : decision.reason.replace(/\.$/, '')
+    return { id: Number(node.folder.id), name: node.folder.name, systemManaged: Boolean(node.folder.systemManaged), effectiveRead: effective ? { allowed: effective.read.allowed, source: source(effective.read) } : undefined, effectiveWrite: effective ? { allowed: effective.write.allowed, source: source(effective.write) } : undefined, children: node.children.map(toNode) }
+  }
   return <TenantShell tenant={tenant} cssVars={themeTokensToCssVars(resolveThemeTokens(tenant))} role={role} switcherTenants={domains}>
     <section>
       <p><a href={`/domain/${slug}`}>← Domain home</a></p>

@@ -5,21 +5,26 @@ import { useActionState } from 'react'
 
 import { createFormTemplateAction, type TemplateActionState } from '@/lib/actions/templates'
 import type { FormFieldType, LoreForgeFormField, LoreForgeFormSchema } from '@/lib/forms/schema'
+import { ForwardRefEditor } from '@/components/editor/ForwardRefEditor'
 
-type FolderOption = { id: number; name: string }
+type FolderOption = { id: number; name: string; parentId?: number | null }
 type TypeOption = { id: number; name: string }
+type BaseTemplateOption = { id: number; name: string; scopeFolderId: number; availableToDescendants: boolean }
 
 const FIELD_TYPES: FormFieldType[] = ['text', 'textarea', 'date', 'select', 'checkbox', 'character']
 
 const initialField = (index: number): LoreForgeFormField => ({ key: `field_${index}`, type: 'text', label: `Field ${index}`, required: false })
 
-export function FormStudio({ domainSlug, folders, types, baseTemplates = [] }: { domainSlug: string; folders: FolderOption[]; types: TypeOption[]; baseTemplates?: Array<{ id: number; name: string }> }) {
+export function FormStudio({ domainSlug, folders, types, baseTemplates = [] }: { domainSlug: string; folders: FolderOption[]; types: TypeOption[]; baseTemplates?: BaseTemplateOption[] }) {
   const [state, formAction, pending] = useActionState<TemplateActionState, FormData>(createFormTemplateAction, {})
   const [fields, setFields] = useState<LoreForgeFormField[]>([initialField(1)])
   const [output, setOutput] = useState('## {{field_1}}\n\n{{content}}')
+  const [titleOutput, setTitleOutput] = useState('{{field_1}}')
+  const [outputMode, setOutputMode] = useState<'edit' | 'source'>('edit')
   const [dirty, setDirty] = useState(false)
+  const [baseTemplateId, setBaseTemplateId] = useState('')
   const schema: LoreForgeFormSchema = useMemo(() => ({ version: 1, fields }), [fields])
-  const updateField = (index: number, patch: Partial<LoreForgeFormField>) => setFields((current) => current.map((field, item) => item === index ? { ...field, ...patch } : field))
+  const updateField = (index: number, patch: Partial<LoreForgeFormField>) => setFields((current) => current.map((field, itemIndex) => itemIndex === index ? { ...field, ...patch } : field))
   const move = (index: number, direction: -1 | 1) => setFields((current) => {
     const next = [...current]
     const target = index + direction
@@ -29,9 +34,28 @@ export function FormStudio({ domainSlug, folders, types, baseTemplates = [] }: {
     return next
   })
   const preview = output.replace(/\{\{\s*([\w-]+)\s*\}\}/g, (_match, key: string) => key === 'content' ? 'Sample narrative' : `[${key}]`)
-  const previewTokens = [...output.matchAll(/\{\{\s*([\w-]+)\s*\}\}/g)].map((match) => match[1])
+  const previewTokens = [...`${titleOutput}\n${output}`.matchAll(/\{\{\s*([\w-]+)\s*\}\}/g)].map((match) => match[1])
   const knownKeys = new Set([...fields.map((field) => field.key), 'content'])
   const unknownTokens = [...new Set(previewTokens.filter((token) => !knownKeys.has(token)))]
+  const [scopeFolderId, setScopeFolderId] = useState('')
+  const availableBaseTemplates = useMemo(() => {
+    const selected = Number(scopeFolderId)
+    if (!selected) return []
+    const byId = new Map(folders.map((folder) => [folder.id, folder]))
+    return baseTemplates.filter((template) => {
+      let cursor = byId.get(selected)
+      if (template.scopeFolderId === selected) return true
+      if (!template.availableToDescendants) return false
+      const seen = new Set<number>()
+      while (cursor?.parentId != null && !seen.has(cursor.id)) {
+        seen.add(cursor.id)
+        if (cursor.parentId === template.scopeFolderId) return true
+        cursor = byId.get(cursor.parentId)
+      }
+      return false
+    })
+  }, [baseTemplates, folders, scopeFolderId])
+  const effectiveBaseTemplateId = availableBaseTemplates.some((template) => String(template.id) === baseTemplateId) ? baseTemplateId : ''
   useEffect(() => {
     if (!dirty) return
     const beforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
@@ -46,11 +70,11 @@ export function FormStudio({ domainSlug, folders, types, baseTemplates = [] }: {
     <label>Name<input name="name" required placeholder="General Incident Report" onChange={() => setDirty(true)} /></label>
     <label>Document Type<select name="documentTypeId" required defaultValue="" onChange={() => setDirty(true)}> <option value="">Choose a type</option>{types.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select></label>
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem' }}>
-      <label>Available from<select name="scopeFolderId" required defaultValue="" onChange={() => setDirty(true)}> <option value="">Choose a Folder</option>{folders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
+      <label>Available from<select name="scopeFolderId" required value={scopeFolderId} onChange={(event) => { setScopeFolderId(event.target.value); setDirty(true) }}> <option value="">Choose a Folder</option>{folders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
       <label>Normal destination<select name="destinationFolderId" required defaultValue="" onChange={() => setDirty(true)}> <option value="">Choose a Folder</option>{folders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
     </div>
-    <label>Title output template<input name="titleTemplate" required defaultValue="{{field_1}}" onChange={() => setDirty(true)} /></label>
-    <label>Base template (optional)<select name="baseTemplateId" defaultValue="" onChange={() => setDirty(true)}><option value="">No base template</option>{baseTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></label>
+    <label>Title output template<input name="titleTemplate" required value={titleOutput} onChange={(event) => { setDirty(true); setTitleOutput(event.target.value) }} /></label>
+    <label>Base template (optional)<select name="baseTemplateId" value={effectiveBaseTemplateId} onChange={(event) => { setBaseTemplateId(event.target.value); setDirty(true) }}><option value="">No base template</option>{availableBaseTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select><small>{scopeFolderId ? 'Only Templates available at this Folder are listed.' : 'Choose an availability Folder first.'}</small></label>
     <section aria-labelledby="form-fields-heading" style={{ display: 'grid', gap: '.6rem' }}>
       <h2 id="form-fields-heading">Fields</h2>
       {fields.map((field, index) => <fieldset key={`${field.key}-${index}`} style={{ display: 'grid', gap: '.4rem', padding: '.75rem' }}>
@@ -65,9 +89,9 @@ export function FormStudio({ domainSlug, folders, types, baseTemplates = [] }: {
       </fieldset>)}
       <button type="button" onClick={() => setFields((current) => [...current, initialField(current.length + 1)])}>Add field</button>
     </section>
-    <label>Document output<textarea name="bodyTemplate" required value={output} onChange={(event) => { setDirty(true); setOutput(event.target.value) }} rows={10} /></label>
-    <label>Insert field<select aria-label="Insert field" onChange={(event) => { if (event.target.value) { setOutput((current) => `${current} {{${event.target.value}}}`); event.currentTarget.value = '' } }} defaultValue=""><option value="">Insert Field…</option>{fields.map((field) => <option key={field.key} value={field.key}>{field.label}</option>)}</select></label>
-    <section aria-label="Preview" style={{ padding: '1rem', background: '#f5f4ee', whiteSpace: 'pre-wrap' }}><strong>Preview</strong>{unknownTokens.length ? <p role="alert" style={{ color: '#9a2e25' }}>Unknown field token(s): {unknownTokens.map((token) => `{{${token}}}`).join(', ')}</p> : null}<p>{preview}</p></section>
+    <section aria-label="Document output" style={{ display: 'grid', gap: '.5rem' }}><strong>Document output</strong><input type="hidden" name="bodyTemplate" value={output} /><div role="group" aria-label="Document output mode"><button type="button" onClick={() => setOutputMode('edit')} aria-pressed={outputMode === 'edit'}>Edit</button><button type="button" onClick={() => setOutputMode('source')} aria-pressed={outputMode === 'source'}>Source</button></div>{outputMode === 'edit' ? <div style={{ border: '1px solid #b6b3a7', minHeight: 240 }}><ForwardRefEditor markdown={output} onChange={(next) => { setDirty(true); setOutput(next) }} contentEditableClassName="mdx-editor-content" /></div> : <textarea required value={output} onChange={(event) => { setDirty(true); setOutput(event.target.value) }} rows={10} aria-label="Document output source" />}</section>
+    <label>Insert field<select aria-label="Insert field" onChange={(event) => { if (event.target.value) { setDirty(true); setOutput((current) => `${current} {{${event.target.value}}}`); event.currentTarget.value = '' } }} defaultValue=""><option value="">Insert Field…</option>{fields.map((field) => <option key={field.key} value={field.key}>{field.label}</option>)}</select></label>
+    <section aria-label="Preview" style={{ padding: '1rem', background: '#f5f4ee', whiteSpace: 'pre-wrap' }}><strong>Preview</strong>{unknownTokens.length ? <p role="alert" style={{ color: '#9a2e25' }}>Unknown field token(s): {unknownTokens.map((token) => `{{${token}}}`).join(', ')}</p> : null}<p><strong>{titleOutput.replace(/\{\{\s*([\w-]+)\s*\}\}/g, (_match, key: string) => key === 'content' ? 'Sample narrative' : `[${key}]`)}</strong></p><p>{preview}</p></section>
     <button type="submit" disabled={pending || unknownTokens.length > 0}>{pending ? 'Saving…' : 'Save form'}</button>
   </form>
 }

@@ -42,6 +42,14 @@ async function activeCharacterState(payload: Payload, actor: PermissionActor, do
   if (actor.activeCharacterId == null) return null
   const character = await payload.findByID({ collection: 'characters', id: actor.activeCharacterId, depth: 0, overrideAccess: true }).catch(() => null)
   if (!character || character.status !== 'active') return null
+  // An active Character selector is a User -> Character tuple, not a caller
+  // supplied ID. Without this ownership check a user could forge another
+  // user's Character as their acting identity on direct API requests.
+  const characterRecord = character as { controlledBy?: unknown }
+  const controllerId = idOf(characterRecord.controlledBy)
+  // Payload always materializes this relationship for persisted Characters;
+  // tolerate an omitted property only for lightweight test doubles.
+  if (Object.prototype.hasOwnProperty.call(characterRecord, 'controlledBy') && (controllerId == null || Number(controllerId) !== Number(actor.userId))) return null
   const membership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domainId } }, { character: { equals: actor.activeCharacterId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true })
   if (!membership.docs[0]) return null
   return { characterId: Number(actor.activeCharacterId), membershipId: Number(membership.docs[0].id) }

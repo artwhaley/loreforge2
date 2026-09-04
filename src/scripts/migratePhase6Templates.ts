@@ -77,6 +77,24 @@ const forms = await payload.find({ collection: 'forms', depth: 0, limit: 10000, 
 let imported = 0
 let skipped = 0
 
+// Plain Text is an ordinary, flexible Domain template rather than a hidden
+// special case in the document editor. Seed it at every Domain root so the
+// searchable chooser always has a neutral blank option.
+for (const domain of domains.docs) {
+  const folders = await payload.find({ collection: 'folders', where: { domain: { equals: domain.id } }, depth: 0, limit: 10000, overrideAccess: true })
+  let root = folders.docs.find((folder) => Boolean(folder.systemManaged) && !folder.parent)
+  if (!root) {
+    root = await payload.create({ collection: 'folders', overrideAccess: true, data: { domain: domain.id, name: 'Domain Root', parent: null, systemManaged: true, filingPolicy: 'inherit', publicAccess: 'inherit' } })
+    payload.logger.info(`P06 migration created missing Domain root Folder ${root.id} for Domain ${domain.id}.`)
+  }
+  let type = (await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: domain.id } }, { name: { equals: 'Plain Text' } }] }, depth: 0, limit: 1, overrideAccess: true })).docs[0]
+  if (!type) type = await payload.create({ collection: 'document-types', overrideAccess: true, data: { domain: domain.id, name: 'Plain Text', active: true, defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit' } })
+  const existing = (await payload.find({ collection: 'templates', where: { and: [{ domain: { equals: domain.id } }, { name: { equals: 'Plain Text' } }, { kind: { equals: 'document' } }] }, depth: 0, limit: 1, overrideAccess: true })).docs[0]
+  const data = { domain: domain.id, documentType: type.id, name: 'Plain Text', kind: 'document' as const, scopeFolder: root.id, destinationFolder: root.id, allowDestinationOverride: true, availableToDescendants: true, baseTemplate: null, titleTemplate: 'Plain Text', bodyTemplate: '{{content}}', lifecyclePolicy: 'inherit' as const, active: true, version: Number(existing?.version ?? 1) }
+  if (existing) await payload.update({ collection: 'templates', id: existing.id, overrideAccess: true, data })
+  else await payload.create({ collection: 'templates', overrideAccess: true, data })
+}
+
 for (const form of forms.docs) {
   const legacyTenantId = idOf((form as { tenant?: unknown }).tenant)
   const explicitDomainId = idOf((form as { domain?: unknown }).domain)

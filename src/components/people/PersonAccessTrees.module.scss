@@ -65,6 +65,8 @@
 .folderTree > .folderItem > .folderTree { margin-left: 1.65rem; border-left: 1px solid color-mix(in srgb, var(--tenant-accent) 55%, #fff); }
 /* P05R-T03 A: real three-state axis controls (Inherited | Allow | Deny). */
 .permissionSet { display: flex; flex-direction: column; align-items: flex-end; gap: .3rem; }
+.effectiveSummary { display: grid; gap: .1rem; color: var(--tenant-muted-text); font-size: .63rem; text-align: right; }
+.effectiveSummary strong { color: var(--tenant-primary); }
 .permissionAxis { display: flex; align-items: center; gap: .4rem; color: var(--tenant-primary); font-size: .72rem; }
 .permissionName { font-weight: 700; }
 .permissionOptions { display: inline-flex; padding: .12rem; gap: .1rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 60%, #fff); border-radius: 6px; background: var(--tenant-page-bg); }

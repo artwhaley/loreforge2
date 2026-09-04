@@ -10,6 +10,7 @@ so the owner can review both phases together.
 
 Known manual items remain owner checks rather than self-approval: clean-user
 Form Studio usability, a form-created ordinary Document, base-template output,
-and confirmation that no raw submission answers are retained. See
+and confirmation that no raw submission answers are retained. The previously
+deferred tag picker, additional Prepared-by control, and member attachment
+behavior are now implemented in P06-T04. See
 `PHASE_06_07_TESTING.md`.
-

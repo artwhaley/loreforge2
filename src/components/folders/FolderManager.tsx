@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import styles from './FolderManager.module.scss'
 
-export type AdminFolderNode = { id: number; name: string; systemManaged: boolean; children: AdminFolderNode[] }
+export type AdminFolderNode = { id: number; name: string; systemManaged: boolean; effectiveRead?: { allowed: boolean; source: string }; effectiveWrite?: { allowed: boolean; source: string }; children: AdminFolderNode[] }
 type Menu = { x: number; y: number; node: AdminFolderNode }
 
 function matches(node: AdminFolderNode, query: string): AdminFolderNode | null {
@@ -24,7 +24,7 @@ function contains(node: AdminFolderNode, id: number): boolean {
 function Node({ node, expanded, toggle, onContext }: { node: AdminFolderNode; expanded: Set<number>; toggle: (id: number) => void; onContext: (event: React.MouseEvent, node: AdminFolderNode) => void }) {
   const open = expanded.has(node.id)
   const hasChildren = node.children.length > 0
-  return <li><div className={styles.row} onContextMenu={(event) => onContext(event, node)}><button type="button" className={hasChildren ? styles.disclosure : styles.spacer} aria-label={hasChildren ? `${open ? 'Collapse' : 'Expand'} ${node.name}` : undefined} aria-expanded={hasChildren ? open : undefined} onClick={() => hasChildren && toggle(node.id)}>{hasChildren ? (open ? '⌄' : '›') : null}</button><span className={styles.folderIcon} aria-hidden="true">{node.systemManaged ? '⌂' : '▱'}</span><span className={styles.name}>{node.name}</span>{node.systemManaged ? <span className={styles.system}>system root</span> : null}</div>{hasChildren && open ? <ul className={styles.nested}>{node.children.map((child) => <Node key={child.id} node={child} expanded={expanded} toggle={toggle} onContext={onContext} />)}</ul> : null}</li>
+  return <li><div className={styles.row} onContextMenu={(event) => onContext(event, node)}><button type="button" className={hasChildren ? styles.disclosure : styles.spacer} aria-label={hasChildren ? `${open ? 'Collapse' : 'Expand'} ${node.name}` : undefined} aria-expanded={hasChildren ? open : undefined} onClick={() => hasChildren && toggle(node.id)}>{hasChildren ? (open ? '⌄' : '›') : null}</button><span className={styles.folderIcon} aria-hidden="true">{node.systemManaged ? '⌂' : '▱'}</span><span className={styles.name}>{node.name}</span>{node.systemManaged ? <span className={styles.system}>system root</span> : null}{node.effectiveRead || node.effectiveWrite ? <span className={styles.effective}>{node.effectiveRead ? `Read ${node.effectiveRead.allowed ? 'allowed' : 'denied'}` : null}{node.effectiveRead && node.effectiveWrite ? ' · ' : null}{node.effectiveWrite ? `Write ${node.effectiveWrite.allowed ? 'allowed' : 'denied'}` : null}</span> : null}</div>{hasChildren && open ? <ul className={styles.nested}>{node.children.map((child) => <Node key={child.id} node={child} expanded={expanded} toggle={toggle} onContext={onContext} />)}</ul> : null}</li>
 }
 
 export function FolderManager({ domainSlug, folders }: { domainSlug: string; folders: AdminFolderNode[] }) {

@@ -9,6 +9,7 @@ import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 import { FolderTree, RoleTree, type FolderTreeNode, type PermissionState, type RoleDepartment, type RoleTreeNode } from '@/components/people/PersonAccessTrees'
 import { canAssignRole } from '@/lib/authz/delegation'
 import { isAllowed } from '@/lib/authz/evaluate'
+import { resolveFolderPermission } from '@/lib/authz/folderAccess'
 import styles from '@/components/people/PersonWorkspace.module.scss'
 
 type Props = { params: Promise<{ slug: string; characterId: string }>; searchParams?: Promise<{ roleFilter?: string }> }
@@ -79,15 +80,28 @@ export default async function PersonWorkspacePage({ params, searchParams }: Prop
   }
   const roleDepartments: RoleDepartment[] = departments.docs.map((department) => ({ id: Number(department.id), name: department.name, roles: rolesByDepartment.get(Number(department.id)) ?? [] })).filter((department) => department.roles.length > 0)
   const toPermissionState = (folderId: number, capabilities: string[]): PermissionState => (ruleFor(folderId, capabilities)?.effect as PermissionState | undefined) ?? 'inherit'
-  const toFolderNode = (node: ReturnType<typeof buildFolderTree>[number]): FolderTreeNode => ({
-    id: Number(node.folder.id),
-    name: node.folder.name,
-    systemManaged: Boolean(node.folder.systemManaged),
-    readState: toPermissionState(Number(node.folder.id), ['read']),
-    writeState: toPermissionState(Number(node.folder.id), ['create_document', 'edit_document']),
-    children: node.children.map(toFolderNode),
-  })
-  const folderNodes = folderTree.map(toFolderNode)
+  const controllerId = relationId(character.controlledBy)
+  const subjectActor = controllerId == null ? null : { userId: controllerId, activeCharacterId: characterId }
+  const explanation = async (folderId: number) => {
+    if (!subjectActor) return null
+    const decision = await resolveFolderPermission({ payload, actor: subjectActor, domainId: tenant.id, folderId })
+    const source = (value: typeof decision.read) => value.matchedRule ? `${value.matchedRule.principalType} rule` : value.reason.replace(/\.$/, '')
+    return { read: { allowed: decision.read.allowed, source: source(decision.read) }, write: { allowed: decision.write.allowed, source: source(decision.write) } }
+  }
+  const toFolderNode = async (node: ReturnType<typeof buildFolderTree>[number]): Promise<FolderTreeNode> => {
+    const effective = await explanation(Number(node.folder.id))
+    return {
+      id: Number(node.folder.id),
+      name: node.folder.name,
+      systemManaged: Boolean(node.folder.systemManaged),
+      readState: toPermissionState(Number(node.folder.id), ['read']),
+      writeState: toPermissionState(Number(node.folder.id), ['create_document', 'edit_document']),
+      effectiveRead: effective?.read,
+      effectiveWrite: effective?.write,
+      children: await Promise.all(node.children.map(toFolderNode)),
+    }
+  }
+  const folderNodes = await Promise.all(folderTree.map(toFolderNode))
   const controller = character.controlledBy && typeof character.controlledBy === 'object' ? character.controlledBy : null
   return <TenantShell tenant={tenant} cssVars={themeTokensToCssVars(resolveThemeTokens(tenant))} role={contextRole} switcherTenants={domains} activeCharacter={activeCharacter}>
     <section className={styles.page}>

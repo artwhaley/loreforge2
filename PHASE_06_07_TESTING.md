@@ -31,10 +31,16 @@ preserved.
    templates and select the form. Fill the form and submit it. Confirm the
    result is an ordinary archive Document with generated Markdown/body and no
    raw answer payload stored as the document's business model.
-5. On the new-document editor, deliberately leave a required field empty after
+5. On the new-document editor, confirm the acting Character is shown as a
+   required, non-removable Prepared-by credit. Search for and add one or more
+   additional active Domain Characters, then remove one of the additional
+   credits. Search an existing tag and add it; type a new tag and use the
+   Create control. Confirm the selected credits, tags, Concerns, and form
+   answers remain visible in the submitted snapshot.
+6. On the new-document editor, deliberately leave a required field empty after
    entering a title, destination, body, and concerns. Submit, confirm the
    validation message, and confirm every entered value remains in the form.
-6. Return to the form/template preview and confirm base composition (header,
+7. Return to the form/template preview and confirm base composition (header,
    footer, and Domain styling) is presentation-only and does not alter the
    canonical document body unexpectedly.
 
@@ -102,4 +108,3 @@ preserved.
 - Review the Domain audit records for membership, Role, RoleAssignment,
   Folder, and PermissionRule changes. Confirm actor User and active Character
   context are present where applicable.
-

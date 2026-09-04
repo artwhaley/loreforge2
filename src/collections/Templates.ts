@@ -39,17 +39,20 @@ async function assertBaseTemplateGraph(req: RequestLike, templateId: number | nu
   if (!baseId) return
   if (templateId && baseId === templateId) throw new Error('A Template cannot base itself.')
   const all = await req.payload.find({ collection: 'templates', depth: 0, limit: 10000, overrideAccess: true })
-  const byId = new Map<number, { baseTemplate?: unknown; domain?: unknown }>()
-  for (const item of all.docs) byId.set(Number(item.id), item as unknown as { baseTemplate?: unknown; domain?: unknown })
+  const byId = new Map<number, { baseTemplate?: unknown; domain?: unknown; bodyTemplate?: unknown; active?: unknown }>()
+  for (const item of all.docs) byId.set(Number(item.id), item as unknown as { baseTemplate?: unknown; domain?: unknown; bodyTemplate?: unknown; active?: unknown })
   let cursor: number | null = baseId
   const visited = new Set<number>()
   while (cursor) {
     if (visited.has(cursor) || (templateId && cursor === templateId)) throw new Error('Template base graph contains a cycle.')
     visited.add(cursor)
-    const row = byId.get(cursor) ?? await req.payload.findByID({ collection: 'templates', id: cursor, depth: 0, overrideAccess: true }).catch(() => null) as unknown as { baseTemplate?: unknown; domain?: unknown } | null
+    const row: { baseTemplate?: unknown; domain?: unknown; bodyTemplate?: unknown; active?: unknown } | null = byId.get(cursor) ?? await req.payload.findByID({ collection: 'templates', id: cursor, depth: 0, overrideAccess: true }).catch(() => null) as unknown as { baseTemplate?: unknown; domain?: unknown; bodyTemplate?: unknown; active?: unknown } | null
     if (!row) throw new Error('The base Template does not exist.')
     const rowDomain = relationId(row.domain)
     if (!rowDomain || rowDomain !== Number(domainId)) throw new Error('A base Template must belong to the same Domain.')
+    if (row.active === false) throw new Error('A base Template must be active and available.')
+    const contentPoints = [...String(row.bodyTemplate ?? '').matchAll(/\{\{\s*content\s*\}\}/g)].length
+    if (contentPoints !== 1) throw new Error('Every referenced base Template must contain exactly one {{content}} insertion point.')
     cursor = relationId(row.baseTemplate)
   }
 }
