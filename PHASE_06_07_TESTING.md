@@ -18,6 +18,13 @@ active Character, owner/admin-only document creation remains available, while
 ordinary member document creation must be rejected with its entered fields
 preserved.
 
+Local fixture credentials:
+
+- Domain/platform admin: `admin@example.test` / `test-password-123`
+- Ordinary officer: `officer@example.test` / `test-password-123`
+
+These are development-only accounts; they are not production credentials.
+
 ## Phase 6 — Templates and Forms
 
 1. In a Domain where you are the owner/admin, use the capability-driven
