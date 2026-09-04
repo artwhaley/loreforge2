@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import styles from './PlatformShell.module.scss'
 
@@ -23,6 +23,7 @@ export function DashboardCharacterPicker({
   const [pending, setPending] = useState(false)
   const [selectedId, setSelectedId] = useState(String(activeCharacterId ?? ''))
   const [lastServerCharacterId, setLastServerCharacterId] = useState(activeCharacterId)
+  const inFlight = useRef(false)
 
   // Re-sync the select when the server-rendered active Character changes after
   // a refresh (the guarded adjust-during-render pattern used by CharacterSwitcher).
@@ -32,11 +33,12 @@ export function DashboardCharacterPicker({
   }
 
   async function switchCharacter(value: string) {
-    if (pending || value === selectedId) return
-    const formData = new FormData()
-    formData.set('characterId', value)
+    if (inFlight.current) return
+    inFlight.current = true
     setPending(true)
     try {
+      const formData = new FormData()
+      formData.set('characterId', value)
       const response = await fetch('/api/switch-character', {
         method: 'POST',
         body: formData,
@@ -51,6 +53,7 @@ export function DashboardCharacterPicker({
       if (body?.redirectTo && body.redirectTo !== '/') router.push(body.redirectTo)
       else router.refresh()
     } finally {
+      inFlight.current = false
       setPending(false)
     }
   }
@@ -62,7 +65,7 @@ export function DashboardCharacterPicker({
         id="dashboard-character"
         className={styles.dashboardCharacterSelect}
         value={selectedId}
-        onChange={(event) => { setSelectedId(event.target.value); void switchCharacter(event.target.value) }}
+        onChange={(event) => { const value = event.target.value; setSelectedId(value); if (value !== String(activeCharacterId ?? '')) void switchCharacter(value) }}
         disabled={pending || characters.length === 0}
       >
         <option value="">No active Character</option>

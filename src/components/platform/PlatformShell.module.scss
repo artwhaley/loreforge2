@@ -480,13 +480,15 @@
 .dashboardHeader { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 2.5rem; padding: 2rem 0 2.5rem; border-bottom: 1px solid var(--ink-hairline); }
 .dashboardGreeting { margin: 0.9rem 0 0; color: var(--ink); }
 .dashboardControls { display: grid; justify-items: end; gap: 0.9rem; min-width: min(100%, 390px); }
-.characterPicker { display: grid; grid-template-columns: minmax(150px, 1fr) auto; width: 100%; border: 1px solid var(--ink-hairline); background: var(--paper-light); }
-.characterPicker label { grid-column: 1 / -1; padding: 0.45rem 0.65rem; border-bottom: 1px solid var(--ink-faint); color: var(--ink); font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
-.characterPicker select { min-width: 0; padding: 0.7rem; border: 0; border-right: 1px solid var(--ink-faint); border-radius: 0; color: var(--ink-dark); background: transparent; font: inherit; }
-.characterPicker button { border: 0; padding: 0.7rem 0.9rem; color: var(--paper-light); background: var(--ink-dark); font: inherit; font-size: 0.76rem; font-weight: 700; cursor: pointer; transition: background-color 180ms ease; }
-.characterPicker button:hover { background: var(--ink); }
-.characterPicker select:focus-visible,
-.characterPicker button:focus-visible { position: relative; z-index: 1; outline: 2px solid var(--ember); outline-offset: -2px; }
+.domainEntry { display: grid; gap: 0.4rem; margin: 0 0 1.15rem; padding: 0.9rem 1rem 0.95rem; border: 1px solid var(--ink-hairline); background: rgba(252, 250, 244, 0.72); }
+.domainEntryLabel { color: var(--ink); font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.dashboardCharacterSelect { width: 100%; box-sizing: border-box; padding: 0.72rem 0.7rem; border: 1px solid var(--ink-hairline); border-radius: 0; color: var(--ink-dark); background: var(--paper-light); font: inherit; transition: border-color 180ms ease, background-color 180ms ease; }
+.dashboardCharacterSelect:hover:not(:disabled) { border-color: var(--ink); }
+.dashboardCharacterSelect:focus-visible { outline: 0; border-color: var(--ink); background: var(--paper-light); }
+.dashboardCharacterSelect:disabled { cursor: not-allowed; opacity: 0.6; }
+.domainLock { padding: 1.2rem 1.05rem; border: 1px dashed var(--ink-faint); color: var(--ink-faint); font-size: 0.88rem; line-height: 1.6; background: repeating-linear-gradient(-45deg, rgba(49, 93, 118, 0.035) 0 8px, transparent 8px 16px); }
+.domainLock p { margin: 0; }
+.domainLock a { color: var(--ink); text-underline-offset: 3px; }
 .dashboardGrid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 1rem; }
 .panel { box-shadow: none; }
 .panel h2 { margin: 0 0 0.8rem; color: var(--ink-dark); font-family: var(--font-display), "Iowan Old Style", "Palatino Linotype", Georgia, serif; font-size: 1.5rem; font-weight: 500; }

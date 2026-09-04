@@ -1,8 +1,10 @@
 import Link from 'next/link'
 
+import { DashboardCharacterPicker } from '@/components/platform/DashboardCharacterPicker'
 import { PlatformShell, platformStyles as styles } from '@/components/platform/PlatformShell'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
-import { getAdministrationDomainsForUser, getTenantsForUser } from '@/lib/tenant/queries'
+import { getDomainsForCharacter } from '@/lib/tenant/characterDomains'
+import { getAdministrationDomainsForUser } from '@/lib/tenant/queries'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,31 +44,34 @@ export default async function HomePage({ searchParams }: Props) {
     )
   }
 
-  const [domains, managed] = await Promise.all([getTenantsForUser(context.user.id), getAdministrationDomainsForUser(context.user.id)])
-  const byId = new Map([...domains, ...managed].map((domain) => [String(domain.id), domain]))
-  const allDomains = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name))
+  const characters = context.characters
+  const activeCharacter = context.activeCharacter
+  const managed = await getAdministrationDomainsForUser(context.user.id)
+  const domains = activeCharacter ? await getDomainsForCharacter(activeCharacter.id) : []
   const activeDomain = context.tenant
 
   return (
     <PlatformShell>
       <div className={styles.dashboardHeader}>
-        <div><p className={styles.eyebrow}>Your Loreforge</p><h1 className={styles.sectionTitle}>Welcome back, {context.user.name ?? context.user.email}</h1><p className={styles.dashboardGreeting}>{context.activeCharacter ? `Acting as ${context.activeCharacter.name}.` : 'No participating Character is active.'}</p></div>
+        <div><p className={styles.eyebrow}>Your Loreforge</p><h1 className={styles.sectionTitle}>Welcome back, {context.user.name ?? context.user.email}</h1><p className={styles.dashboardGreeting}>{activeCharacter ? `Acting as ${activeCharacter.name}.` : 'Choose a Character to unlock your Domains.'}</p></div>
         <div className={styles.dashboardControls}>
-          <form action="/api/switch-character" method="post" className={styles.characterPicker}>
-            <label htmlFor="dashboard-character">Character</label>
-            <select id="dashboard-character" name="characterId" defaultValue={context.activeCharacter?.id ?? ''}>
-              <option value="">No active Character</option>
-              {context.characters.map((character) => <option key={character.id} value={character.id}>{character.name}</option>)}
-            </select>
-            <button type="submit">Switch</button>
-          </form>
           <div className={styles.actions}><Link href="/account" className={styles.secondary}>Account</Link><form action="/api/logout" method="post"><button type="submit" className={styles.textButton}>Log out</button></form></div>
         </div>
       </div>
       <nav className={styles.subnav} aria-label="Account navigation"><Link href="/">Dashboard</Link><Link href="/account">Account</Link><Link href="/account/characters">Characters</Link></nav>
       <div className={styles.dashboardGrid}>
-        <section className={styles.panel}><h2>Your Domains</h2>{allDomains.length ? <ul className={styles.domainList}>{allDomains.map((domain) => <li key={domain.id}><form action="/api/switch-tenant" method="post"><input type="hidden" name="tenantSlug" value={domain.slug} /><button type="submit" className={styles.domainLink}><span>{domain.name}</span><span className={styles.badge}>{managed.some((item) => String(item.id) === String(domain.id)) ? 'Managed' : 'Participating'}</span></button></form></li>)}</ul> : <div className={styles.emptyCard}>Your Domains will appear here when a Character joins one.</div>}</section>
-        <section className={styles.panel}><h2>Continue working</h2><div className={styles.emptyCard}>{activeDomain ? <>You’re currently viewing <strong>{activeDomain.name}</strong>. Open its <Link href={`/domain/${activeDomain.slug}`}>Domain Home</Link> to continue.</> : 'Choose a Domain above to pick up where you left off.'}</div><h2 style={{ marginTop: '1.5rem' }}>For you</h2><div className={styles.emptyCard}>Your notices and watched activity will appear here. Nothing new yet.</div></section>
+        <section className={styles.panel}>
+          <h2>Your Domains</h2>
+          {characters.length ? (
+            <>
+              <div className={styles.domainEntry}>
+                <DashboardCharacterPicker characters={characters} activeCharacterId={activeCharacter ? Number(activeCharacter.id) : null} />
+              </div>
+              {domains.length ? <ul className={styles.domainList}>{domains.map((domain) => <li key={domain.id}><form action="/api/switch-tenant" method="post"><input type="hidden" name="tenantSlug" value={domain.slug} /><button type="submit" className={styles.domainLink}><span>{domain.name}</span><span className={styles.badge}>{managed.some((item) => String(item.id) === String(domain.id)) ? 'Managed' : 'Participating'}</span></button></form></li>)}</ul> : activeCharacter ? <div className={styles.emptyCard}>{activeCharacter.name} isn’t an active member of any Domain yet — membership is granted inside each Domain.</div> : <div className={styles.domainLock}>Choose a Character above to unlock the Domains they belong to.</div>}
+            </>
+          ) : <div className={styles.emptyCard}>No Characters are connected to this account yet. <Link href="/account/characters">Manage Characters</Link></div>}
+        </section>
+        <section className={styles.panel}><h2>Continue working</h2><div className={styles.emptyCard}>{activeDomain ? <>You’re currently viewing <strong>{activeDomain.name}</strong>. Open its <Link href={`/domain/${activeDomain.slug}`}>Domain Home</Link> to continue.</> : 'Choose a Domain to pick up where you left off.'}</div><h2 style={{ marginTop: '1.5rem' }}>For you</h2><div className={styles.emptyCard}>Your notices and watched activity will appear here. Nothing new yet.</div></section>
       </div>
     </PlatformShell>
   )
