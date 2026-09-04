@@ -99,7 +99,7 @@ This index is navigation only. `01_ORCHESTRATOR.md`, each phase's `00_PHASE_ORCH
   `tickets/phase-04/P04-GATE-review-gate-4.md`  
   _Human review of the approved customer shell/workflows and durable Document/Type/lifecycle/version/provenance foundation before relationships and templates build on it._
 
-## Phase 5 — Archive Relationships, Tags, Character Links, Copy/Move/Share
+## Phase 5 — Archive Relationships, Tags, Character Links, Supersedes/Share
 - Branch: `phase-05-document-relations-copy-share`
 - Orchestrator: `tickets/phase-05/00_PHASE_ORCHESTRATOR.md`
 
@@ -109,17 +109,17 @@ This index is navigation only. `01_ORCHESTRATOR.md`, each phase's `00_PHASE_ORCH
 - **P05-T01** — Prepared-by credits, Concerns links, and Domain tag vocabulary  
   `tickets/phase-05/P05-T01-character-links-and-domain-tags.md`  
   _Add typed visible preparation credits, Characters a record concerns, and Domain tags without conflating any of them with provenance actors._
-- **P05-T02** — Grouped and Supersedes document relationships  
-  `tickets/phase-05/P05-T02-grouped-and-supersedes-relationships.md`  
-  _Implement exactly the two frozen semantic relationship classes with useful history behavior._
-- **P05-T03** — Document Copy and Move semantics  
-  `tickets/phase-05/P05-T03-document-copy-and-move.md`  
-  _Implement independent copying and canonical moving exactly as frozen, including cross-Domain behavior and provenance._
+- **P05-T02** — Superseding document relationships
+  `tickets/phase-05/P05-T02-grouped-and-supersedes-relationships.md`
+  _Implement one linear supersedes relationship with locking and successor history._
+- **P05-T03** — Retired: Document Copy and Move (owner decision; do not execute)
+  `tickets/phase-05/P05-T03-document-copy-and-move.md`
+  _Retired. Do not implement Copy, Move, transfer, or cross-Domain mapping._
 - **P05-T04** — Document sharing and document action UX  
   `tickets/phase-05/P05-T04-document-sharing-and-action-ux.md`  
-  _Add exceptional same-document sharing without conflating it with Copy, and make the three operations unmistakable in the UI._
-- **P05-GATE** — Review Gate 5 — document graph, copy/move/share  
-  `tickets/phase-05/P05-GATE-review-gate-5.md`  
+  _Add exceptional same-document sharing and keep the document view focused on the record._
+- **P05-GATE** — Review Gate 5 — supersedes/share
+  `tickets/phase-05/P05-GATE-review-gate-5.md`
   _Human validation that document identity, succession, and cross-boundary operations are unambiguous before template automation expands creation volume._
 
 ## Phase 6 — Templates and Form Studio

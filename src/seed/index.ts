@@ -375,7 +375,7 @@ const domainFixtures = [
 ]
 for (const fixture of domainFixtures) {
   const existing = await payload.find({ collection: 'domains', where: { slug: { equals: fixture.slug } }, depth: 0, limit: 1 })
-  const domain = existing.docs[0] ?? await payload.create({ collection: 'domains', data: { ...fixture, kind: 'community', lifecycle: 'active', defaultFilingPolicy: 'direct-file', publicEnabled: false, allowCrossDomainMove: false } })
+  const domain = existing.docs[0] ?? await payload.create({ collection: 'domains', data: { ...fixture, kind: 'community', lifecycle: 'active', defaultFilingPolicy: 'direct-file', publicEnabled: false } })
   if (!domain.defaultFilingPolicy) await payload.update({ collection: 'domains', id: domain.id, data: { defaultFilingPolicy: 'direct-file' } })
   domainsBySlug[fixture.slug] = { id: domain.id, tenantId: 'tenantId' in fixture ? fixture.tenantId : undefined }
   const admin = await payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: domain.id } }, { user: { equals: fixture.ownerUser } }] }, depth: 0, limit: 1 })

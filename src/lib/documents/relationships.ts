@@ -1,7 +1,7 @@
 import type { Payload } from 'payload'
 
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
-import { recordDocumentProvenance } from '@/lib/documents/provenance'
+import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
 import { assertNoSupersedesCycle, assertRelationshipInput, type RelationshipKind } from '@/lib/documents/relationshipInvariants'
 
 const idOf = (value: unknown): number | null => {
@@ -32,14 +32,15 @@ export async function addDocumentRelationship(args: { payload: Payload; domainId
   assertRelationshipInput({ sourceId, targetId, kind, label: args.label })
   const [source, target] = await Promise.all([getDocument(payload, sourceId, domainId), getDocument(payload, targetId, domainId)])
   if (!args.skipAuthorization) await requireAdmin(payload, actor, domainId)
-  let canonicalSource = Number(source.id)
-  let canonicalTarget = Number(target.id)
-  if (kind === 'grouped' && canonicalSource > canonicalTarget) [canonicalSource, canonicalTarget] = [canonicalTarget, canonicalSource]
+  const canonicalSource = Number(source.id)
+  const canonicalTarget = Number(target.id)
   const duplicate = await payload.find({ collection: 'document-relationships', where: { and: [{ source: { equals: canonicalSource } }, { target: { equals: canonicalTarget } }, { kind: { equals: kind } }] }, depth: 0, limit: 1, overrideAccess: true })
   if (duplicate.docs[0]) return duplicate.docs[0]
   if (kind === 'supersedes') {
     const successor = await payload.find({ collection: 'document-relationships', where: { and: [{ kind: { equals: 'supersedes' } }, { target: { equals: canonicalTarget } }] }, depth: 0, limit: 1, overrideAccess: true })
     if (successor.docs[0]) throw new Error('An older Document can have only one direct superseding successor; remove the existing one first.')
+    const predecessor = await payload.find({ collection: 'document-relationships', where: { and: [{ kind: { equals: 'supersedes' } }, { source: { equals: canonicalSource } }] }, depth: 0, limit: 1, overrideAccess: true })
+    if (predecessor.docs[0]) throw new Error('A Document can supersede only one direct predecessor.')
     const edges = await payload.find({ collection: 'document-relationships', where: { and: [{ domain: { equals: domainId } }, { kind: { equals: 'supersedes' } }] }, depth: 0, limit: 5000, overrideAccess: true })
     const newerToOlder = new Map<string, string>()
     for (const edge of edges.docs) {
@@ -49,8 +50,12 @@ export async function addDocumentRelationship(args: { payload: Payload; domainId
     }
     assertNoSupersedesCycle(canonicalSource, canonicalTarget, newerToOlder)
   }
-  const created = await payload.create({ collection: 'document-relationships', overrideAccess: true, data: { domain: Number(domainId), source: canonicalSource, target: canonicalTarget, kind, label: kind === 'grouped' ? String(args.label ?? '').trim() : undefined, actorUser: Number(actor.userId), actorCharacter: actor.characterId == null ? undefined : Number(actor.characterId) } })
-  const context = { action: 'added', kind, relatedDocumentId: canonicalTarget, label: kind === 'grouped' ? String(args.label ?? '').trim() : undefined }
+  const created = await payload.create({ collection: 'document-relationships', overrideAccess: true, data: { domain: Number(domainId), source: canonicalSource, target: canonicalTarget, kind, actorUser: Number(actor.userId), actorCharacter: actor.characterId == null ? undefined : Number(actor.characterId) } })
+  const context = { action: 'added', kind, relatedDocumentId: canonicalTarget }
+  if (kind === 'supersedes' && String(target.lifecycle) !== 'locked') {
+    await payload.update({ collection: 'documents', id: target.id, overrideAccess: true, context: { supersedesLock: true }, data: { lifecycle: 'locked' } })
+    await recordDocumentProvenance({ payload, domainId, documentId: target.id, eventType: 'locked', actorUserId: actor.userId, actorCharacterId: actor.characterId, context: { reason: 'superseded', supersedingDocumentId: canonicalSource }, revisionId: await latestDocumentRevisionId(payload, target.id) })
+  }
   await recordDocumentProvenance({ payload, domainId, documentId: source.id, eventType: kind === 'supersedes' ? 'superseded' : 'relationship_added', actorUserId: actor.userId, actorCharacterId: actor.characterId, context })
   await recordDocumentProvenance({ payload, domainId, documentId: target.id, eventType: 'relationship_added', actorUserId: actor.userId, actorCharacterId: actor.characterId, context: { ...context, relatedDocumentId: source.id } })
   return created

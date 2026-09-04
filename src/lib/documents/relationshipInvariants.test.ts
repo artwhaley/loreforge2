@@ -3,9 +3,9 @@ import test from 'node:test'
 
 import { assertNoSupersedesCycle, assertRelationshipInput } from './relationshipInvariants'
 
-test('grouped relationships require labels and reject self-links', () => {
-  assert.equal(assertRelationshipInput({ sourceId: 1, targetId: 2, kind: 'grouped', label: 'amendment' }), true)
-  assert.throws(() => assertRelationshipInput({ sourceId: 1, targetId: 2, kind: 'grouped', label: '  ' }), /nonblank/)
+test('only supersedes relationships are accepted and self-links are rejected', () => {
+  assert.equal(assertRelationshipInput({ sourceId: 2, targetId: 1, kind: 'supersedes' }), true)
+  assert.throws(() => assertRelationshipInput({ sourceId: 1, targetId: 2, kind: 'grouped' as never }), /Only supersedes/)
   assert.throws(() => assertRelationshipInput({ sourceId: 1, targetId: 1, kind: 'supersedes' }), /itself/)
 })
 

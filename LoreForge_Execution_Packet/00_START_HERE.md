@@ -35,9 +35,9 @@ Do not begin work if it reports FAIL. The validator checks exact byte hashes for
 
 Phases 1–4 have been executed and owner-approved in the working repository. Confirm `execution-notes/P04-GATE.md` records `APPROVED_BY_OWNER` and that the checked-out source includes changes `CC-2026-09-02-01` and `CC-2026-09-03-02`; do not restart completed phases from the original spike.
 
-> **Phase 5 — Archive Relationships, Tags, Character Links, Copy/Move/Share**
+> **Phase 5 — Archive Relationships, Tags, Character Links, Supersedes/Share**
 
-Create `phase-05-document-relations-copy-share` only from the approved Phase 4 state. Execute the Phase 5 orchestrator's exact order: `P05-T00`, `P05-T01`, `P05-T02`, `P05-T03`, `P05-T04`, then `P05-GATE`. **Stop there.** P05-T00 is the mandatory owner-directed model correction from `CC-2026-09-03-03`; do not begin document-relationship work on the rejected model. Do not begin Phase 6 until the project owner explicitly approves Review Gate 5.
+Create `phase-05-document-relations-copy-share` only from the approved Phase 4 state. Execute the Phase 5 orchestrator's exact order: `P05-T00`, `P05-T01`, `P05-T02`, `P05-T03` (retired/no-op), `P05-T04`, then `P05-GATE`. **Stop there.** P05-T00 is the mandatory owner-directed model correction from `CC-2026-09-03-03`; do not begin document-relationship work on the rejected model. Do not begin Phase 6 until the project owner explicitly approves Review Gate 5.
 
 The original P00/Phase 1 kickoff remains historical evidence of how the project began; it is not the current continuation point.
 

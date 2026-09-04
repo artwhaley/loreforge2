@@ -55,7 +55,6 @@ for (const tenant of legacyTenants.docs) {
           logo: tenant.logo ? relationId(tenant.logo) : null,
           banner: tenant.banner ? relationId(tenant.banner) : null,
           publicEnabled: false,
-          allowCrossDomainMove: false,
         },
         depth: 0,
       })

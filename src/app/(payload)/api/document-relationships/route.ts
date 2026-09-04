@@ -23,8 +23,8 @@ export async function POST(request: Request) {
       if (Number.isFinite(relationshipId)) await removeDocumentRelationship({ payload, domainId: domain.id, relationshipId, actor })
     } else {
       const targetId = Number(form.get('targetId') ?? '')
-      const kind = String(form.get('kind') ?? '') as 'grouped' | 'supersedes'
-      if (Number.isFinite(targetId)) await addDocumentRelationship({ payload, domainId: domain.id, sourceId: documentId, targetId, kind, label: String(form.get('label') ?? ''), actor })
+      const kind = String(form.get('kind') ?? '') as 'supersedes'
+      if (Number.isFinite(targetId) && kind === 'supersedes') await addDocumentRelationship({ payload, domainId: domain.id, sourceId: documentId, targetId, kind, actor })
     }
   } catch {
     // Do not expose authorization or provider details through a redirect.

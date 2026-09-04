@@ -152,7 +152,7 @@ critical={
     ],
     ROOT/"03_ARCHITECTURE_CONTRACT.md":[
         "Authorization precedence",
-        "Copy/move/share contract",
+        "Sharing and supersession contract",
         "Raw HTML is **not** a supported feature",
         "PostgreSQL",
     ],

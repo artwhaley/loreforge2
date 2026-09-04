@@ -1,16 +1,15 @@
 import type { CollectionConfig } from 'payload'
 
-/** Canonical document graph edges. Grouped is symmetric; Supersedes is newer -> older. */
+/** Canonical linear succession edges. Supersedes is newer -> older. */
 export const DocumentRelationships: CollectionConfig = {
   slug: 'document-relationships',
-  admin: { useAsTitle: 'kind', defaultColumns: ['kind', 'source', 'target', 'label', 'actorUser'] },
+  admin: { useAsTitle: 'kind', defaultColumns: ['kind', 'source', 'target', 'actorUser'] },
   timestamps: true,
   fields: [
     { name: 'domain', type: 'relationship', relationTo: 'domains', required: true, index: true },
     { name: 'source', type: 'relationship', relationTo: 'documents', required: true, index: true },
     { name: 'target', type: 'relationship', relationTo: 'documents', required: true, index: true },
-    { name: 'kind', type: 'select', required: true, options: [{ label: 'Grouped', value: 'grouped' }, { label: 'Supersedes', value: 'supersedes' }] },
-    { name: 'label', type: 'text', label: 'Grouped label' },
+    { name: 'kind', type: 'select', required: true, options: [{ label: 'Supersedes', value: 'supersedes' }] },
     { name: 'actorUser', type: 'relationship', relationTo: 'users', required: true, admin: { readOnly: true } },
     { name: 'actorCharacter', type: 'relationship', relationTo: 'characters', admin: { readOnly: true } },
   ],
@@ -19,11 +18,10 @@ export const DocumentRelationships: CollectionConfig = {
       const source = data?.source ?? originalDoc?.source
       const target = data?.target ?? originalDoc?.target
       const kind = String(data?.kind ?? originalDoc?.kind ?? '')
-      const label = String(data?.label ?? originalDoc?.label ?? '')
       if (!data?.domain && !originalDoc?.domain) throw new Error('Document relationships require a Domain.')
       if (source && target) {
         if (String(source) === String(target)) throw new Error('A Document cannot relate to itself.')
-        if (kind === 'grouped' && !label.trim()) throw new Error('Grouped relationships require a nonblank label.')
+        if (kind !== 'supersedes') throw new Error('Only supersedes relationships are supported.')
         const sourceDoc = await req.payload.findByID({ collection: 'documents', id: typeof source === 'object' && 'id' in source ? (source as { id: number }).id : source, depth: 0, overrideAccess: true })
         const targetDoc = await req.payload.findByID({ collection: 'documents', id: typeof target === 'object' && 'id' in target ? (target as { id: number }).id : target, depth: 0, overrideAccess: true })
         const domainId = typeof data?.domain === 'object' && data.domain && 'id' in data.domain ? (data.domain as { id: number }).id : data?.domain ?? originalDoc?.domain

@@ -14,11 +14,12 @@ type Props = {
   folders: Array<Option & { depth: number }>
   activeCharacter: Character | null
   initialState?: DocumentEditorActionState
+  supersedesDocumentId?: number
 }
 
 const emptyState: DocumentEditorActionState = { values: { title: '', body: '', documentTypeId: '', folderId: '', concernLinks: '', tagNames: '' } }
 
-export function NewDocumentForm({ tenantSlug, types, folders, activeCharacter, initialState = emptyState }: Props) {
+export function NewDocumentForm({ tenantSlug, types, folders, activeCharacter, initialState = emptyState, supersedesDocumentId }: Props) {
   const [state, formAction, pending] = useActionState(createDocumentFromEditorAction, initialState)
   const values = state.values ?? emptyState.values!
   const defaultType = types.find((item) => item.name.toLocaleLowerCase() === 'plain text')?.id ?? ''
@@ -34,6 +35,7 @@ export function NewDocumentForm({ tenantSlug, types, folders, activeCharacter, i
 
   return <form action={formAction} style={{ display: 'grid', gap: '1rem', padding: '1.25rem', border: '1px solid var(--tenant-accent)', background: 'var(--tenant-surface-bg)' }}>
     <input type="hidden" name="tenantSlug" value={tenantSlug} />
+    {supersedesDocumentId ? <input type="hidden" name="supersedesDocumentId" value={supersedesDocumentId} /> : null}
     {message ? <p role="alert" style={{ color: '#8f2d21' }}>{message}</p> : null}
     <label style={{ display: 'grid', gap: '.35rem' }}><strong>Document Type</strong><select name="documentTypeId" required defaultValue={values.documentTypeId || defaultType}><option value="">Choose a type</option>{types.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
     <label style={{ display: 'grid', gap: '.35rem' }}><strong>Title</strong><input name="title" required autoFocus defaultValue={values.title} /></label>

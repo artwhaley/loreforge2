@@ -49,7 +49,8 @@ export const DocumentCharacterLinks: CollectionConfig = {
     }],
     beforeDelete: [async ({ id, req }) => {
       const link = await req.payload.findByID({ collection: 'document-character-links', id, depth: 0, overrideAccess: true }).catch(() => null)
-      if (link?.requiredByCreate) throw new Error('The active Character creation credit cannot be removed.')
+      const context = req.context as Record<string, unknown> | undefined
+      if (link?.requiredByCreate && context?.systemCleanup !== true) throw new Error('The active Character creation credit cannot be removed.')
     }],
   },
 }

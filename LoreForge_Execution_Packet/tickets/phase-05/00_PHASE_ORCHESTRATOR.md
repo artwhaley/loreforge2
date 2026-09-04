@@ -1,9 +1,9 @@
-# Phase 5 Orchestrator — Archive Relationships, Tags, Character Links, Copy/Move/Share
+# Phase 5 Orchestrator — Archive Relationships, Tags, Character Links, Supersedes/Share
 
 **Status:** READY — P04-GATE was owner-approved on 2026-09-03; Phase 5 has not begun.
 
 ## Phase outcome
-First correct the rejected Role/Department/Folder assignment model, then add structured Character links, tags, grouped/supersedes relationships, and rigorously distinct Copy, Move, and Share behavior.
+First correct the rejected Role/Department/Folder assignment model, then add structured Character links, tags, linear supersedes relationships, and same-document Share behavior.
 
 ## Authority for this phase
 Before implementation, read the packet root documents `00_START_HERE.md` through `06_CHANGE_CONTROL.md`, this phase orchestrator, and each ticket immediately before executing it. The ticket is the bounded unit of work; this file controls order and stop behavior.
@@ -32,28 +32,27 @@ Create it only from the owner-approved previous state.
   - P05-T00
 - Outcome: Add typed visible preparation credits, Characters a record concerns, and Domain tags without conflating any of them with provenance actors.
 
-### P05-T02 — Grouped and Supersedes document relationships
+### P05-T02 — Superseding document chains
 - File: `P05-T02-grouped-and-supersedes-relationships.md`
 - Mode: IMPLEMENTATION TICKET
 - Depends on:
   - P05-T01
-- Outcome: Implement exactly the two frozen semantic relationship classes with useful history behavior.
+- Outcome: Implement linear superseding document chains; superseded records are locked and link to their current successor.
 
-### P05-T03 — Document Copy and Move semantics
+### P05-T03 — Retired: Document Copy and Move
 - File: `P05-T03-document-copy-and-move.md`
-- Mode: IMPLEMENTATION TICKET
-- Depends on:
-  - P05-T02
-- Outcome: Implement independent copying and canonical moving exactly as frozen, including cross-Domain behavior and provenance.
+- Mode: RETIRED BY OWNER
+- Depends on: None
+- Outcome: No implementation. Documents are never copied or moved between Domains; correspondence is a future messaging feature.
 
 ### P05-T04 — Document sharing and document action UX
 - File: `P05-T04-document-sharing-and-action-ux.md`
 - Mode: IMPLEMENTATION TICKET
 - Depends on:
-  - P05-T03
-- Outcome: Add exceptional same-document sharing without conflating it with Copy, and make the three operations unmistakable in the UI.
+  - P05-T02
+- Outcome: Add exceptional same-document sharing and keep the document view focused on the record itself.
 
-### P05-GATE — Review Gate 5 — document graph, copy/move/share
+### P05-GATE — Review Gate 5 — supersedes/share
 - File: `P05-GATE-review-gate-5.md`
 - Mode: REVIEW GATE — NO SELF-APPROVAL
 - Depends on:

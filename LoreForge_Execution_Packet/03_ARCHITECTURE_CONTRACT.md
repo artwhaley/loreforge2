@@ -153,7 +153,6 @@ Unique `(domain, character)` local context for alias/local display information w
 - theme tokens;
 - vocabulary;
 - public settings: `publicEnabled` boolean default false; public policy is defined below;
-- cross-Domain destructive move flag default false;
 - correspondence policy later;
 - informational `installedPackKey/version` only—never a live dependency.
 
@@ -221,7 +220,7 @@ Effective access may still come from Role defaults or Folder ancestry. The Peopl
 - title;
 - canonical Markdown body;
 - lifecycle `draft | pending_review | filed | locked`;
-- source kind `web | markdown-import | form | copy | correspondence | second-life`;
+- source kind `web | markdown-import | form | correspondence | second-life`;
 - created by User and acting Character when applicable;
 - typed Character credits/links through `document-character-links`; every Character-authored create includes the active Character as a non-removable `prepared_by` credit during creation;
 - soft-delete fields;
@@ -251,7 +250,7 @@ Initial notices are Domain-wide. They are authored content, not provenance/audit
 ### document-provenance-events
 Append-only Document-owned history through one service/helper.
 Minimum event types:
-`created, edited, submitted, withdrawn, approved, rejected, filed, locked, unlocked, soft_deleted, restored, moved, copied_from, copied_to, shared, share_revoked, relationship_added, relationship_removed, superseded, tag_changed, character_link_changed, imported, exported, sl_transfer`.
+`created, edited, submitted, withdrawn, approved, rejected, filed, locked, unlocked, soft_deleted, restored, shared, share_revoked, relationship_added, relationship_removed, superseded, tag_changed, character_link_changed, imported, exported, sl_transfer`.
 Each event records document, timestamp, actor User, acting Character if any, and typed context sufficient to explain the action.
 
 ### document-character-links
@@ -267,11 +266,8 @@ Domain-owned Tag vocabulary. Authorized ad-hoc creation creates a normal Tag bef
 ### document-relationships
 - source Document;
 - target Document;
-- kind `grouped | supersedes`;
-- `label` required for grouped;
 - actor/timestamps.
-`grouped` is presented symmetric.
-`supersedes` is directional source=newer, target=older. Reject self-links/cycles. A Document may have at most one direct superseding successor; correcting that relationship is audited.
+`supersedes` is the only supported kind and is directional source=newer, target=older. Reject self-links/cycles. A Document may have at most one direct predecessor and one direct superseding successor; correcting that relationship is audited.
 
 ### templates
 - Domain;
@@ -299,7 +295,7 @@ One centralized rule collection.
 - audit fields.
 
 Stable capabilities include:
-`read, create_document, edit_document, submit_document, file_document, approve_document, lock_document, unlock_document, delete_document, restore_document, move_document, copy_document, share_document, export_document, manage_folders, manage_templates, manage_types_tags, manage_access, manage_members, manage_claims, manage_roles, assign_roles, assign_subordinates, manage_subdomain, manage_domain_appearance, manage_notices`.
+`read, create_document, edit_document, submit_document, file_document, approve_document, lock_document, unlock_document, delete_document, restore_document, share_document, export_document, manage_folders, manage_templates, manage_types_tags, manage_access, manage_members, manage_claims, manage_roles, assign_roles, assign_subordinates, manage_subdomain, manage_domain_appearance, manage_notices`.
 
 Ownership/subscription transfer is not a normal permission capability.
 
@@ -327,7 +323,7 @@ All API/server-action/list paths use this subsystem. Filter inaccessible rows be
 Pre-P07 authority is a compatibility seam, not a product role and not permission-by-UI-hiding:
 - expose one server-side `authorizeInterimOperation` boundary and call it from every pre-P07 privileged API/action;
 - in P02 only, claim approval is limited to a User with the legacy Tenant `admin` membership for that Domain; P03 migrates that operational authority to `ownerUser`/DomainAdmin and removes this legacy branch;
-- from P03 through P06, ownerUser and operational DomainAdmins may manage Domain memberships, Department-owned Roles, RoleAssignments, and direct Folder-access records; review/approve/lock/restore; add/remove tags, Character links, or Document relationships; Copy/Move/Share; manage Templates; and create unclaimed Characters inline;
+- from P03 through P06, ownerUser and operational DomainAdmins may manage Domain memberships, Department-owned Roles, RoleAssignments, and direct Folder-access records; review/approve/lock/restore; add/remove tags, Character links, or Document relationships; Share; manage Templates; and create unclaimed Characters inline;
 - ordinary P06 form/document creation requires an authenticated User controlling the active Character, an active DomainMembership, and the existing server-validated destination scope; it never grants management authority;
 - all interim decisions record actor User, acting Character where applicable, operation, resource, and timestamp in audit/provenance;
 - P07-T02 replaces and deletes this helper/legacy branch, with integration tests proving no legacy User Membership still grants access.
@@ -391,27 +387,14 @@ Editing:
 - Locked no body edit until unlock or new related/superseding record.
 Soft delete is orthogonal and preserves prior state.
 
-## 10. Copy/move/share contract
+## 10. Sharing and supersession contract
 
-### Copy
-- Always new Document ID.
-- Copy exact current body/title revision.
-- Provenance stores source Document ID/Domain, source version or body hash, actor/time.
-- Independent after creation.
-- Same Domain Type defaults source Type.
-- Cross-Domain Type defaults exact same-name active Type; otherwise destination Plain Text; UI confirms mapping.
-- Community copy starts Draft and follows destination filing policy.
-- `Keep a copy in Personal Domain` defaults Filed.
-- Copy title/body, global Character links, and safe source metadata. Set the new creator/acting Character to the copy actor and source kind to `copy`; do not copy lifecycle approvals/locks, soft-delete state, PermissionRules, revision history, or DocumentRelationships.
-- Same-Domain copy retains Tag links. Cross-Domain copy maps each Tag by case-insensitive exact name to an active destination Tag and drops unmatched Tags after showing the confirmation summary.
-
-### Move
-- Same-Domain: same ID/history/lifecycle; folder changes; provenance event.
-- Cross-Domain: source Domain flag must be enabled; explicit confirmation and destination authorization.
-- Cross-Domain preserves ID/history/lifecycle, changes Domain/Folder, maps Type as above.
-- Source Domain keeps an audit pointer/event to destination.
-- Same-Domain move retains Character links, Tags, and relationships.
-- Cross-Domain move retains global Character links and relationships/history; relationship rendering remains permission-filtered. Map Tags by case-insensitive exact name and drop unmatched Tags only after explicit confirmation/provenance.
+### Supersedes
+- A superseding Document is a new Document with a new ID and its own revision stream.
+- The creation surface pre-fills title, body, and Concerns from the older Document and appends an italic note naming the superseded title, date, and Prepared by Character.
+- The older Document is locked as part of the audited supersession operation and remains readable through a prominent successor link.
+- `supersedes` is a linear chain: one direct predecessor and one direct successor maximum; cycles and forks are rejected.
+- Documents never move or copy between Domains. Cross-Domain correspondence is a future messaging feature, not a record transfer.
 
 ### Share
 - Same Document ID.
@@ -424,13 +407,11 @@ Operation authorization is exact:
 
 | Operation | Source requirement | Destination/extra requirement |
 |---|---|---|
-| Copy | `read` and `copy_document` on source Document | `create_document` on destination Folder |
-| Same-Domain Move | `move_document` on source Document | `create_document` on destination Folder |
-| Cross-Domain Move | same as Move; source Domain `allowCrossDomainMove=true` | `create_document` on destination Folder, both Domains active for writes, explicit confirmation |
+| Create superseding Document | `create_document` on the current Domain and `edit_document` on the older Document | older Document readable; operation locks the older Document and records provenance |
 | Share read/edit | `manage_access` and `share_document` on Document | actor also possesses the exact capability being granted (`read` or `edit_document`) on that Document |
 | Revoke Share | `manage_access` on Document | revocation remains audited |
 | Add/remove Tag or Character link | `edit_document` on Document | linked Tag belongs to Domain; Character link never grants read |
-| Add/remove Grouped/Supersedes | `edit_document` on both Documents | both Documents readable; relationship itself never grants read |
+| Add/remove Supersedes | `edit_document` on both Documents | both Documents readable; relationship itself never grants read |
 
 ## 11. Form/template contract
 Payload Form Builder is spike-only business-schema-wise. Permanent schema is neutral.

@@ -75,11 +75,10 @@ There are no direct Character-to-Department membership fixtures and no Folder-sc
 1. Plain Text note.
 2. Form-generated Incident Report.
 3. Three Property Deeds for one building, supersession A <- B <- C.
-4. Marriage License for Share/Personal-copy scenarios.
+4. Marriage License for Share scenarios.
 5. Filed then Locked Court Ruling.
 6. Imported Markdown/notecard-simulation record.
-7. Cross-Domain copied record after Bayview exists.
-8. `related case` grouped relationship.
+7. A superseding record chain for one property, with older records locked and linked to the current version.
 9. Document linked to `Unknown Traveler`.
 10. Later: delivered/delayed/intercepted/garbled correspondence.
 
@@ -104,13 +103,13 @@ Cassian's direct deny blocks normal Warrior role grant. A more-specific direct D
 Draft -> submit -> approve/file -> lock. Pending body frozen. Reject -> Draft with reason/history. Locked edit fails until unlock.
 
 ### GS-07 Provenance/versioning
-Edit, move, copy, share, supersede. Timeline names actor/time/action. Revisions inspect/restore without losing provenance.
+Edit, share, supersede. Timeline names actor/time/action. Revisions inspect/restore without losing provenance.
 
-### GS-08 Copy vs Share
-Share Marriage License = same ID. Copy = new ID + source provenance + independent edits.
+### GS-08 Share
+Share Marriage License = same ID and revision stream. Revoke removes future access while preserving audit history.
 
-### GS-09 Cross-Domain transfer
-Copy works with Type mapping. Destructive Move refused while source Domain flag off.
+### GS-09 Supersession
+Create a superseding record from the prior version. The new record gets a new ID and revision stream; the old record is locked and links to the current version. Cross-Domain transfer is not a supported operation.
 
 ### GS-10 Form Studio
 Department head builds form without CMS terminology. Warrior fills it. Output is Markdown Document; Character fields create links; no raw answer record remains.
@@ -119,7 +118,7 @@ Department head builds form without CMS terminology. Warrior fills it. Output is
 Anonymous user sees public only; no private titles/snippets leak through navigation/search/Character pages.
 
 ### GS-12 Personal Domain
-Character receives independent Community copy. No public/subdomain/role/folder-share controls. Single-document share works.
+Character receives no implicit cross-Domain record. No public/subdomain/role/folder-share controls. Single-document share works.
 
 ### GS-13 Backup/restore
 Postgres backup -> destroy/replace -> restore -> rerun permissions/provenance acceptance.

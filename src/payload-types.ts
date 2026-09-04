@@ -374,7 +374,6 @@ export interface Domain {
   logo?: (number | null) | Media;
   banner?: (number | null) | Media;
   publicEnabled?: boolean | null;
-  allowCrossDomainMove?: boolean | null;
   installedPackKey?: string | null;
   installedPackVersion?: string | null;
   updatedAt: string;
@@ -640,8 +639,7 @@ export interface DocumentRelationship {
   domain: number | Domain;
   source: number | Document;
   target: number | Document;
-  kind: 'grouped' | 'supersedes';
-  label?: string | null;
+  kind: 'supersedes';
   actorUser: number | User;
   actorCharacter?: (number | null) | Character;
   updatedAt: string;
@@ -1203,7 +1201,6 @@ export interface DomainsSelect<T extends boolean = true> {
   logo?: T;
   banner?: T;
   publicEnabled?: T;
-  allowCrossDomainMove?: T;
   installedPackKey?: T;
   installedPackVersion?: T;
   updatedAt?: T;
@@ -1331,7 +1328,6 @@ export interface DocumentRelationshipsSelect<T extends boolean = true> {
   source?: T;
   target?: T;
   kind?: T;
-  label?: T;
   actorUser?: T;
   actorCharacter?: T;
   updatedAt?: T;

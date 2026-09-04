@@ -73,21 +73,19 @@ These decisions came from the product-design conversation and supersede stale/sp
 - A Template specifies its normal destination Folder. Choosing the Template selects that destination automatically; an authorized alternative is possible only when the Template explicitly permits destination override. Plain Text remains deliberately flexible.
 - Visible `Prepared by` credits, `Concerns` links, and immutable provenance actors are separate semantics and may not be collapsed into one generic Character link.
 
-## Document relationships and movement
-There are exactly two core relationship semantics:
-1. `grouped` — symmetric/general relationship with a human label such as `amendment`, `appeal`, `supporting evidence`, `related case`.
-2. `supersedes` — first-class directional historical succession used for deeds and similar records.
+## Document relationships and correspondence
+There is one core document relationship:
 
-- A document can be moved.
-- A document can be copied. Copy creates a genuinely independent new Document; later edits do not propagate.
-- Copy provenance permanently identifies source and copy time/actor.
-- Cross-Domain destructive move is possible but **disabled by default per Domain policy**.
-- Cross-Domain copy is the normal/default transfer behavior.
-- `Share` means access to the same canonical Document; `Copy` means a new independent Document.
+1. `supersedes` — directional historical succession where the newer record points to the older record.
+
+- Creating a superseding Document starts from the older record's title, body, and Concerns and adds an italic supersession note to the new body.
+- A superseded Document is locked and displays a prominent link to its current successor. Each Document has at most one direct predecessor and one direct successor, so succession remains a linear chain.
+- Documents are never moved or copied between Domains. A future correspondence/messaging feature may send a document between Domains as a communication, but it will not transfer the canonical record.
+- `Share` means access to the same canonical Document and remains an explicit bottom-of-document action.
 
 ## Metadata, Characters, tags, search
 - Platform defines standardized metadata. Domains express special record fields through templates/document body rather than arbitrary database columns.
-- Metadata/provenance records who created, edited, submitted, filed, approved/rejected, locked/unlocked, moved, copied, shared, etc.
+- Metadata/provenance records who created, edited, submitted, filed, approved/rejected, locked/unlocked, superseded, shared, etc.
 - Documents have typed structural Character links independent of text mentions: `prepared_by` credits and `concerns` links. A Concerns link may carry a human relationship label such as suspect, spouse, or owner. Provenance separately records the authenticated User and acting Character who performed an action.
 - Tags are Domain-managed/autocomplete vocabulary with controlled ad-hoc creation by authorized users.
 - Primary search scope is always one active Domain.

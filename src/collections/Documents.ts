@@ -59,9 +59,14 @@ export const Documents: CollectionConfig = {
         const from = String(originalDoc?.lifecycle ?? 'draft') as Lifecycle
         const to = String(data?.lifecycle ?? originalDoc?.lifecycle ?? 'draft') as Lifecycle
         if (operation === 'update') {
-          assertLifecycleTransition(from, to)
+          const supersedesLock = (req.context as Record<string, unknown> | undefined)?.supersedesLock === true
+          if (supersedesLock) {
+            if (to !== 'locked') throw new Error('A superseded Document can only transition to Locked.')
+          } else {
+            assertLifecycleTransition(from, to)
+          }
           const isPrivilegedTransition = from !== to && to !== 'pending_review'
-          if (isPrivilegedTransition && !(req.context as Record<string, unknown> | undefined)?.interimWorkflowAuthorized) {
+          if (isPrivilegedTransition && !supersedesLock && !(req.context as Record<string, unknown> | undefined)?.interimWorkflowAuthorized) {
             if (!req.user?.id || !domainId) throw new Error('A verified Domain supervisor is required for this lifecycle transition.')
             const authorized = await authorizeInterimOperation(req.payload, { userId: req.user.id }, domainId)
             if (authorized !== true) throw new Error(authorized)

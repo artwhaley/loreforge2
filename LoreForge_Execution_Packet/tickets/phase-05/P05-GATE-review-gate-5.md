@@ -1,11 +1,11 @@
-# P05-GATE — Review Gate 5 — document graph, copy/move/share
+# P05-GATE — Review Gate 5 — supersedes/share
 
 **Mode:** REVIEW GATE — NO SELF-APPROVAL  
 **Phase:** 5  
 **Commit prefix:** `P05-GATE:`
 
 ## Objective
-Human validation that document identity, succession, and cross-boundary operations are unambiguous before template automation expands creation volume.
+Human validation that document identity, linear succession, and same-document sharing are unambiguous before template automation expands creation volume.
 
 ## Required pre-read
 - `00_START_HERE.md`
@@ -24,28 +24,28 @@ Human validation that document identity, succession, and cross-boundary operatio
 - P05-T04
 
 ## Frozen context for this ticket
-- This gate specifically guards against semantic confusion among Share, Copy, Move, Grouped, and Supersedes.
+- This gate verifies the approved supersedes and Share semantics. Copy, Move, Grouped, and cross-Domain mapping are not application features.
 
 ## Required work
 1. Run Phase 5 tests.
-2. Demonstrate the corrected Role/Department/Folder model and Character workspace; demonstrate separate Prepared by credits, Concerns links, and provenance actors; then execute golden scenarios for deed supersession, marriage-license share, copy divergence, and cross-Domain move disabled/enabled.
-3. Inspect provenance on both source and destination/copy.
-4. Record screenshots/notes of Document Actions wording.
+2. Demonstrate the corrected Role/Department/Folder model and Character workspace; demonstrate separate Prepared by credits, Concerns links, and provenance actors; then execute golden scenarios for deed supersession and marriage-license share.
+3. Inspect provenance on the supersession chain and shared record.
+4. Record screenshots/notes of the document view hierarchy and bottom Share control.
 
 ## Likely code touchpoints
 - Inspect current adjacent files; do not broaden scope.
 
 ## Automated acceptance
 
-- Full Phase 5 suite passes, including required grouped labels, acyclic/single-successor Supersedes, exact Copy/Move metadata and authorization matrices, and temporary Share enforcement.
-- Identity/provenance assertions prove Share=same ID, Copy=new ID, and Move=same ID/history.
+- Full Phase 5 suite passes, including acyclic/linear Supersedes, locked superseded records, and temporary Share enforcement.
+- Identity/provenance assertions prove supersession creates a new ID while Share keeps the same ID.
 
 
 ## Manual acceptance
 - All Phase 5 tests green.
 - No supersedes cycles.
-- Copy and Share demonstrably differ by ID/version behavior.
-- Cross-Domain move defaults disabled.
+- Superseding creates a new ID and locks the older record.
+- No Copy, Move, or cross-Domain mapping controls appear.
 - Prepared by credits, Concerns links, and provenance actors remain visibly and structurally distinct.
 - RoleAssignments contain no Folder scope, Department participation is Role-derived, and direct Folder overrides are managed independently on the Character workspace.
 

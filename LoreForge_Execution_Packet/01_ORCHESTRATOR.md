@@ -30,9 +30,9 @@ This sequence is retained for historical clean-start reconstruction. The current
 ## Current continuation — Phase 5
 
 1. Confirm the repository's `execution-notes/P04-GATE.md` is `APPROVED_BY_OWNER` and this packet contains `CC-2026-09-03-03`.
-2. Create `phase-05-document-relations-copy-share` from that approved state.
+2. Create `phase-05-document-relations-copy-share` from that approved state (the historical branch name is retained; Copy/Move implementation is retired by owner decision).
 3. Read `tickets/phase-05/00_PHASE_ORCHESTRATOR.md` completely.
-4. Execute exactly: `P05-T00`, `P05-T01`, `P05-T02`, `P05-T03`, `P05-T04`, `P05-GATE`.
+4. Execute exactly: `P05-T00`, `P05-T01`, `P05-T02`, `P05-T03` (retired/no-op), `P05-T04`, `P05-GATE`.
 5. Stop after `P05-GATE`; Phase 6 requires explicit owner approval.
 
 ## Ticket loop

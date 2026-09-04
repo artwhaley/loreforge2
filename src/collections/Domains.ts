@@ -43,7 +43,6 @@ export const Domains: CollectionConfig = {
     { name: 'logo', type: 'upload', relationTo: 'media', label: 'Seal / logo' },
     { name: 'banner', type: 'upload', relationTo: 'media', label: 'Banner image' },
     { name: 'publicEnabled', type: 'checkbox', defaultValue: false },
-    { name: 'allowCrossDomainMove', type: 'checkbox', defaultValue: false },
     { name: 'installedPackKey', type: 'text', admin: { readOnly: true } },
     { name: 'installedPackVersion', type: 'text', admin: { readOnly: true } },
   ],
