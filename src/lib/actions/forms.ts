@@ -69,6 +69,7 @@ export async function submitReportFormAction(
   // optional; when selected, it becomes the visible Prepared by credit.
   const activeContext = await getActiveContext()
   const activeCharacterId = activeContext.tenant?.slug === tenantSlug ? activeContext.activeCharacter?.id : undefined
+  if (!activeCharacterId) return { ok: false, message: 'Choose an acting Character before creating a form document.' }
 
   // The Template itself must belong to the active Domain. Legacy plugin Forms
   // are intentionally no longer a customer-facing submission surface.

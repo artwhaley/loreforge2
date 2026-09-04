@@ -4,6 +4,8 @@ import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
 import { composeTemplate, renderTemplateTokens } from '@/lib/templates/compose'
 import type { LoreForgeFormSchema } from './schema'
+import { runInTransaction } from '@/lib/documents/relationships'
+import { attachDocumentCharacterLink, ensurePreparedBy } from '@/lib/documents/links'
 
 /**
  * The Ticket 07 design seam: form template + submitted answers -> archive
@@ -118,36 +120,28 @@ export async function generateDocumentFromSubmission(args: {
     ? Number(form.documentType)
     : (await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: tenant.id } }, { name: { equals: 'Plain Text' } }, { active: { equals: true } }] }, depth: 0, limit: 1 })).docs[0]?.id
   if (!documentType) throw new Error('The Domain has no active Plain Text Document Type.')
-
-  const created = await payload.create({
-    collection: 'documents',
-    context: actorCharacterId == null ? { allowUserCreate: true, actorUserId: user.id } : { preparedByCharacterId: actorCharacterId, actorUserId: user.id },
-    data: {
-      domain: tenant.id,
-      tenant: tenant.id,
-      folder,
-      title,
-      body,
-      origin: 'form',
-      sourceKind: 'form',
-      documentType,
-      lifecycle: 'draft',
-      publicAccess: 'inherit',
-      createdBy: user.id,
-    },
-    depth: 0,
+  if (!neutral) {
+    const created = await payload.create({ collection: 'documents', context: actorCharacterId == null ? { allowUserCreate: true, actorUserId: user.id } : { preparedByCharacterId: actorCharacterId, actorUserId: user.id }, data: { domain: tenant.id, tenant: tenant.id, folder, title, body, origin: 'form', sourceKind: 'form', documentType, lifecycle: 'draft', publicAccess: 'inherit', createdBy: user.id }, depth: 0 })
+    return { id: Number(created.id), title, body }
+  }
+  const schema = form.formSchema ? form.formSchema : { version: 1, fields: [] }
+  const lifecycle = form.lifecyclePolicy === 'review-required' ? 'pending_review' : 'filed'
+  const created = await runInTransaction(payload, async (transactionID) => {
+    const req = { transactionID }
+    const row = await payload.create({ collection: 'documents', req, context: actorCharacterId == null ? { allowUserCreate: true, actorUserId: user.id } : { preparedByCharacterId: actorCharacterId, actorUserId: user.id }, data: { domain: tenant.id, tenant: tenant.id, folder, title, body, origin: 'form', sourceKind: 'form', documentType, lifecycle, publicAccess: 'inherit', createdBy: user.id }, depth: 0 })
+    if (actorCharacterId != null) await ensurePreparedBy({ payload, domainId: tenant.id, documentId: row.id, characterId: actorCharacterId, actor: { userId: user.id, characterId: actorCharacterId }, transactionID })
+    for (const field of schema.fields) {
+      if (field.type !== 'character') continue
+      const raw = answers[field.key]
+      if (raw === undefined || raw === null || raw === '') continue
+      const characterId = Number(raw)
+      if (!Number.isFinite(characterId) || characterId <= 0) throw new Error(`Character field ${field.key} must identify an existing Character.`)
+      const character = await payload.findByID({ collection: 'characters', id: characterId, depth: 0, overrideAccess: true, req })
+      if (!character || character.status !== 'active') throw new Error(`Character field ${field.key} references an inactive Character.`)
+      await attachDocumentCharacterLink({ payload, domainId: tenant.id, documentId: row.id, characterId, kind: 'concerns', relationshipLabel: field.relationshipLabel, actor: { userId: user.id, characterId: actorCharacterId }, transactionID })
+    }
+    await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: row.id, eventType: 'created', actorUserId: user.id, actorCharacterId, context: { sourceKind: 'form', templateId: Number(form.id), lifecycle }, revisionId: await latestDocumentRevisionId(payload, row.id, transactionID), transactionID })
+    return row
   })
-
-  await recordDocumentProvenance({
-    payload,
-    domainId: tenant.id,
-    documentId: created.id,
-    eventType: 'created',
-    actorUserId: user.id,
-    actorCharacterId,
-    context: { sourceKind: 'form' },
-    revisionId: await latestDocumentRevisionId(payload, created.id),
-  })
-
   return { id: Number(created.id), title, body }
 }

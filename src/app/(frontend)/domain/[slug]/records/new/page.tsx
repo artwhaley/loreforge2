@@ -18,7 +18,10 @@ export default async function NewDocumentPage({ params, searchParams }: Props) {
   if (!tenant || tenant.slug !== slug || !user) notFound()
   const [folders, domains] = await Promise.all([getFoldersForTenant(tenant), getTenantsForUser(user.id)])
   const payload = await (await import('@/lib/payload')).getLorePayload()
-  const types = await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: tenant.id } }, { active: { equals: true } }] }, depth: 0, limit: 500, sort: 'name' })
+  const [types, templates] = await Promise.all([
+    payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: tenant.id } }, { active: { equals: true } }] }, depth: 0, limit: 500, sort: 'name' }),
+    payload.find({ collection: 'templates', where: { and: [{ domain: { equals: tenant.id } }, { active: { equals: true } }] }, depth: 1, limit: 500, sort: 'name', overrideAccess: true }),
+  ])
   const flatFolders = flattenFolderTree(buildFolderTree(folders))
   const selectedFolder = query?.folder ?? ''
   const supersedesId = Number(query?.supersedes ?? '')
@@ -42,10 +45,12 @@ export default async function NewDocumentPage({ params, searchParams }: Props) {
       folderId: String(typeof supersededDocument.folder === 'object' ? supersededDocument.folder?.id ?? '' : supersededDocument.folder ?? ''),
       concernLinks: JSON.stringify(supersededConcerns),
       tagNames: '',
+      templateId: '',
+      formAnswers: '',
     },
-  } : selectedFolder ? { values: { title: '', body: '', documentTypeId: '', folderId: selectedFolder, concernLinks: '', tagNames: '' } } : undefined
+  } : selectedFolder ? { values: { title: '', body: '', documentTypeId: '', folderId: selectedFolder, concernLinks: '', tagNames: '', templateId: '', formAnswers: '' } } : undefined
 
   return <TenantShell tenant={tenant} cssVars={themeTokensToCssVars(resolveThemeTokens(tenant))} role={role} switcherTenants={domains} activeCharacter={activeCharacter}>
-    <section style={{ maxWidth: 860, margin: '0 auto' }}><p><a href={`/domain/${slug}/records`}>Records</a> / New document</p><h1>{supersededDocument ? 'Create superseding document' : 'New document'}</h1><p>{supersededDocument ? `Start a new version of “${supersededDocument.title}”.` : 'Choose a destination and write the first version of this record. Templates and Forms will join this entry point in the templates phase.'}</p>{query?.error === 'character' ? <p role="alert" style={{ color: '#8f2d21' }}>Choose an acting Character from the selector above — members must create through an acting Character, which becomes the non-removable Prepared-by credit (CC-2026-09-03-05).</p> : query?.error === 'missing' ? <p role="alert" style={{ color: '#8f2d21' }}>A title is required.</p> : query?.error === 'type' ? <p role="alert" style={{ color: '#8f2d21' }}>Choose an active Document Type before creating a document.</p> : null}<NewDocumentForm tenantSlug={slug} types={types.docs.map((item) => ({ id: Number(item.id), name: item.name }))} folders={flatFolders.map(({ folder, depth }) => ({ id: Number(folder.id), name: folder.name, systemManaged: Boolean(folder.systemManaged), depth }))} activeCharacter={activeCharacter ? { id: Number(activeCharacter.id), name: activeCharacter.name } : null} initialState={supersedingInitialState} supersedesDocumentId={supersededDocument?.id} /></section>
+    <section style={{ maxWidth: 1100, margin: '0 auto' }}><p><a href={`/domain/${slug}/records`}>Records</a> / New document</p><h1>{supersededDocument ? 'Create superseding document' : 'New document'}</h1><p>{supersededDocument ? `Start a new version of “${supersededDocument.title}”.` : 'Choose a Template, complete the document, and file it in the declared destination.'}</p>{query?.error === 'character' ? <p role="alert" style={{ color: '#8f2d21' }}>Choose an acting Character from the selector above — members must create through an acting Character, which becomes the non-removable Prepared-by credit (CC-2026-09-03-05).</p> : query?.error === 'missing' ? <p role="alert" style={{ color: '#8f2d21' }}>A title is required.</p> : query?.error === 'type' ? <p role="alert" style={{ color: '#8f2d21' }}>Choose an active Document Type before creating a document.</p> : null}<NewDocumentForm tenantSlug={slug} types={types.docs.map((item) => ({ id: Number(item.id), name: item.name }))} templates={templates.docs.map((item) => ({ id: Number(item.id), name: item.name, kind: item.kind, documentTypeId: Number(typeof item.documentType === 'object' ? item.documentType.id : item.documentType), destinationFolderId: Number(typeof item.destinationFolder === 'object' ? item.destinationFolder.id : item.destinationFolder), allowDestinationOverride: Boolean(item.allowDestinationOverride), formSchema: item.formSchema && typeof item.formSchema === 'object' ? item.formSchema as never : null }))} folders={flatFolders.map(({ folder, depth }) => ({ id: Number(folder.id), name: folder.name, systemManaged: Boolean(folder.systemManaged), depth }))} activeCharacter={activeCharacter ? { id: Number(activeCharacter.id), name: activeCharacter.name } : null} initialState={supersedingInitialState} supersedesDocumentId={supersededDocument?.id} /></section>
   </TenantShell>
 }

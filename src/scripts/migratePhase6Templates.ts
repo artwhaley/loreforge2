@@ -1,4 +1,6 @@
 import { getPayload } from 'payload'
+import { DatabaseSync } from 'node:sqlite'
+import { resolve } from 'node:path'
 
 import config from '@/payload.config'
 import { adaptPayloadForm } from '@/lib/forms/adapter-payload'
@@ -8,6 +10,57 @@ const idOf = (value: unknown): number | null => {
   if (typeof value === 'object' && value !== null && 'id' in value) return Number((value as { id: number | string }).id)
   return Number(value)
 }
+
+function databasePath(uri: string): string {
+  if (!uri.startsWith('file:')) throw new Error('P06 template migration only supports a local file: DATABASE_URI.')
+  const raw = decodeURIComponent(uri.slice('file:'.length).split('?')[0])
+  if (!raw || raw === ':memory:' || /^\/\//.test(raw) || /^[a-z]+:\/\//i.test(raw)) throw new Error('P06 template migration requires a concrete local SQLite file.')
+  return resolve(process.cwd(), raw)
+}
+
+/** Add only the Templates table/indexes; never use Payload's destructive dev push. */
+function ensureTemplateSchema() {
+  const db = new DatabaseSync(databasePath(process.env.DATABASE_URI ?? 'file:./sl-civic-archive.db'))
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS templates (
+      id integer PRIMARY KEY NOT NULL,
+      domain_id integer NOT NULL,
+      document_type_id integer NOT NULL,
+      name text NOT NULL,
+      kind text DEFAULT 'document' NOT NULL,
+      scope_folder_id integer NOT NULL,
+      destination_folder_id integer NOT NULL,
+      allow_destination_override integer DEFAULT false,
+      available_to_descendants integer DEFAULT true,
+      base_template_id integer,
+      title_template text NOT NULL,
+      body_template text NOT NULL,
+      form_schema text,
+      lifecycle_policy text DEFAULT 'inherit' NOT NULL,
+      active integer DEFAULT true,
+      version numeric DEFAULT 1 NOT NULL,
+      updated_at text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+      created_at text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+      FOREIGN KEY (domain_id) REFERENCES domains(id) ON UPDATE no action ON DELETE set null,
+      FOREIGN KEY (document_type_id) REFERENCES document_types(id) ON UPDATE no action ON DELETE set null,
+      FOREIGN KEY (scope_folder_id) REFERENCES folders(id) ON UPDATE no action ON DELETE set null,
+      FOREIGN KEY (destination_folder_id) REFERENCES folders(id) ON UPDATE no action ON DELETE set null,
+      FOREIGN KEY (base_template_id) REFERENCES templates(id) ON UPDATE no action ON DELETE set null
+    )`)
+    for (const [name, columns] of [
+      ['templates_domain_idx', 'domain_id'], ['templates_document_type_idx', 'document_type_id'],
+      ['templates_scope_folder_idx', 'scope_folder_id'], ['templates_destination_folder_idx', 'destination_folder_id'],
+      ['templates_base_template_idx', 'base_template_id'], ['templates_created_at_idx', 'created_at'], ['templates_updated_at_idx', 'updated_at'],
+    ]) db.exec(`CREATE INDEX IF NOT EXISTS ${name} ON templates (${columns})`)
+    db.exec('COMMIT')
+  } catch (error) {
+    db.exec('ROLLBACK')
+    throw error
+  } finally { db.close() }
+}
+
+ensureTemplateSchema()
 
 /**
  * One-way, idempotent migration from the spike Form Builder records to
@@ -73,4 +126,3 @@ for (const form of forms.docs) {
 
 payload.logger.info(`P06 template migration complete: imported=${imported} skipped=${skipped}`)
 process.exitCode = skipped > 0 ? 1 : 0
-
