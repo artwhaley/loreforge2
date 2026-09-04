@@ -35,11 +35,13 @@ export function Inspector({ field, count, isRecordNamer, onPatch, onRemove, onDu
     )
   }
 
+  const isCharacterType = (type: FormFieldType) => type === 'character' || type === 'characters'
+
   const changeType = (type: FormFieldType) => {
     const patch: Partial<LoreForgeFormField> = { type }
     if (type !== 'select') patch.options = undefined
     else if (!field.options || field.options.length === 0) patch.options = [{ label: 'First choice', value: 'first_choice' }]
-    if (type !== 'character') patch.relationshipLabel = undefined
+    if (!isCharacterType(type)) patch.relationshipLabel = undefined
     if (type !== 'checkbox' && typeof field.default === 'boolean') patch.default = undefined
     onPatch(field.key, patch)
   }
@@ -119,11 +121,11 @@ export function Inspector({ field, count, isRecordNamer, onPatch, onRemove, onDu
         </div>
       ) : null}
 
-      {field.type === 'character' ? (
+      {isCharacterType(field.type) ? (
         <div className={styles.group}>
           <label className={styles.groupLabel} htmlFor={`relation-${field.key}`}>Label the relationship <span className={styles.optional}>(optional)</span></label>
           <input id={`relation-${field.key}`} className={styles.input} value={field.relationshipLabel ?? ''} placeholder="e.g. witness" onChange={(event) => onPatch(field.key, { relationshipLabel: event.target.value })} />
-          <p className={styles.muted}>The record links this Character; the label says what they are to the report.</p>
+          <p className={styles.muted}>{field.type === 'characters' ? 'The record links each of these Characters; the label says what they are to the report.' : 'The record links this Character; the label says what they are to the report.'}</p>
         </div>
       ) : null}
 
@@ -133,7 +135,7 @@ export function Inspector({ field, count, isRecordNamer, onPatch, onRemove, onDu
             <input type="checkbox" checked={field.default === true} onChange={(event) => onPatch(field.key, { default: event.target.checked ? true : undefined })} />
             Ticked by default
           </label>
-        ) : field.type !== 'character' && (field.type !== 'select' || (field.options ?? []).length > 0) ? (
+        ) : !isCharacterType(field.type) && (field.type !== 'select' || (field.options ?? []).length > 0) ? (
           <>
             <label className={styles.groupLabel} htmlFor={`default-${field.key}`}>Default answer <span className={styles.optional}>(optional)</span></label>
             {field.type === 'textarea' ? (

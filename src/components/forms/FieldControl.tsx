@@ -7,7 +7,8 @@ import type { LoreForgeFormField } from '@/lib/forms/schema'
 
 import styles from './FieldControl.module.scss'
 
-export type FieldValue = string | boolean
+/** A control's value: text, a boolean (checkbox), or chosen Character ids. */
+export type FieldValue = string | boolean | string[]
 
 type Props = {
   field: LoreForgeFormField
@@ -39,7 +40,7 @@ export function FieldControl({ field, name, id, value, onValueChange, domainSlug
   const controlId = id ?? `field-${field.key}`
   const helpId = `${controlId}-help`
   const isRequired = required ?? Boolean(field.required)
-  const change = (next: FieldValue) => { if (!disabled && onValueChange) onValueChange(next) }
+  const change = (next: string | boolean | string[]) => { if (!disabled && onValueChange) onValueChange(next) }
   const labelledBy = `${controlId}-label`
 
   let control: ReactNode
@@ -59,10 +60,11 @@ export function FieldControl({ field, name, id, value, onValueChange, domainSlug
         <span className={styles.checkboxLabel}>Yes</span>
       </span>
     )
-  } else if (field.type === 'character') {
+  } else if (field.type === 'character' || field.type === 'characters') {
+    const multi = field.type === 'characters'
     control = domainSlug && !disabled
-      ? <CharacterFieldPicker domainSlug={domainSlug} value={typeof value === 'string' ? value : ''} onChange={(next) => change(next)} ariaLabel={field.label} name={name} />
-      : <input id={controlId} name={name} type="text" className={styles.input} disabled aria-labelledby={labelledBy} aria-describedby={field.help ? helpId : undefined} placeholder="Character picker appears when this form is filled" value="" onChange={() => undefined} />
+      ? <CharacterFieldPicker multi={multi} domainSlug={domainSlug} value={multi ? (Array.isArray(value) ? value : []) : typeof value === 'string' ? value : ''} onChange={(next) => change(next)} ariaLabel={field.label} name={name} />
+      : <input id={controlId} name={name} type="text" className={styles.input} disabled aria-labelledby={labelledBy} aria-describedby={field.help ? helpId : undefined} placeholder={multi ? 'Character picker appears when this form is filled' : 'Character picker appears when this form is filled'} value="" onChange={() => undefined} />
   } else {
     control = <input id={controlId} name={name} type={field.type === 'date' ? 'date' : 'text'} className={styles.input} required={isRequired} disabled={disabled} aria-labelledby={labelledBy} aria-describedby={field.help ? helpId : undefined} value={typeof value === 'string' ? value : ''} onChange={(event) => change(event.target.value)} />
   }

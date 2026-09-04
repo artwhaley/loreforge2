@@ -17,7 +17,7 @@ type Props = {
 
 export const dynamic = 'force-dynamic'
 
-const ALLOWED: ReadonlySet<string> = new Set(['text', 'textarea', 'date', 'select', 'checkbox', 'character'])
+const ALLOWED: ReadonlySet<string> = new Set(['text', 'textarea', 'date', 'select', 'checkbox', 'character', 'characters'])
 
 export default async function FillFormPage({ params }: Props) {
   const { slug, formId: formIdRaw } = await params

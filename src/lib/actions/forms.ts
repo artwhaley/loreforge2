@@ -88,6 +88,17 @@ export async function submitReportFormAction(
   const answers: FormAnswers = {}
   const missingFields: string[] = []
   for (const field of schema.fields) {
+    if (field.type === 'characters') {
+      // The picker emits one hidden input per chosen Character (same name), so
+      // a native submit surfaces them as repeated fields.
+      const ids = [...new Set(formData.getAll(field.key).map((value) => String(value).trim()).filter(Boolean))]
+      if (field.required && ids.length === 0) {
+        missingFields.push(field.label ?? field.key)
+        continue
+      }
+      answers[field.key] = ids.length > 0 ? ids : ''
+      continue
+    }
     if (field.type === 'checkbox') {
       answers[field.key] = formData.get(field.key) !== null
       continue

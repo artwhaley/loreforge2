@@ -120,14 +120,15 @@ export function tokensMatchFields(titleTemplate: string, bodyTemplate: string, f
   return true
 }
 
-export type DisplayAnswers = Record<string, string | boolean>
+export type DisplayAnswers = Record<string, string | boolean | string[]>
 
 /**
  * Answers as they should *read* in a generated record. Select answers are
  * stored as option values but must display as their labels; checkbox strings
  * ('true'/''/boolean) are normalized to real booleans so records read
- * Yes/No. Character answers stay raw ids here — resolving them to names needs
- * the payload and happens in the action layer before rendering.
+ * Yes/No. Character answers stay raw ids here (a multiple pick keeps its id
+ * array) — resolving them to names needs the payload and happens in the
+ * action layer before rendering.
  */
 export function displayAnswersForRender(schema: LoreForgeFormSchema, answers: FormAnswers): DisplayAnswers {
   const out: DisplayAnswers = {}

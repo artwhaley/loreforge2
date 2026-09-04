@@ -16,7 +16,7 @@ import { attachDocumentCharacterLink, attachDocumentTag, ensurePreparedBy, findO
 import { addDocumentRelationship, runInTransaction } from '@/lib/documents/relationships'
 import { evaluatePermission } from '@/lib/authz/evaluate'
 import { domainAndIdWhere } from '@/lib/tenant/scope'
-import { assertFormSchema } from '@/lib/forms/schema'
+import { assertFormSchema, type FormAnswers } from '@/lib/forms/schema'
 import { answersForRecordRender, renderNeutralTemplate } from '@/lib/forms/generateDocument'
 import { isTemplateAvailableAt } from '@/lib/templates/resolve'
 import type { Domain, Tenant } from '@/payload-types'
@@ -265,11 +265,12 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
     if (!selectedType) return { error: 'type', values }
     if (String(selectedTemplate.kind ?? 'document') === 'form') {
       if (!activeCharacterId) return { error: 'character', values }
-      let answers: Record<string, string | boolean | null | undefined>
-      try { answers = JSON.parse(String(formData.get('formAnswers') ?? '{}')) as Record<string, string | boolean | null | undefined> } catch { return { error: 'form-validation', values } }
+      let answers: FormAnswers
+      try { answers = JSON.parse(String(formData.get('formAnswers') ?? '{}')) as FormAnswers } catch { return { error: 'form-validation', values } }
       let schema
       try { schema = assertFormSchema(selectedTemplate.formSchema) } catch { return { error: 'form-validation', values } }
-      const missing = schema.fields.filter((field) => field.required && (answers[field.key] === undefined || answers[field.key] === null || answers[field.key] === '')).map((field) => field.label)
+      const unanswered = (value: FormAnswers[string]) => value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0)
+      const missing = schema.fields.filter((field) => field.required && unanswered(answers[field.key])).map((field) => field.label)
       if (missing.length > 0) return { error: 'form-validation', values }
       try {
         // Records read select labels, boolean checkboxes, and Character names;
@@ -277,12 +278,21 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
         const renderAnswers = await answersForRecordRender({ payload: ctx.payload, schema, answers })
         const rendered = renderNeutralTemplate({ id: selectedTemplate.id, name: String(selectedTemplate.name), kind: 'form', titleTemplate: String(selectedTemplate.titleTemplate), bodyTemplate: String(selectedTemplate.bodyTemplate), formSchema: schema, baseTemplate: selectedTemplate.baseTemplate as never }, renderAnswers)
         renderedBody = rendered.body
-        for (const field of schema.fields) if (field.type === 'character') {
-          const raw = String(answers[field.key] ?? '').trim()
-          if (!raw) continue
-          const id = Number(raw)
-          if (Number.isFinite(id) && id > 0) formCharacterEntries.push({ characterId: id, relationshipLabel: field.relationshipLabel })
-          else formCharacterEntries.push({ newName: raw, relationshipLabel: field.relationshipLabel })
+        for (const field of schema.fields) {
+          if (field.type === 'character') {
+            const raw = String(answers[field.key] ?? '').trim()
+            if (!raw) continue
+            const id = Number(raw)
+            if (Number.isFinite(id) && id > 0) formCharacterEntries.push({ characterId: id, relationshipLabel: field.relationshipLabel })
+            else formCharacterEntries.push({ newName: raw, relationshipLabel: field.relationshipLabel })
+          } else if (field.type === 'characters') {
+            const raw = answers[field.key]
+            const ids = Array.isArray(raw) ? raw : raw === undefined || raw === null || raw === '' ? [] : [String(raw)]
+            for (const rawId of ids) {
+              const id = Number(rawId)
+              if (Number.isFinite(id) && id > 0) formCharacterEntries.push({ characterId: id, relationshipLabel: field.relationshipLabel })
+            }
+          }
         }
       } catch { return { error: 'form-validation', values } }
     }

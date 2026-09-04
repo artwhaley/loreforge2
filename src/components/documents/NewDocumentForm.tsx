@@ -35,7 +35,8 @@ function controlValue(field: LoreForgeFormField, value: FieldValue | null | unde
     if (typeof value === 'boolean') return value
     return value === 'true' || value === 'yes'
   }
-  // Non-checkbox controls hold text; a stray boolean is normalized defensively.
+  // Non-checkbox controls hold text; a multiple-Character answer holds its ids.
+  if (Array.isArray(value)) return value
   return typeof value === 'boolean' ? String(value) : value
 }
 
@@ -69,7 +70,7 @@ export function NewDocumentForm({ tenantSlug, types, folders, templates = [], ac
   const [folderId, setFolderId] = useState(values.folderId || '')
   const selectedTemplate = templates.find((item) => String(item.id) === selectedTemplateId)
   const answerValues = useMemo(() => {
-    try { return JSON.parse(formAnswers || '{}') as Record<string, string | boolean | null | undefined> } catch { return {} }
+    try { return JSON.parse(formAnswers || '{}') as Record<string, FieldValue | null | undefined> } catch { return {} }
   }, [formAnswers])
 
   // A failed server action returns the complete submitted snapshot. Hydrate

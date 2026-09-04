@@ -9,6 +9,7 @@ function sampleAnswer(field: LoreForgeFormField): string {
   if (field.type === 'select') return field.options?.[0]?.label ?? 'A choice'
   if (field.type === 'checkbox') return field.default === true ? 'Yes' : 'No'
   if (field.type === 'character') return 'A Character from this Domain'
+  if (field.type === 'characters') return 'Two Characters from this Domain'
   if (field.type === 'date') return '2026-09-04'
   if (field.type === 'textarea') return 'Sample long answer that runs over a couple of lines.'
   return 'Sample answer'

@@ -5,7 +5,9 @@
  */
 
 export const FORM_SCHEMA_VERSION = 1 as const
-export const FORM_FIELD_TYPES = ['text', 'textarea', 'date', 'select', 'checkbox', 'character'] as const
+/** The Character question family: a single pick vs. a multiple pick. */
+export const CHARACTER_FIELD_TYPES = ['character', 'characters'] as const
+export const FORM_FIELD_TYPES = ['text', 'textarea', 'date', 'select', 'checkbox', 'character', 'characters'] as const
 export type FormFieldType = (typeof FORM_FIELD_TYPES)[number]
 
 /**
@@ -39,7 +41,13 @@ export type LoreForgeFormSchema = {
   fields: LoreForgeFormField[]
 }
 
-export type FormAnswers = Record<string, string | boolean | null | undefined>
+/**
+ * One submitted answer. A multiple-Character question holds an array of
+ * Character ids; every other question type holds a scalar (checkbox answers
+ * are real booleans after normalization).
+ */
+export type FormAnswerValue = string | boolean | string[] | null | undefined
+export type FormAnswers = Record<string, FormAnswerValue>
 
 export type FormSchemaIssue = { path: string; message: string }
 
@@ -103,7 +111,7 @@ export function validateFormSchema(input: unknown): { valid: true; value: LoreFo
     const defaultValue = item.default
     if (defaultValue !== undefined && typeof defaultValue !== 'string' && typeof defaultValue !== 'boolean') issues.push(issue(`${path}.default`, 'Defaults must be text or boolean values.'))
     const relationshipLabel = item.relationshipLabel === undefined ? undefined : String(item.relationshipLabel).trim()
-    if (type !== 'character' && relationshipLabel) issues.push(issue(`${path}.relationshipLabel`, 'Relationship labels are only valid for Character fields.'))
+    if (!(CHARACTER_FIELD_TYPES as readonly string[]).includes(type) && relationshipLabel) issues.push(issue(`${path}.relationshipLabel`, 'Relationship labels are only valid for Character fields.'))
     // Presentation hints (P06R): optional and additive, never structural. Any
     // older stored schema without them remains valid and renders at defaults.
     let width: FormFieldWidth | undefined

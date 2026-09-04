@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 
 import { assertFormSchema } from './schema'
 import { autoBodyTemplate, autoTitleTemplate, displayAnswersForRender, headingText, recordNameKeyFromTitle, slugifyLabel, slugifyOptionValue, tokensMatchFields, uniqueKey } from './layout'
-import { renderNeutralTemplate } from './generateDocument'
+import { answersForRecordRender, renderNeutralTemplate } from './generateDocument'
 import { escapeMarkdownValue, renderTemplateTokens } from '@/lib/templates/compose'
 
 test('P06R slugifyLabel produces stable lowercase keys with a leading letter', () => {
@@ -101,6 +101,39 @@ test('P06R recordNameKeyFromTitle infers a single naming token or null', () => {
   assert.equal(recordNameKeyFromTitle('{{when}}', fields), 'when')
   assert.equal(recordNameKeyFromTitle('{{witness}}', fields), null) // character can't name records
   assert.equal(recordNameKeyFromTitle('General Report', fields), null)
+})
+
+test('P06R multiple-Characters answers render as their Characters joined, raw ids kept for linking', async () => {
+  const schema = assertFormSchema({
+    version: 1,
+    fields: [
+      { key: 'witnesses', type: 'characters', label: 'Witnesses', relationshipLabel: 'witness' },
+      { key: 'named', type: 'characters', label: 'Cast' },
+    ],
+  })
+  // Before resolution the pure mapping passes the id array through untouched.
+  const raw = displayAnswersForRender(schema, { witnesses: ['5', '7'], named: [] })
+  assert.deepEqual(raw.witnesses, ['5', '7'])
+  // The action layer swaps ids for active Characters' names.
+  const stubPayload = {
+    findByID: async ({ id }: { id: number | string }) => ({ id: Number(id), name: `Character ${id}`, status: 'active' }),
+  } as never
+  const resolved = await answersForRecordRender({ payload: stubPayload, schema, answers: { witnesses: ['5', '7'], named: [] } })
+  assert.equal(resolved.witnesses, 'Character 5, Character 7')
+  assert.equal(resolved.named, '')
+})
+
+test('P06R multiple-Characters never name records and cannot inject tokens', () => {
+  const fields = [
+    { key: 'witnesses', type: 'characters' as const, label: 'Witnesses' },
+    { key: 'consent', type: 'checkbox' as const, label: 'Consent' },
+  ]
+  assert.equal(autoTitleTemplate(fields, null), null)
+  const body = autoBodyTemplate(fields)
+  // The question still gets its own body section, and that section references
+  // the declared key — never a stray token.
+  assert.ok(body.includes('## Witnesses\n\n{{witnesses}}'))
+  assert.ok(tokensMatchFields('', body, fields))
 })
 
 test('P06R display mapping renders select labels and normalizes checkboxes', () => {

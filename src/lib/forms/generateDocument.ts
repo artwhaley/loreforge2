@@ -3,10 +3,12 @@ import type { Payload } from 'payload'
 import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
 import { composeTemplate, renderTemplateTokens } from '@/lib/templates/compose'
-import { displayAnswersForRender } from './layout'
+import { displayAnswersForRender, type DisplayAnswers } from './layout'
 import { runInTransaction } from '@/lib/documents/relationships'
 import { attachDocumentCharacterLink, ensurePreparedBy } from '@/lib/documents/links'
 import type { FormAnswers, LoreForgeFormSchema } from './schema'
+
+const CHARACTER_TYPES = new Set(['character', 'characters'])
 
 /**
  * The Ticket 07 design seam: form template + submitted answers -> archive
@@ -27,8 +29,9 @@ export type FormArchiveMetadata = {
 }
 
 /** How a submitted value renders into Markdown: booleans as true/false. */
-function renderValue(value: string | boolean | null | undefined): string {
+function renderValue(value: string | boolean | string[] | null | undefined): string {
   if (value === null || value === undefined) return ''
+  if (Array.isArray(value)) return value.join(', ')
   return String(value)
 }
 
@@ -75,20 +78,39 @@ export function renderNeutralTemplate(template: NeutralTemplateMetadata, answers
 /**
  * Answers as a generated record should *read* them: select answers become
  * their display labels, checkbox strings normalize to booleans (Yes/No), and
- * Character answers become the Character's name. Raw values (ids, option
- * values) are untouched for the archive/index side-effects that consume them.
- * Inactive or missing Characters keep their raw id here; the link step below
- * rejects them with the authoritative error before anything is created.
+ * Character answers become the Character's name (a multiple pick joins its
+ * names with commas). Raw values (ids, option values) are untouched for the
+ * archive/index side-effects that consume them. Inactive or missing
+ * Characters keep their raw id here; the link step below rejects them with
+ * the authoritative error before anything is created.
  */
 export async function answersForRecordRender(args: {
   payload: Payload
   schema: LoreForgeFormSchema
   answers: FormAnswers
-}): Promise<Record<string, string | boolean>> {
+}): Promise<DisplayAnswers> {
   const display = displayAnswersForRender(args.schema, args.answers)
   for (const field of args.schema.fields) {
-    if (field.type !== 'character') continue
+    if (!CHARACTER_TYPES.has(field.type)) continue
     const raw = args.answers[field.key]
+    if (field.type === 'characters') {
+      const rawIds = Array.isArray(raw) ? raw : raw === undefined || raw === null || raw === '' ? [] : [String(raw)]
+      if (rawIds.length === 0) {
+        display[field.key] = ''
+        continue
+      }
+      const names: string[] = []
+      for (const rawId of rawIds) {
+        const characterId = Number(rawId)
+        const character = Number.isFinite(characterId) && characterId > 0
+          ? await args.payload.findByID({ collection: 'characters', id: characterId, depth: 0, overrideAccess: true }).catch(() => null)
+          : null
+        if (character && character.status === 'active') names.push(character.name)
+        else names.push(String(rawId))
+      }
+      display[field.key] = names.join(', ')
+      continue
+    }
     if (raw === undefined || raw === null || raw === '') continue
     const characterId = Number(raw)
     if (!Number.isFinite(characterId) || characterId <= 0) continue
@@ -124,7 +146,7 @@ export async function generateDocumentFromSubmission(args: {
   const schema: LoreForgeFormSchema = neutral ? (form.formSchema ? form.formSchema : { version: 1, fields: [] }) : { version: 1, fields: [] }
   let rendered: { title: string; body: string; chain: Array<number | string> }
   if (neutral) {
-    const renderAnswers = schema.fields.some((field) => field.type === 'character')
+    const renderAnswers = schema.fields.some((field) => CHARACTER_TYPES.has(field.type))
       ? await answersForRecordRender({ payload, schema, answers })
       : displayAnswersForRender(schema, answers)
     rendered = renderNeutralTemplate(form, renderAnswers)
@@ -157,23 +179,35 @@ export async function generateDocumentFromSubmission(args: {
     : (await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: tenant.id } }, { name: { equals: 'Plain Text' } }, { active: { equals: true } }] }, depth: 0, limit: 1 })).docs[0]?.id
   if (!documentType) throw new Error('The Domain has no active Plain Text Document Type.')
   if (!neutral) {
-    const created = await payload.create({ collection: 'documents', context: actorCharacterId == null ? { allowUserCreate: true, actorUserId: user.id } : { preparedByCharacterId: actorCharacterId, actorUserId: user.id }, data: { domain: tenant.id, tenant: tenant.id, folder, title, body, origin: 'form', sourceKind: 'form', documentType, lifecycle: 'draft', publicAccess: 'inherit', createdBy: user.id }, depth: 0 })
+    // The legacy `tenant` column belongs to the retired tenants collection and
+    // is only ever written when a real legacy tenant id exists (see archive.ts).
+    // A Domain id must NOT be written there — tenants has no such row and the
+    // FK insert fails. Modern documents are scoped by `domain` alone.
+    const created = await payload.create({ collection: 'documents', context: actorCharacterId == null ? { allowUserCreate: true, actorUserId: user.id } : { preparedByCharacterId: actorCharacterId, actorUserId: user.id }, data: { domain: tenant.id, folder, title, body, origin: 'form', sourceKind: 'form', documentType, lifecycle: 'draft', publicAccess: 'inherit', createdBy: user.id }, depth: 0 })
     return { id: Number(created.id), title, body }
   }
   const lifecycle = form.lifecyclePolicy === 'review-required' ? 'pending_review' : 'filed'
   const created = await runInTransaction(payload, async (transactionID) => {
     const req = { transactionID }
-    const row = await payload.create({ collection: 'documents', req, context: actorCharacterId == null ? { allowUserCreate: true, actorUserId: user.id } : { preparedByCharacterId: actorCharacterId, actorUserId: user.id }, data: { domain: tenant.id, tenant: tenant.id, folder, title, body, origin: 'form', sourceKind: 'form', documentType, lifecycle, publicAccess: 'inherit', createdBy: user.id }, depth: 0 })
+    // `domain` scopes the record; the legacy tenants collection has no row for
+    // this Domain, so `tenant` is never written here (FOREIGN KEY fix).
+    const row = await payload.create({ collection: 'documents', req, context: actorCharacterId == null ? { allowUserCreate: true, actorUserId: user.id } : { preparedByCharacterId: actorCharacterId, actorUserId: user.id }, data: { domain: tenant.id, folder, title, body, origin: 'form', sourceKind: 'form', documentType, lifecycle, publicAccess: 'inherit', createdBy: user.id }, depth: 0 })
     if (actorCharacterId != null) await ensurePreparedBy({ payload, domainId: tenant.id, documentId: row.id, characterId: actorCharacterId, actor: { userId: user.id, characterId: actorCharacterId }, transactionID })
+    // Character questions become real Character links on the record. A single
+    // pick links one Character; a multiple pick links every chosen one.
     for (const field of schema.fields) {
-      if (field.type !== 'character') continue
+      if (!CHARACTER_TYPES.has(field.type)) continue
       const raw = answers[field.key]
-      if (raw === undefined || raw === null || raw === '') continue
-      const characterId = Number(raw)
-      if (!Number.isFinite(characterId) || characterId <= 0) throw new Error(`Character field ${field.key} must identify an existing Character.`)
-      const character = await payload.findByID({ collection: 'characters', id: characterId, depth: 0, overrideAccess: true, req })
-      if (!character || character.status !== 'active') throw new Error(`Character field ${field.key} references an inactive Character.`)
-      await attachDocumentCharacterLink({ payload, domainId: tenant.id, documentId: row.id, characterId, kind: 'concerns', relationshipLabel: field.relationshipLabel, actor: { userId: user.id, characterId: actorCharacterId }, transactionID })
+      const rawIds = field.type === 'characters'
+        ? Array.isArray(raw) ? raw : raw === undefined || raw === null || raw === '' ? [] : [String(raw)]
+        : raw === undefined || raw === null || raw === '' ? [] : [String(raw)]
+      for (const rawId of rawIds) {
+        const characterId = Number(rawId)
+        if (!Number.isFinite(characterId) || characterId <= 0) throw new Error(`Character field ${field.key} must identify an existing Character.`)
+        const character = await payload.findByID({ collection: 'characters', id: characterId, depth: 0, overrideAccess: true, req })
+        if (!character || character.status !== 'active') throw new Error(`Character field ${field.key} references an inactive Character.`)
+        await attachDocumentCharacterLink({ payload, domainId: tenant.id, documentId: row.id, characterId, kind: 'concerns', relationshipLabel: field.relationshipLabel, actor: { userId: user.id, characterId: actorCharacterId }, transactionID })
+      }
     }
     await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: row.id, eventType: 'created', actorUserId: user.id, actorCharacterId, context: { sourceKind: 'form', templateId: Number(form.id), lifecycle }, revisionId: await latestDocumentRevisionId(payload, row.id, transactionID), transactionID })
     return row

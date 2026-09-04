@@ -13,6 +13,7 @@ export const FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
   select: 'Choice list',
   checkbox: 'Checkbox',
   character: 'Pick a Character',
+  characters: 'Pick Characters',
 }
 
 export const FIELD_TYPE_HINTS: Record<FormFieldType, string> = {
@@ -21,10 +22,11 @@ export const FIELD_TYPE_HINTS: Record<FormFieldType, string> = {
   date: 'A calendar date',
   select: 'Choose from options you write',
   checkbox: 'A box the filer ticks',
-  character: 'Choose an active Character in this Domain',
+  character: 'Choose one active Character in this Domain',
+  characters: 'Choose several active Characters in this Domain',
 }
 
-export const FIELD_TYPES: FormFieldType[] = ['text', 'textarea', 'date', 'select', 'checkbox', 'character']
+export const FIELD_TYPES: FormFieldType[] = ['text', 'textarea', 'date', 'select', 'checkbox', 'character', 'characters']
 
 type ToolboxProps = {
   onAdd: (type: FormFieldType) => void

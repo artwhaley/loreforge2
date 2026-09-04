@@ -41,9 +41,10 @@ export function composeTemplate(template: TemplateForComposition, lookup: (id: n
 }
 
 /** Markdown-safe value escaping used by form generation. */
-export function escapeMarkdownValue(value: string | boolean | null | undefined): string {
+export function escapeMarkdownValue(value: string | boolean | string[] | null | undefined): string {
   if (value === null || value === undefined) return ''
   if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  if (Array.isArray(value)) return value.join(', ').replace(/[\\`*_{}\[\]()#+.!|>~-]/g, '\\$&')
   return String(value).replace(/[\\`*_{}\[\]()#+.!|>~-]/g, '\\$&')
 }
 
@@ -66,9 +67,10 @@ export function renderTemplateTokens(template: string, answers: FormAnswers, sch
 }
 
 /** Plain-text value rendering (no Markdown escaping) for record titles. */
-export function renderPlainValue(value: string | boolean | null | undefined): string {
+export function renderPlainValue(value: string | boolean | string[] | null | undefined): string {
   if (value === null || value === undefined) return ''
   if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  if (Array.isArray(value)) return value.join(', ')
   return String(value)
 }
 

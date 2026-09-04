@@ -52,3 +52,22 @@ test('P06R rejects invalid width and rows values instead of coercing', () => {
   assert.equal(floatRows.valid, false)
 })
 
+test('P06R multiple-Characters question validates and keeps its relationship label', () => {
+  const result = validateFormSchema({ version: 1, fields: [
+    { key: 'witnesses', type: 'characters', label: 'Witnesses', required: true, relationshipLabel: 'witness', width: 'full' },
+    { key: 'officer', type: 'character', label: 'Officer', relationshipLabel: 'officer' },
+  ] })
+  assert.equal(result.valid, true)
+  if (result.valid) {
+    assert.equal(result.value.fields[0].type, 'characters')
+    assert.equal(result.value.fields[0].relationshipLabel, 'witness')
+  }
+  // Options stay select-only; relationship labels stay Character-only.
+  const optionsOnCharacters = validateFormSchema({ version: 1, fields: [{ key: 'witnesses', type: 'characters', label: 'Witnesses', options: [{ label: 'x', value: 'x' }] }] })
+  assert.equal(optionsOnCharacters.valid, false)
+  const labelOnText = validateFormSchema({ version: 1, fields: [{ key: 'q', type: 'text', label: 'Q', relationshipLabel: 'x' }] })
+  assert.equal(labelOnText.valid, false)
+  const unsupported = validateFormSchema({ version: 1, fields: [{ key: 'q', type: 'cast', label: 'Q' }] })
+  assert.equal(unsupported.valid, false)
+})
+
