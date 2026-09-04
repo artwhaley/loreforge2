@@ -51,6 +51,37 @@ PAYLOAD_PUSH=false npm run seed            # fixture Domains, Characters, Roles,
 npm run migrate:phase5                     # Phase 3→5 model migration (tenants → Domains)
 ```
 
+### P05R-T14 database upgrade
+
+The normal dev command intentionally keeps `PAYLOAD_PUSH=false`. After stopping
+the dev server (and any other process using the database), inspect the exact
+configured local file without changing it:
+
+```bash
+DATABASE_URI=file:./sl-civic-archive.db npm run migrate:phase5-review -- --dry-run
+```
+
+The dry run is a preflight for null Document destinations, malformed or
+duplicate PermissionRule identities, and supersession forks/cycles. It refuses
+to guess at an ambiguous repair. Apply only after the dry run is clear:
+
+```bash
+DATABASE_URI=file:./sl-civic-archive.db npm run migrate:phase5-review -- --apply
+```
+
+The command checkpoints WAL, creates a verified SQLite `VACUUM INTO` backup in
+`.loreforge-backups/` beside the database, applies a versioned transaction, and
+performs integrity, foreign-key, count, fingerprint, and schema checks. It is
+safe to run again; the second run is a no-op apart from a fresh backup and
+verification. Backups are local recovery artifacts and are ignored by Git.
+
+For a rollback rehearsal, copy the backup to a disposable filename and point
+`DATABASE_URI` at that copy; never overwrite the original while the server is
+running. If verification fails, leave the original untouched, stop the server,
+and restore the verified backup by replacing the local database and its
+`-wal`/`-shm` companions together. Remote/production URIs are intentionally
+rejected by this command.
+
 To fully reset: stop the dev server, delete `sl-civic-archive.db*` from the project root and
 `public/media/*`, then re-run the seed. If the Payload admin reports a missing import-map
 component after a fresh clone, run `npx payload generate:importmap` once.
@@ -59,7 +90,7 @@ component after a fresh clone, run `npx payload generate:importmap` once.
 
 ```bash
 npm test               # unit + pure-logic suites (78 tests)
-npm run test:security  # DB-backed suites: access boundary, supersession, people workspace, domain removal (25 tests)
+npm run test:security  # DB-backed suites: access boundary, supersession, race, people workspace, audit/removal (>30 tests)
 npx tsc --noEmit       # typecheck
 ```
 
@@ -71,9 +102,11 @@ Authoritative architecture, frozen product decisions, and per-phase tickets live
 `LoreForge_Execution_Packet/` (start at `00_START_HERE.md`). Phases execute ticket by
 ticket on their own branches with per-ticket commits, execution notes in
 `execution-notes/`, and a review-gate at each phase end. Packet integrity is enforced by
-`LoreForge_Execution_Packet/tools/validate_packet.py` (SHA256SUMS). The current remediation
-stack for Phase 5 audit findings lives in `../P05-corrective-stack/` (tickets `P05R-T00`
-through `P05R-GATE`).
+`LoreForge_Execution_Packet/tools/validate_packet.py` (SHA256SUMS). The current corrective
+follow-up stack for the Phase 5 audit findings lives in
+`corrective-stacks/P05R-followup/` (tickets `P05R-T09` through `P05R-GATE2`); its execution
+notes and owner checks are in `execution-notes/` and
+`PHASE_05_FOLLOWUP_TESTING.md`.
 
 ## Status
 
