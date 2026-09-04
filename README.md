@@ -74,21 +74,23 @@ quick-link modules and recent records. Routes: `/tenant/[slug]`, `.../about`, `.
 ## Ticket 05 scope
 
 The archive is now a usable records system. A tenant-owned `Folders` collection (nullable parent)
-drives an understandable folder tree, and every document belongs to a folder (or the root). The
-`/tenant/[slug]/records` route is the archive browser: folder tree sidebar with counts, a
-current-folder document list with breadcrumb, a basic search box, and create/folder + create/record
-flows. Document viewers support Edit, a Move-to-folder selector, Delete, and Markdown source.
-Server actions re-verifies the session user is a member of the tenant for every create/move/delete.
-Delete folder refuses a non-empty folder. Search is tenant-scoped over title and body (spec §7.5).
+drives a nested folder navigator, and every document belongs to a folder (or the root). The
+`/tenant/[slug]/records` route is a two-pane file-explorer view: collapsible folders on the left and
+records on the right, with scoped search, a search-subfolders toggle, document-type filtering, and
+context-aware folder/record actions. Document viewers support Edit, Delete, lifecycle controls, and
+Markdown source; documents are never moved or copied across Domains. Server actions re-verify the
+session user for every create/delete operation, and deleting a non-empty folder is refused.
+Search is tenant-scoped over title and body (spec §7.5).
 
 ## Ticket 06 scope
 
 Simulated Second Life Markdown round trip. `/tenant/[slug]/import` accepts a title, destination
 folder, and pasted Markdown, and creates a normal Document with origin `markdown-import` (no SL
 transport assumptions — just a paste surface). A "Load sample notecard" button fills the fixture.
-Every document viewer has Copy Markdown (canonical Markdown to clipboard) and a Markdown source
-view. All Markdown text boundaries (import + editor saves) canonicalize CRLF to LF so stored
-bodies stay canonical. Imported records are ordinary documents: editable, movable, searchable.
+The Document editor retains a Markdown source view. All Markdown text boundaries (import + editor
+saves) canonicalize CRLF to LF so stored bodies stay canonical. Imported records are ordinary
+documents: editable and searchable. Cross-Domain delivery is deferred to correspondence/messaging;
+there is no cross-Domain document Copy or Move operation.
 
 ## Ticket 07 scope
 
@@ -99,7 +101,7 @@ in one explicit module (`src/lib/forms/generateDocument.ts`) — deliberately ou
 callbacks/UI, so the authoring tool can be swapped without touching generation. Members fill
 forms from the tenant site (`/tenant/[slug]/forms`) with server-side required validation;
 submission creates an ordinary Document (`origin: form`) in its destination folder, editable,
-searchable, movable, and exportable like any other record.
+searchable, and exportable like any other record.
 
 Note for Windows/local dev: after adding the plugin, run `npx payload generate:importmap` (or let
 the dev server regenerate it) so the plugin's Lexical confirmation field resolves in the admin.

@@ -11,6 +11,7 @@
 - `253d504` — P05-T02 Supersedes relationships.
 - `c38493f` — P05-T04 Share and consolidated Document Actions.
 - `4615a9d` — P05-T01 follow-up: fix the Character workspace checkbox boundary, make Acting-as/Prepared-by optional, and replace the Concerns checkbox list with any-Character search/chips and unlinked Character creation.
+- `898ed1a` — follow-up document-page recomposition: one shaded view surface, Concerns below the body, and the same metadata/body/Concerns hierarchy in the editor with concern mutation controls confined to edit mode.
 
 ## Automated evidence
 
@@ -49,8 +50,9 @@ Run the server with `npm run dev` (the script pins `PAYLOAD_PUSH=false`) and ope
 
 ### 4. Share and document-view hierarchy
 
-1. Open a record and confirm the page begins with the title, a single Prepared by/Date line, a Concerns box, and the rendered document text. There is no Document actions explainer, Shared with panel, Copy control, Move control, or cross-Domain mapping preview.
-2. Confirm **Share record** is at the bottom of the page. Share and revoke behavior remains the same Document ID/revision stream and preserves History.
+1. Open a record and confirm one shaded document-page surface contains the title, a single Prepared by/Date line, divider, rendered document text, Concerns below the body, and any supersession line/notice. There is no Document actions explainer, Shared with panel, Copy control, Move control, or cross-Domain mapping preview.
+2. Confirm the read-only view has no Add concern or Remove concern controls. Open **Edit** and confirm the same title → metadata → divider → body → Concerns hierarchy, with concern mutation controls available only when the record is writable.
+3. Confirm **Share record** is at the bottom of the page. Share and revoke behavior remains the same Document ID/revision stream and preserves History.
 
 ## Deferred by contract
 
