@@ -528,6 +528,7 @@ export interface PermissionRule {
     | 'manage_notices';
   effect: 'grant' | 'deny';
   active?: boolean | null;
+  ruleKey: string;
   actorUser: number | User;
   actorCharacter?: (number | null) | Character;
   updatedAt: string;
@@ -657,6 +658,8 @@ export interface DocumentRelationship {
   source: number | Document;
   target: number | Document;
   kind: 'supersedes';
+  lockApplied?: boolean | null;
+  priorLifecycle?: ('filed' | 'locked') | null;
   actorUser: number | User;
   actorCharacter?: (number | null) | Character;
   updatedAt: string;
@@ -1334,6 +1337,7 @@ export interface PermissionRulesSelect<T extends boolean = true> {
   capability?: T;
   effect?: T;
   active?: T;
+  ruleKey?: T;
   actorUser?: T;
   actorCharacter?: T;
   updatedAt?: T;
@@ -1388,6 +1392,8 @@ export interface DocumentRelationshipsSelect<T extends boolean = true> {
   source?: T;
   target?: T;
   kind?: T;
+  lockApplied?: T;
+  priorLifecycle?: T;
   actorUser?: T;
   actorCharacter?: T;
   updatedAt?: T;

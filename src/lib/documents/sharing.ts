@@ -2,6 +2,7 @@ import type { Payload, Where } from 'payload'
 
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
+import { permissionRuleKey } from '@/collections/PermissionRules'
 
 export type SharePrincipalType = 'User' | 'Character'
 export type ShareCapability = 'read' | 'edit_document'
@@ -38,7 +39,7 @@ export async function shareDocument(args: { payload: Payload; domainId: number |
   }
   const existing = await payload.find({ collection: 'permission-rules', where: { and: [{ domain: { equals: domainId } }, { principalType: { equals: principalType } }, { resourceType: { equals: 'Document' } }, { resource: { equals: document.id } }, { principal: { equals: principalId } }, { capability: { equals: capability } }] }, depth: 0, limit: 20, overrideAccess: true })
   for (const row of existing.docs) await payload.delete({ collection: 'permission-rules', id: row.id, overrideAccess: true })
-  const created = await payload.create({ collection: 'permission-rules', overrideAccess: true, data: { domain: Number(domainId), principalType, principal: { relationTo: principalType === 'User' ? 'users' : 'characters', value: Number(principalId) }, resourceType: 'Document', resource: { relationTo: 'documents', value: Number(document.id) }, capability, effect: 'grant', active: true, actorUser: Number(actorUserId), actorCharacter: actorCharacterId == null ? undefined : Number(actorCharacterId) } })
+  const created = await payload.create({ collection: 'permission-rules', overrideAccess: true, data: { domain: Number(domainId), principalType, principal: { relationTo: principalType === 'User' ? 'users' : 'characters', value: Number(principalId) }, resourceType: 'Document', resource: { relationTo: 'documents', value: Number(document.id) }, capability, effect: 'grant', active: true, actorUser: Number(actorUserId), actorCharacter: actorCharacterId == null ? undefined : Number(actorCharacterId), ruleKey: permissionRuleKey({ domainId: Number(domainId), principalType, principalRelation: principalType === 'User' ? 'users' : 'characters', principalId: Number(principalId), resourceType: 'Document', resourceRelation: 'documents', resourceId: Number(document.id), capability }) }, } as never)
   await recordDocumentProvenance({ payload, domainId, documentId: document.id, eventType: 'shared', actorUserId, actorCharacterId, context: { principalType, principalId: Number(principalId), capability, action: 'granted' }, revisionId: await latestDocumentRevisionId(payload, document.id) })
   return created
 }

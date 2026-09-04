@@ -29,7 +29,7 @@ type MemberTenant = {
 }
 
 export type DocumentEditorActionState = {
-  error?: 'missing' | 'type' | 'authorization' | 'concerns' | 'supersede-eligibility' | 'character'
+  error?: string
   values?: {
     title: string
     body: string

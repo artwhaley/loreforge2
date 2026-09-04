@@ -5,6 +5,7 @@ import config from '@payload-config'
 
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
 import { recordDomainAudit } from '@/lib/domains/domainAudit'
+import { runInTransaction } from '@/lib/db/transactions'
 
 export async function POST(request: Request) {
   const payload = await getPayload({ config })
@@ -27,24 +28,34 @@ export async function POST(request: Request) {
   // hook), so a removal leaves exactly one coherent audit event that commits
   // atomically with the state change. addedBy on the update keeps the actor
   // visible to the removal hook.
-  if (existing.docs[0]) {
-    const priorStatus = String(existing.docs[0].status ?? 'active')
-    await payload.update({ collection: 'domain-memberships', id: existing.docs[0].id, data: { domain: domain.id, status: action === 'remove' ? 'inactive' : 'active', addedBy: user.id } })
-    if (action !== 'remove') {
-      await recordDomainAudit({
-        payload, domainId: domain.id, eventType: 'membership_changed', actorUser: user.id,
-        targetType: 'domain-membership', targetId: existing.docs[0].id,
-        action: priorStatus === 'active' ? 'added' : 'reinstated',
-        context: { characterId: character.id, priorStatus },
-      }).catch((error: Error) => payload.logger.error(`domain audit write failed: ${error.message}`))
-    }
-  } else if (action !== 'remove') {
-    const created = await payload.create({ collection: 'domain-memberships', data: { domain: domain.id, character: character.id, status: 'active', addedBy: user.id, note: 'Added through the Domain member roster.' } })
-    await recordDomainAudit({
-      payload, domainId: domain.id, eventType: 'membership_changed', actorUser: user.id,
-      targetType: 'domain-membership', targetId: created.id,
-      action: 'added', context: { characterId: character.id },
-    }).catch((error: Error) => payload.logger.error(`domain audit write failed: ${error.message}`))
+  try {
+    await runInTransaction(payload, async (transactionID) => {
+      const req = { transactionID }
+      if (existing.docs[0]) {
+        const priorStatus = String(existing.docs[0].status ?? 'active')
+        await payload.update({ collection: 'domain-memberships', id: existing.docs[0].id, data: { domain: domain.id, status: action === 'remove' ? 'inactive' : 'active', addedBy: user.id }, req })
+        if (action !== 'remove') {
+          await recordDomainAudit({
+            payload, domainId: domain.id, eventType: 'membership_changed', actorUser: user.id,
+            targetType: 'domain-membership', targetId: existing.docs[0].id,
+            action: priorStatus === 'active' ? 'added' : 'reinstated',
+            context: { characterId: character.id, priorStatus }, transactionID,
+          })
+        }
+      } else if (action !== 'remove') {
+        const created = await payload.create({ collection: 'domain-memberships', req, data: { domain: domain.id, character: character.id, status: 'active', addedBy: user.id, note: 'Added through the Domain member roster.' } })
+        await recordDomainAudit({
+          payload, domainId: domain.id, eventType: 'membership_changed', actorUser: user.id,
+          targetType: 'domain-membership', targetId: created.id,
+          action: 'added', context: { characterId: character.id }, transactionID,
+        })
+      }
+    })
+  } catch (error) {
+    payload.logger.error(error)
+    const failed = new URL(`/domain/${domainSlug}/members`, request.url)
+    failed.searchParams.set('error', 'mutation')
+    return NextResponse.redirect(failed, 303)
   }
   return NextResponse.redirect(new URL(`/domain/${domainSlug}/members`, request.url), 303)
 }

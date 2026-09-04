@@ -6,6 +6,7 @@ import config from '@payload-config'
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
 import { recordDomainAudit } from '@/lib/domains/domainAudit'
 import { assertRoleHierarchy } from '@/lib/roles/invariants'
+import { runInTransaction } from '@/lib/db/transactions'
 
 const idOf = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null
@@ -33,17 +34,27 @@ export async function POST(request: Request) {
     if (!role || idOf(role.domain) !== Number(domain.id) || role.system) return NextResponse.redirect(new URL(destination, request.url), 303)
     const children = await payload.find({ collection: 'roles', where: { and: [{ parentRole: { equals: roleId } }, { active: { equals: true } }] }, depth: 0, limit: 1 })
     if (children.docs.length > 0) return NextResponse.redirect(new URL(destination, request.url), 303)
-    await payload.update({ collection: 'roles', id: roleId, data: { active: false } })
-    const assignments = await payload.find({ collection: 'role-assignments', where: { and: [{ role: { equals: roleId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 5000 })
-    for (const assignment of assignments.docs) await payload.update({ collection: 'role-assignments', id: assignment.id, data: { status: 'inactive' } })
-    payload.logger.info(`Phase 5 role archived: actorUser=${user.id} operation=delete_role resource=${roleId}`)
-    // P05R-T05 C: Role creation/update is administration truth — archive it durably.
-    await recordDomainAudit({
-      payload, domainId: domain.id, eventType: 'role_changed', actorUser: user.id,
-      targetType: 'role', targetId: roleId,
-      action: 'archived',
-      context: { name: role.name, active: false, deactivatedAssignmentCount: assignments.docs.length },
-    }).catch((error: Error) => payload.logger.error(`domain audit write failed: ${error.message}`))
+    try {
+      await runInTransaction(payload, async (transactionID) => {
+        const req = { transactionID }
+        await payload.update({ collection: 'roles', id: roleId, data: { active: false }, req })
+        const assignments = await payload.find({ collection: 'role-assignments', where: { and: [{ role: { equals: roleId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 5000, req })
+        for (const assignment of assignments.docs) await payload.update({ collection: 'role-assignments', id: assignment.id, data: { status: 'inactive' }, req })
+        payload.logger.info(`Phase 5 role archived: actorUser=${user.id} operation=delete_role resource=${roleId}`)
+        await recordDomainAudit({
+          payload, domainId: domain.id, eventType: 'role_changed', actorUser: user.id,
+          targetType: 'role', targetId: roleId,
+          action: 'archived',
+          context: { name: role.name, active: false, deactivatedAssignmentCount: assignments.docs.length },
+          transactionID,
+        })
+      })
+    } catch (error) {
+      payload.logger.error(error)
+      const failed = new URL(destination, request.url)
+      failed.searchParams.set('error', 'mutation')
+      return NextResponse.redirect(failed, 303)
+    }
     return NextResponse.redirect(new URL(destination, request.url), 303)
   }
   const name = String(form.get('name') ?? '').trim()
@@ -63,16 +74,22 @@ export async function POST(request: Request) {
       parent ? { id: parent.id, domainId: idOf(parent.domain) ?? domain.id, subdomainId: idOf(parent.subdomain), parentRoleId: idOf(parent.parentRole) } : null,
       roles.docs.map((role) => ({ id: role.id, domainId: idOf(role.domain) ?? domain.id, subdomainId: idOf(role.subdomain), parentRoleId: idOf(role.parentRole) })),
     )
-    const created = await payload.create({ collection: 'roles', data: { domain: domain.id, subdomain: subdomainId, name, parentRole: parentRoleId, active: true, system: false } })
-    payload.logger.info(`Phase 3 role created: actorUser=${user.id} operation=create_role resource=${created.id}`)
-    await recordDomainAudit({
-      payload, domainId: domain.id, eventType: 'role_changed', actorUser: user.id,
-      targetType: 'role', targetId: created.id,
-      action: 'created',
-      context: { name, subdomainId, parentRoleId },
-    }).catch((error: Error) => payload.logger.error(`domain audit write failed: ${error.message}`))
-  } catch {
-    // Keep the customer on the role manager with no schema/error details leaked.
+    await runInTransaction(payload, async (transactionID) => {
+      const created = await payload.create({ collection: 'roles', req: { transactionID }, data: { domain: domain.id, subdomain: subdomainId, name, parentRole: parentRoleId, active: true, system: false } })
+      payload.logger.info(`Phase 3 role created: actorUser=${user.id} operation=create_role resource=${created.id}`)
+      await recordDomainAudit({
+        payload, domainId: domain.id, eventType: 'role_changed', actorUser: user.id,
+        targetType: 'role', targetId: created.id,
+        action: 'created',
+        context: { name, subdomainId, parentRoleId },
+        transactionID,
+      })
+    })
+  } catch (error) {
+    payload.logger.error(error)
+    const failed = new URL(destination, request.url)
+    failed.searchParams.set('error', 'mutation')
+    return NextResponse.redirect(failed, 303)
   }
   return NextResponse.redirect(new URL(destination, request.url), 303)
 }

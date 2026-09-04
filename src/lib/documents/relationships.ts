@@ -84,7 +84,8 @@ export async function addDocumentRelationship(args: {
     assertSupersessionInvariants({ sourceId: canonicalSource, targetId: canonicalTarget, edges })
 
     const wasLocked = String(target.lifecycle) === 'locked'
-    const created = await payload.create({ collection: 'document-relationships', overrideAccess: true, req: txReq, data: { domain: Number(domainId), source: canonicalSource, target: canonicalTarget, kind, lockApplied: kind === 'supersedes' && !wasLocked, priorLifecycle: String(target.lifecycle), actorUser: Number(actor.userId), actorCharacter: actor.characterId == null ? undefined : Number(actor.characterId) } })
+    const priorLifecycle = String(target.lifecycle) === 'locked' ? 'locked' : 'filed'
+    const created = await payload.create({ collection: 'document-relationships', overrideAccess: true, req: txReq, data: { domain: Number(domainId), source: canonicalSource, target: canonicalTarget, kind, lockApplied: kind === 'supersedes' && !wasLocked, priorLifecycle, actorUser: Number(actor.userId), actorCharacter: actor.characterId == null ? undefined : Number(actor.characterId) } })
 
     // P05R-T02 F: the predecessor's own timeline must show that it was
     // superseded and by whom. When it is not already Locked, lock it through

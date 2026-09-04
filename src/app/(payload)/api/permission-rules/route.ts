@@ -5,6 +5,7 @@ import config from '@payload-config'
 
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
 import { recordDomainAudit } from '@/lib/domains/domainAudit'
+import { runInTransaction } from '@/lib/db/transactions'
 
 const idOf = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null
@@ -37,30 +38,38 @@ export async function POST(request: Request) {
     const membership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domain.id } }, { character: { equals: principalId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
     if (!membership.docs[0]) return NextResponse.redirect(new URL(destination, request.url), 303)
   } else if (idOf(principalRecord.domain) !== Number(domain.id)) return NextResponse.redirect(new URL(destination, request.url), 303)
-  const existing = await payload.find({ collection: 'permission-rules', where: { and: [{ domain: { equals: domain.id } }, { principalType: { equals: principalType } }] }, depth: 0, limit: 5000 }).catch(() => ({ docs: [] }))
-  const directRules = existing.docs.filter((rule) => idOf(rule.principal) === principalId && rule.resourceType === 'Folder' && idOf(rule.resource) === folderId)
-  const removeCapabilities = async (capabilities: string[]) => {
-    for (const rule of directRules.filter((item) => capabilities.includes(item.capability))) await payload.delete({ collection: 'permission-rules', id: rule.id })
+  try {
+    await runInTransaction(payload, async (transactionID) => {
+      const req = { transactionID }
+      const existing = await payload.find({ collection: 'permission-rules', where: { and: [{ domain: { equals: domain.id } }, { principalType: { equals: principalType } }] }, depth: 0, limit: 5000, req })
+      const directRules = existing.docs.filter((rule) => idOf(rule.principal) === principalId && rule.resourceType === 'Folder' && idOf(rule.resource) === folderId)
+      const removeCapabilities = async (capabilities: string[]) => {
+        for (const rule of directRules.filter((item) => capabilities.includes(item.capability))) await payload.delete({ collection: 'permission-rules', id: rule.id, req })
+      }
+      const saveAxis = async (state: string, capabilities: string[]) => {
+        if (!['inherit', 'grant', 'deny'].includes(state)) throw new Error('Invalid Folder permission state.')
+        await removeCapabilities(capabilities)
+        if (state === 'inherit') return
+        for (const capability of capabilities) {
+          await payload.create({ collection: 'permission-rules', req, data: { domain: domain.id, principalType, principal: { relationTo: principalType === 'Role' ? 'roles' : 'characters', value: principalRecord.id }, resourceType: 'Folder', resource: { relationTo: 'folders', value: folder.id }, capability: capability as 'read' | 'create_document' | 'edit_document', effect: state as 'grant' | 'deny', active: true, actorUser: user.id, actorCharacter: undefined } } as never)
+        }
+      }
+      await saveAxis(readState, ['read'])
+      await saveAxis(writeState, ['create_document', 'edit_document'])
+      payload.logger.info(`P05-T00 audit: saved direct Folder Read/Write overrides domain=${domain.id} principalType=${principalType} principal=${principalRecord.id} folder=${folder.id} actorUser=${user.id}`)
+      await recordDomainAudit({
+        payload, domainId: domain.id, eventType: 'folder_access_changed', actorUser: user.id,
+        targetType: 'folder', targetId: folder.id,
+        action: 'saved',
+        context: { principalType, principalId: principalRecord.id, readState, writeState, capabilities: ['read', 'create_document', 'edit_document'] },
+        transactionID,
+      })
+    })
+  } catch (error) {
+    payload.logger.error(error)
+    const failed = new URL(destination, request.url)
+    failed.searchParams.set('error', 'mutation')
+    return NextResponse.redirect(failed, 303)
   }
-  const saveAxis = async (state: string, capabilities: string[]) => {
-    if (!['inherit', 'grant', 'deny'].includes(state)) return
-    await removeCapabilities(capabilities)
-    if (state === 'inherit') return
-    for (const capability of capabilities) {
-      await payload.create({ collection: 'permission-rules', data: { domain: domain.id, principalType, principal: { relationTo: principalType === 'Role' ? 'roles' : 'characters', value: principalRecord.id }, resourceType: 'Folder', resource: { relationTo: 'folders', value: folder.id }, capability: capability as 'read' | 'create_document' | 'edit_document', effect: state as 'grant' | 'deny', active: true, actorUser: user.id, actorCharacter: undefined } })
-    }
-  }
-  await saveAxis(readState, ['read'])
-  await saveAxis(writeState, ['create_document', 'edit_document'])
-  payload.logger.info(`P05-T00 audit: saved direct Folder Read/Write overrides domain=${domain.id} principalType=${principalType} principal=${principalRecord.id} folder=${folder.id} actorUser=${user.id}`)
-  // P05R-T05 C: direct Folder access grant/deny/inherit is durable admin truth.
-  // Context is server-generated from the sanctioned form states, never
-  // client-supplied.
-  await recordDomainAudit({
-    payload, domainId: domain.id, eventType: 'folder_access_changed', actorUser: user.id,
-    targetType: 'folder', targetId: folder.id,
-    action: 'saved',
-    context: { principalType, principalId: principalRecord.id, readState, writeState, capabilities: ['read', 'create_document', 'edit_document'] },
-  }).catch((error: Error) => payload.logger.error(`domain audit write failed: ${error.message}`))
   return NextResponse.redirect(new URL(destination, request.url), 303)
 }
