@@ -326,6 +326,12 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   selectedType = selectedType ?? (typeResult.docs.find((item) => Number(item.id) === requestedTypeId) ?? typeResult.docs.find((item) => String(item.name ?? '').toLowerCase() === 'plain text')) as typeof selectedType
   if (!selectedType) return { error: 'type', values }
   const actor = { userId: ctx.user.id, activeCharacterId }
+  // create_document on the destination folder is the single authorization gate
+  // for this whole create act. The links/prepared-by credits/tags attached
+  // inside the transaction below are part of that act, so they skip the
+  // per-document edit_document check (mirrors ensurePreparedBy and the
+  // generateDocument.ts filing path); edit_document stays enforced on every
+  // later mutation surface (document editor, /api/document-links).
   const createDecision = await evaluatePermission({ payload: ctx.payload, actor, domainId: ctx.tenant.id, capability: 'create_document', resource: { type: 'Folder', id: folder } })
   if (!createDecision.allowed) return { error: 'authorization', values }
   concernEntries.push(...formCharacterEntries)
@@ -368,7 +374,7 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
     if (created.lifecycle === 'filed') await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'filed', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { reason: 'filing-policy' }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id, transactionID ?? undefined), transactionID })
     if (activeCharacterId) await ensurePreparedBy({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
     for (const characterId of additionalPreparedByIds) {
-      await attachDocumentCharacterLink({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId, kind: 'prepared_by', actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
+      await attachDocumentCharacterLink({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId, kind: 'prepared_by', actor: { userId: ctx.user.id, characterId: activeCharacterId }, skipAuthorization: true, transactionID })
     }
     if (concernEntries.length > 0) {
       for (const entry of concernEntries) {
@@ -379,7 +385,7 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
           const character = existing ?? await ctx.payload.create({ collection: 'characters', overrideAccess: true, req, data: { name: entry.newName, status: 'active', createdBy: ctx.user.id } })
           characterId = Number(character.id)
         }
-        if (characterId) await attachDocumentCharacterLink({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId, kind: 'concerns', relationshipLabel: entry.relationshipLabel, actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
+        if (characterId) await attachDocumentCharacterLink({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId, kind: 'concerns', relationshipLabel: entry.relationshipLabel, actor: { userId: ctx.user.id, characterId: activeCharacterId }, skipAuthorization: true, transactionID })
       }
     }
     // Tags are independent metadata; they must not disappear merely because

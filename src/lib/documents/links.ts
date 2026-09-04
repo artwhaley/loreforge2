@@ -12,14 +12,17 @@ const idOf = (value: unknown): number | null => {
   return typeof value === 'object' && value !== null && 'id' in value ? Number((value as { id: number | string }).id) : Number(value)
 }
 
-async function requireDocumentEditor(payload: Payload, actor: LinkActor, domainId: number | string, documentId: number | string) {
-  await requirePermission({ payload, actor: { userId: actor.userId, activeCharacterId: actor.characterId }, domainId, capability: 'edit_document', resource: { type: 'Document', id: documentId } })
+async function requireDocumentEditor(payload: Payload, actor: LinkActor, domainId: number | string, documentId: number | string, transactionID?: number | string | null) {
+  // Inside a caller's open transaction the check MUST carry the transactionID:
+  // without req the Payload Local API auto-commits its own separate read that
+  // cannot see rows created earlier in that transaction (see db/transactions.ts).
+  await requirePermission({ payload, actor: { userId: actor.userId, activeCharacterId: actor.characterId }, domainId, capability: 'edit_document', resource: { type: 'Document', id: documentId }, ...(transactionID == null ? {} : { transactionID }) })
 }
-async function requireTagManager(payload: Payload, actor: LinkActor, domainId: number | string, documentId: number | string) {
+async function requireTagManager(payload: Payload, actor: LinkActor, domainId: number | string, documentId: number | string, transactionID?: number | string | null) {
   // P07-T02: attaching/removing a tag from a Document is an edit operation;
   // managing the Domain vocabulary remains a separate capability for creating
   // new tags outside a document-entry transaction.
-  await requireDocumentEditor(payload, actor, domainId, documentId)
+  await requireDocumentEditor(payload, actor, domainId, documentId, transactionID)
 }
 async function requireDomainTagManager(payload: Payload, actor: LinkActor, domainId: number | string) {
   await requirePermission({ payload, actor: { userId: actor.userId, activeCharacterId: actor.characterId }, domainId, capability: 'manage_types_tags', resource: { type: 'Domain', id: domainId } })
@@ -57,7 +60,7 @@ export async function attachDocumentCharacterLink(args: {
   const document = await documentInDomain(payload, documentId, domainId, args.transactionID)
   const character = await payload.findByID({ collection: 'characters', id: characterId, depth: 0, overrideAccess: true, req: txReq })
   if (!character || character.status !== 'active') throw new Error('Only active Characters may be linked.')
-  if (!args.skipAuthorization) await requireDocumentEditor(payload, actor, domainId, documentId)
+  if (!args.skipAuthorization) await requireDocumentEditor(payload, actor, domainId, documentId, args.transactionID)
   const existing = await payload.find({ collection: 'document-character-links', where: { and: [{ document: { equals: documentId } }, { character: { equals: characterId } }, { kind: { equals: kind } }] }, depth: 0, limit: 1, overrideAccess: true, req: txReq })
   if (existing.docs[0]) return existing.docs[0]
   const created = await payload.create({ collection: 'document-character-links', overrideAccess: true, req: txReq, data: { domain: Number(domainId), document: Number(document.id), character: Number(character.id), kind, relationshipLabel: kind === 'concerns' ? String(args.relationshipLabel ?? '').trim() || undefined : undefined, requiredByCreate: Boolean(args.requiredByCreate), actorUser: Number(actor.userId), actorCharacter: actor.characterId == null ? undefined : Number(actor.characterId) } })
@@ -102,7 +105,7 @@ export async function attachDocumentTag(args: { payload: Payload; domainId: numb
   const { payload, domainId, documentId, tagId, actor } = args
   const txReq = args.transactionID == null ? undefined : { transactionID: args.transactionID }
   await documentInDomain(payload, documentId, domainId, args.transactionID)
-  if (!args.skipAuthorization) await requireTagManager(payload, actor, domainId, documentId)
+  if (!args.skipAuthorization) await requireTagManager(payload, actor, domainId, documentId, args.transactionID)
   const tag = await payload.findByID({ collection: 'tags', id: tagId, depth: 0, overrideAccess: true, req: txReq })
   if (!tag || idOf(tag.domain) !== Number(domainId)) throw new Error('Tag does not belong to this Domain.')
   const existing = await payload.find({ collection: 'document-tags', where: { and: [{ document: { equals: documentId } }, { tag: { equals: tagId } }] }, depth: 0, limit: 1, overrideAccess: true, req: txReq })

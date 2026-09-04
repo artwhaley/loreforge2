@@ -115,24 +115,32 @@ export async function submitReportFormAction(
   }
 
   const folderValue = form.destinationFolder
-  const result = await generateDocumentFromSubmission({
-    payload,
-    tenant: { id: Number(tenant.id), slug: tenant.slug },
-    user: { id: Number(user.id) },
-    actorCharacterId: activeCharacterId == null ? undefined : Number(activeCharacterId),
-    form: {
-      id: form.id,
-      name: form.name,
-      kind: 'form',
-      titleTemplate: form.titleTemplate,
-      bodyTemplate: form.bodyTemplate,
-      formSchema: schema,
-      destinationFolder: folderValue == null ? null : Number(typeof folderValue === 'object' ? folderValue.id : folderValue),
-      documentType: typeof form.documentType === 'object' ? form.documentType.id : form.documentType,
-      lifecyclePolicy: form.lifecyclePolicy,
-    },
-    answers,
-  })
+  let result: Awaited<ReturnType<typeof generateDocumentFromSubmission>>
+  try {
+    result = await generateDocumentFromSubmission({
+      payload,
+      tenant: { id: Number(tenant.id), slug: tenant.slug },
+      user: { id: Number(user.id) },
+      actorCharacterId: activeCharacterId == null ? undefined : Number(activeCharacterId),
+      form: {
+        id: form.id,
+        name: form.name,
+        kind: 'form',
+        titleTemplate: form.titleTemplate,
+        bodyTemplate: form.bodyTemplate,
+        formSchema: schema,
+        destinationFolder: folderValue == null ? null : Number(typeof folderValue === 'object' ? folderValue.id : folderValue),
+        documentType: typeof form.documentType === 'object' ? form.documentType.id : form.documentType,
+        lifecyclePolicy: form.lifecyclePolicy,
+      },
+      answers,
+    })
+  } catch (error) {
+    // Never surface a database error to a customer: log it and return a
+    // friendly state so the fill page shows a message instead of a crash.
+    payload.logger.error(error)
+    return { ok: false, message: 'Could not file the report. Nothing was saved — please try again, or contact your domain administrator.' }
+  }
 
   revalidatePath(`/domain/${tenantSlug}/records`)
   redirect(`/domain/${tenantSlug}/documents/${result.id}`)

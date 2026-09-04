@@ -195,6 +195,15 @@ export async function generateDocumentFromSubmission(args: {
     if (actorCharacterId != null) await ensurePreparedBy({ payload, domainId: tenant.id, documentId: row.id, characterId: actorCharacterId, actor: { userId: user.id, characterId: actorCharacterId }, transactionID })
     // Character questions become real Character links on the record. A single
     // pick links one Character; a multiple pick links every chosen one.
+    // Authorization note: submitReportFormAction preflights create_document on
+    // the destination folder before this transaction, and the Document row is
+    // created by this same actor inside this same transaction. Attaching the
+    // form's own Character links is part of that single create act — the
+    // per-document edit_document check is skipped here exactly as
+    // ensurePreparedBy skips it and as archive.ts skips it for tags on the
+    // same create ("the post-create Document edit check applies to later
+    // mutations"). It stays enforced on every later mutation surface
+    // (document editor, /api/document-links).
     for (const field of schema.fields) {
       if (!CHARACTER_TYPES.has(field.type)) continue
       const raw = answers[field.key]
@@ -206,7 +215,7 @@ export async function generateDocumentFromSubmission(args: {
         if (!Number.isFinite(characterId) || characterId <= 0) throw new Error(`Character field ${field.key} must identify an existing Character.`)
         const character = await payload.findByID({ collection: 'characters', id: characterId, depth: 0, overrideAccess: true, req })
         if (!character || character.status !== 'active') throw new Error(`Character field ${field.key} references an inactive Character.`)
-        await attachDocumentCharacterLink({ payload, domainId: tenant.id, documentId: row.id, characterId, kind: 'concerns', relationshipLabel: field.relationshipLabel, actor: { userId: user.id, characterId: actorCharacterId }, transactionID })
+        await attachDocumentCharacterLink({ payload, domainId: tenant.id, documentId: row.id, characterId, kind: 'concerns', relationshipLabel: field.relationshipLabel, actor: { userId: user.id, characterId: actorCharacterId }, skipAuthorization: true, transactionID })
       }
     }
     await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: row.id, eventType: 'created', actorUserId: user.id, actorCharacterId, context: { sourceKind: 'form', templateId: Number(form.id), lifecycle }, revisionId: await latestDocumentRevisionId(payload, row.id, transactionID), transactionID })
