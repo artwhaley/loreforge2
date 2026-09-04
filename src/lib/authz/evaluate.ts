@@ -86,6 +86,9 @@ export async function evaluatePermission(args: { payload: Payload; actor: Permis
   const candidates: Array<{ rule: Record<string, unknown>; classRank: number; specificity: number; principal: PrincipalType; resource: ResourceType; resourceId: number; effect: 'grant' | 'deny' }> = []
   for (const raw of rulesResult.docs) {
     const rule = raw as unknown as Record<string, unknown>
+    // Keep the evaluator fail-closed even when a Local API adapter or test
+    // double does not enforce the capability filter from the query.
+    if (String(rule.capability ?? '') !== capability) continue
     const principal = rulePrincipalId(rule)
     const resource = ruleResourceId(rule)
     if (!principal.type || !resource.type || !principal.id || !resource.id) continue

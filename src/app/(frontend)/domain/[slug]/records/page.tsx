@@ -6,6 +6,7 @@ import { getLorePayload } from '@/lib/payload'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getDocumentsForTenant, getFoldersForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
+import { isAllowed } from '@/lib/authz/evaluate'
 
 import { RecordsExplorer, type ExplorerFolder } from './RecordsExplorer'
 
@@ -23,7 +24,7 @@ const relationId = (value: unknown): number | null => typeof value === 'object' 
 export default async function RecordsPage({ params, searchParams }: Props) {
   const { slug } = await params
   const { folder: folderRaw, q } = await searchParams
-  const { tenant, role, user } = await getActiveTenant()
+  const { tenant, role, user, activeCharacter } = await getActiveTenant()
   if (!tenant || tenant.slug !== slug) notFound()
 
   const base = `/domain/${tenant.slug}`
@@ -33,6 +34,11 @@ export default async function RecordsPage({ params, searchParams }: Props) {
     user ? getTenantsForUser(user.id) : Promise.resolve([]),
   ])
   const payload = await getLorePayload()
+  const actor = { userId: user?.id ?? 0, activeCharacterId: activeCharacter?.id ?? null }
+  const [canManageFolders, canDeleteRecords] = user ? await Promise.all([
+    isAllowed({ payload, actor, domainId: tenant.id, capability: 'manage_folders', resource: { type: 'Domain', id: tenant.id } }),
+    isAllowed({ payload, actor, domainId: tenant.id, capability: 'delete_document', resource: { type: 'Domain', id: tenant.id } }),
+  ]) : [false, false]
   const [relationships, preparedLinks, documentTypes] = await Promise.all([
     payload.find({ collection: 'document-relationships', where: { and: [{ domain: { equals: tenant.id } }, { kind: { equals: 'supersedes' } }] }, depth: 0, limit: 5000, overrideAccess: true }),
     payload.find({ collection: 'document-character-links', where: { and: [{ document: { in: allDocs.map((document) => document.id) } }, { kind: { equals: 'prepared_by' } }] }, depth: 1, limit: 5000, overrideAccess: true }),
@@ -71,9 +77,9 @@ export default async function RecordsPage({ params, searchParams }: Props) {
       supersessionEdges={supersessionEdges}
       initialFolderId={initialFolderId}
       initialSearch={typeof q === 'string' ? q.trim() : ''}
-      canManageFolders={role === 'admin'}
+      canManageFolders={canManageFolders}
       canActOnRecords={Boolean(user)}
-      canDeleteRecords={role === 'admin'}
+      canDeleteRecords={canDeleteRecords}
     />
   </TenantShell>
 }

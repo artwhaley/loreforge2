@@ -5,6 +5,8 @@ import { TenantShell } from '@/components/theme/TenantShell'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getFormsForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
+import { getLorePayload } from '@/lib/payload'
+import { isAllowed } from '@/lib/authz/evaluate'
 
 import styles from './forms.module.scss'
 
@@ -16,7 +18,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function FormsPage({ params }: Props) {
   const { slug } = await params
-  const { tenant, role, user } = await getActiveTenant()
+  const { tenant, role, user, activeCharacter } = await getActiveTenant()
 
   if (!tenant || tenant.slug !== slug) {
     notFound()
@@ -24,6 +26,8 @@ export default async function FormsPage({ params }: Props) {
 
   const base = `/domain/${tenant.slug}`
   const myTenants = user ? await getTenantsForUser(user.id) : []
+  const payload = await getLorePayload()
+  const canManageTemplates = Boolean(user && await isAllowed({ payload, actor: { userId: user.id, activeCharacterId: activeCharacter?.id ?? null }, domainId: tenant.id, capability: 'manage_templates', resource: { type: 'Domain', id: tenant.id } }))
   const forms = await getFormsForTenant(tenant)
   const tokens = resolveThemeTokens(tenant)
 
@@ -35,7 +39,7 @@ export default async function FormsPage({ params }: Props) {
       switcherTenants={myTenants}
     >
       <section className={styles.panel}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}><h1 className={styles.title}>Forms</h1><Link href={`${base}/forms/new`}>Create form</Link></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}><h1 className={styles.title}>Forms</h1>{canManageTemplates ? <Link href={`${base}/forms/new`}>Create form</Link> : null}</div>
         <p className={styles.intro}>
           Build and fill structured forms that generate ordinary archive records.
         </p>

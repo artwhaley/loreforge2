@@ -6,14 +6,16 @@ import { getLorePayload } from '@/lib/payload'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getFoldersForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
+import { isAllowed } from '@/lib/authz/evaluate'
 
 export const dynamic = 'force-dynamic'
 
 export default async function NewFormPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const { tenant, role, user, activeCharacter } = await getActiveTenant()
-  if (!tenant || tenant.slug !== slug || !user || role !== 'admin') notFound()
+  if (!tenant || tenant.slug !== slug || !user) notFound()
   const payload = await getLorePayload()
+  if (!await isAllowed({ payload, actor: { userId: user.id, activeCharacterId: activeCharacter?.id ?? null }, domainId: tenant.id, capability: 'manage_templates', resource: { type: 'Domain', id: tenant.id } })) notFound()
   const [folders, types, domains, baseTemplates] = await Promise.all([
     getFoldersForTenant(tenant),
     payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: tenant.id } }, { active: { equals: true } }] }, depth: 0, limit: 500, sort: 'name' }),

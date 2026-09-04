@@ -82,19 +82,19 @@ function RoleNode({ node, department, domainSlug, characterId, expanded, toggle,
     <div className={`${styles.treeRow} ${selected ? styles.treeRowSelected : ''}`} onClick={() => onSelectRole?.(node, department)} onContextMenu={(event) => onContextRole?.(event, node, department)}>
       {hasChildren ? <button type="button" className={styles.disclosure} aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${node.name}`} aria-expanded={isOpen} onClick={(event) => { event.stopPropagation(); toggle(key) }}>{isOpen ? '⌄' : '›'}</button> : <span className={styles.disclosureSpacer} aria-hidden="true" />}
       <span className={styles.roleBranch} aria-hidden="true" />
-      <span className={styles.roleAssignment}>{showAssignmentCheckbox ? <RoleAssignmentToggle domainSlug={domainSlug} characterId={characterId} roleId={node.id} checked={node.held} label={node.name} /> : <button type="button" className={styles.roleSelectButton} onClick={(event) => { event.stopPropagation(); onSelectRole?.(node, department) }} onContextMenu={(event) => { event.stopPropagation(); onContextRole?.(event, node, department) }}>{node.name}</button>}</span>
+      <span className={styles.roleAssignment}>{showAssignmentCheckbox ? <RoleAssignmentToggle domainSlug={domainSlug} characterId={characterId} roleId={node.id} checked={node.held} assignable={node.assignable ?? false} label={node.name} /> : <button type="button" className={styles.roleSelectButton} onClick={(event) => { event.stopPropagation(); onSelectRole?.(node, department) }} onContextMenu={(event) => { event.stopPropagation(); onContextRole?.(event, node, department) }}>{node.name}</button>}</span>
     </div>
     {hasChildren && isOpen ? <ul className={styles.nestedTree} role="group">{node.children.map((child) => <RoleNode key={child.id} node={child} department={department} domainSlug={domainSlug} characterId={characterId} expanded={expanded} toggle={toggle} showAssignmentCheckbox={showAssignmentCheckbox} selectedRoleId={selectedRoleId} onSelectRole={onSelectRole} onContextRole={onContextRole} />)}</ul> : null}
   </li>
 }
 
-function RoleAssignmentToggle({ domainSlug, characterId, roleId, checked, label }: { domainSlug: string; characterId: number; roleId: number; checked: boolean; label: string }) {
+function RoleAssignmentToggle({ domainSlug, characterId, roleId, checked, assignable, label }: { domainSlug: string; characterId: number; roleId: number; checked: boolean; assignable: boolean; label: string }) {
   return <form action="/api/role-assignments" method="post" className={styles.assignmentForm}>
     <input type="hidden" name="domainSlug" value={domainSlug} />
     <input type="hidden" name="characterId" value={characterId} />
     <input type="hidden" name="roleId" value={roleId} />
     <input type="hidden" name="action" value={checked ? 'remove' : 'add'} />
-    <label className={styles.checkLabel}><input type="checkbox" defaultChecked={checked} onChange={(event) => event.currentTarget.form?.requestSubmit()} /><span>{label}</span></label>
+    <label className={styles.checkLabel}><input type="checkbox" defaultChecked={checked} disabled={!assignable} aria-disabled={!assignable} title={!assignable ? 'You cannot assign or remove this Role with your current authority.' : undefined} onChange={(event) => event.currentTarget.form?.requestSubmit()} /><span>{label}</span></label>
   </form>
 }
 

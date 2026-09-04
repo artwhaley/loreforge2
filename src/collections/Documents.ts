@@ -95,8 +95,27 @@ export const Documents: CollectionConfig = {
         // also drives the required Prepared by credit. Seeders/migrations
         // use the explicit system seam; a missing request user must never be
         // an accidental bypass of this boundary.
-        if (operation === 'create' && !context?.allowSystemCreate && !context?.allowUserCreate && !context?.preparedByCharacterId) {
-          throw new Error('Document creation requires an explicit authoring context.')
+        if (operation === 'create' && !context?.allowSystemCreate) {
+          const actorUserId = relationId(context?.actorUserId ?? req.user?.id)
+          const preparedCharacterId = relationId(context?.preparedByCharacterId)
+          if (!actorUserId) throw new Error('Document creation requires an authenticated authoring context.')
+          if (preparedCharacterId) {
+            const preparedCharacter = await req.payload.findByID({ collection: 'characters', id: preparedCharacterId, depth: 0, overrideAccess: true }).catch(() => null) as { status?: string; controlledBy?: unknown } | null
+            const controllerId = relationId(preparedCharacter?.controlledBy)
+            const membership = domainId ? await req.payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domainId } }, { character: { equals: preparedCharacterId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true }) : { docs: [] }
+            if (!preparedCharacter || preparedCharacter.status !== 'active' || controllerId !== actorUserId || !membership.docs[0]) throw new Error('The Prepared-by Character must be an active Character controlled by the author in this Domain.')
+          } else {
+            // A no-Character create is reserved for the Domain owner or an
+            // operational/platform administrator. Ordinary members must act
+            // through the selected Character so its Prepared-by credit is
+            // durable and non-removable.
+            const domain = domainId ? await req.payload.findByID({ collection: 'domains', id: domainId, depth: 0, overrideAccess: true }).catch(() => null) as { ownerUser?: unknown } | null : null
+            const owner = relationId(domain?.ownerUser)
+            const account = await req.payload.findByID({ collection: 'users', id: actorUserId, depth: 0, overrideAccess: true }).catch(() => null) as { isPlatformAdmin?: unknown } | null
+            const admins = domainId ? await req.payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: domainId } }, { user: { equals: actorUserId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true }) : { docs: [] }
+            if (owner !== actorUserId && !Boolean(account?.isPlatformAdmin) && !admins.docs[0]) throw new Error('Document creation requires an acting Character unless the author is a Domain administrator.')
+          }
+          if (!context?.allowUserCreate && !preparedCharacterId) throw new Error('Document creation requires an explicit authoring context.')
         }
         return data
       },

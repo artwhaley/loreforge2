@@ -8,6 +8,8 @@ import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getDocumentForTenant, getDocumentsForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 import { renderMarkdown } from '@/lib/markdown/render'
 import { mediaSrc, resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
+import { getLorePayload } from '@/lib/payload'
+import { isAllowed } from '@/lib/authz/evaluate'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -17,7 +19,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function CustomizePage({ params }: Props) {
   const { slug } = await params
-  const { tenant, role, user } = await getActiveTenant()
+  const { tenant, role, user, activeCharacter } = await getActiveTenant()
 
   if (!tenant || tenant.slug !== slug) {
     notFound()
@@ -25,9 +27,8 @@ export default async function CustomizePage({ params }: Props) {
   if (!user) {
     redirect('/admin/login')
   }
-  if (role !== 'admin') {
-    notFound()
-  }
+  const payload = await getLorePayload()
+  if (!await isAllowed({ payload, actor: { userId: user.id, activeCharacterId: activeCharacter?.id ?? null }, domainId: tenant.id, capability: 'manage_domain_appearance', resource: { type: 'Domain', id: tenant.id } })) notFound()
 
   const myTenants = await getTenantsForUser(user.id)
   const tokens = resolveThemeTokens(tenant)

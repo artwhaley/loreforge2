@@ -34,6 +34,7 @@ export default async function PersonWorkspacePage({ params, searchParams }: Prop
   const actor = { userId: user?.id ?? 0, activeCharacterId: activeCharacter?.id ?? null }
   const workspaceAllowed = contextRole === 'admin' || Boolean(user && (await Promise.all(['manage_members', 'manage_roles', 'manage_access'].map((capability) => isAllowed({ payload, actor, domainId: tenant.id, capability, resource: { type: 'Domain', id: tenant.id } })))).some(Boolean))
   if (!workspaceAllowed) notFound()
+  const canManageMembers = Boolean(user && await isAllowed({ payload, actor, domainId: tenant.id, capability: 'manage_members', resource: { type: 'Domain', id: tenant.id } }))
   const [character, membershipRows, contexts, departments, roles, assignments, folders, permissionRules, domains] = await Promise.all([
     payload.findByID({ collection: 'characters', id: characterId, depth: 1 }).catch(() => null),
     payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: tenant.id } }, { character: { equals: characterId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 }),
@@ -93,7 +94,7 @@ export default async function PersonWorkspacePage({ params, searchParams }: Prop
       <p className={styles.crumb}><a href={`/domain/${slug}/manage/people`}>People</a> / {localContext?.localDisplayName || character.name}</p>
       <header className={styles.identityHeader}>
         <div className={styles.nameLine}><h1>{localContext?.localDisplayName || character.name}</h1><span className={styles.characterHandle}>{controller?.name || controller?.email || 'Unclaimed Character'}</span></div>
-        <form action="/api/domain-memberships" method="post" className={styles.removeForm}><input type="hidden" name="domainSlug" value={slug} /><input type="hidden" name="characterId" value={characterId} /><input type="hidden" name="action" value="remove" /><button type="submit">Remove from Domain</button></form>
+        {canManageMembers ? <form action="/api/domain-memberships" method="post" className={styles.removeForm}><input type="hidden" name="domainSlug" value={slug} /><input type="hidden" name="characterId" value={characterId} /><input type="hidden" name="action" value="remove" /><button type="submit">Remove from Domain</button></form> : null}
       </header>
       <RoleTree domainSlug={slug} characterId={characterId} departments={roleDepartments} initialMode={roleFilter} />
       <FolderTree domainSlug={slug} characterId={characterId} folders={folderNodes} />
