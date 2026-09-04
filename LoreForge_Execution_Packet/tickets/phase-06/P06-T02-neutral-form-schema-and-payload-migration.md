@@ -58,6 +58,7 @@ Replace plugin-specific form definitions as business data with LoreForge's froze
 - Preserve passing behavior outside this ticket; add regression tests for changed contracts.
 - Regenerate Payload types after schema changes.
 - Commit this ticket separately and write its execution note before proceeding.
+- Forward-patch guardrails (P05R-T07, DEF-FORM-01): retire the permissive legacy Payload Form Builder submission create/read surface; old spike-era submission records are not permanent product data; no unrestricted legacy submissions API survives this ticket.
 
 ## Completion handoff
 - All required automated checks pass.

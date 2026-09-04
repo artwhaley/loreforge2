@@ -54,6 +54,7 @@ Make database/schema operations repeatable and close gaps that should be enforce
 - Preserve passing behavior outside this ticket; add regression tests for changed contracts.
 - Regenerate Payload types after schema changes.
 - Commit this ticket separately and write its execution note before proceeding.
+- Forward-patch guardrails (P05R-T07, DEF-TENANT-01, DEF-ORIGIN-01): the migration window for removing legacy Tenant surfaces and `Documents.origin` is executed here (or the register row is re-owned through change control); canonical Domain/`sourceKind` data is preserved and verified before drops.
 
 ## Completion handoff
 - All required automated checks pass.

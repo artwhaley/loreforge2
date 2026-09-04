@@ -57,6 +57,7 @@ Deliver scalable, permission-aware archive retrieval without adding an external 
 - Preserve passing behavior outside this ticket; add regression tests for changed contracts.
 - Regenerate Payload types after schema changes.
 - Commit this ticket separately and write its execution note before proceeding.
+- Forward-patch guardrails (P05R-T07, DEF-FTS-01, DEF-SEARCH-02): production search is Postgres-native indexed search, not full-roster scans; superseded and soft-deleted Documents are filtered out of active results.
 
 ## Completion handoff
 - All required automated checks pass.

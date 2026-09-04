@@ -53,6 +53,7 @@ Expose public archive search cleanly and make restricted search behavior unsurpr
 - Preserve passing behavior outside this ticket; add regression tests for changed contracts.
 - Regenerate Payload types after schema changes.
 - Commit this ticket separately and write its execution note before proceeding.
+- Forward-patch guardrails (P05R-T07, DEF-SEARCH-01): real pagination with no hard-coded 100-result assumption; permission filtering precedes counts/snippets/facets; no hidden-resource metadata leaks through search.
 
 ## Completion handoff
 - All required automated checks pass.

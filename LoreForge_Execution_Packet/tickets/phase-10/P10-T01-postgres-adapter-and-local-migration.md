@@ -57,6 +57,7 @@ Move the now-stable product model from intentional SQLite proof infrastructure t
 - Preserve passing behavior outside this ticket; add regression tests for changed contracts.
 - Regenerate Payload types after schema changes.
 - Commit this ticket separately and write its execution note before proceeding.
+- Forward-patch guardrails (P05R-T07, DEF-TENANT-01, DEF-ORIGIN-01): inventory and remove, once compatibility ends, the legacy `Tenants` collection, legacy `Memberships`, hidden tenant relationships, dual Domain/Tenant fallback writes/reads, and `Documents.origin`; preserve canonical Domain/`sourceKind` data before dropping any column.
 
 ## Completion handoff
 - All required automated checks pass.

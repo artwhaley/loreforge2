@@ -64,6 +64,7 @@ Create a reusable template system that supports Department/Folder availability, 
 - Preserve passing behavior outside this ticket; add regression tests for changed contracts.
 - Regenerate Payload types after schema changes.
 - Commit this ticket separately and write its execution note before proceeding.
+- Forward-patch guardrails (P05R-T07): the template-header rework lands on the Phase 5-repaired UI, so acceptance must re-run Phase 5 gate scenario 2.1 (in-place Acting-as switch preserves editor fields) and the Concerns-chips flow and must not regress them.
 
 ## Completion handoff
 - All required automated checks pass.

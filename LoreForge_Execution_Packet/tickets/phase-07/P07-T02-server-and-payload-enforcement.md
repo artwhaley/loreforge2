@@ -27,10 +27,10 @@ Make the evaluator authoritative across all read/write paths so UI hiding is nev
 ## Required work
 1. Create server authorization context resolver from authenticated User + selected Domain + optional active Character. User-level Domain owner/admin evaluation must work without a Character; Character-scoped operations require the validated active member Character. Do not recreate Administration mode in authorization context.
 2. Wire the shared evaluator into every customer-accessible tenant-owned path for Documents, Folders, Document Types, Templates, Tags, Document Character links, Document Relationships, Characters/DomainCharacterContexts, CharacterClaimRequests, Domain memberships, Subdomains, Roles/RoleAssignments, and PermissionRules. Department participation is derived from Roles; obsolete SubdomainMembership paths must not exist or authorize. Claim decisions require `manage_claims` on the claim Domain and a still-unclaimed Character. Collections that are platform-internal only must deny ordinary customer API access. Do not duplicate precedence inside hooks.
-3. Filter list/search queries by readable resource scope and avoid returning hidden titles/counts where access denied.
+3. Filter list/search queries by readable resource scope and avoid returning hidden titles/counts where access denied (DEF-AUTH-01). Superseded-notice/successor metadata obeys the same readable-resource rules (DEF-AUTH-02). Keep the authorization hot path free of obvious N+1 query multiplication (DEF-PERF-01).
 4. Ensure mutations re-check authorization server-side using persisted target state, not client destination claims.
 5. Add integration tests that exercise direct REST/local API/server actions, not only browser UI.
-6. Replace and delete `authorizeInterimOperation`, the legacy Tenant-admin branch, and the temporary P05 share enforcement adapter, following the P05R-T00 call-site inventory appendix below (disposition per site: replace with the shared evaluator, delete, or keep for a named reason). Preserve workflow APIs and PermissionRule rows; no legacy User Membership may grant post-P07 access. Do not replace the Share adapter with a customer Share workflow unless `P07-D01` (`references/P07-D01-DOCUMENT-SHARING-DECISION.md`) has separately approved one; Share remains deferred (CC-2026-09-03-04).
+6. Replace and delete `authorizeInterimOperation`, the legacy Tenant-admin branch, and the temporary P05 share enforcement adapter, following the P05R-T00 call-site inventory appendix below (DEF-AUTH-03) (disposition per site: replace with the shared evaluator, delete, or keep for a named reason). Preserve workflow APIs and PermissionRule rows; no legacy User Membership may grant post-P07 access. Do not replace the Share adapter with a customer Share workflow unless `P07-D01` (`references/P07-D01-DOCUMENT-SHARING-DECISION.md`) has separately approved one; Share remains deferred (CC-2026-09-03-04).
 
 ## Likely code touchpoints
 - src/lib/authz/context.ts
@@ -58,7 +58,7 @@ Make the evaluator authoritative across all read/write paths so UI hiding is nev
 - Do not introduce a new framework/provider/abstraction not authorized by the Architecture Contract.
 - Keep customer-facing language free of Payload/CMS schema terminology.
 - Preserve passing behavior outside this ticket; add regression tests for changed contracts.
-- All final authorization/role/folder/delegation mutations must write through the durable audit seam established in P05R-T05. Do not invent a second audit system.
+- All final authorization/role/folder/delegation mutations must write through the durable audit seam established in P05R-T05 (DEF-AUDIT-01). Do not invent a second audit system.
 - Regenerate Payload types after schema changes.
 - Commit this ticket separately and write its execution note before proceeding.
 

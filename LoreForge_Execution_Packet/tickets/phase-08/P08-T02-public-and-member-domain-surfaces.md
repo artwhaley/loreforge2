@@ -60,6 +60,7 @@ Hydrate and polish the approved LoreForge/Domain surfaces with public policy and
 - Preserve passing behavior outside this ticket; add regression tests for changed contracts.
 - Regenerate Payload types after schema changes.
 - Commit this ticket separately and write its execution note before proceeding.
+- Forward-patch guardrails (P05R-T07, DEF-PUBLIC-01): Domain `publicEnabled` gates public access; Folder `publicAccess` inheritance is honored; a direct-public Document inside a private Folder never exposes private ancestor names/counts.
 
 ## Completion handoff
 - All required automated checks pass.

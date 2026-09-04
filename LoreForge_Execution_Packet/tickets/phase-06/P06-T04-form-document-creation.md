@@ -61,6 +61,7 @@ Complete form-first authoring so a filer fills a friendly form and receives an o
 - Preserve passing behavior outside this ticket; add regression tests for changed contracts.
 - Regenerate Payload types after schema changes.
 - Commit this ticket separately and write its execution note before proceeding.
+- Forward-patch guardrails (P05R-T07): on form-created Documents the active member Character automatically becomes Prepared-by; Character form fields create Concerns, not Prepared-by credits; ordinary form authoring requires an active member Character; new code uses canonical `sourceKind`, never legacy `origin`.
 
 ## Completion handoff
 - All required automated checks pass.

@@ -56,6 +56,7 @@ Add minimum production-shaped operational plumbing needed by later notifications
 - Preserve passing behavior outside this ticket; add regression tests for changed contracts.
 - Regenerate Payload types after schema changes.
 - Commit this ticket separately and write its execution note before proceeding.
+- Forward-patch guardrails (P05R-T07): operational logs complement but never replace durable LoreForge audit events; the DomainAuditEvents seam (P05R-T05) remains the audit source of truth.
 
 ## Completion handoff
 - All required automated checks pass.
