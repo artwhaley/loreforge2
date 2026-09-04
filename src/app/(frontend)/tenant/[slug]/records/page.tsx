@@ -5,7 +5,6 @@ import { DeleteFolderButton } from '@/components/archive/DeleteFolderButton'
 import { TenantShell } from '@/components/theme/TenantShell'
 import { createFolderAction } from '@/lib/actions/archive'
 import { buildFolderTree, flattenFolderTree, folderPath } from '@/lib/archive/folderTree'
-import { originLabel } from '@/lib/origin'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import {
   getDocumentsForTenant,
@@ -88,6 +87,19 @@ const docs = query
     limit: 5000,
     overrideAccess: true,
   })
+  const preparedLinks = await payload.find({
+    collection: 'document-character-links',
+    where: { and: [{ document: { in: allDocs.map((document) => document.id) } }, { kind: { equals: 'prepared_by' } }] },
+    depth: 1,
+    limit: 5000,
+    overrideAccess: true,
+  })
+  const preparedBy = new Map<number, string>()
+  for (const link of preparedLinks.docs) {
+    const documentId = typeof link.document === 'object' ? link.document.id : link.document
+    const character = typeof link.character === 'object' ? link.character : null
+    if (documentId && character?.name) preparedBy.set(Number(documentId), character.name)
+  }
   const newerByOlder = new Map<number, number>()
   const olderByNewer = new Map<number, number>()
   for (const relationship of relationships.docs) {
@@ -132,8 +144,9 @@ const docs = query
         {node.doc.title}
       </a>
       <div className={styles.itemMeta}>
-        <span className={styles.origin}>{originLabel(node.doc.origin)}</span>
-        {recordDate(node.doc.updatedAt) ? <span>Updated {recordDate(node.doc.updatedAt)}</span> : null}
+        {recordDate(node.doc.updatedAt) ? (
+          <span>{preparedBy.get(Number(node.doc.id)) ? `Prepared by ${preparedBy.get(Number(node.doc.id))} · ` : ''}Updated {recordDate(node.doc.updatedAt)}</span>
+        ) : preparedBy.get(Number(node.doc.id)) ? <span>Prepared by {preparedBy.get(Number(node.doc.id))}</span> : null}
       </div>
       {node.children.length > 0 ? (
         <ul className={styles.supersessionChildren} aria-label={`Older versions of ${node.doc.title}`}>
@@ -226,16 +239,15 @@ const docs = query
             </div>
           </div>
 
-          <nav className={styles.crumbs} aria-label="Folder path">
-            <a className={styles.crumb} href={`${base}/records`}>
-              Records
-            </a>
-            {crumbs.map((folder) => (
-              <span key={folder.id} className={styles.crumbSep}>
-                / <a className={styles.crumb} href={`${base}/records?folder=${folder.id}`}>{folder.name}</a>
-              </span>
-            ))}
-          </nav>
+          {crumbs.length > 0 ? (
+            <nav className={styles.crumbs} aria-label="Folder path">
+              {crumbs.map((folder, index) => (
+                <span key={folder.id} className={styles.crumbSep}>
+                  {index > 0 ? ' / ' : ''}<a className={styles.crumb} href={`${base}/records?folder=${folder.id}`}>{folder.name}</a>
+                </span>
+              ))}
+            </nav>
+          ) : null}
 
           <h1 className={styles.pageTitle}>
             {query ? `Search results for “${query}”` : currentFolder ? currentFolder.name : 'All records'}
