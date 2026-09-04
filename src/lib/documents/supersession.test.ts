@@ -46,11 +46,11 @@ async function fixture() {
   const typeAlpha = await payload.create({ collection: 'document-types', data: { domain: alpha.id, name: 'Plain Text', active: true, defaultFilingPolicy: 'direct-file' } } as never)
   const typeBeta = await payload.create({ collection: 'document-types', data: { domain: beta.id, name: 'Plain Text', active: true, defaultFilingPolicy: 'direct-file' } } as never)
 
-  const makeDoc = async (title: string, lifecycle: 'draft' | 'pending_review' | 'filed' | 'locked', opts: { domain?: Id; folder?: Id; type?: Id } = {}) => {
+  const makeDoc = async (title: string, lifecycle: 'draft' | 'pending_review' | 'filed' | 'locked', opts: { domain?: Id; folder?: Id; type?: Id; transactionID?: number | string } = {}) => {
     const domain = opts.domain ?? alpha.id
     const folder = opts.folder ?? rootAlpha.id
     const type = opts.type ?? typeAlpha.id
-    return payload.create({ collection: 'documents', context: { allowSystemCreate: true }, data: { domain, documentType: type, folder, title, body: `# ${title}\n\n`, origin: 'web-editor', sourceKind: 'web', lifecycle, publicAccess: 'inherit', createdBy: user.id } } as never)
+    return payload.create({ collection: 'documents', req: opts.transactionID == null ? undefined : { transactionID: opts.transactionID }, context: { allowSystemCreate: true }, data: { domain, documentType: type, folder, title, body: `# ${title}\n\n`, origin: 'web-editor', sourceKind: 'web', lifecycle, publicAccess: 'inherit', createdBy: user.id } } as never)
   }
 
   return { payload, user, alpha, beta, rootAlpha, rootBeta, typeAlpha, typeBeta, makeDoc }
@@ -98,6 +98,19 @@ test('P05R-T02: an explicit transaction rolls back all writes on failure', async
   assert.equal((await edgesForTarget(payload, t.id)).length, 0, 'rolled-back edge must not persist')
   assert.equal((await eventsFor(payload, t.id)).length, 0, 'rolled-back provenance must not persist')
   assert.equal(await docLifecycle(payload, t.id), 'filed', 'rolled-back lock must not persist')
+})
+
+test('P05R-T10: create-and-relate sees the successor inside its transaction', async () => {
+  const { payload, makeDoc } = f
+  const target = await makeDoc('TransactionTarget', 'filed')
+  const created = await runInTransaction(payload, async (transactionID) => {
+    const successor = await makeDoc('TransactionSuccessor', 'filed', { transactionID })
+    await addDocumentRelationship({ payload, domainId: f.alpha.id, sourceId: successor.id, targetId: target.id, kind: 'supersedes', actor, skipAuthorization: true, transactionID })
+    return successor
+  })
+  assert.equal((await edgesForTarget(payload, target.id)).length, 1)
+  assert.equal(await docLifecycle(payload, target.id), 'locked')
+  assert.ok(created.id)
 })
 
 test('P05R-T02: Draft and Pending-Review records cannot be superseded (no edge, lock, or provenance)', async () => {
@@ -233,6 +246,17 @@ test('P05R-T02: correction restores the predecessor lifecycle and provenance; re
   assert.ok(reEdge?.id)
   assert.equal(await docLifecycle(payload, target.id), 'locked', 're-adding a successor re-locks the predecessor')
   assert.equal((await edgesForTarget(payload, target.id)).length, 1, 'exactly one successor after re-add')
+})
+
+test('P05R-T10: correction preserves an independently Locked predecessor', async () => {
+  const { payload, makeDoc } = f
+  const source = await makeDoc('IndependentLockSuccessor', 'filed')
+  const target = await makeDoc('IndependentLockPredecessor', 'locked')
+  const edge = await addDocumentRelationship({ payload, domainId: f.alpha.id, sourceId: source.id, targetId: target.id, kind: 'supersedes', actor, skipAuthorization: true })
+  await correctSupersession({ payload, domainId: f.alpha.id, relationshipId: edge.id, actor, skipAuthorization: true })
+  assert.equal(await docLifecycle(payload, target.id), 'locked')
+  const events = await eventsFor(payload, target.id)
+  assert.ok(!events.some((event) => event.eventType === 'unlocked' && event.context?.reason === 'supersession-corrected'))
 })
 
 test('P05R-T02: two supersede attempts of one predecessor cannot fork', async () => {

@@ -277,43 +277,51 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   const folderRecord = folder ? await ctx.payload.findByID({ collection: 'folders', id: folder, depth: 0 }).catch(() => null) : null
   const domainRecord = await ctx.payload.findByID({ collection: 'domains', id: ctx.tenant.id, depth: 0 })
   const policy = resolveFilingPolicy({ template: 'inherit', folder: (folderRecord?.filingPolicy ?? 'inherit') as FilingPolicy, documentType: selectedType.defaultFilingPolicy, domain: (domainRecord.defaultFilingPolicy ?? 'direct-file') as Exclude<FilingPolicy, 'inherit'> })
-  // P05R-T02 A: a superseding create is ONE atomic operation — create the
+  // P05R-T02 A: every application create is ONE atomic operation — create the
   // successor, relate it, lock the predecessor, and record provenance on both
   // records inside one DB transaction, so any failure after the preflights
   // rolls everything back (no orphaned successor, no stale lock, no stray
-  // provenance). Non-superseding creates keep their previous behavior.
+  // provenance). Required Prepared-by and accepted links are included before
+  // the transaction commits, so no mandatory attribution can be stranded.
   const createAndRelate = async (transactionID: number | string | null) => {
-    const req = transactionID == null ? undefined : { transactionID }
+    if (transactionID == null) throw new Error('Document creation requires a real database transaction.')
+    const req = { transactionID }
     const created = await ctx.payload.create({ collection: 'documents', req, context: activeCharacterId ? { preparedByCharacterId: activeCharacterId, actorUserId: ctx.user.id } : { allowUserCreate: true, actorUserId: ctx.user.id }, data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body, origin: 'web-editor', sourceKind: 'web', documentType: selectedType.id, lifecycle: policy === 'review-required' ? 'pending_review' : 'filed', publicAccess: 'inherit', createdBy: ctx.user.id, folder } })
     if (superseding) {
       await addDocumentRelationship({ payload: ctx.payload, domainId: ctx.tenant.id, sourceId: created.id, targetId: supersedesDocumentId, kind: 'supersedes', actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
     }
     await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'created', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { lifecycle: created.lifecycle }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id, transactionID ?? undefined), transactionID })
     if (created.lifecycle === 'filed') await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'filed', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { reason: 'filing-policy' }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id, transactionID ?? undefined), transactionID })
+    if (activeCharacterId) await ensurePreparedBy({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
+    if (interim === true) {
+      for (const entry of concernEntries) {
+        let characterId = entry.characterId
+        if (!characterId && entry.newName) {
+          const allCharacters = await ctx.payload.find({ collection: 'characters', where: { status: { equals: 'active' } }, depth: 0, limit: 5000, overrideAccess: true, req })
+          const existing = allCharacters.docs.find((character) => character.name.trim().toLocaleLowerCase() === entry.newName?.toLocaleLowerCase())
+          const character = existing ?? await ctx.payload.create({ collection: 'characters', overrideAccess: true, req, data: { name: entry.newName, status: 'active', createdBy: ctx.user.id } })
+          characterId = Number(character.id)
+        }
+        if (characterId) await attachDocumentCharacterLink({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId, kind: 'concerns', relationshipLabel: entry.relationshipLabel, actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
+      }
+      const rawTags = String(formData.get('tagNames') ?? '').split(',').map((name) => name.trim()).filter(Boolean)
+      for (const name of [...new Set(rawTags.map((tag) => tag.toLocaleLowerCase()))]) {
+        const displayName = rawTags.find((tag) => tag.toLocaleLowerCase() === name) ?? name
+        const tag = await findOrCreateDomainTag({ payload: ctx.payload, domainId: ctx.tenant.id, name: displayName, actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
+        await attachDocumentTag({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, tagId: tag.id, actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
+      }
+    }
     return created
   }
-  const created = superseding ? await runInTransaction(ctx.payload, (transactionID) => createAndRelate(transactionID)) : await createAndRelate(null)
-  // P05R-T04 J: the acting Character's non-removable Prepared-by credit is
-  // applied AFTER the create commits — an afterChange hook cannot write on
-  // this adapter while the create's own transaction is open (P05R-T02 B).
-  if (activeCharacterId) await ensurePreparedBy({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: ctx.user.id, characterId: activeCharacterId } })
-  if (interim === true) {
-    for (const entry of concernEntries) {
-      let characterId = entry.characterId
-      if (!characterId && entry.newName) {
-        const allCharacters = await ctx.payload.find({ collection: 'characters', where: { status: { equals: 'active' } }, depth: 0, limit: 5000, overrideAccess: true })
-        const existing = allCharacters.docs.find((character) => character.name.trim().toLocaleLowerCase() === entry.newName?.toLocaleLowerCase())
-        const character = existing ?? await ctx.payload.create({ collection: 'characters', overrideAccess: true, data: { name: entry.newName, status: 'active', createdBy: ctx.user.id } })
-        characterId = Number(character.id)
-      }
-      if (characterId) await attachDocumentCharacterLink({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId, kind: 'concerns', relationshipLabel: entry.relationshipLabel, actor: { userId: ctx.user.id, characterId: activeCharacterId } })
-    }
-    const rawTags = String(formData.get('tagNames') ?? '').split(',').map((name) => name.trim()).filter(Boolean)
-    for (const name of [...new Set(rawTags.map((tag) => tag.toLocaleLowerCase()))]) {
-      const displayName = rawTags.find((tag) => tag.toLocaleLowerCase() === name) ?? name
-      const tag = await findOrCreateDomainTag({ payload: ctx.payload, domainId: ctx.tenant.id, name: displayName, actor: { userId: ctx.user.id, characterId: activeCharacterId } })
-      await attachDocumentTag({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, tagId: tag.id, actor: { userId: ctx.user.id, characterId: activeCharacterId } })
-    }
+  let created: Awaited<ReturnType<typeof createAndRelate>>
+  try {
+    created = await runInTransaction(ctx.payload, (transactionID) => createAndRelate(transactionID))
+  } catch (error) {
+    // Preserve the complete editor state on post-preflight failures. Expected
+    // validation/conflict codes are rendered by the existing form surface;
+    // never leak a database message or stack trace to the customer.
+    ctx.payload.logger.error(error)
+    return { error: 'unable-to-create', values }
   }
   redirect(`${ctx.basePath}/documents/${created.id}/edit`)
 }
@@ -365,26 +373,29 @@ export async function importMarkdownAction(formData: FormData): Promise<void> {
   if (!documentType) redirect(`/domain/${tenantSlug}/records?error=type`)
   const folder = await tenantFolderId(payload, tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
 
-  const created = await payload.create({
-    collection: 'documents',
-    context: activeCharacterId ? { preparedByCharacterId: activeCharacterId, actorUserId: user.id } : { allowUserCreate: true, actorUserId: user.id },
-    data: {
-      domain: tenant.id,
-      ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}),
-      title,
-      body,
-      origin: 'markdown-import',
-      sourceKind: 'markdown-import',
-      documentType,
-      lifecycle: 'draft',
-      publicAccess: 'inherit',
-      createdBy: user.id,
-      folder,
-    },
+  const created = await runInTransaction(payload, async (transactionID) => {
+    const req = { transactionID }
+    const created = await payload.create({
+      collection: 'documents', req,
+      context: activeCharacterId ? { preparedByCharacterId: activeCharacterId, actorUserId: user.id } : { allowUserCreate: true, actorUserId: user.id },
+      data: {
+        domain: tenant.id,
+        ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}),
+        title,
+        body,
+        origin: 'markdown-import',
+        sourceKind: 'markdown-import',
+        documentType,
+        lifecycle: 'draft',
+        publicAccess: 'inherit',
+        createdBy: user.id,
+        folder,
+      },
+    })
+    await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: created.id, eventType: 'created', actorUserId: user.id, actorCharacterId: activeCharacterId, revisionId: await latestDocumentRevisionId(payload, created.id, transactionID), context: { sourceKind: 'markdown-import' }, transactionID })
+    if (activeCharacterId) await ensurePreparedBy({ payload, domainId: tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: user.id, characterId: activeCharacterId }, transactionID })
+    return created
   })
-  await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: created.id, eventType: 'created', actorUserId: user.id, actorCharacterId: activeCharacterId, revisionId: await latestDocumentRevisionId(payload, created.id), context: { sourceKind: 'markdown-import' } })
-  // P05R-T04 J: applied after the create commits (see createDocumentAction).
-  if (activeCharacterId) await ensurePreparedBy({ payload, domainId: tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: user.id, characterId: activeCharacterId } })
   redirect(`${ctx.basePath}/documents/${created.id}`)
 }
 

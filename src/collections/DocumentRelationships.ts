@@ -33,6 +33,8 @@ export const DocumentRelationships: CollectionConfig = {
     { name: 'source', type: 'relationship', relationTo: 'documents', required: true, index: true },
     { name: 'target', type: 'relationship', relationTo: 'documents', required: true, index: true },
     { name: 'kind', type: 'select', required: true, options: [{ label: 'Supersedes', value: 'supersedes' }] },
+    { name: 'lockApplied', type: 'checkbox', defaultValue: false, admin: { readOnly: true } },
+    { name: 'priorLifecycle', type: 'select', options: [{ label: 'Filed', value: 'filed' }, { label: 'Locked', value: 'locked' }], admin: { readOnly: true } },
     { name: 'actorUser', type: 'relationship', relationTo: 'users', required: true, admin: { readOnly: true } },
     { name: 'actorCharacter', type: 'relationship', relationTo: 'characters', admin: { readOnly: true } },
   ],
@@ -45,8 +47,9 @@ export const DocumentRelationships: CollectionConfig = {
       if (source && target) {
         if (String(source) === String(target)) throw new Error('A Document cannot relate to itself.')
         if (kind !== 'supersedes') throw new Error('Only supersedes relationships are supported.')
-        const sourceDoc = await req.payload.findByID({ collection: 'documents', id: typeof source === 'object' && 'id' in source ? (source as { id: number }).id : source, depth: 0, overrideAccess: true })
-        const targetDoc = await req.payload.findByID({ collection: 'documents', id: typeof target === 'object' && 'id' in target ? (target as { id: number }).id : target, depth: 0, overrideAccess: true })
+        const txReq = req.transactionID == null ? undefined : { transactionID: req.transactionID }
+        const sourceDoc = await req.payload.findByID({ collection: 'documents', id: typeof source === 'object' && 'id' in source ? (source as { id: number }).id : source, depth: 0, overrideAccess: true, req: txReq })
+        const targetDoc = await req.payload.findByID({ collection: 'documents', id: typeof target === 'object' && 'id' in target ? (target as { id: number }).id : target, depth: 0, overrideAccess: true, req: txReq })
         const domainId = typeof data?.domain === 'object' && data.domain && 'id' in data.domain ? (data.domain as { id: number }).id : data?.domain ?? originalDoc?.domain
         const sourceDomain = typeof sourceDoc.domain === 'object' ? sourceDoc.domain?.id : sourceDoc.domain
         const targetDomain = typeof targetDoc.domain === 'object' ? targetDoc.domain?.id : targetDoc.domain
@@ -57,6 +60,7 @@ export const DocumentRelationships: CollectionConfig = {
           depth: 0,
           limit: 5000,
           overrideAccess: true,
+          req: txReq,
         })
         const edges: SupersedesEdgeRow[] = edgesResult.docs.map((edge) => ({
           id: edge.id,

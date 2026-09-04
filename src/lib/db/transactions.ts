@@ -11,10 +11,7 @@ import type { Payload } from 'payload'
 export async function runInTransaction<T>(payload: Payload, fn: (transactionID: number | string) => Promise<T>): Promise<T> {
   const transactionID = await payload.db.beginTransaction()
   if (transactionID === null || transactionID === undefined) {
-    // Adapter without live transaction support: document exact evidence and
-    // fall back to sequential execution (P05R-T02 B evidence note).
-    payload.logger.warn('runInTransaction: adapter returned no transactionID; running without a real transaction.')
-    return fn(0 as unknown as number)
+    throw new Error('This operation requires a database transaction, but the configured adapter did not provide one.')
   }
   try {
     const result = await fn(transactionID)

@@ -22,8 +22,8 @@ async function requireAdmin(payload: Payload, actor: RelationshipActor, domainId
   if (authorized !== true) throw new Error(authorized)
 }
 
-async function getDocument(payload: Payload, id: number | string, domainId: number | string) {
-  const document = await payload.findByID({ collection: 'documents', id, depth: 0, overrideAccess: true })
+async function getDocument(payload: Payload, id: number | string, domainId: number | string, transactionID?: number | string | null) {
+  const document = await payload.findByID({ collection: 'documents', id, depth: 0, overrideAccess: true, req: transactionID == null ? undefined : { transactionID } })
   if (!document || idOf(document.domain) !== Number(domainId)) throw new Error('Both Documents must belong to the selected Domain.')
   return document
 }
@@ -61,7 +61,7 @@ export async function addDocumentRelationship(args: {
   // P05R-T02 A: authorize and preflight BEFORE any write, and the
   // predecessor's lifecycle eligibility is enforced centrally here so no path
   // (UI, route, raw service call) can supersede a Draft or Pending record.
-  const [source, target] = await Promise.all([getDocument(payload, sourceId, domainId), getDocument(payload, targetId, domainId)])
+  const [source, target] = await Promise.all([getDocument(payload, sourceId, domainId, args.transactionID), getDocument(payload, targetId, domainId, args.transactionID)])
   if (kind === 'supersedes' && !canSupersedeDocument(String(target.lifecycle))) {
     throw new Error('Only Filed or already-Locked records may be superseded; Draft records are edited, not superseded.')
   }
@@ -83,7 +83,8 @@ export async function addDocumentRelationship(args: {
     const edges = await allSupersedesEdges(payload, domainId, transactionID)
     assertSupersessionInvariants({ sourceId: canonicalSource, targetId: canonicalTarget, edges })
 
-    const created = await payload.create({ collection: 'document-relationships', overrideAccess: true, req: txReq, data: { domain: Number(domainId), source: canonicalSource, target: canonicalTarget, kind, actorUser: Number(actor.userId), actorCharacter: actor.characterId == null ? undefined : Number(actor.characterId) } })
+    const wasLocked = String(target.lifecycle) === 'locked'
+    const created = await payload.create({ collection: 'document-relationships', overrideAccess: true, req: txReq, data: { domain: Number(domainId), source: canonicalSource, target: canonicalTarget, kind, lockApplied: kind === 'supersedes' && !wasLocked, priorLifecycle: String(target.lifecycle), actorUser: Number(actor.userId), actorCharacter: actor.characterId == null ? undefined : Number(actor.characterId) } })
 
     // P05R-T02 F: the predecessor's own timeline must show that it was
     // superseded and by whom. When it is not already Locked, lock it through
@@ -91,7 +92,6 @@ export async function addDocumentRelationship(args: {
     // superseded event is always recorded on the predecessor, whether or not a
     // new lock was made.
     if (kind === 'supersedes') {
-      const wasLocked = String(target.lifecycle) === 'locked'
       if (!wasLocked) {
         await payload.update({ collection: 'documents', id: target.id, overrideAccess: true, req: txReq, context: { supersedesLock: true }, data: { lifecycle: 'locked' } })
         await recordDocumentProvenance({ payload, domainId, documentId: target.id, eventType: 'locked', actorUserId: actor.userId, actorCharacterId: actor.characterId, context: { reason: 'superseded', supersedingDocumentId: canonicalSource }, revisionId: await latestDocumentRevisionId(payload, target.id, transactionID), transactionID })
@@ -130,11 +130,16 @@ export async function removeDocumentRelationship(args: { payload: Payload; domai
       const remaining = await payload.find({ collection: 'document-relationships', where: { and: [{ kind: { equals: 'supersedes' } }, { target: { equals: targetId } }] }, depth: 0, limit: 1, overrideAccess: true, req: txReq })
       if (remaining.docs.length === 0) {
         const target = await payload.findByID({ collection: 'documents', id: targetId, depth: 0, overrideAccess: true, req: txReq }).catch(() => null) as { lifecycle?: unknown } | null
-        if (target && String(target.lifecycle) === 'locked') {
+        const lockApplied = Boolean((relation as { lockApplied?: unknown }).lockApplied)
+        const priorLifecycle = String((relation as { priorLifecycle?: unknown }).priorLifecycle ?? 'filed')
+        if (target && String(target.lifecycle) === 'locked' && lockApplied) {
           // The actor was verified above; this is a sanctioned correction, not
           // an ordinary privileged transition.
-          await payload.update({ collection: 'documents', id: targetId, overrideAccess: true, req: txReq, context: { interimWorkflowAuthorized: true }, data: { lifecycle: 'filed' } })
-          await recordDocumentProvenance({ payload, domainId, documentId: targetId, eventType: 'unlocked', actorUserId: actor.userId, actorCharacterId: actor.characterId, context: { reason: 'supersession-corrected', relationshipId: Number(relationshipId) }, revisionId: await latestDocumentRevisionId(payload, targetId, transactionID), transactionID })
+          const restoreLifecycle = priorLifecycle === 'locked' ? 'locked' : 'filed'
+          if (restoreLifecycle !== 'locked') {
+            await payload.update({ collection: 'documents', id: targetId, overrideAccess: true, req: txReq, context: { interimWorkflowAuthorized: true }, data: { lifecycle: restoreLifecycle } })
+            await recordDocumentProvenance({ payload, domainId, documentId: targetId, eventType: 'unlocked', actorUserId: actor.userId, actorCharacterId: actor.characterId, context: { reason: 'supersession-corrected', relationshipId: Number(relationshipId) }, revisionId: await latestDocumentRevisionId(payload, targetId, transactionID), transactionID })
+          }
         }
       }
     }
