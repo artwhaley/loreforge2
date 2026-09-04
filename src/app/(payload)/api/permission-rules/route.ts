@@ -6,6 +6,7 @@ import config from '@payload-config'
 import { assertCanDelegate } from '@/lib/authz/delegation'
 import { recordDomainAudit } from '@/lib/domains/domainAudit'
 import { runInTransaction } from '@/lib/db/transactions'
+import { assertRoleDefaultScope } from '@/lib/authz/roleDefaults'
 
 const idOf = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null
@@ -38,6 +39,9 @@ export async function POST(request: Request) {
     const membership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domain.id } }, { character: { equals: principalId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
     if (!membership.docs[0]) return NextResponse.redirect(new URL(destination, request.url), 303)
   } else if (idOf(principalRecord.domain) !== Number(domain.id)) return NextResponse.redirect(new URL(destination, request.url), 303)
+  if (principalType === 'Role') {
+    try { await assertRoleDefaultScope(payload, { domainId: domain.id, roleId: principalId, folderId: folder.id }) } catch { return NextResponse.redirect(new URL(destination, request.url), 303) }
+  }
   try {
     const actor = { userId: user.id }
     await assertCanDelegate(payload, actor, domain.id, 'read', { type: 'Folder', id: folder.id }, readState === 'inherit' ? 'revoke' : readState === 'grant' ? 'grant' : 'deny')

@@ -58,7 +58,7 @@ export async function POST(request: Request) {
           })
         }
       } else if (!existing.docs[0]) {
-        const created = await payload.create({ collection: 'role-assignments', req, data: { character: character.id, role: role.id, status: 'active', assignedBy: user.id } })
+        const created = await payload.create({ collection: 'role-assignments', req, data: { character: character.id, role: role.id, status: 'active', assignedBy: user.id, assignedByCharacter: activeCharacterId ?? undefined } })
         await recordDomainAudit({
           payload, domainId: domain.id, eventType: 'role_assignment_changed', actorUser: user.id,
           targetType: 'role-assignment', targetId: created.id,
