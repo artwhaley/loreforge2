@@ -81,6 +81,15 @@ Hard stop. Executor reports; owner approves. No self-approval.
 
 ## Approved change log
 
+### CC-P07X-2026-09-04 — acting identity, Document-Type workflows, invitations, Work surfaces
+
+- **Authority:** owner-directed corrective extension (`LoreForge_P07X_Execution_Packet/` at the repository root), approved 2026-09-04, executed after Phase 7 went green and before the Phase 8 empty-Domain buildout.
+- **Problem closed:** login-account admin authority leaked across acting identities; Folder permissions were too prominent in ordinary record work; Document Type was not the true authorization/creation/workflow unit; Domain onboarding and pending work lacked real invite/request/work surfaces.
+- **Supersedes:** User-level `isPlatformAdmin` / `ownerUser` / `domain-admins` ambient authority inside ordinary Domain record authorization; multiple operational Domain admins; the acting-Character selector excluding administrative identities; Folder-primary ordinary record access; Template destination winning ordinary filing.
+- **Frozen replacement:** four hard-separated Character kinds (`player | npc | domain_admin | platform_admin`); acting identity authoritative with explicit platform and Domain seams; exactly one Community Domain owner/admin with one provisioned `domain_admin` Character; Document Type as the primary record-permission resource with lifecycle Folder routing and Type-owned creation methods (Blank/Template/Form); WYSIWYG form header/footer; one secure token-based invitation mechanism (bootstrap / character claim / domain join); source-specific Work surfaces; no universal queue abstraction.
+- **Execution:** tickets P07X-T00..T11 on branch `phase-07x-acting-identity-document-workflows`; P07X-GATE-A is an executor invariant gate (continue when green); owner review happens after T11 integrated acceptance.
+- **Non-change:** no second Domain admin; no moderators; no email sending; no generic workflow engine; no Postgres migration; Payload, SQLite, the neutral form schema, canonical Markdown, and the centralized evaluator are preserved.
+
 ### CC-2026-09-02-01 — User-first customer shell before Phase 4
 
 - **Authority:** explicit owner approval on 2026-09-02 of `PROPOSED_UX_WORKFLOW_SPEC.md` after Phase 3 acceptance.

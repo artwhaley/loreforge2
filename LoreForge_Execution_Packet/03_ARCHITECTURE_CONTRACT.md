@@ -62,12 +62,14 @@ Phase 1 retains MDXEditor. Do not replace it merely because it is heavy.
 - If MDXEditor demonstrably corrupts supported canonical Markdown after Phase 1 fixes, stop at Review Gate 1 with a reproducible test. A lower agent does not choose a replacement.
 - If the owner rejects MDXEditor at Gate 1 for corruption or usability, Phase 2 remains blocked until the owner issues a replacement decision/new ticket. An executor never chooses the replacement unilaterally.
 
-## 5. Domain/User/Character authority split
-- Domain Owner is a **User-level** relation. Exactly one User owns a Community Domain.
-- Operational Domain Administrators are also User-level assignments.
-- Roleplay access/membership/roles are **Character-level**.
-- Subdomain administrators/heads are Character-level.
-- Platform Admin is User-level and outside tenant authorization.
+## 5. Acting identity and authority seams
+- `Character.kind` is exactly `player | npc | domain_admin | platform_admin`; there is no `administrative` kind plus a scope flag.
+- `player | npc` use the ordinary Character → DomainMembership → Role → PermissionRule path and gain no authority from the controlling User's platform/owner/admin status.
+- `domain_admin` is system-provisioned for the Community Domain's one owner/admin User, has a required `administrativeDomain` relation to exactly one Domain, needs no DomainMembership or RoleAssignments, has full customer-operational authority inside that Domain only, never passes the platform seam, and is excluded from public/RP semantics.
+- `platform_admin` is system-provisioned for a platform-admin-eligible User, has no `administrativeDomain`, authorizes platform-operator functions only, and gains no ordinary Domain record mutation authority.
+- Domain Owner is a **User-level** relation: exactly one User owns a Community Domain, and that User is provisioned exactly one `domain_admin` Character. The legacy `domain-admins` assignment model is retired as an authority source; remaining rows are reported, never silently promoted.
+- Roleplay access/membership/roles are **Character-level**. Subdomain administrators/heads are Character-level.
+- The acting Character is the authority context. The login User never silently contributes a stronger authority class after an acting identity is selected. User-account operations (password/profile) remain User operations and need no fake Character checks.
 
 Billing/closure/support belongs to account authority; Scribe/Commander/Magistrate privileges belong to Characters.
 
@@ -76,9 +78,9 @@ The customer shell exposes one top-level operating-context bar with two visibly 
 - left: `Domain`, the selected Domain selector;
 - right: `Acting as`, the active Character selector.
 
-There is exactly one Domain selector. Its options are the union of Domains reachable through at least one active controlled-Character membership and Domains the User owns or operationally administers. Options may be grouped as `Participating` and `Managed`; duplicate Domains appear once. For the selected Domain, the Character list contains only active Characters controlled by that User with active membership in that Domain. A `domain-character-contexts` row can supply a local alias/display label but never qualifies a Character for this list. No client-supplied IDs or labels are trusted.
+There is exactly one Domain selector. Its options are the union of Domains reachable through at least one active controlled-Character membership and Domains the User owns or operationally administers. Options may be grouped as `Participating` and `Managed`; duplicate Domains appear once. For the selected Domain, the Character list contains the User's provisioned administrative identities when eligible (the Platform Admin `Administrator` platform-wide; `Administrator of <Domain>` only for a Domain the User owns) plus active ordinary Characters controlled by that User with active membership in that Domain. A `domain-character-contexts` row can supply a local alias/display label but never qualifies a Character for this list. No client-supplied IDs or labels are trusted.
 
-Selected Domain and acting Character are related but not an indivisible mode. When switching Domain invalidates the prior Character, clear the Character selection and preserve the explicitly selected Domain; never silently choose another Character. Character-scoped actions validate `(User, active Character, selected Domain)` and active membership server-side. Public browsing and User-level Domain owner/admin actions validate without an acting Character. The no-active-Character state is valid and displays `No participating Character` when appropriate.
+Selected Domain and acting Character are related but not an indivisible mode. When switching Domain invalidates the prior Character, clear the Character selection and preserve the explicitly selected Domain; never silently choose another Character. Character-scoped actions validate `(User, active Character, selected Domain)` server-side; administrative actions validate the acting identity's kind and scope (platform seam vs matching Domain-admin seam). The no-active-Character state is valid and displays `No participating Character` when appropriate.
 
 Administration is capability, not a context or mode. The customer shell has no Administration selector, Enter/Exit Administration control, or parallel Domain choice. User-level owner/admin authority is evaluated directly for the selected Domain and never grants RP identity/access. Membership editing remains separate; membership does not imply a Role, permission, ownership, or operational-admin assignment.
 
@@ -209,8 +211,10 @@ Effective access may still come from Role defaults or Folder ancestry. The Peopl
 - Domain;
 - name/description;
 - active;
+- creation methods `allowBlank | allowTemplate | allowForm`; every active Type has at least one effective method;
+- lifecycle Folder routing: `defaultFolder` (required/fallback), optional `draftFolder | pendingReviewFolder | filedFolder | lockedFolder`; multiple states may target one Folder; lifecycle transitions relocate the Document atomically with provenance;
 - default filing policy `direct-file | review-required`;
-- optional default Folder used only by creation/import flows with no richer Template destination; a selected Template's normal destination always wins;
+- Document Type is a PermissionRule resource; ordinary record capabilities (`read, create_document, edit_document, submit_document, file_document, approve_document, lock_document, unlock_document, delete_document, restore_document, export_document`) attach to Types;
 - seeded `Plain Text`.
 
 ### documents
@@ -274,8 +278,8 @@ Domain-owned Tag vocabulary. Authorized ad-hoc creation creates a normal Tag bef
 - Document Type;
 - name;
 - scope Folder (Domain root allowed);
-- required normal destination Folder in the same Domain;
-- `allowDestinationOverride` boolean, default false; Plain Text may enable it;
+- required normal destination Folder in the same Domain (legacy migration compatibility only; customer creation routes through Document Type routing, and customer editing of Template destination is deprecated/hidden);
+- `allowDestinationOverride` boolean, default false; Plain Text may enable it (legacy compatibility only);
 - `availableToDescendants`;
 - optional `baseTemplate` same Domain;
 - kind `document | form`;
@@ -289,7 +293,7 @@ Base graph acyclic. Base contains exactly one `{{content}}`; child replaces it, 
 One centralized rule collection.
 - Domain;
 - principal polymorphic relation to Character, User, Role, or DomainMembership;
-- resource polymorphic relation to Domain, Subdomain, Folder, or Document;
+- resource polymorphic relation to Domain, Subdomain, Folder, Document, or DocumentType;
 - capability;
 - effect `grant | deny`;
 - audit fields.
@@ -302,9 +306,9 @@ Ownership/subscription transfer is not a normal permission capability.
 ## 7. Authorization precedence — frozen
 Evaluate `(User, active Character, capability, resource)` server-side.
 
-1. Platform Admin: allow; audit action.
-2. Community Domain Owner/User-level Domain Admin: full operational Domain access except platform-only operations; lifecycle state still gates ordinary writes.
-3. Personal Domain owner Character: full Personal Domain access subject to Personal policy restrictions.
+1. Acting-identity seams decide first: `platform_admin` authorizes platform operations only and never ordinary Domain record mutation; a matching `domain_admin` (administrativeDomain equals the selected Domain and controlling User equals that Domain's ownerUser) has full customer-operational authority in that Domain only; Personal Domain owner Character keeps full Personal Domain access subject to Personal policy restrictions.
+2. For ordinary record capabilities, evaluate the two-axis decision: (a) acting Character kind authority; (b) direct Document exception when present; (c) effective Document-Type rule; (d) containing Folder/ancestor restrictions (effective deny narrows a Type/Document grant; a Folder read grant never manufactures a missing record capability); (e) default deny. `create_document` is evaluated against the chosen Document Type before a Document exists.
+3. Folder-only and admin capabilities continue to use Folder ancestry.
 4. Gather ordinary rules whose resource scope contains requested resource.
 5. Principal class priority: **direct User/Character > Role > membership default**. Within the direct class, User and active-Character rules are peers: most-specific resource wins and deny wins equal-specificity ties. A Character grant does not automatically outrank a User deny or vice versa.
 6. Within a principal class, most-specific resource wins: Document > deepest matching Folder > Subdomain > Domain.
@@ -369,7 +373,7 @@ Document Type = `direct-file | review-required`.
 Folder = `inherit | direct-file | review-required`.
 Template = `inherit | direct-file | review-required`.
 
-Precedence: Template explicit > Folder explicit > Document Type default > Domain default.
+Precedence for lifecycle Folder routing: Document Type state route > Type `defaultFolder` > Domain default. On lifecycle transition the Document is atomically relocated to the routed Folder; provenance records both lifecycle and routing. Ordinary creators/reviewers never supply a workflow destination manually.
 
 ### Transitions
 - New -> `draft` unless a dedicated flow explicitly files it.
@@ -419,8 +423,8 @@ Superseded prototype Share rows (historical only; not acceptance authority):
 ## 11. Form/template contract
 Payload Form Builder is spike-only business-schema-wise. Permanent schema is neutral.
 
-Initial field types:
-`text, textarea, date, select, checkbox, character`.
+Field types:
+`text, textarea, date, time, select, checkbox, character, characters`.
 
 Each field: stable machine `key`, human `label`, `required`, optional help; select has value/label options. Character field transiently selects/creates Character and produces a `concerns` DocumentCharacterLink, optionally with the Template-defined human relationship label. It never fabricates `prepared_by` credit.
 
@@ -437,7 +441,9 @@ Unknown runtime token = error/no Document, never silent blanking.
 
 After successful Document creation, raw answer JSON/submission rows are not retained as a second truth.
 
-The ordinary creation route is `/domain/:domain/records/new`. Records presents one `New document` action and no inline title/create form. The full creation surface contains a searchable Template selector grouped by Document Type, Template-derived destination Folder, title, `Prepared by`, `Concerns`, Tags, and WYSIWYG or form body. Selecting a Template immediately selects its required normal destination. The destination control is read-only with an explanation unless that Template has `allowDestinationOverride=true`, in which case it offers only destinations where the actor may create. Plain Text is the blank, destination-flexible option once its Template exists. Template changes after user input require destructive-replacement confirmation. Lifecycle actions are `Save Draft` and the effective `Submit for Review` or `File` action.
+Form Templates may define optional WYSIWYG-authored `headerMarkdown` and `footerMarkdown`. Generation order is `headerMarkdown` → rendered form body → `footerMarkdown`, joined with canonical blank-line boundaries and canonicalized. Empty header/footer preserves prior output. Header/footer text never creates structural Character links.
+
+The ordinary creation route is `/domain/:domain/records/new`. Records presents one `New document` action and no inline title/create form. The full creation surface is Type-first: choose an accessible Document Type, then its available creation method (Blank / Template / Form; the chooser is skipped when only one method exists), then complete the editor/template/form flow. Destination Folder comes from Type/lifecycle routing and is never an ordinary user choice. Template changes after user input require destructive-replacement confirmation. Lifecycle actions are `Save Draft` and the effective `Submit for Review` or `File` action.
 
 ## 12. Theme/vocabulary/starter-pack contract
 No raw CSS.

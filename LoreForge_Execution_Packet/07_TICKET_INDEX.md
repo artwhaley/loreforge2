@@ -10,7 +10,43 @@ they are not six additional phase gates. P07-GATE must remain open until the
 owner completes the visible acceptance and release measurements before Phase 8.
 Repository-root entry point: `P07_DATABASE_ACCESS_PATCH.md`.
 
-**Total ticket files:** 84 (69 implementation/design tickets plus 15 mandatory human review gates).
+**Total ticket files:** 84 (69 implementation/design tickets plus 15 mandatory human review gates). The P07X corrective extension below supplements but does not replace this count.
+
+## P07X — Acting-Identity and Document-Workflow Corrective Extension
+
+Owner-directed corrective stack executed between Phase 7 and Phase 8. Spec and
+stack live outside this packet at the repository root:
+`LoreForge_P07X_Execution_Packet/` (`00_CORRECTIVE_SPEC.md`, `01_EXECUTION_STACK.md`, `02_INTEGRATED_ACCEPTANCE.md`).
+
+- Branch: `phase-07x-acting-identity-document-workflows`
+- **P07X-T00** — freeze acting identity and document workflow redirects  
+  _Patch canonical packet docs so later agents do not restore the User-admin bypass / Folder-primary / Template-destination model._
+- **P07X-T01** — add four hard-separated Character kinds  
+  _Introduce `player | npc | domain_admin | platform_admin` with system-managed administrative identities._
+- **P07X-T02** — make acting Character authoritative  
+  _Split platform vs Domain authorization seams; remove ambient User-level authority from ordinary Domain record authorization._
+- **P07X-T03** — pivot record permissions to Document Types  
+  _Two-axis record authorization with DocumentType as a PermissionRule resource._
+- **P07X-T04** — simplify Type permissions and Folder projection  
+  _Role × Document Type permission surface and permission-aware Folder projection._
+- **P07X-GATE-A** — identity/authorization invariant gate  
+  _Executor continuation gate; continue automatically when all 12 checks pass._
+- **P07X-T05** — route lifecycle through Document Type folders  
+  _Type-owned draft/pending/filed/locked routing with atomic relocation and provenance._
+- **P07X-T06** — make Document Type the creation entry point  
+  _Type-first New Document with Blank / Template / Form creation methods._
+- **P07X-T07** — add WYSIWYG form header and footer  
+  _Form Studio headerMarkdown/footerMarkdown with canonical generation order._
+- **P07X-T08** — add secure invitation link foundation  
+  _One narrow token-based invitation mechanism (bootstrap / character claim / domain join)._
+- **P07X-T09** — implement Domain invitation workflows  
+  _Bootstrap, Character, and general Domain invite experiences on the T08 foundation._
+- **P07X-T10** — add source-specific Work queues  
+  _Platform/Domain pending-work surfaces projected from canonical sources; no universal queue storage._
+- **P07X-T11** — complete integrated identity workflow correction  
+  _Migration cleanup, fixtures, and the full integrated acceptance run._
+- **P07X-GATE-FINAL** — owner end-to-end review  
+  _Hard stop before any Phase 8 work; the empty-Domain buildout exercise determines the first starter pack._
 
 This index is navigation only. `01_ORCHESTRATOR.md`, each phase's `00_PHASE_ORCHESTRATOR.md`, and the ticket itself control execution.
 

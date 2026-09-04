@@ -40,6 +40,7 @@
 - `references/SPIKE_README.md` — original runnable-spike notes.
 - `references/SPIKE_ORIGINAL_*` — the build packet that produced the spike.
 - `references/P07-D01-DOCUMENT-SHARING-DECISION.md` — owner decision brief for the deferred Document Sharing workflow (CC-2026-09-03-04); decision required before P07-GATE closes.
+- `../LoreForge_P07X_Execution_Packet/` (repository root, outside this packet) — owner-directed corrective extension between Phase 7 and Phase 8: acting identity, Document-Type workflows, invitations, and Work surfaces (CC-P07X-2026-09-04).
 
 ## Deliberate owner-only gates
 - `owner-gates/P00_MVP_BASELINE_APPROVAL.md` — Phase 1 cannot start until the exact source revision is approved.
