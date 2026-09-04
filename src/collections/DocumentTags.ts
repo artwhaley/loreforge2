@@ -32,9 +32,13 @@ export const DocumentTags: CollectionConfig = {
       const documentId = relationId(data?.document ?? originalDoc?.document)
       const tagId = relationId(data?.tag ?? originalDoc?.tag)
       if (!domainId || !documentId || !tagId) throw new Error('A Document Tag link requires a Domain, Document, and Tag.')
+      // Same transaction rule as DocumentCharacterLinks: inside an atomic
+      // create flow the Document may still be uncommitted, so the lookups must
+      // join the caller's transaction via `req` or they auto-commit a separate
+      // read and this hook throws NotFound.
       const [document, tag] = await Promise.all([
-        req.payload.findByID({ collection: 'documents', id: documentId, depth: 0, overrideAccess: true }),
-        req.payload.findByID({ collection: 'tags', id: tagId, depth: 0, overrideAccess: true }),
+        req.payload.findByID({ collection: 'documents', id: documentId, depth: 0, overrideAccess: true, req }),
+        req.payload.findByID({ collection: 'tags', id: tagId, depth: 0, overrideAccess: true, req }),
       ])
       if (relationId(document.domain) !== domainId || relationId(tag.domain) !== domainId) throw new Error('Document Tags must stay inside one Domain.')
       return { ...data, domain: domainId }

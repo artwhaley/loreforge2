@@ -40,9 +40,14 @@ export const DocumentCharacterLinks: CollectionConfig = {
       const kind = String(data?.kind ?? originalDoc?.kind ?? '')
       if (!documentId || !characterId || !domainId) throw new Error('A Character link requires a Domain, Document, Character, and valid kind.')
       assertCharacterLinkInput({ kind, relationshipLabel: data?.relationshipLabel ?? originalDoc?.relationshipLabel })
+      // The hook can run inside the caller's transaction (e.g. the form-filing
+      // flow creates the Document and its links atomically), so every lookup
+      // must carry `req` — otherwise Payload auto-commits a separate read that
+      // cannot see the still-uncommitted Document and this hook throws
+      // NotFound. See src/lib/db/transactions.ts.
       const [document, character] = await Promise.all([
-        req.payload.findByID({ collection: 'documents', id: documentId, depth: 0, overrideAccess: true }),
-        req.payload.findByID({ collection: 'characters', id: characterId, depth: 0, overrideAccess: true }),
+        req.payload.findByID({ collection: 'documents', id: documentId, depth: 0, overrideAccess: true, req }),
+        req.payload.findByID({ collection: 'characters', id: characterId, depth: 0, overrideAccess: true, req }),
       ])
       if (relationId(document.domain) !== domainId) throw new Error('Character links must stay inside the Document Domain.')
       if (character.status !== 'active') throw new Error('Only active Characters may be linked.')
@@ -56,7 +61,7 @@ export const DocumentCharacterLinks: CollectionConfig = {
       }
     }],
     beforeDelete: [async ({ id, req }) => {
-      const link = await req.payload.findByID({ collection: 'document-character-links', id, depth: 0, overrideAccess: true }).catch(() => null)
+      const link = await req.payload.findByID({ collection: 'document-character-links', id, depth: 0, overrideAccess: true, req }).catch(() => null)
       const context = req.context as Record<string, unknown> | undefined
       if (link?.requiredByCreate && context?.systemCleanup !== true) throw new Error('The active Character creation credit cannot be removed.')
     }],
