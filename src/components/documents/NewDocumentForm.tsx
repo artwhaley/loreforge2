@@ -29,11 +29,13 @@ export function NewDocumentForm({ tenantSlug, types, folders, activeCharacter, i
       ? 'Choose an active Document Type before creating a document.'
       : state.error === 'concerns'
         ? 'One of the Concerns entries was invalid. Your other fields are preserved.'
-        : state.error === 'authorization'
-          ? 'You are not authorized to create a record in this Domain.'
-          : state.error === 'supersede-eligibility'
-            ? 'That record cannot be superseded in its current lifecycle state; only Filed or Locked records can gain a successor.'
-            : null
+        : state.error === 'character'
+          ? 'Choose an acting Character from the selector above — members must create through an acting Character, which becomes the non-removable Prepared-by credit (CC-2026-09-03-05).'
+          : state.error === 'authorization'
+            ? 'You are not authorized to create a record in this Domain.'
+            : state.error === 'supersede-eligibility'
+              ? 'That record cannot be superseded in its current lifecycle state; only Filed or Locked records can gain a successor.'
+              : null
 
   return <form action={formAction} style={{ display: 'grid', gap: '1rem', padding: '1.25rem', border: '1px solid var(--tenant-accent)', background: 'var(--tenant-surface-bg)' }}>
     <input type="hidden" name="tenantSlug" value={tenantSlug} />

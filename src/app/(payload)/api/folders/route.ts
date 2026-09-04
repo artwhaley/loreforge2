@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       const parent = await payload.findByID({ collection: 'folders', id: parentId, depth: 0 }).catch(() => null)
       if (!parent || idOf(parent.domain) !== Number(domain.id)) return NextResponse.redirect(new URL(returnTo, request.url), 303)
     }
-    await payload.create({ collection: 'folders', data: { domain: domain.id, name, parent: parentId, filingPolicy: 'inherit', systemManaged: false } })
+    await payload.create({ collection: 'folders', data: { domain: domain.id, name, parent: parentId, filingPolicy: 'inherit', systemManaged: false, publicAccess: 'inherit' } })
     payload.logger.info(`Phase 5 folder created: actorUser=${user.id} domain=${domain.id} parent=${parentId ?? 'root'}`)
     return NextResponse.redirect(new URL(returnTo, request.url), 303)
   }

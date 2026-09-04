@@ -1,5 +1,16 @@
 import type { CollectionConfig } from 'payload'
 
+import { PROVENANCE_EVENT_TYPES, type ProvenanceEventType } from '@/lib/documents/provenance'
+
+const EVENT_LABELS: Record<ProvenanceEventType, string> = {
+  created: 'Created', edited: 'Edited', submitted: 'Submitted for review', withdrawn: 'Withdrawn',
+  approved: 'Approved', rejected: 'Rejected', filed: 'Filed', locked: 'Locked', unlocked: 'Unlocked',
+  soft_deleted: 'Soft-deleted', restored: 'Restored', shared: 'Shared', share_revoked: 'Share revoked',
+  relationship_added: 'Relationship added', relationship_removed: 'Relationship removed', superseded: 'Superseded',
+  tag_changed: 'Tag changed', character_link_changed: 'Character link changed',
+  imported: 'Imported', exported: 'Exported', sl_transfer: 'Second Life transfer',
+}
+
 /** Append-only, Document-owned history. */
 export const DocumentProvenanceEvents: CollectionConfig = {
   slug: 'document-provenance-events',
@@ -25,20 +36,11 @@ export const DocumentProvenanceEvents: CollectionConfig = {
       type: 'select',
       required: true,
       index: true,
-      options: [
-        { label: 'Created', value: 'created' }, { label: 'Edited', value: 'edited' },
-        { label: 'Submitted for review', value: 'submitted' }, { label: 'Filed', value: 'filed' },
-        { label: 'Approved', value: 'approved' }, { label: 'Rejected', value: 'rejected' },
-        { label: 'Locked', value: 'locked' }, { label: 'Unlocked', value: 'unlocked' },
-        { label: 'Moved', value: 'moved' }, { label: 'Copied', value: 'copied' },
-        { label: 'Shared', value: 'shared' }, { label: 'Relationship added', value: 'relationship-added' },
-        { label: 'Relationship removed', value: 'relationship-removed' }, { label: 'Deleted', value: 'deleted' },
-        { label: 'Restored', value: 'restored' }, { label: 'Copied from', value: 'copied_from' },
-        { label: 'Copied to', value: 'copied_to' }, { label: 'Share revoked', value: 'share_revoked' },
-        { label: 'Relationship added (canonical)', value: 'relationship_added' }, { label: 'Relationship removed (canonical)', value: 'relationship_removed' },
-        { label: 'Character link changed', value: 'character_link_changed' }, { label: 'Tag changed', value: 'tag_changed' },
-        { label: 'Superseded', value: 'superseded' }, { label: 'Withdrawn', value: 'withdrawn' }, { label: 'Soft-deleted', value: 'soft_deleted' },
-      ],
+      // P05R-T04 G: exactly the Architecture Contract's minimum event list
+      // (imported/exported/sl_transfer/withdrawn added; moved/copied*/deleted
+      // and the kebab spellings pruned after a stored-row check showed zero
+      // rows used them; shared/share_revoked reserved but unused).
+      options: PROVENANCE_EVENT_TYPES.map((value) => ({ label: EVENT_LABELS[value], value })),
     },
     { name: 'occurredAt', type: 'date', required: true, index: true, defaultValue: () => new Date().toISOString() },
     { name: 'context', type: 'json', required: false, admin: { description: 'Structured before/after or workflow context.' } },

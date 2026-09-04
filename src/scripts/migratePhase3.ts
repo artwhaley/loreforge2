@@ -96,7 +96,7 @@ const updateDomainRelation = async (collection: string, doc: Record<string, unkn
 const rootByDomain = new Map<number, number>()
 for (const [legacyTenantId, domainId] of mappings) {
   const roots = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domainId } }, { systemManaged: { equals: true } }, { parent: { equals: null } }] }, depth: 0, limit: 1 })
-  const root = roots.docs[0] ?? await payload.create({ collection: 'folders', draft: false, data: { domain: domainId, tenant: legacyTenantId, name: 'Domain Root', parent: null, systemManaged: true, filingPolicy: 'inherit' }, depth: 0 })
+  const root = roots.docs[0] ?? await payload.create({ collection: 'folders', draft: false, data: { domain: domainId, tenant: legacyTenantId, name: 'Domain Root', parent: null, systemManaged: true, filingPolicy: 'inherit', publicAccess: 'inherit' }, depth: 0 })
   rootByDomain.set(domainId, Number(root.id))
 }
 

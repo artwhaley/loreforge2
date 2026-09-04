@@ -65,7 +65,9 @@ export async function detachDocumentCharacterLink(args: { payload: Payload; doma
     if (link.requiredByCreate) throw new Error('The required Prepared by credit cannot be removed.')
     await payload.delete({ collection: 'document-character-links', id: link.id, overrideAccess: true })
   }
-  if (existing.docs.length) await recordDocumentProvenance({ payload, domainId, documentId, eventType: 'character_link_changed', actorUserId: actor.userId, actorCharacterId: actor.characterId, context: { action: 'detached', kind, characterId: Number(characterId) } })
+  // P05R-T04 G: detach mirrors attach's context shape (kind, characterId,
+  // relationshipLabel for concerns) so timelines read symmetrically.
+  if (existing.docs.length) await recordDocumentProvenance({ payload, domainId, documentId, eventType: 'character_link_changed', actorUserId: actor.userId, actorCharacterId: actor.characterId, context: { action: 'detached', kind, characterId: Number(characterId), relationshipLabel: kind === 'concerns' ? String(existing.docs[0].relationshipLabel ?? '').trim() || null : null } })
 }
 
 export async function ensurePreparedBy(args: { payload: Payload; domainId: number | string; documentId: number | string; characterId: number | string; actor: LinkActor; skipAuthorization?: boolean }) {
@@ -103,6 +105,9 @@ export async function detachDocumentTag(args: { payload: Payload; domainId: numb
   await documentInDomain(payload, documentId, domainId)
   if (!args.skipAuthorization) await requireDomainAdmin(payload, actor, domainId)
   const existing = await payload.find({ collection: 'document-tags', where: { and: [{ document: { equals: documentId } }, { tag: { equals: tagId } }] }, depth: 0, limit: 20, overrideAccess: true })
+  const tag = await payload.findByID({ collection: 'tags', id: tagId, depth: 0, overrideAccess: true }).catch(() => null)
+  const tagName = String(tag ? (tag as { name?: unknown }).name ?? '' : '')
   for (const link of existing.docs) await payload.delete({ collection: 'document-tags', id: link.id, overrideAccess: true })
-  if (existing.docs.length) await recordDocumentProvenance({ payload, domainId, documentId, eventType: 'tag_changed', actorUserId: actor.userId, actorCharacterId: actor.characterId, context: { action: 'detached', tagId: Number(tagId) } })
+  // P05R-T04 G: detach mirrors attach's context shape (tagId + tagName).
+  if (existing.docs.length) await recordDocumentProvenance({ payload, domainId, documentId, eventType: 'tag_changed', actorUserId: actor.userId, actorCharacterId: actor.characterId, context: { action: 'detached', tagId: Number(tagId), tagName } })
 }

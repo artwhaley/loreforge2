@@ -36,8 +36,11 @@ export default async function EditDocumentPage({ params }: Props) {
     (await import('@/lib/payload')).getLorePayload(),
   ])
   const characterLinks = await getDocumentCharacterLinks(payload, doc.id)
-  const preparedBy = characterLinks.docs.find((link) => link.kind === 'prepared_by')?.character
-  const preparedByLabel = preparedBy && typeof preparedBy === 'object' ? preparedBy.name : 'No Character credit'
+  // P05R-T04 I: render ALL Prepared-by credits in deterministic order (by
+  // link id) — services can store more than one, and showing only the first
+  // would misrepresent the record.
+  const preparedByLinks = characterLinks.docs.filter((link) => link.kind === 'prepared_by').sort((a, b) => Number(a.id) - Number(b.id))
+  const preparedByLabel = preparedByLinks.map((link) => typeof link.character === 'object' && link.character ? link.character.name : `Character ${String(link.character)}`).join(', ') || 'No Character credit'
   const concerns = characterLinks.docs
     .filter((link) => link.kind === 'concerns')
     .flatMap((link) => {

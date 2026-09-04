@@ -503,10 +503,27 @@ export interface PermissionRule {
     | 'read'
     | 'create_document'
     | 'edit_document'
+    | 'submit_document'
+    | 'file_document'
+    | 'approve_document'
+    | 'lock_document'
+    | 'unlock_document'
+    | 'delete_document'
+    | 'restore_document'
+    | 'share_document'
+    | 'export_document'
+    | 'manage_folders'
+    | 'manage_templates'
+    | 'manage_types_tags'
     | 'manage_access'
+    | 'manage_members'
+    | 'manage_claims'
     | 'manage_roles'
     | 'assign_roles'
-    | 'assign_subordinates';
+    | 'assign_subordinates'
+    | 'manage_subdomain'
+    | 'manage_domain_appearance'
+    | 'manage_notices';
   effect: 'grant' | 'deny';
   active?: boolean | null;
   actorUser: number | User;
@@ -534,6 +551,7 @@ export interface Folder {
    */
   systemManaged?: boolean | null;
   filingPolicy: 'inherit' | 'direct-file' | 'review-required';
+  publicAccess: 'inherit' | 'private' | 'public';
   updatedAt: string;
   createdAt: string;
 }
@@ -549,17 +567,14 @@ export interface Document {
   domain?: (number | null) | Domain;
   tenant?: (number | null) | Tenant;
   documentType: number | DocumentType;
-  /**
-   * Archive folder. Leave empty to file at the root.
-   */
-  folder?: (number | null) | Folder;
+  folder: number | Folder;
   title: string;
   /**
    * Canonical Markdown body. Presentation (theme) is applied by the tenant, never stored here.
    */
   body: string;
   origin: 'web-editor' | 'markdown-import' | 'form';
-  sourceKind: 'web' | 'markdown-import' | 'form' | 'copy' | 'correspondence' | 'second-life';
+  sourceKind: 'web' | 'markdown-import' | 'form' | 'correspondence' | 'second-life';
   lifecycle: 'draft' | 'pending_review' | 'filed' | 'locked';
   publicAccess: 'inherit' | 'private' | 'public';
   softDeletedAt?: string | null;
@@ -659,28 +674,24 @@ export interface DocumentProvenanceEvent {
     | 'created'
     | 'edited'
     | 'submitted'
-    | 'filed'
+    | 'withdrawn'
     | 'approved'
     | 'rejected'
+    | 'filed'
     | 'locked'
     | 'unlocked'
-    | 'moved'
-    | 'copied'
-    | 'shared'
-    | 'relationship-added'
-    | 'relationship-removed'
-    | 'deleted'
+    | 'soft_deleted'
     | 'restored'
-    | 'copied_from'
-    | 'copied_to'
+    | 'shared'
     | 'share_revoked'
     | 'relationship_added'
     | 'relationship_removed'
-    | 'character_link_changed'
-    | 'tag_changed'
     | 'superseded'
-    | 'withdrawn'
-    | 'soft_deleted';
+    | 'tag_changed'
+    | 'character_link_changed'
+    | 'imported'
+    | 'exported'
+    | 'sl_transfer';
   occurredAt: string;
   /**
    * Structured before/after or workflow context.
@@ -1430,6 +1441,7 @@ export interface FoldersSelect<T extends boolean = true> {
   sortOrder?: T;
   systemManaged?: T;
   filingPolicy?: T;
+  publicAccess?: T;
   updatedAt?: T;
   createdAt?: T;
 }

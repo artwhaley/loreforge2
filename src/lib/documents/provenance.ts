@@ -1,12 +1,20 @@
 import type { Payload } from 'payload'
 
 
-export type ProvenanceEventType =
-  | 'created' | 'edited' | 'submitted' | 'filed' | 'approved' | 'rejected'
-  | 'locked' | 'unlocked' | 'moved' | 'copied' | 'shared'
-  | 'copied_from' | 'copied_to' | 'share_revoked' | 'relationship-added' | 'relationship-removed'
-  | 'relationship_added' | 'relationship_removed' | 'character_link_changed' | 'tag_changed' | 'superseded'
-  | 'withdrawn' | 'soft_deleted' | 'deleted' | 'restored'
+// P05R-T04 G: the vocabulary is exactly the Architecture Contract's
+// minimum event list. `shared`/`share_revoked` stay reserved but unused
+// (CC-2026-09-03-04); `moved`/`copied`/`copied_from`/`copied_to`/`deleted`
+// and the kebab spellings were pruned (stored-row check: zero rows used them).
+export const PROVENANCE_EVENT_TYPES = [
+  'created', 'edited', 'submitted', 'withdrawn', 'approved', 'rejected',
+  'filed', 'locked', 'unlocked', 'soft_deleted', 'restored',
+  'shared', 'share_revoked',
+  'relationship_added', 'relationship_removed', 'superseded',
+  'tag_changed', 'character_link_changed',
+  'imported', 'exported', 'sl_transfer',
+] as const
+
+export type ProvenanceEventType = (typeof PROVENANCE_EVENT_TYPES)[number]
 
 export type ProvenanceContext = Record<string, unknown>
 
@@ -61,26 +69,24 @@ export function describeProvenanceEvent(eventType: ProvenanceEventType, context?
     case 'created': return 'created this record'
     case 'edited': return 'edited the record'
     case 'submitted': return 'submitted the record for review'
+    case 'withdrawn': return 'withdrew the record from review'
     case 'filed': return 'filed the record'
     case 'approved': return 'approved the record'
     case 'rejected': return context?.note ? `returned the record to Draft: ${String(context.note)}` : 'returned the record to Draft'
     case 'locked': return 'locked the record'
     case 'unlocked': return 'unlocked the record'
-    case 'moved': return context?.folderName ? `moved the record to ${String(context.folderName)}` : 'moved the record'
-    case 'copied': return 'created an independent copy of the record'
-    case 'copied_from': return 'created an independent copy of the record'
-    case 'copied_to': return 'was copied to another Domain'
+    case 'soft_deleted': return 'soft-deleted the record'
+    case 'restored': return 'restored the record'
     case 'shared': return 'shared the record'
     case 'share_revoked': return 'revoked a record share'
     case 'character_link_changed': return context?.action === 'detached' ? 'removed a Character link' : 'added a Character link'
     case 'tag_changed': return context?.action === 'detached' ? 'removed a tag' : 'added a tag'
-    case 'relationship-added': return 'added a record relationship'
-    case 'relationship-removed': return 'removed a record relationship'
     case 'relationship_added': return 'added a record relationship'
     case 'relationship_removed': return 'removed a record relationship'
     case 'superseded': return context?.supersedingDocumentId ? 'was superseded by a newer record' : 'superseded an older record'
-    case 'deleted': return 'soft-deleted the record'
-    case 'restored': return 'restored the record'
+    case 'imported': return 'imported the record'
+    case 'exported': return 'exported the record'
+    case 'sl_transfer': return 'transferred the record across Second Life'
     default: return 'changed the record'
   }
 }

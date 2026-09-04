@@ -39,11 +39,13 @@ export default async function RecordsPage({ params, searchParams }: Props) {
     payload.find({ collection: 'document-types', where: { domain: { equals: tenant.id } }, depth: 0, limit: 500, sort: 'name' }),
   ])
 
+  // P05R-T04 I: keep every Prepared-by credit, joined deterministically by
+  // link id so no duplicate-credit record shows only its first author.
   const preparedBy = new Map<number, string>()
-  for (const link of preparedLinks.docs) {
+  for (const link of [...preparedLinks.docs].sort((a, b) => Number(a.id) - Number(b.id))) {
     const documentId = relationId(link.document)
     const character = typeof link.character === 'object' ? link.character : null
-    if (documentId !== null && character?.name) preparedBy.set(documentId, character.name)
+    if (documentId !== null && character?.name) preparedBy.set(documentId, [preparedBy.get(documentId), character.name].filter(Boolean).join(', '))
   }
   const tree = buildFolderTree(folders)
   const toExplorerFolder = (node: (typeof tree)[number]): ExplorerFolder => ({

@@ -3,7 +3,6 @@ import type { CollectionConfig } from 'payload'
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
 import { canAccessDocument } from '@/lib/authorization/documentAccess'
 import { assertLifecycleTransition, canEditDocumentBody, type Lifecycle } from '@/lib/documents/lifecycle'
-import { ensurePreparedBy } from '@/lib/documents/links'
 
 const relationId = (value: unknown): number | null => value && typeof value === 'object' && 'id' in value ? Number((value as { id: number | string }).id) : value === null || value === undefined || value === '' ? null : Number(value)
 
@@ -99,25 +98,27 @@ export const Documents: CollectionConfig = {
         if (operation === 'create' && !context?.allowSystemCreate && !context?.allowUserCreate && !context?.preparedByCharacterId) {
           throw new Error('Document creation requires an explicit authoring context.')
         }
+        // P05R-T04 J (CC-2026-09-03-05): creating WITHOUT an acting Character
+        // (no Prepared-by credit) is reserved for Domain Owners and explicit
+        // Domain Admin user paths. Ordinary members must create through an
+        // acting Character and therefore always carry the credit.
+        if (operation === 'create' && context?.allowUserCreate && !context?.preparedByCharacterId) {
+          const actorUserId = typeof context.actorUserId === 'number' || typeof context.actorUserId === 'string' ? context.actorUserId : req.user?.id
+          if (!actorUserId || !domainId) throw new Error('Document creation without an acting Character requires a verified manager.')
+          const authorized = await authorizeInterimOperation(req.payload, { userId: actorUserId }, domainId)
+          if (authorized !== true) throw new Error('Ordinary members must create through an acting Character; only the Domain Owner or a Domain Admin may create without one.')
+        }
         return data
       },
     ],
-    afterChange: [async ({ doc, operation, req }) => {
-      const context = req.context as Record<string, unknown> | undefined
-      const preparedByCharacterId = context?.preparedByCharacterId
-      const domainId = relationId(doc.domain)
-      if (operation === 'create' && domainId && preparedByCharacterId) {
-        await ensurePreparedBy({
-          payload: req.payload,
-          domainId,
-          documentId: doc.id,
-          characterId: Number(preparedByCharacterId),
-          actor: { userId: Number(req.user?.id ?? context?.actorUserId ?? 0), characterId: Number(preparedByCharacterId) },
-          skipAuthorization: true,
-        })
-      }
-      return doc
-    }],
+    // NOTE: the Prepared-by credit is applied by the application actions AFTER
+    // the create commits (archive.ts calls ensurePreparedBy explicitly). It
+    // cannot run inside an afterChange hook on this adapter: with real
+    // per-operation transactions enabled (P05R-T02 B), hook-inner payload
+    // calls neither see the just-created row (it is uncommitted) nor begin
+    // their own nested transaction (single-connection libsql refuses with
+    // SQLITE_BUSY). The preparedByCharacterId context flag still marks the
+    // create as Character-authored so the J gate and audit stay intact.
   },
   fields: [
     {
@@ -147,10 +148,9 @@ export const Documents: CollectionConfig = {
       type: 'relationship',
       relationTo: 'folders',
       index: true,
-      required: false,
-      admin: {
-        description: 'Archive folder. Leave empty to file at the root.',
-      },
+      // P05R-T04 A: genuinely required — root filing stores the system-managed
+      // Domain root Folder explicitly (the picker defaults to it), never null.
+      required: true,
     },
     {
       name: 'title',
@@ -186,7 +186,6 @@ export const Documents: CollectionConfig = {
         { label: 'Web', value: 'web' },
         { label: 'Markdown import', value: 'markdown-import' },
         { label: 'Form', value: 'form' },
-        { label: 'Copy', value: 'copy' },
         { label: 'Correspondence', value: 'correspondence' },
         { label: 'Second Life', value: 'second-life' },
       ],

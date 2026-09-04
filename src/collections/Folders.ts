@@ -88,5 +88,9 @@ export const Folders: CollectionConfig = {
     },
     { name: 'systemManaged', type: 'checkbox', defaultValue: false, admin: { description: 'Domain root folders are protected from normal deletion or movement.' } },
     { name: 'filingPolicy', type: 'select', required: true, defaultValue: 'inherit', options: [{ label: 'Inherit', value: 'inherit' }, { label: 'Direct file', value: 'direct-file' }, { label: 'Review required', value: 'review-required' }] },
+    // P05R-T04 B: canonical field only — public-read behavior is owned by
+    // P08-T02. Documents inherit from their Folder; the Folder defaults to the
+    // Domain policy, which is 'inherit' (i.e. not public) until P08 decides.
+    { name: 'publicAccess', type: 'select', required: true, defaultValue: 'inherit', options: [{ label: 'Inherit', value: 'inherit' }, { label: 'Private', value: 'private' }, { label: 'Public', value: 'public' }] },
   ],
 }

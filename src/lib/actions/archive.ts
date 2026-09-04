@@ -12,7 +12,7 @@ import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { canSupersedeDocument, resolveFilingPolicy, type FilingPolicy } from '@/lib/documents/lifecycle'
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
-import { attachDocumentCharacterLink, attachDocumentTag, findOrCreateDomainTag } from '@/lib/documents/links'
+import { attachDocumentCharacterLink, attachDocumentTag, ensurePreparedBy, findOrCreateDomainTag } from '@/lib/documents/links'
 import { addDocumentRelationship, runInTransaction } from '@/lib/documents/relationships'
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
 import { domainAndIdWhere } from '@/lib/tenant/scope'
@@ -24,10 +24,12 @@ type MemberTenant = {
   tenant: Domain | Tenant
   basePath: string
   legacyTenantId?: number
+  /** Domain Owner or active Domain Admin (interim authorization). */
+  isManager: boolean
 }
 
 export type DocumentEditorActionState = {
-  error?: 'missing' | 'type' | 'authorization' | 'concerns' | 'supersede-eligibility'
+  error?: 'missing' | 'type' | 'authorization' | 'concerns' | 'supersede-eligibility' | 'character'
   values?: {
     title: string
     body: string
@@ -112,7 +114,8 @@ async function getMemberTenant(tenantSlug: string): Promise<MemberTenant | null>
           limit: 1,
         })
       : { docs: [] }
-    if (Number(ownerId) !== Number(user.id) && domainAdmins.docs.length === 0 && member.docs.length === 0) return null
+    const isManager = Number(ownerId) === Number(user.id) || domainAdmins.docs.length > 0
+    if (!isManager && member.docs.length === 0) return null
 
     const legacy = await payload.find({ collection: 'tenants', where: { slug: { equals: tenantSlug } }, depth: 0, limit: 1 })
     return {
@@ -121,6 +124,7 @@ async function getMemberTenant(tenantSlug: string): Promise<MemberTenant | null>
       tenant: domain,
       basePath: `/domain/${domain.slug}`,
       legacyTenantId: legacy.docs[0]?.id,
+      isManager,
     }
   }
 
@@ -138,28 +142,36 @@ async function getMemberTenant(tenantSlug: string): Promise<MemberTenant | null>
   })
   if (!memberships.docs[0]) return null
 
-  return { payload, user: { id: Number(user.id) }, tenant, basePath: `/tenant/${tenant.slug}`, legacyTenantId: tenant.id }
+  return { payload, user: { id: Number(user.id) }, tenant, basePath: `/tenant/${tenant.slug}`, legacyTenantId: tenant.id, isManager: false }
 }
 
-/** Verify a folder belongs to the tenant, returning its id or null. */
+/**
+ * Resolve the destination Folder, always to a real id (P05R-T04 A): an empty
+ * or unresolvable picker value falls back to the system-managed Domain root,
+ * so Documents never file against a null Folder. Throws only when the Domain
+ * has no root at all, which is a broken Domain, not a user error.
+ */
 async function tenantFolderId(
   payload: MemberTenant['payload'],
   domainId: number,
   legacyTenantId: number | undefined,
   raw: string | null,
-): Promise<number | null> {
-  const id = raw ? Number(raw) : NaN
-  if (!Number.isFinite(id) || id <= 0) {
+): Promise<number> {
+  const rootFolderId = async () => {
     const roots = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domainId } }, { systemManaged: { equals: true } }, { parent: { equals: null } }] }, depth: 0, limit: 1 })
-    return roots.docs[0]?.id ?? null
+    const root = roots.docs[0]
+    if (!root) throw new Error('The Domain has no system-managed root folder.')
+    return Number(root.id)
   }
+  const id = raw ? Number(raw) : NaN
+  if (!Number.isFinite(id) || id <= 0) return rootFolderId()
   const found = await payload.find({
     collection: 'folders',
     where: { and: [{ or: [{ domain: { equals: domainId } }, ...(legacyTenantId ? [{ tenant: { equals: legacyTenantId } }] : [])] }, { id: { equals: id } }] },
     depth: 0,
     limit: 1,
   })
-  return found.docs[0] ? id : null
+  return found.docs[0] ? id : rootFolderId()
 }
 
 function recordsPath(ctx: Pick<MemberTenant, 'basePath'>) {
@@ -176,6 +188,10 @@ export async function createDocumentAction(formData: FormData): Promise<void> {
   const { payload, user, tenant } = ctx
   const activeContext = await getActiveContext()
   const activeCharacterId = activeContext.tenant?.slug === tenantSlug ? activeContext.activeCharacter?.id : undefined
+  // P05R-T04 J (CC-2026-09-03-05): ordinary members must create through an
+  // acting Character (which always carries the Prepared-by credit); only the
+  // Domain Owner / Domain Admin may create without one.
+  if (!activeCharacterId && !ctx.isManager) redirect(`/domain/${tenantSlug}/records?error=character`)
   const documentType = await plainTextTypeId(payload, tenant.id)
   if (!documentType) redirect(`/domain/${tenantSlug}/records/new?error=type`)
   const folder = await tenantFolderId(payload, tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
@@ -199,6 +215,10 @@ export async function createDocumentAction(formData: FormData): Promise<void> {
     },
   })
   await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: created.id, eventType: 'created', actorUserId: user.id, actorCharacterId: activeCharacterId, revisionId: await latestDocumentRevisionId(payload, created.id) })
+  // P05R-T04 J: the acting Character's non-removable Prepared-by credit is
+  // applied AFTER the create commits — an afterChange hook cannot write on
+  // this adapter while the create's own transaction is open (P05R-T02 B).
+  if (activeCharacterId) await ensurePreparedBy({ payload, domainId: tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: user.id, characterId: activeCharacterId } })
   redirect(`${ctx.basePath}/documents/${created.id}/edit`)
 }
 
@@ -215,6 +235,10 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
 
   const context = await getActiveContext()
   const activeCharacterId = context.tenant?.slug === tenantSlug ? context.activeCharacter?.id : undefined
+  // P05R-T04 J (CC-2026-09-03-05): ordinary members must create through an
+  // acting Character (which always carries the Prepared-by credit); only the
+  // Domain Owner / Domain Admin may create without one.
+  if (!activeCharacterId && !ctx.isManager) return { error: 'character', values }
   const concernEntries = parseConcernLinks(values.concernLinks)
   if (!concernEntries) return { error: 'concerns', values }
   const folder = await tenantFolderId(ctx.payload, ctx.tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
@@ -266,6 +290,10 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
     return created
   }
   const created = superseding ? await runInTransaction(ctx.payload, (transactionID) => createAndRelate(transactionID)) : await createAndRelate(null)
+  // P05R-T04 J: the acting Character's non-removable Prepared-by credit is
+  // applied AFTER the create commits — an afterChange hook cannot write on
+  // this adapter while the create's own transaction is open (P05R-T02 B).
+  if (activeCharacterId) await ensurePreparedBy({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: ctx.user.id, characterId: activeCharacterId } })
   if (interim === true) {
     for (const entry of concernEntries) {
       let characterId = entry.characterId
@@ -300,7 +328,7 @@ export async function createFolderAction(formData: FormData): Promise<void> {
   await payload.create({
     collection: 'folders',
     draft: false,
-    data: { domain: tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), name, parent, filingPolicy: 'inherit' },
+    data: { domain: tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), name, parent, filingPolicy: 'inherit', publicAccess: 'inherit' },
   })
   revalidatePath(recordsPath(ctx))
 }
@@ -326,6 +354,10 @@ export async function importMarkdownAction(formData: FormData): Promise<void> {
   const { payload, user, tenant } = ctx
   const activeContext = await getActiveContext()
   const activeCharacterId = activeContext.tenant?.slug === tenantSlug ? activeContext.activeCharacter?.id : undefined
+  // P05R-T04 J (CC-2026-09-03-05): ordinary members must create through an
+  // acting Character (which always carries the Prepared-by credit); only the
+  // Domain Owner / Domain Admin may create without one.
+  if (!activeCharacterId && !ctx.isManager) redirect(`${ctx.basePath}/records?error=character`)
   const documentType = await plainTextTypeId(payload, tenant.id)
   if (!documentType) redirect(`/domain/${tenantSlug}/records?error=type`)
   const folder = await tenantFolderId(payload, tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
@@ -348,6 +380,8 @@ export async function importMarkdownAction(formData: FormData): Promise<void> {
     },
   })
   await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: created.id, eventType: 'created', actorUserId: user.id, actorCharacterId: activeCharacterId, revisionId: await latestDocumentRevisionId(payload, created.id), context: { sourceKind: 'markdown-import' } })
+  // P05R-T04 J: applied after the create commits (see createDocumentAction).
+  if (activeCharacterId) await ensurePreparedBy({ payload, domainId: tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: user.id, characterId: activeCharacterId } })
   redirect(`${ctx.basePath}/documents/${created.id}`)
 }
 

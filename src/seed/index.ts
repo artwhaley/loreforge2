@@ -622,6 +622,7 @@ for (const [tenantSlug, files] of Object.entries(FOLDER_TREES)) {
         name: file.name,
         parent: file.parentPath ? (folderIds[tenantSlug][file.parentPath] ?? null) : null,
         filingPolicy: 'inherit',
+        publicAccess: 'inherit',
       },
     })
     folderIds[tenantSlug][file.path] = created.id
@@ -633,7 +634,7 @@ for (const [tenantSlug, files] of Object.entries(FOLDER_TREES)) {
 const rootFolderIds: Record<string, number> = {}
 for (const [domainSlug, domainRef] of Object.entries(domainsBySlug)) {
   const existingRoot = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domainRef.id } }, { systemManaged: { equals: true } }, { parent: { equals: null } }] }, depth: 0, limit: 1 })
-  const root = existingRoot.docs[0] ?? await payload.create({ collection: 'folders', draft: false, data: { domain: domainRef.id, tenant: domainRef.tenantId ?? null, name: 'Domain Root', parent: null, systemManaged: true, filingPolicy: 'inherit' } })
+  const root = existingRoot.docs[0] ?? await payload.create({ collection: 'folders', draft: false, data: { domain: domainRef.id, tenant: domainRef.tenantId ?? null, name: 'Domain Root', parent: null, systemManaged: true, filingPolicy: 'inherit', publicAccess: 'inherit' } })
   rootFolderIds[domainSlug] = root.id
   const topLevel = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domainRef.id } }, { parent: { equals: null } }] }, depth: 0, limit: 500 })
   for (const folder of topLevel.docs) {
@@ -664,7 +665,7 @@ for (const fixture of arFolderFixtures) {
   const parentId = fixture.parent ? arFolderIds[fixture.parent] : rootFolderIds.ar
   const subdomain = subdomainsByKey[`ar:${fixture.subdomain}`]
   const existing = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domainsBySlug.ar.id } }, { name: { equals: fixture.name } }, { parent: { equals: parentId } }] }, depth: 0, limit: 1 })
-  const folder = existing.docs[0] ?? await payload.create({ collection: 'folders', draft: false, data: { domain: domainsBySlug.ar.id, tenant: domainsBySlug.ar.tenantId ?? null, name: fixture.name, parent: parentId, subdomain: subdomain?.id ?? null, systemManaged: false, filingPolicy: 'inherit' } })
+  const folder = existing.docs[0] ?? await payload.create({ collection: 'folders', draft: false, data: { domain: domainsBySlug.ar.id, tenant: domainsBySlug.ar.tenantId ?? null, name: fixture.name, parent: parentId, subdomain: subdomain?.id ?? null, systemManaged: false, filingPolicy: 'inherit', publicAccess: 'inherit' } })
   arFolderIds[fixture.path] = folder.id
 }
 

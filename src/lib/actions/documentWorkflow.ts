@@ -83,7 +83,7 @@ export async function softDeleteDocumentAction(formData: FormData): Promise<void
     try { await requireInterimWorkflowAuthority(ctx.payload, ctx.userId, ctx.domain.id) } catch { redirect(`/domain/${tenantSlug}/records?error=forbidden`) }
   }
   await ctx.payload.update({ collection: 'documents', id: document.id, data: { softDeletedAt: new Date().toISOString(), softDeletedBy: ctx.userId }, depth: 0 })
-  await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.domain.id, documentId: document.id, eventType: 'deleted', actorUserId: ctx.userId, actorCharacterId: ctx.actorCharacterId, context: { soft: true }, revisionId: await latestDocumentRevisionId(ctx.payload, document.id) })
+  await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.domain.id, documentId: document.id, eventType: 'soft_deleted', actorUserId: ctx.userId, actorCharacterId: ctx.actorCharacterId, context: { soft: true }, revisionId: await latestDocumentRevisionId(ctx.payload, document.id) })
   redirect(`/domain/${tenantSlug}/records`)
 }
 
