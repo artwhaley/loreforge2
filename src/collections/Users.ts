@@ -14,6 +14,13 @@ export const Users: CollectionConfig = {
       label: 'Display Name',
     },
     {
+      name: 'isPlatformAdmin',
+      type: 'checkbox',
+      defaultValue: false,
+      label: 'Platform administrator',
+      admin: { description: 'Explicit platform authority; every use is audited.' },
+    },
+    {
       name: 'slAvatarUUID',
       type: 'text',
       label: 'Second Life avatar UUID',
