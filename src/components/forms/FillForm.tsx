@@ -1,9 +1,10 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 
 import { submitReportFormAction, type FillField, type FormSubmitState } from '@/lib/actions/forms'
+import { FieldControl, type FieldValue } from './FieldControl'
 
 import styles from './FillForm.module.scss'
 
@@ -23,16 +24,31 @@ type Props = {
   submitLabel?: string
 }
 
+/** The initial answer snapshot applies each field's authored default. */
+function defaultsFor(fields: FillField[]): Record<string, FieldValue> {
+  const out: Record<string, FieldValue> = {}
+  for (const field of fields) {
+    if (field.default !== undefined) out[field.key] = field.default
+  }
+  return out
+}
+
 /**
- * Member-facing fill experience for a structured report form. Plain inputs
- * only (the five allowed field types); required validation happens again
- * server-side in submitReportFormAction, whose error state renders here.
+ * Member-facing fill experience for a structured report form. Every control
+ * renders through the shared FieldControl so what the Form Studio previews is
+ * exactly what a filer fills: label + help + default + sizing, including the
+ * live Character picker. Required validation happens again server-side in
+ * submitReportFormAction, whose error state renders here.
  */
 export function FillForm({ fields, tenantSlug, formId, submitLabel = 'Submit' }: Props) {
   const [state, formAction] = useActionState<FormSubmitState | null, FormData>(
     submitReportFormAction,
     null,
   )
+  const [answers, setAnswers] = useState<Record<string, FieldValue>>(() => defaultsFor(fields))
+  const change = (key: string) => (value: FieldValue) => {
+    setAnswers((current) => ({ ...current, [key]: value }))
+  }
 
   return (
     <form action={formAction} className={styles.wrap}>
@@ -48,63 +64,16 @@ export function FillForm({ fields, tenantSlug, formId, submitLabel = 'Submit' }:
         </p>
       ) : null}
 
-      {fields.map((field) => {
-        const inputId = `field-${field.key}`
-        return (
-          <div key={field.key} className={styles.field}>
-            <label htmlFor={inputId} className={styles.label}>
-              {field.label}
-              {field.required ? <span className={styles.req} aria-hidden="true"> *</span> : null}
-            </label>
-
-            {field.type === 'textarea' ? (
-              <textarea
-                id={inputId}
-                name={field.key}
-                className={styles.textarea}
-                required={field.required}
-                rows={5}
-              />
-            ) : field.type === 'select' ? (
-              <select
-                id={inputId}
-                name={field.key}
-                className={styles.select}
-                required={field.required}
-                defaultValue=""
-              >
-                <option value="" disabled>
-                  Choose…
-                </option>
-                {(field.options ?? []).map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            ) : field.type === 'checkbox' ? (
-              <span className={styles.checkboxRow}>
-                <input
-                  id={inputId}
-                  name={field.key}
-                  type="checkbox"
-                  className={styles.checkbox}
-                  value="yes"
-                />
-                <span>Yes</span>
-              </span>
-            ) : (
-              <input
-                id={inputId}
-                name={field.key}
-                type={field.type === 'date' ? 'date' : 'text'}
-                className={styles.input}
-                required={field.required}
-              />
-            )}
-          </div>
-        )
-      })}
+      {fields.map((field) => (
+        <FieldControl
+          key={field.key}
+          field={field}
+          name={field.key}
+          domainSlug={tenantSlug}
+          value={answers[field.key] ?? ''}
+          onValueChange={change(field.key)}
+        />
+      ))}
 
       <div className={styles.actions}>
         <SubmitButton label={submitLabel} />

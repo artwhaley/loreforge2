@@ -54,14 +54,21 @@ export default async function FormsPage({ params }: Props) {
           <p className={styles.empty}>No report forms have been set up for this Domain yet.</p>
         ) : (
           <ul className={styles.list}>
-            {forms.map((form) => (
-              <li key={form.id}>
-                <Link href={`${base}/forms/${form.id}`} className={styles.card}>
-                  <span className={styles.formTitle}>{form.name}</span>
-                  <span className={styles.meta}>{form.formSchema && typeof form.formSchema === 'object' && 'fields' in form.formSchema && Array.isArray(form.formSchema.fields) ? form.formSchema.fields.length : 0} fields</span>
-                </Link>
+            {forms.map((form) => {
+              const fieldCount = form.formSchema && typeof form.formSchema === 'object' && 'fields' in form.formSchema && Array.isArray(form.formSchema.fields) ? form.formSchema.fields.length : 0
+              const active = Boolean(form.active)
+              return (
+              <li key={form.id} className={styles.listItem}>
+                <div className={styles.card}>
+                  <div className={styles.cardMain}>
+                    {active ? <Link href={`${base}/forms/${form.id}`} className={styles.formTitleLink}>{form.name}</Link> : <span className={styles.formTitleMuted}>{form.name}</span>}
+                    <span className={styles.meta}>{fieldCount} fields · {active ? 'Active' : 'Inactive'}</span>
+                  </div>
+                  {canManageTemplates ? <span className={styles.manageActions}><Link href={`${base}/forms/${form.id}/edit`}>Edit</Link></span> : null}
+                </div>
               </li>
-            ))}
+              )
+            })}
           </ul>
         )}
       </section>

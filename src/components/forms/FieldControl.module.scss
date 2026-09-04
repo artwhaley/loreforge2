@@ -1,0 +1,78 @@
+.field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+/* Width emphasis: short/medium cap the input area, full spans the row. */
+.short {
+  max-width: 240px;
+}
+
+.medium {
+  max-width: 520px;
+}
+
+.label {
+  font-weight: 600;
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+
+.req {
+  color: #b04040;
+}
+
+.help {
+  font-size: 0.82rem;
+  color: var(--tenant-muted, #666);
+}
+
+.input,
+.select,
+.textarea {
+  font: inherit;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--tenant-border, #ccc);
+  border-radius: 4px;
+  background: var(--tenant-surface, #fff);
+  color: inherit;
+  width: 100%;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: 2px solid var(--tenant-accent, #7aa);
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    opacity: 0.75;
+    background: var(--tenant-surface-muted, #f4f3ee);
+    cursor: not-allowed;
+  }
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.checkboxRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+}
+
+.checkbox {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--tenant-primary, #243145);
+}
+
+.checkboxLabel {
+  font-size: 0.92rem;
+}

@@ -42,23 +42,18 @@ export default async function FillFormPage({ params }: Props) {
   const fillFields: FillField[] = []
   for (const field of schema.fields) {
     if (!ALLOWED.has(field.type)) continue
-    if (field.type === 'select') {
-      fillFields.push({
-        type: 'select',
-        key: field.key,
-        label: field.label ?? field.key,
-        required: Boolean(field.required),
-        options: field.options ?? [],
-      })
-    } else {
-      fillFields.push({
-        type: field.type,
-        key: field.key,
-        label: field.label ?? field.key,
-        required: Boolean(field.required),
-        help: field.help,
-      })
-    }
+    fillFields.push({
+      type: field.type,
+      key: field.key,
+      label: field.label ?? field.key,
+      required: Boolean(field.required),
+      ...(field.options && field.options.length > 0 ? { options: field.options } : {}),
+      help: field.help,
+      default: field.default,
+      width: field.width,
+      rows: field.rows,
+      relationshipLabel: field.relationshipLabel,
+    })
   }
 
   return (
