@@ -69,10 +69,10 @@ a2d0755dbabdb352e9736e47de1b7de907932c66fda78e9dcea526a713dddb2c  ./tickets/phas
 985ffeed382bef8e8b2fc6ee4d75c94ad50a89172ca9f37a65c5054936a03f7d  ./tickets/phase-07/00_PHASE_ORCHESTRATOR.md
 d322542a7c3a37a2291df288eb332bfcd55224cbe2c890af4e2e5080ff7e4977  ./tickets/phase-07/P07-GATE-review-gate-7.md
 386d1b4166ddf0ddf28b297a3b58852091963a1f5aefc003dcabacd7b2951ab8  ./tickets/phase-07/P07-T01-authorization-rule-model-and-evaluator.md
-85aefdffb4c8fe720545914d4eb92d55c0b88a04b49249224e770fc86596c504  ./tickets/phase-07/P07-T02-server-and-payload-enforcement.md
-bd62df4d9f407310148568877299113cd3c061543d01c8c0b76f539ddd61c06a  ./tickets/phase-07/P07-T03-role-defaults-hierarchy-and-scoped-authority.md
-0c023a7134c98b169efcaabe41e3f2c96c4b36f2ed38f798489c4d59b3210300  ./tickets/phase-07/P07-T04-folder-inheritance-direct-grants-and-explicit-denies.md
-272c55ad989790927be0b7b90f40d65e9991a8edc5c100d68155bac64eb6a8a6  ./tickets/phase-07/P07-T05-delegated-administration-and-role-creation-boundaries.md
+5cae1b04e350c39bfebac15c99d96fe9c4f7ccaf6acd5bcd356e5d01b8283cf5  ./tickets/phase-07/P07-T02-server-and-payload-enforcement.md
+5893794b23d3746dbd404b49eafdeccaba1a4c8764c72dc3bfe5cde8c65802c4  ./tickets/phase-07/P07-T03-role-defaults-hierarchy-and-scoped-authority.md
+4a0fe31eaaa9075f8f6ea64f562bcde196311f2f2d4eaecc25cac81688f1f45f  ./tickets/phase-07/P07-T04-folder-inheritance-direct-grants-and-explicit-denies.md
+ace14dfe90011246115b460336dcdec3926133b405ed99f6e3906ed2faa047ca  ./tickets/phase-07/P07-T05-delegated-administration-and-role-creation-boundaries.md
 970edbbfd308e6dafdea493f4842f90ab55f0177a4e1959b4e77cfd616534aa2  ./tickets/phase-08/00_PHASE_ORCHESTRATOR.md
 f130eb6b6dc2d112feb2d6a863af64e8fa79e4f6d7eeb3d35801fb413f64d6cb  ./tickets/phase-08/P08-GATE-review-gate-8.md
 dbeaeb82d600d4ef4c2d9b705b818ed7574d0c7650c30ff7807f0c7af46703c8  ./tickets/phase-08/P08-T01-theme-studio-productization-and-vocabulary.md

@@ -4,6 +4,7 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { recordDomainAudit } from '@/lib/domains/domainAudit'
 import { assertRoleHierarchy } from '@/lib/roles/invariants'
 
 const idOf = (value: unknown): number | null => {
@@ -36,6 +37,13 @@ export async function POST(request: Request) {
     const assignments = await payload.find({ collection: 'role-assignments', where: { and: [{ role: { equals: roleId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 5000 })
     for (const assignment of assignments.docs) await payload.update({ collection: 'role-assignments', id: assignment.id, data: { status: 'inactive' } })
     payload.logger.info(`Phase 5 role archived: actorUser=${user.id} operation=delete_role resource=${roleId}`)
+    // P05R-T05 C: Role creation/update is administration truth — archive it durably.
+    await recordDomainAudit({
+      payload, domainId: domain.id, eventType: 'role_changed', actorUser: user.id,
+      targetType: 'role', targetId: roleId,
+      action: 'archived',
+      context: { name: role.name, active: false, deactivatedAssignmentCount: assignments.docs.length },
+    }).catch((error: Error) => payload.logger.error(`domain audit write failed: ${error.message}`))
     return NextResponse.redirect(new URL(destination, request.url), 303)
   }
   const name = String(form.get('name') ?? '').trim()
@@ -57,6 +65,12 @@ export async function POST(request: Request) {
     )
     const created = await payload.create({ collection: 'roles', data: { domain: domain.id, subdomain: subdomainId, name, parentRole: parentRoleId, active: true, system: false } })
     payload.logger.info(`Phase 3 role created: actorUser=${user.id} operation=create_role resource=${created.id}`)
+    await recordDomainAudit({
+      payload, domainId: domain.id, eventType: 'role_changed', actorUser: user.id,
+      targetType: 'role', targetId: created.id,
+      action: 'created',
+      context: { name, subdomainId, parentRoleId },
+    }).catch((error: Error) => payload.logger.error(`domain audit write failed: ${error.message}`))
   } catch {
     // Keep the customer on the role manager with no schema/error details leaked.
   }

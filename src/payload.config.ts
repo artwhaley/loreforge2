@@ -10,6 +10,7 @@ import sharp from 'sharp'
 import { Documents } from './collections/Documents'
 import { DocumentTypes } from './collections/DocumentTypes'
 import { DocumentProvenanceEvents } from './collections/DocumentProvenanceEvents'
+import { DomainAuditEvents } from './collections/DomainAuditEvents'
 import { Characters } from './collections/Characters'
 import { CharacterClaimRequests } from './collections/CharacterClaimRequests'
 import { CharacterMergeRequests } from './collections/CharacterMergeRequests'
@@ -141,7 +142,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Characters, CharacterClaimRequests, CharacterMergeRequests, DomainCharacterContexts, DomainMemberships, Domains, DomainAdmins, Subdomains, Roles, RoleAssignments, PermissionRules, DocumentCharacterLinks, Tags, DocumentTags, DocumentRelationships, DocumentTypes, DocumentProvenanceEvents, Tenants, Memberships, Documents, Folders, Pages, Media],
+  collections: [Users, Characters, CharacterClaimRequests, CharacterMergeRequests, DomainCharacterContexts, DomainMemberships, Domains, DomainAdmins, Subdomains, Roles, RoleAssignments, PermissionRules, DocumentCharacterLinks, Tags, DocumentTags, DocumentRelationships, DocumentTypes, DocumentProvenanceEvents, DomainAuditEvents, Tenants, Memberships, Documents, Folders, Pages, Media],
   plugins: [formBuilder],
   editor: lexicalEditor(),
   db: sqliteAdapter({

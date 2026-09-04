@@ -85,6 +85,7 @@ export interface Config {
     'document-relationships': DocumentRelationship;
     'document-types': DocumentType;
     'document-provenance-events': DocumentProvenanceEvent;
+    'domain-audit-events': DomainAuditEvent;
     tenants: Tenant;
     memberships: Membership;
     documents: Document;
@@ -118,6 +119,7 @@ export interface Config {
     'document-relationships': DocumentRelationshipsSelect<false> | DocumentRelationshipsSelect<true>;
     'document-types': DocumentTypesSelect<false> | DocumentTypesSelect<true>;
     'document-provenance-events': DocumentProvenanceEventsSelect<false> | DocumentProvenanceEventsSelect<true>;
+    'domain-audit-events': DomainAuditEventsSelect<false> | DomainAuditEventsSelect<true>;
     tenants: TenantsSelect<false> | TenantsSelect<true>;
     memberships: MembershipsSelect<false> | MembershipsSelect<true>;
     documents: DocumentsSelect<false> | DocumentsSelect<true>;
@@ -718,6 +720,49 @@ export interface DocumentProvenanceEvent {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "domain-audit-events".
+ */
+export interface DomainAuditEvent {
+  id: number;
+  domain: number | Domain;
+  eventType:
+    | 'membership_changed'
+    | 'role_changed'
+    | 'role_assignment_changed'
+    | 'folder_access_changed'
+    | 'permission_rule_changed';
+  actorUser?: (number | null) | User;
+  actorCharacter?: (number | null) | Character;
+  /**
+   * Stable target kind, e.g. role, role-assignment, folder, membership.
+   */
+  targetType: string;
+  /**
+   * Stable target row id (or composite key) the event concerns.
+   */
+  targetId: string;
+  /**
+   * Short verb, e.g. added, deactivated, assigned, archived.
+   */
+  action: string;
+  occurredAt: string;
+  /**
+   * Server-generated structured change context; never client-supplied.
+   */
+  context?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "memberships".
  */
 export interface Membership {
@@ -1001,6 +1046,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'document-provenance-events';
         value: number | DocumentProvenanceEvent;
+      } | null)
+    | ({
+        relationTo: 'domain-audit-events';
+        value: number | DomainAuditEvent;
       } | null)
     | ({
         relationTo: 'tenants';
@@ -1373,6 +1422,23 @@ export interface DocumentProvenanceEventsSelect<T extends boolean = true> {
   context?: T;
   revisionId?: T;
   sourceDescriptor?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "domain-audit-events_select".
+ */
+export interface DomainAuditEventsSelect<T extends boolean = true> {
+  domain?: T;
+  eventType?: T;
+  actorUser?: T;
+  actorCharacter?: T;
+  targetType?: T;
+  targetId?: T;
+  action?: T;
+  occurredAt?: T;
+  context?: T;
   updatedAt?: T;
   createdAt?: T;
 }

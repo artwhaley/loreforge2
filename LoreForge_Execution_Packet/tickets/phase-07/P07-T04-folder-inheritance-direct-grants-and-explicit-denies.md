@@ -58,6 +58,7 @@ Complete practical folder/document permission administration including temporary
 - Do not introduce a new framework/provider/abstraction not authorized by the Architecture Contract.
 - Keep customer-facing language free of Payload/CMS schema terminology.
 - Preserve passing behavior outside this ticket; add regression tests for changed contracts.
+- All final authorization/role/folder/delegation mutations must write through the durable audit seam established in P05R-T05. Do not invent a second audit system.
 - Regenerate Payload types after schema changes.
 - Commit this ticket separately and write its execution note before proceeding.
 

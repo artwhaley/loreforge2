@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { runInTransaction } from '@/lib/db/transactions'
 import { canSupersedeDocument } from '@/lib/documents/lifecycle'
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
 import { assertRelationshipInput, assertSupersessionInvariants, type RelationshipKind, type SupersedesEdgeRow } from '@/lib/documents/relationshipInvariants'
@@ -12,34 +13,9 @@ const idOf = (value: unknown): number | null => {
 
 type RelationshipActor = { userId: number | string; characterId?: number | string | null }
 
-/**
- * Run `fn` inside one DB transaction. Every Payload operation inside `fn` must
- * pass `req: { transactionID }` so it joins instead of auto-committing (Payload
- * 3.88: Local API operations auto-begin/commit their own transaction unless a
- * transactionID is already present on the request). On failure the whole
- * transaction rolls back — no orphan successor, edge, lock, or provenance.
- */
-export async function runInTransaction<T>(payload: Payload, fn: (transactionID: number | string) => Promise<T>): Promise<T> {
-  const transactionID = await payload.db.beginTransaction()
-  if (transactionID === null || transactionID === undefined) {
-    // Adapter without live transaction support: document exact evidence and
-    // fall back to sequential execution (P05R-T02 B evidence note).
-    payload.logger.warn('runInTransaction: adapter returned no transactionID; running without a real transaction.')
-    return fn(0 as unknown as number)
-  }
-  try {
-    const result = await fn(transactionID)
-    await payload.db.commitTransaction(transactionID)
-    return result
-  } catch (error) {
-    try {
-      await payload.db.rollbackTransaction(transactionID)
-    } catch {
-      // Rollback failure is logged by the adapter; the original error wins.
-    }
-    throw error
-  }
-}
+// P05R-T05: runInTransaction moved to the shared src/lib/db/transactions
+// module so domain services can reuse it without importing the documents layer.
+export { runInTransaction }
 
 async function requireAdmin(payload: Payload, actor: RelationshipActor, domainId: number | string) {
   const authorized = await authorizeInterimOperation(payload, { userId: actor.userId, activeCharacterId: actor.characterId }, domainId)

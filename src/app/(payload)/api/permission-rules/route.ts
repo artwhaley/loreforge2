@@ -4,6 +4,7 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { recordDomainAudit } from '@/lib/domains/domainAudit'
 
 const idOf = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null
@@ -52,5 +53,14 @@ export async function POST(request: Request) {
   await saveAxis(readState, ['read'])
   await saveAxis(writeState, ['create_document', 'edit_document'])
   payload.logger.info(`P05-T00 audit: saved direct Folder Read/Write overrides domain=${domain.id} principalType=${principalType} principal=${principalRecord.id} folder=${folder.id} actorUser=${user.id}`)
+  // P05R-T05 C: direct Folder access grant/deny/inherit is durable admin truth.
+  // Context is server-generated from the sanctioned form states, never
+  // client-supplied.
+  await recordDomainAudit({
+    payload, domainId: domain.id, eventType: 'folder_access_changed', actorUser: user.id,
+    targetType: 'folder', targetId: folder.id,
+    action: 'saved',
+    context: { principalType, principalId: principalRecord.id, readState, writeState, capabilities: ['read', 'create_document', 'edit_document'] },
+  }).catch((error: Error) => payload.logger.error(`domain audit write failed: ${error.message}`))
   return NextResponse.redirect(new URL(destination, request.url), 303)
 }

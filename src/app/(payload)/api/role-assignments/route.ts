@@ -4,6 +4,7 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
+import { recordDomainAudit } from '@/lib/domains/domainAudit'
 import { assertRoleAssignment } from '@/lib/roles/invariants'
 
 const idOf = (value: unknown): number | null => {
@@ -39,10 +40,23 @@ export async function POST(request: Request) {
         { id: role.id, domainId: idOf(role.domain) ?? domain.id, subdomainId: idOf(role.subdomain), parentRoleId: idOf(role.parentRole) },
       )
       const existing = await payload.find({ collection: 'role-assignments', where: { and: [{ character: { equals: character.id } }, { role: { equals: role.id } }] }, depth: 0, limit: 1 })
+      // P05R-T05 C: assignments/removals are durable administrative truth.
       if (action === 'remove') {
-        if (existing.docs[0]) await payload.delete({ collection: 'role-assignments', id: existing.docs[0].id })
+        if (existing.docs[0]) {
+          await payload.delete({ collection: 'role-assignments', id: existing.docs[0].id })
+          await recordDomainAudit({
+            payload, domainId: domain.id, eventType: 'role_assignment_changed', actorUser: user.id,
+            targetType: 'role-assignment', targetId: existing.docs[0].id,
+            action: 'removed', context: { roleId: role.id, characterId: character.id, roleName: role.name },
+          }).catch((error: Error) => payload.logger.error(`domain audit write failed: ${error.message}`))
+        }
       } else if (!existing.docs[0]) {
-        await payload.create({ collection: 'role-assignments', data: { character: character.id, role: role.id, status: 'active', assignedBy: user.id } })
+        const created = await payload.create({ collection: 'role-assignments', data: { character: character.id, role: role.id, status: 'active', assignedBy: user.id } })
+        await recordDomainAudit({
+          payload, domainId: domain.id, eventType: 'role_assignment_changed', actorUser: user.id,
+          targetType: 'role-assignment', targetId: created.id,
+          action: 'assigned', context: { roleId: role.id, characterId: character.id, roleName: role.name },
+        }).catch((error: Error) => payload.logger.error(`domain audit write failed: ${error.message}`))
       }
       payload.logger.info(`P05-T00 audit: ${action === 'remove' ? 'removed' : 'assigned'} Role=${role.id} Character=${character.id} Domain=${domain.id} actorUser=${user.id}`)
     }
