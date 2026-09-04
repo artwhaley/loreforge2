@@ -35,11 +35,16 @@ export default async function FormsPage({ params }: Props) {
       switcherTenants={myTenants}
     >
       <section className={styles.panel}>
-        <h1 className={styles.title}>Report forms</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}><h1 className={styles.title}>Forms</h1><Link href={`${base}/forms/new`}>Create form</Link></div>
         <p className={styles.intro}>
-          Fill a structured form to generate a normal archive record, filed automatically in its
-          destination folder.
+          Build and fill structured forms that generate ordinary archive records.
         </p>
+
+        <nav aria-label="Templates and Forms" style={{ display: 'flex', gap: '.75rem', marginBottom: '1rem' }}>
+          <Link href={`${base}/forms`} aria-current="page">Forms</Link>
+          <Link href={`${base}/templates`}>Templates</Link>
+          <Link href={`${base}/document-types`}>Document Types</Link>
+        </nav>
 
         {forms.length === 0 ? (
           <p className={styles.empty}>No report forms have been set up for this Domain yet.</p>
@@ -48,8 +53,8 @@ export default async function FormsPage({ params }: Props) {
             {forms.map((form) => (
               <li key={form.id}>
                 <Link href={`${base}/forms/${form.id}`} className={styles.card}>
-                  <span className={styles.formTitle}>{form.title}</span>
-                  <span className={styles.meta}>{form.fields?.length ?? 0} fields</span>
+                  <span className={styles.formTitle}>{form.name}</span>
+                  <span className={styles.meta}>{form.formSchema && typeof form.formSchema === 'object' && 'fields' in form.formSchema && Array.isArray(form.formSchema.fields) ? form.formSchema.fields.length : 0} fields</span>
                 </Link>
               </li>
             ))}
