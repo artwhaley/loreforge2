@@ -70,6 +70,13 @@ adoption. Recorded as the authorized exception in `00_START_HERE.md`.
   the open transaction's rows.
 - (Follow-up) `submitReportFormAction` logs generation failures and returns a
   friendly message instead of surfacing a server crash.
+- (Follow-up, owner decision 2026-09-04) The `evaluate.ts` hardening — the
+  three resource `findByID` calls now pass `req: { transactionID }` when a
+  transaction id is supplied — was edited directly on top of the Phase 7
+  agent's uncommitted rewrite and left **unstaged**, so the agent's next
+  commit of that file carries it. It is inert today (no caller passes a
+  transaction id to `evaluatePermission` yet) and becomes active when the
+  Phase 7 patch wires `transactionID` through its callers.
 - Pre-corrective forms that are edited are re-laid-out by the auto-layout
   composer (their previously hand-written body templates are regenerated from
   the question list on save).
