@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { renderTemplate } from './generateDocument'
+import { renderNeutralTemplate, renderTemplate } from './generateDocument'
 
 describe('renderTemplate (form -> document generation seam)', () => {
   it('renders the fixture title template from fixture answers', () => {
@@ -52,5 +52,11 @@ describe('renderTemplate (form -> document generation seam)', () => {
   it('leaves unknown placeholders empty without throwing', () => {
     const out = renderTemplate('Hello {{no_such_field}}', {})
     assert.equal(out, 'Hello ')
+  })
+
+  it('strict neutral rendering rejects unknown tokens and escapes Markdown values', () => {
+    const template = { id: 1, name: 'Incident', kind: 'form' as const, titleTemplate: '{{title}}', bodyTemplate: '{{title}}', formSchema: { version: 1 as const, fields: [{ key: 'title', type: 'text' as const, label: 'Title' }] } }
+    assert.equal(renderNeutralTemplate(template, { title: '*unsafe*' }).body, '\\*unsafe\\*')
+    assert.throws(() => renderNeutralTemplate({ ...template, bodyTemplate: '{{missing}}' }, { title: 'ok' }), /Unknown template token/)
   })
 })

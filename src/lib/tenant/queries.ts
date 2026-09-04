@@ -2,7 +2,7 @@ import type { Where } from 'payload'
 
 import { getLorePayload } from '@/lib/payload'
 
-import type { Character, Document, Domain, DomainMembership, Folder, Form, Page, Tenant } from '@/payload-types'
+import type { Character, Document, Domain, DomainMembership, Folder, Page, Tenant, Template } from '@/payload-types'
 
 import { domainAndIdWhere, domainWhere } from './scope'
 
@@ -43,13 +43,13 @@ export async function getDocumentForTenant(
   return result.docs[0] ?? null
 }
 
-/** Forms owned by the tenant (structured report templates). */
-export async function getFormsForTenant(tenant: DomainRecord): Promise<Form[]> {
+/** Form Templates owned by the Domain (neutral LoreForge schema). */
+export async function getFormsForTenant(tenant: DomainRecord): Promise<Template[]> {
   const payload = await getLorePayload()
   const result = await payload.find({
-    collection: 'forms',
-    where: domainWhere(domainId(tenant)),
-    depth: 0,
+    collection: 'templates',
+    where: domainWhere(domainId(tenant), { kind: { equals: 'form' } }),
+    depth: 1,
     limit: 100,
     sort: 'title',
   })
@@ -59,11 +59,11 @@ export async function getFormsForTenant(tenant: DomainRecord): Promise<Form[]> {
 export async function getFormForTenant(
   tenant: DomainRecord,
   formId: number,
-): Promise<Form | null> {
+): Promise<Template | null> {
   const payload = await getLorePayload()
   const result = await payload.find({
-    collection: 'forms',
-    where: domainAndIdWhere(domainId(tenant), formId),
+    collection: 'templates',
+    where: { and: [domainAndIdWhere(domainId(tenant), formId), { kind: { equals: 'form' } }] },
     depth: 1,
     limit: 1,
   })

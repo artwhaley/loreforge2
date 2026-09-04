@@ -9,6 +9,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 
 import { generateDocumentFromSubmission, type FormAnswers } from '@/lib/forms/generateDocument'
+import { assertFormSchema, type FormFieldType } from '@/lib/forms/schema'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
 
 export type FormSubmitState = {
@@ -19,11 +20,12 @@ export type FormSubmitState = {
 
 /** A serialized form-field block safe to pass to the client fill form. */
 export type FillField = {
-  blockType: 'text' | 'textarea' | 'date' | 'select' | 'checkbox'
-  name: string
+  type: FormFieldType
+  key: string
   label: string
   required: boolean
   options?: Array<{ label: string; value: string }>
+  help?: string
 }
 
 /**
@@ -47,7 +49,7 @@ export async function submitReportFormAction(
   if (!user) redirect('/admin/login')
 
   const tenants = await payload.find({
-    collection: 'tenants',
+    collection: 'domains',
     where: { slug: { equals: tenantSlug } },
     depth: 0,
     limit: 1,
@@ -68,37 +70,40 @@ export async function submitReportFormAction(
   const activeContext = await getActiveContext()
   const activeCharacterId = activeContext.tenant?.slug === tenantSlug ? activeContext.activeCharacter?.id : undefined
 
-  // The form itself must belong to the active tenant.
+  // The Template itself must belong to the active Domain. Legacy plugin Forms
+  // are intentionally no longer a customer-facing submission surface.
   const forms = await payload.find({
-    collection: 'forms',
-    where: { and: [{ tenant: { equals: tenant.id } }, { id: { equals: formId } }] },
-    depth: 0,
+    collection: 'templates',
+    where: { and: [{ domain: { equals: tenant.id } }, { id: { equals: formId } }, { kind: { equals: 'form' } }, { active: { equals: true } }] },
+    depth: 1,
     limit: 1,
   })
   const form = forms.docs[0]
   if (!form) return { ok: false, message: 'Form not found.' }
 
+  const schema = assertFormSchema(form.formSchema)
+
   // Collect answers from the form's own field definitions (not raw formData —
   // only declared fields are read) and enforce required validation.
   const answers: FormAnswers = {}
   const missingFields: string[] = []
-  for (const field of form.fields ?? []) {
-    if (field.blockType === 'checkbox') {
-      answers[field.name] = formData.get(field.name) !== null
+  for (const field of schema.fields) {
+    if (field.type === 'checkbox') {
+      answers[field.key] = formData.get(field.key) !== null
       continue
     }
-    const raw = String(formData.get(field.name) ?? '').trim()
+    const raw = String(formData.get(field.key) ?? '').trim()
     if (field.required && !raw) {
-      missingFields.push(field.label ?? field.name)
+      missingFields.push(field.label ?? field.key)
       continue
     }
-    answers[field.name] = raw
+    answers[field.key] = raw
   }
   if (missingFields.length > 0) {
     return { ok: false, message: 'Required fields are missing.', missingFields }
   }
 
-  const folderValue = form.folder
+  const folderValue = form.destinationFolder
   const result = await generateDocumentFromSubmission({
     payload,
     tenant: { id: Number(tenant.id), slug: tenant.slug },
@@ -106,12 +111,14 @@ export async function submitReportFormAction(
     actorCharacterId: activeCharacterId == null ? undefined : Number(activeCharacterId),
     form: {
       id: form.id,
-      title: form.title,
-      folder: folderValue == null ? null : Number(folderValue),
-      archive: {
-        titleTemplate: form.archive.titleTemplate,
-        markdownTemplate: form.archive.markdownTemplate,
-      },
+      name: form.name,
+      kind: 'form',
+      titleTemplate: form.titleTemplate,
+      bodyTemplate: form.bodyTemplate,
+      formSchema: schema,
+      destinationFolder: folderValue == null ? null : Number(typeof folderValue === 'object' ? folderValue.id : folderValue),
+      documentType: typeof form.documentType === 'object' ? form.documentType.id : form.documentType,
+      lifecyclePolicy: form.lifecyclePolicy,
     },
     answers,
   })

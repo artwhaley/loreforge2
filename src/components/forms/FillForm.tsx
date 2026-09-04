@@ -49,26 +49,26 @@ export function FillForm({ fields, tenantSlug, formId, submitLabel = 'Submit' }:
       ) : null}
 
       {fields.map((field) => {
-        const inputId = `field-${field.name}`
+        const inputId = `field-${field.key}`
         return (
-          <div key={field.name} className={styles.field}>
+          <div key={field.key} className={styles.field}>
             <label htmlFor={inputId} className={styles.label}>
               {field.label}
               {field.required ? <span className={styles.req} aria-hidden="true"> *</span> : null}
             </label>
 
-            {field.blockType === 'textarea' ? (
+            {field.type === 'textarea' ? (
               <textarea
                 id={inputId}
-                name={field.name}
+                name={field.key}
                 className={styles.textarea}
                 required={field.required}
                 rows={5}
               />
-            ) : field.blockType === 'select' ? (
+            ) : field.type === 'select' ? (
               <select
                 id={inputId}
-                name={field.name}
+                name={field.key}
                 className={styles.select}
                 required={field.required}
                 defaultValue=""
@@ -82,11 +82,11 @@ export function FillForm({ fields, tenantSlug, formId, submitLabel = 'Submit' }:
                   </option>
                 ))}
               </select>
-            ) : field.blockType === 'checkbox' ? (
+            ) : field.type === 'checkbox' ? (
               <span className={styles.checkboxRow}>
                 <input
                   id={inputId}
-                  name={field.name}
+                  name={field.key}
                   type="checkbox"
                   className={styles.checkbox}
                   value="yes"
@@ -96,8 +96,8 @@ export function FillForm({ fields, tenantSlug, formId, submitLabel = 'Submit' }:
             ) : (
               <input
                 id={inputId}
-                name={field.name}
-                type={field.blockType === 'date' ? 'date' : 'text'}
+                name={field.key}
+                type={field.type === 'date' ? 'date' : 'text'}
                 className={styles.input}
                 required={field.required}
               />

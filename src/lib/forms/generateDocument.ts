@@ -2,6 +2,8 @@ import type { Payload } from 'payload'
 
 import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
+import { composeTemplate, renderTemplateTokens } from '@/lib/templates/compose'
+import type { LoreForgeFormSchema } from './schema'
 
 /**
  * The Ticket 07 design seam: form template + submitted answers -> archive
@@ -39,6 +41,34 @@ export function renderTemplate(template: string, answers: FormAnswers): string {
   )
 }
 
+export type NeutralTemplateMetadata = {
+  id: number | string
+  name: string
+  kind: 'document' | 'form'
+  titleTemplate: string
+  bodyTemplate: string
+  formSchema?: LoreForgeFormSchema | null
+  baseTemplate?: NeutralTemplateMetadata | number | string | null
+  destinationFolder?: number | string | null
+  documentType?: number | string | null
+  lifecyclePolicy?: 'inherit' | 'direct-file' | 'review-required'
+}
+
+/** Strict neutral-schema rendering used by all Phase 6 creation paths. */
+export function renderNeutralTemplate(template: NeutralTemplateMetadata, answers: FormAnswers) {
+  const lookup = (id: number | string): NeutralTemplateMetadata | null => {
+    if (template.baseTemplate && typeof template.baseTemplate === 'object' && String(template.baseTemplate.id) === String(id)) return template.baseTemplate
+    return null
+  }
+  const composed = composeTemplate(template, lookup)
+  const schema = template.kind === 'form' ? template.formSchema : undefined
+  return {
+    title: renderTemplateTokens(composed.titleTemplate, answers, schema).trim(),
+    body: canonicalizeMarkdown(renderTemplateTokens(composed.bodyTemplate, answers, schema)).trim(),
+    chain: composed.chain,
+  }
+}
+
 export type GeneratedDocument = {
   id: number
   title: string
@@ -55,34 +85,38 @@ export async function generateDocumentFromSubmission(args: {
   tenant: { id: number; slug: string }
   user: { id: number }
   actorCharacterId?: number
-  form: FormArchiveMetadata
+  form: FormArchiveMetadata | NeutralTemplateMetadata
   answers: FormAnswers
 }): Promise<GeneratedDocument> {
   const { payload, tenant, user, actorCharacterId, form, answers } = args
 
-  const title = renderTemplate(form.archive.titleTemplate, answers).trim()
-  const body = canonicalizeMarkdown(
-    renderTemplate(form.archive.markdownTemplate, answers),
-  ).trim()
+  const neutral = 'bodyTemplate' in form
+  const rendered = neutral
+    ? renderNeutralTemplate(form, answers)
+    : { title: renderTemplate((form as FormArchiveMetadata).archive.titleTemplate, answers).trim(), body: canonicalizeMarkdown(renderTemplate((form as FormArchiveMetadata).archive.markdownTemplate, answers)).trim(), chain: [] }
+  const title = rendered.title
+  const body = rendered.body
 
   // Confirm the destination folder belongs to this tenant before filing.
   let folder: number | null = null
-  if (form.folder) {
+  const configuredFolder = neutral ? form.destinationFolder : form.folder
+  if (configuredFolder) {
     const found = await payload.find({
       collection: 'folders',
-      where: { and: [{ or: [{ domain: { equals: tenant.id } }, { tenant: { equals: tenant.id } }] }, { id: { equals: form.folder } }] },
+      where: { and: [{ or: [{ domain: { equals: tenant.id } }, { tenant: { equals: tenant.id } }] }, { id: { equals: configuredFolder } }] },
       depth: 0,
       limit: 1,
     })
-    if (found.docs[0]) folder = Number(form.folder)
+    if (found.docs[0]) folder = Number(configuredFolder)
   }
   if (folder === null) {
     const roots = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: tenant.id } }, { systemManaged: { equals: true } }, { parent: { equals: null } }] }, depth: 0, limit: 1 })
     folder = roots.docs[0]?.id ?? null
   }
 
-  const typeResult = await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: tenant.id } }, { name: { equals: 'Plain Text' } }, { active: { equals: true } }] }, depth: 0, limit: 1 })
-  const documentType = typeResult.docs[0]?.id
+  const documentType = neutral && form.documentType
+    ? Number(form.documentType)
+    : (await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: tenant.id } }, { name: { equals: 'Plain Text' } }, { active: { equals: true } }] }, depth: 0, limit: 1 })).docs[0]?.id
   if (!documentType) throw new Error('The Domain has no active Plain Text Document Type.')
 
   const created = await payload.create({

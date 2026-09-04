@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { FillForm } from '@/components/forms/FillForm'
 import { TenantShell } from '@/components/theme/TenantShell'
 import type { FillField } from '@/lib/actions/forms'
+import { assertFormSchema } from '@/lib/forms/schema'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getFormForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
@@ -16,7 +17,7 @@ type Props = {
 
 export const dynamic = 'force-dynamic'
 
-const ALLOWED: ReadonlySet<string> = new Set(['text', 'textarea', 'date', 'select', 'checkbox'])
+const ALLOWED: ReadonlySet<string> = new Set(['text', 'textarea', 'date', 'select', 'checkbox', 'character'])
 
 export default async function FillFormPage({ params }: Props) {
   const { slug, formId: formIdRaw } = await params
@@ -36,24 +37,26 @@ export default async function FillFormPage({ params }: Props) {
   const myTenants = user ? await getTenantsForUser(user.id) : []
   const tokens = resolveThemeTokens(tenant)
 
-  // Serialize only the five allowed field types for the client fill form.
+  const schema = assertFormSchema(form.formSchema)
+  // Serialize only the neutral supported field types for the client fill form.
   const fillFields: FillField[] = []
-  for (const field of form.fields ?? []) {
-    if (!ALLOWED.has(field.blockType)) continue
-    if (field.blockType === 'select') {
+  for (const field of schema.fields) {
+    if (!ALLOWED.has(field.type)) continue
+    if (field.type === 'select') {
       fillFields.push({
-        blockType: 'select',
-        name: field.name,
-        label: field.label ?? field.name,
+        type: 'select',
+        key: field.key,
+        label: field.label ?? field.key,
         required: Boolean(field.required),
         options: field.options ?? [],
       })
     } else {
       fillFields.push({
-        blockType: field.blockType,
-        name: field.name,
-        label: field.label ?? field.name,
+        type: field.type,
+        key: field.key,
+        label: field.label ?? field.key,
         required: Boolean(field.required),
+        help: field.help,
       })
     }
   }
@@ -68,22 +71,22 @@ export default async function FillFormPage({ params }: Props) {
       <section className={styles.panel}>
         <nav className={styles.crumbs} aria-label="Folder path">
           <Link href={`${base}/forms`} className={styles.crumbLink}>
-            Report forms
+            Forms
           </Link>
           <span className={styles.sep}>/</span>
-          <span>{form.title}</span>
+          <span>{form.name}</span>
         </nav>
 
-        <h1 className={styles.title}>{form.title}</h1>
+        <h1 className={styles.title}>{form.name}</h1>
         <p className={styles.intro}>
-          Submitting generates a normal archive record{form.folder && typeof form.folder === 'object' ? ' filed in its destination folder' : ''} — you can edit, move, search, and export it like any other document.
+          Submitting generates a normal archive record{form.destinationFolder ? ' filed in its destination folder' : ''} — you can edit, search, and export it like any other document.
         </p>
 
         <FillForm
           fields={fillFields}
           tenantSlug={tenant.slug}
           formId={Number(form.id)}
-          submitLabel={form.submitButtonLabel?.trim() || 'Submit report'}
+          submitLabel="Create document"
         />
       </section>
     </TenantShell>
