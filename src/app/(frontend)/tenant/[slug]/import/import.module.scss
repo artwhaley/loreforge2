@@ -1,5 +1,7 @@
 .panel {
-  max-width: 680px;
+  max-width: 1400px;
+  width: 100%;
+  box-sizing: border-box;
   margin: 0 auto;
   background: var(--tenant-surface-bg);
   border: 1px solid var(--tenant-accent);

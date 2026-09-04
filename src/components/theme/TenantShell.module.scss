@@ -1,4 +1,5 @@
 .root {
+  --tenant-shell-width: min(1400px, calc(100% - 3rem));
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -8,7 +9,9 @@
 }
 
 .contextBar {
-  max-width: 980px;
+  width: var(--tenant-shell-width);
+  max-width: 100%;
+  box-sizing: border-box;
   margin: 0 auto;
   padding: 0.65rem 1.5rem;
   display: grid;
@@ -160,7 +163,9 @@
 }
 
 .headerInner {
-  max-width: 980px;
+  width: var(--tenant-shell-width);
+  max-width: 100%;
+  box-sizing: border-box;
   margin: 0 auto;
   padding: 1.25rem 1.5rem;
   display: flex;
@@ -192,7 +197,7 @@
   flex-wrap: wrap;
 }
 
-.managementNav { max-width: 980px; margin: 0 auto; padding: .55rem 1.5rem; display: flex; align-items: center; gap: 1.1rem; flex-wrap: wrap; font-size: .82rem; }
+.managementNav { width: var(--tenant-shell-width); max-width: 100%; box-sizing: border-box; margin: 0 auto; padding: .55rem 1.5rem; display: flex; align-items: center; gap: 1.1rem; flex-wrap: wrap; font-size: .82rem; }
 .managementNav a { color: var(--tenant-text-on-primary); opacity: .92; text-decoration: none; }
 .managementNav a:hover { text-decoration: underline; text-decoration-color: var(--tenant-accent); }
 
@@ -218,8 +223,8 @@
 .main {
   flex: 1;
   padding: 2rem 1.5rem;
-  max-width: 980px;
-  width: 100%;
+  width: var(--tenant-shell-width);
+  max-width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
 }
