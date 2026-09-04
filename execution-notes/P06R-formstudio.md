@@ -48,9 +48,9 @@ open-source field.
 
 ## Evidence
 
-- `npm test` — 109 pass / 0 fail (schema/adapter/compose/resolve tests were
+- `npm test` — 112 pass / 0 fail (schema/adapter/compose/resolve tests were
   previously omitted from the runner and are now included with the new
-  layout tests).
+  layout tests; follow-up added multi-Character cases).
 - `npx tsc --noEmit` — clean.
 - `eslint` changed files — clean.
 - Dev-server smoke requests to the four Forms routes returned auth-shielded
@@ -59,6 +59,32 @@ open-source field.
 ## Manual acceptance
 
 Not run before unattended execution. Scenario + sign-off table:
+`corrective-stacks/P06R-formstudio/01_MANUAL_ACCEPTANCE.md`.
+
+## Follow-up (2026-09-04): filing crash fix + multiple-Characters question
+
+While manually filing a form the owner hit a server error:
+`FOREIGN KEY constraint failed` on the `documents` insert. Root cause: the
+create wrote the Domain id into the `documents.tenant` column, whose FK
+references the retired `tenants` collection (only the two legacy fixture
+rows exist), so any Domain beyond the legacy two crashed. Every other create
+path in the app either omits `tenant` or writes a genuine legacy id
+(`archive.ts`). Fix (`c204cfe`): the generation seam now scopes new records
+by `domain` alone.
+
+The owner also asked for two versions of the Character chooser: the existing
+single pick plus one that selects MULTIPLE Characters. Added a `characters`
+question type: schema/validator support (additive, stays schema v1), answer
+values as id arrays, a chips multi-select in the shared picker (one hidden
+input per chosen Character so native form submission reads them via
+`getAll`), record bodies that join the chosen Characters' names, and a
+Character link per selection. The Form Studio exposes it as a new
+"Pick Characters" question with the same inspector options (relationship
+label etc.); fills and records/new render it through the shared
+`FieldControl`.
+
+Verification at commit: `npm test` 112 pass / 0 fail, `tsc --noEmit` clean,
+`eslint` clean. Manual scenario added as Scenario D in
 `corrective-stacks/P06R-formstudio/01_MANUAL_ACCEPTANCE.md`.
 
 ## Deferred / notes

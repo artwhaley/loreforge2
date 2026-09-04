@@ -63,6 +63,26 @@ blocks closure of this corrective.
 3. Deliberately submit once with a required question empty and confirm the
    inline error preserves every other entered value.
 
+## Scenario D — follow-up: multiple-Characters question + filing fix
+
+Added after the owner hit a server error while filling a form (follow-up
+2026-09-04). The crash was a `FOREIGN KEY constraint failed` on the document
+insert: the create passed the Domain id into the retired `tenants` legacy
+column, which has no such row. Fixed by scoping new documents by `domain`
+alone, matching every other create path.
+
+1. Edit the saved form and add a **Pick Characters** question ("Witnesses",
+   relationship label `witness`, full width) alongside the single **Pick a
+   Character** question. Save changes.
+2. As a member, fill the form: search and add SEVERAL Characters to the
+   Witnesses question (chips with Remove), one Character to the single pick.
+   Submit — you must land on the record, never a server error.
+3. On the record, confirm the Witnesses section lists each chosen Character's
+   name, that every chosen Character is linked with the `witness`
+   relationship, and the single pick is linked once.
+4. Mark the Witnesses question required, save, then submit it empty: the
+   inline error must preserve every other entered value (chips included).
+
 ## Keyboard-only pass (repeat scenario A #6)
 
 Add, edit, move up/down, remove, and save entirely without a mouse.
@@ -84,4 +104,8 @@ Add, edit, move up/down, remove, and save entirely without a mouse.
 | C: Character picker on fill, link + relationship | | |
 | C: record body human-readable (labels/names/Yes-No) | | |
 | C: required-miss error preserves entries | | |
+| C: filing creates the record (no server error) | | |
+| D: multi-Character chips picker on fill | | |
+| D: every chosen Character linked with the label | | |
+| D: multi required-miss error preserves entries | | |
 | Keyboard: full flow without a mouse | | |

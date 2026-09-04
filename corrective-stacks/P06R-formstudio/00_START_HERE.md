@@ -26,12 +26,24 @@ a bespoke studio on the MIT drag toolkit `@dnd-kit`.
 
 - `a0216cb` P06R: neutral form-schema sizing hints and auto-layout rendering
 - `db42f38` P06R: rebuild the Form Studio as a drag-and-drop visual builder
+- `c204cfe` P06R: fix form-filing FK crash and add a multiple-Characters question (follow-up)
 
 See `02_TRACEABILITY.md` for the file map.
 
+## Follow-up (2026-09-04, after owner hit the filing crash)
+
+- **Filing fix:** a form submission failed with `FOREIGN KEY constraint
+  failed` because the create wrote the Domain id into the retired legacy
+  `tenants` column (which holds only the two legacy fixture rows). Records
+  are now created scoped by `domain` alone, matching every other create path.
+- **Multiple-Characters question:** new `characters` question type — a chips
+  multi-select on fills (single pick remains `character`). The owner asked
+  for both versions of the chooser; this corrective now ships them. Manual
+  scenario added as Scenario D in `01_MANUAL_ACCEPTANCE.md`.
+
 ## Verification already run
 
-- `npm test` — 109 pass / 0 fail (includes the previously orphaned
+- `npm test` — 112 pass / 0 fail (includes the previously orphaned
   `schema`/`adapter-payload`/`compose`/`resolve` tests and the new `layout` tests).
 - `npx tsc --noEmit` — clean.
 - `eslint` over every changed file — clean.
