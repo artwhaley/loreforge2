@@ -123,6 +123,12 @@ test('P06R multiple-Characters answers render as their Characters joined, raw id
   assert.equal(resolved.named, '')
 })
 
+test('P06R a time question records a time but does not name the record', () => {
+  assert.equal(autoTitleTemplate([{ key: 'happened_at', type: 'time' as const, label: 'Time' }], null), null)
+  const body = autoBodyTemplate([{ key: 'happened_at', type: 'time' as const, label: 'Time' }])
+  assert.ok(body.includes('## Time\n\n{{happened_at}}'))
+})
+
 test('P06R multiple-Characters never name records and cannot inject tokens', () => {
   const fields = [
     { key: 'witnesses', type: 'characters' as const, label: 'Witnesses' },

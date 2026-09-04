@@ -146,7 +146,7 @@ export function Inspector({ field, count, isRecordNamer, onPatch, onRemove, onDu
                 {(field.options ?? []).map((option) => <option key={option.value} value={option.value}>{option.label || option.value}</option>)}
               </select>
             ) : (
-              <input id={`default-${field.key}`} className={styles.input} type={field.type === 'date' ? 'date' : 'text'} value={typeof field.default === 'string' ? field.default : ''} placeholder="Prefilled when someone opens the form" onChange={(event) => onPatch(field.key, { default: event.target.value }) } />
+              <input id={`default-${field.key}`} className={styles.input} type={field.type === 'date' ? 'date' : field.type === 'time' ? 'time' : 'text'} value={typeof field.default === 'string' ? field.default : ''} placeholder="Prefilled when someone opens the form" onChange={(event) => onPatch(field.key, { default: event.target.value }) } />
             )}
           </>
         ) : null}

@@ -11,6 +11,7 @@ function sampleAnswer(field: LoreForgeFormField): string {
   if (field.type === 'character') return 'A Character from this Domain'
   if (field.type === 'characters') return 'Two Characters from this Domain'
   if (field.type === 'date') return '2026-09-04'
+  if (field.type === 'time') return '14:30'
   if (field.type === 'textarea') return 'Sample long answer that runs over a couple of lines.'
   return 'Sample answer'
 }

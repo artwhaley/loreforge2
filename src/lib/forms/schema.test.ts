@@ -71,3 +71,15 @@ test('P06R multiple-Characters question validates and keeps its relationship lab
   assert.equal(unsupported.valid, false)
 })
 
+test('P06R time question validates with text defaults and presentation hints', () => {
+  const result = validateFormSchema({ version: 1, fields: [
+    { key: 'happened_at', type: 'time', label: 'When (time)', required: true, default: '14:30', width: 'short' },
+  ] })
+  assert.equal(result.valid, true)
+  if (result.valid) {
+    assert.equal(result.value.fields[0].type, 'time')
+    assert.equal(result.value.fields[0].default, '14:30')
+    assert.equal(result.value.fields[0].width, 'short')
+  }
+})
+

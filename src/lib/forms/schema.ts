@@ -7,7 +7,7 @@
 export const FORM_SCHEMA_VERSION = 1 as const
 /** The Character question family: a single pick vs. a multiple pick. */
 export const CHARACTER_FIELD_TYPES = ['character', 'characters'] as const
-export const FORM_FIELD_TYPES = ['text', 'textarea', 'date', 'select', 'checkbox', 'character', 'characters'] as const
+export const FORM_FIELD_TYPES = ['text', 'textarea', 'date', 'time', 'select', 'checkbox', 'character', 'characters'] as const
 export type FormFieldType = (typeof FORM_FIELD_TYPES)[number]
 
 /**

@@ -66,7 +66,7 @@ export function FieldControl({ field, name, id, value, onValueChange, domainSlug
       ? <CharacterFieldPicker multi={multi} domainSlug={domainSlug} value={multi ? (Array.isArray(value) ? value : []) : typeof value === 'string' ? value : ''} onChange={(next) => change(next)} ariaLabel={field.label} name={name} />
       : <input id={controlId} name={name} type="text" className={styles.input} disabled aria-labelledby={labelledBy} aria-describedby={field.help ? helpId : undefined} placeholder={multi ? 'Character picker appears when this form is filled' : 'Character picker appears when this form is filled'} value="" onChange={() => undefined} />
   } else {
-    control = <input id={controlId} name={name} type={field.type === 'date' ? 'date' : 'text'} className={styles.input} required={isRequired} disabled={disabled} aria-labelledby={labelledBy} aria-describedby={field.help ? helpId : undefined} value={typeof value === 'string' ? value : ''} onChange={(event) => change(event.target.value)} />
+    control = <input id={controlId} name={name} type={field.type === 'date' ? 'date' : field.type === 'time' ? 'time' : 'text'} className={styles.input} required={isRequired} disabled={disabled} aria-labelledby={labelledBy} aria-describedby={field.help ? helpId : undefined} value={typeof value === 'string' ? value : ''} onChange={(event) => change(event.target.value)} />
   }
 
   return (
