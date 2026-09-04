@@ -26,6 +26,7 @@ import { getPayload, type Payload, type User } from 'payload'
 import { REST_POST } from '@payloadcms/next/routes'
 
 import config from '@/payload.config'
+
 import { POST as roleAssignmentsRoute } from '@/app/(payload)/api/role-assignments/route'
 import { POST as rolesRoute } from '@/app/(payload)/api/roles/route'
 import { POST as permissionRulesRoute } from '@/app/(payload)/api/permission-rules/route'
@@ -38,7 +39,10 @@ type Id = number
 
 // Fresh throwaway DB per run (mirrors the other security suites).
 const dbPath = String(process.env.DATABASE_URI ?? '').replace(/^file:/, '')
-if (dbPath && existsSync(dbPath)) rmSync(dbPath)
+for (const suffix of ['', '-wal', '-shm', '-journal']) {
+  const path = `${dbPath}${suffix}`
+  if (dbPath && existsSync(path)) rmSync(path)
+}
 
 const payloadPromise: Promise<Payload> = getPayload({ config })
 
@@ -148,6 +152,32 @@ test('P05R-T05: standalone service failure injection also rolls back atomically'
   assert.ok(rule, 'Folder PermissionRule must survive the standalone rollback')
   const events = await auditEvents({ and: [{ domain: { equals: alpha.id } }, { action: { equals: 'deactivated' } }] })
   assert.equal(events.length, 0, 'no audit event may survive the standalone rollback')
+})
+
+test('P05R-T15: durable audit storage failure rolls back the completed removal aggregate', async () => {
+  const { payload, alpha, charA, membershipAlpha, assignmentAlpha, ruleAlpha } = f
+  const failingPayload = new Proxy(payload, {
+    get(target, property, receiver) {
+      if (property === 'create') {
+        return (args: { collection?: string; [key: string]: unknown }) => {
+          if (args.collection === 'domain-audit-events') throw new Error('P05R-T15 injected audit storage failure')
+          return target.create(args as never)
+        }
+      }
+      return Reflect.get(target, property, receiver)
+    },
+  }) as Payload
+  await assert.rejects(
+    deactivateDomainParticipation({ payload: failingPayload, domainId: alpha.id, characterId: charA.id, membershipId: membershipAlpha.id }),
+    /audit storage failure/,
+  )
+  const membership = await payload.findByID({ collection: 'domain-memberships', id: membershipAlpha.id, depth: 0, overrideAccess: true })
+  const assignment = await payload.findByID({ collection: 'role-assignments', id: assignmentAlpha.id, depth: 0, overrideAccess: true }).catch(() => null)
+  const rule = await payload.findByID({ collection: 'permission-rules', id: ruleAlpha.id, depth: 0, overrideAccess: true }).catch(() => null)
+  assert.equal(String((membership as { status: string }).status), 'active', 'membership remains active after audit failure')
+  assert.ok(assignment && rule, 'assignment and Folder rule remain after audit failure')
+  const events = await auditEvents({ and: [{ domain: { equals: alpha.id } }, { action: { equals: 'deactivated' } }] })
+  assert.equal(events.length, 0, 'no audit row survives an audit-storage failure')
 })
 
 test('P05R-T05: successful removal is atomic and leaves exactly one coherent audit trail', async () => {

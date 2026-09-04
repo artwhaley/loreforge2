@@ -25,13 +25,17 @@ import { rmSync, existsSync } from 'node:fs'
 import { getPayload, type Payload, type User } from 'payload'
 
 import config from '@/payload.config'
+
 import { addDocumentRelationship, correctSupersession, removeDocumentRelationship, runInTransaction } from '@/lib/documents/relationships'
 import { recordDocumentProvenance } from '@/lib/documents/provenance'
 
 type Id = number
 
 const dbPath = String(process.env.DATABASE_URI ?? '').replace(/^file:/, '')
-if (dbPath && existsSync(dbPath)) rmSync(dbPath)
+for (const suffix of ['', '-wal', '-shm', '-journal']) {
+  const path = `${dbPath}${suffix}`
+  if (dbPath && existsSync(path)) rmSync(path)
+}
 
 const payloadPromise: Promise<Payload> = getPayload({ config })
 

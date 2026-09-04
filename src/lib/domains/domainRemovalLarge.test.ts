@@ -3,10 +3,14 @@ import assert from 'node:assert/strict'
 import { existsSync, rmSync } from 'node:fs'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
+
 import { deactivateDomainParticipation } from './deactivateDomainParticipation'
 
 const dbPath = String(process.env.DATABASE_URI ?? '').replace(/^file:/, '')
-if (dbPath && existsSync(dbPath)) rmSync(dbPath)
+for (const suffix of ['', '-wal', '-shm', '-journal']) {
+  const path = `${dbPath}${suffix}`
+  if (dbPath && existsSync(path)) rmSync(path)
+}
 const payloadPromise = getPayload({ config })
 
 test('P05R-T13: Domain removal exhausts more than 500 direct Folder rules', async () => {

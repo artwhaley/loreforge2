@@ -27,6 +27,7 @@ import { getPayload, type Payload, type User } from 'payload'
 import { REST_POST, REST_PATCH, REST_GET, REST_DELETE } from '@payloadcms/next/routes'
 
 import config from '@/payload.config'
+
 import { POST as roleAssignmentsRoute } from '@/app/(payload)/api/role-assignments/route'
 import { POST as rolesRoute } from '@/app/(payload)/api/roles/route'
 import { POST as permissionRulesRoute } from '@/app/(payload)/api/permission-rules/route'
@@ -43,7 +44,10 @@ type Id = number
 // Fresh throwaway DB per run: remove any file left by an earlier run before
 // Payload opens it (the *.db gitignore entry keeps leftovers out of git).
 const dbPath = String(process.env.DATABASE_URI ?? '').replace(/^file:/, '')
-if (dbPath && existsSync(dbPath)) rmSync(dbPath)
+for (const suffix of ['', '-wal', '-shm', '-journal']) {
+  const path = `${dbPath}${suffix}`
+  if (dbPath && existsSync(path)) rmSync(path)
+}
 
 const payloadPromise: Promise<Payload> = getPayload({ config })
 

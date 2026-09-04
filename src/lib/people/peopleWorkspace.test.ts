@@ -16,6 +16,7 @@ import { getPayload, type Payload, type User } from 'payload'
 import { REST_POST } from '@payloadcms/next/routes'
 
 import config from '@/payload.config'
+
 import { POST as permissionRulesRoute } from '@/app/(payload)/api/permission-rules/route'
 import { GET as peopleSearchRoute } from '@/app/(payload)/api/people-search/route'
 import { attachDocumentCharacterLink, attachDocumentTag, detachDocumentCharacterLink, detachDocumentTag, ensurePreparedBy, findOrCreateDomainTag } from '@/lib/documents/links'
@@ -24,7 +25,10 @@ import { upsertPermissionRule } from '@/lib/permissions/rules'
 type Id = number
 
 const dbPath = String(process.env.DATABASE_URI ?? '').replace(/^file:/, '')
-if (dbPath && existsSync(dbPath)) rmSync(dbPath)
+for (const suffix of ['', '-wal', '-shm', '-journal']) {
+  const path = `${dbPath}${suffix}`
+  if (dbPath && existsSync(path)) rmSync(path)
+}
 
 const restPost = REST_POST(config)
 const payloadPromise: Promise<Payload> = getPayload({ config })
@@ -58,7 +62,8 @@ async function fixture() {
 }
 
 const SLUG = 'alpha-workspace'
-const f = await fixture()
+let f!: Awaited<ReturnType<typeof fixture>>
+test.before(async () => { f = await fixture() })
 
 async function login(payload: Payload, email: string, password: string): Promise<string> {
   const res = await restPost(new Request('http://localhost/api/users/login', {
@@ -174,8 +179,8 @@ async function rulesMatching(payload: Payload, data: { principalType: string; re
   }).map((rule) => ({ id: Number(rule.id), effect: String((rule as { effect: unknown }).effect) }))
 }
 
-const charPrincipal = { relationTo: 'characters' as const, value: f.character.id }
-const shelfResource = { relationTo: 'folders' as const, value: f.shelfFolder.id }
+const charPrincipal = () => ({ relationTo: 'characters' as const, value: f.character.id })
+const shelfResource = () => ({ relationTo: 'folders' as const, value: f.shelfFolder.id })
 
 async function eventsFor(payload: Payload, documentId: Id): Promise<Array<{ eventType: string; context?: Record<string, unknown> | null }>> {
   const rows = await payload.find({ collection: 'document-provenance-events', where: { document: { equals: documentId } }, depth: 0, limit: 200, sort: 'id', overrideAccess: true })
@@ -191,30 +196,30 @@ test('P05R-T04 D/E/F: PermissionRule polymorphic integrity, dedupe, and round-tr
   // F: User/Character/Role/DomainMembership polymorphic rows round-trip with
   // their relation types and values preserved for the P07 evaluator.
   await createRule(payload, { domain: f.domain.id, principalType: 'User', principal: { relationTo: 'users', value: f.controller.id }, resourceType: 'Document', resource: { relationTo: 'documents', value: doc.id }, capability: 'read', effect: 'grant' })
-  await createRule(payload, { domain: f.domain.id, principalType: 'Role', principal: { relationTo: 'roles', value: f.role.id }, resourceType: 'Folder', resource: shelfResource, capability: 'read', effect: 'grant' })
+  await createRule(payload, { domain: f.domain.id, principalType: 'Role', principal: { relationTo: 'roles', value: f.role.id }, resourceType: 'Folder', resource: shelfResource(), capability: 'read', effect: 'grant' })
   await createRule(payload, { domain: f.domain.id, principalType: 'DomainMembership', principal: { relationTo: 'domain-memberships', value: membership.id }, resourceType: 'Domain', resource: { relationTo: 'domains', value: f.domain.id }, capability: 'read', effect: 'grant' })
   const userRule = await rulesMatching(payload, { principalType: 'User', resourceType: 'Document', capability: 'read', principal: { relationTo: 'users', value: f.controller.id }, resource: { relationTo: 'documents', value: doc.id } })
-  const roleRule = await rulesMatching(payload, { principalType: 'Role', resourceType: 'Folder', capability: 'read', principal: { relationTo: 'roles', value: f.role.id }, resource: shelfResource })
+  const roleRule = await rulesMatching(payload, { principalType: 'Role', resourceType: 'Folder', capability: 'read', principal: { relationTo: 'roles', value: f.role.id }, resource: shelfResource() })
   const membershipRule = await rulesMatching(payload, { principalType: 'DomainMembership', resourceType: 'Domain', capability: 'read', principal: { relationTo: 'domain-memberships', value: membership.id }, resource: { relationTo: 'domains', value: f.domain.id } })
   assert.equal(userRule.length, 1, 'User+Document rule round-trips')
   assert.equal(roleRule.length, 1, 'Role+Folder rule round-trips')
   assert.equal(membershipRule.length, 1, 'DomainMembership+Domain rule round-trips')
 
   // D: polymorphic relation type mismatches are rejected.
-  await assert.rejects(createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: { relationTo: 'users', value: f.controller.id }, resourceType: 'Folder', resource: shelfResource, capability: 'read', effect: 'grant' }), /requires a characters relation/)
-  await assert.rejects(createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: charPrincipal, resourceType: 'Folder', resource: { relationTo: 'documents', value: doc.id }, capability: 'read', effect: 'grant' }), /requires a folders relation/)
-  await assert.rejects(createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: charPrincipal, resourceType: 'Folder', resource: shelfResource, capability: 'not-a-capability', effect: 'grant' }), /Unknown capability/)
-  await assert.rejects(createRule(payload, { domain: f.domain.id, principalType: 'Role', principal: { relationTo: 'roles', value: f.betaRole.id }, resourceType: 'Folder', resource: shelfResource, capability: 'read', effect: 'grant' }), /principal must belong to the rule Domain/, 'a Beta Role cannot anchor an Alpha rule')
+  await assert.rejects(createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: { relationTo: 'users', value: f.controller.id }, resourceType: 'Folder', resource: shelfResource(), capability: 'read', effect: 'grant' }), /requires a characters relation/)
+  await assert.rejects(createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: charPrincipal(), resourceType: 'Folder', resource: { relationTo: 'documents', value: doc.id }, capability: 'read', effect: 'grant' }), /requires a folders relation/)
+  await assert.rejects(createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: charPrincipal(), resourceType: 'Folder', resource: shelfResource(), capability: 'not-a-capability', effect: 'grant' }), /Unknown capability/)
+  await assert.rejects(createRule(payload, { domain: f.domain.id, principalType: 'Role', principal: { relationTo: 'roles', value: f.betaRole.id }, resourceType: 'Folder', resource: shelfResource(), capability: 'read', effect: 'grant' }), /principal must belong to the rule Domain/, 'a Beta Role cannot anchor an Alpha rule')
 
   // E: one current effect per logical identity. The hook (read-only on this
   // adapter) aborts duplicate creates; the service upsert updates the
   // surviving row deterministically when the effect changes.
-  await createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: charPrincipal, resourceType: 'Folder', resource: shelfResource, capability: 'edit_document', effect: 'grant' })
-  const before = await rulesMatching(payload, { principalType: 'Character', resourceType: 'Folder', capability: 'edit_document', principal: charPrincipal, resource: shelfResource })
+  await createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: charPrincipal(), resourceType: 'Folder', resource: shelfResource(), capability: 'edit_document', effect: 'grant' })
+  const before = await rulesMatching(payload, { principalType: 'Character', resourceType: 'Folder', capability: 'edit_document', principal: charPrincipal(), resource: shelfResource() })
   assert.equal(before.length, 1)
-  await assert.rejects(createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: charPrincipal, resourceType: 'Folder', resource: shelfResource, capability: 'edit_document', effect: 'grant' }), /DUPLICATE_EQUIVALENT_RULE/, 'identical duplicate create is aborted by the hook')
-  await upsertPermissionRule({ payload, domainId: f.domain.id, principalType: 'Character', principal: charPrincipal, resourceType: 'Folder', resource: shelfResource, capability: 'edit_document', effect: 'deny', actorUser: f.owner.id })
-  const after = await rulesMatching(payload, { principalType: 'Character', resourceType: 'Folder', capability: 'edit_document', principal: charPrincipal, resource: shelfResource })
+  await assert.rejects(createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: charPrincipal(), resourceType: 'Folder', resource: shelfResource(), capability: 'edit_document', effect: 'grant' }), /DUPLICATE_EQUIVALENT_RULE/, 'identical duplicate create is aborted by the hook')
+  await upsertPermissionRule({ payload, domainId: f.domain.id, principalType: 'Character', principal: charPrincipal(), resourceType: 'Folder', resource: shelfResource(), capability: 'edit_document', effect: 'deny', actorUser: f.owner.id })
+  const after = await rulesMatching(payload, { principalType: 'Character', resourceType: 'Folder', capability: 'edit_document', principal: charPrincipal(), resource: shelfResource() })
   assert.equal(after.length, 1, 'no duplicate rule may pile up')
   assert.equal(after[0].effect, 'deny', 'the surviving row deterministically carries the new effect')
 })
@@ -250,7 +255,7 @@ test('P05R-T04 J: Prepared-by credit — owner may create without a Character, m
 test('P05R-T11: PermissionRule identity is storage-backed and Domain resources stay scoped', async () => {
   const { payload } = f
   await assert.rejects(
-    createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: charPrincipal, resourceType: 'Domain', resource: { relationTo: 'domains', value: f.beta.id }, capability: 'read', effect: 'grant' }),
+    createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: charPrincipal(), resourceType: 'Domain', resource: { relationTo: 'domains', value: f.beta.id }, capability: 'read', effect: 'grant' }),
     /must belong to the rule Domain/,
   )
   const folders: Array<{ id: Id }> = []
@@ -258,15 +263,15 @@ test('P05R-T11: PermissionRule identity is storage-backed and Domain resources s
     folders.push(await payload.create({ collection: 'folders', data: { domain: f.domain.id, name: `Identity scale ${index}` } } as never) as { id: Id })
   }
   for (const folder of folders) {
-    await createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: charPrincipal, resourceType: 'Folder', resource: { relationTo: 'folders', value: folder.id }, capability: 'manage_folders', effect: 'grant' })
+    await createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: charPrincipal(), resourceType: 'Folder', resource: { relationTo: 'folders', value: folder.id }, capability: 'manage_folders', effect: 'grant' })
   }
   await assert.rejects(
-    createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: charPrincipal, resourceType: 'Folder', resource: { relationTo: 'folders', value: folders[0].id }, capability: 'manage_folders', effect: 'deny' }),
+    createRule(payload, { domain: f.domain.id, principalType: 'Character', principal: charPrincipal(), resourceType: 'Folder', resource: { relationTo: 'folders', value: folders[0].id }, capability: 'manage_folders', effect: 'deny' }),
     /DUPLICATE_EQUIVALENT_RULE/,
     'duplicate identity remains rejected after the first 100 candidates',
   )
-  await upsertPermissionRule({ payload, domainId: f.domain.id, principalType: 'Character', principal: charPrincipal, resourceType: 'Folder', resource: { relationTo: 'folders', value: folders[0].id }, capability: 'manage_folders', effect: 'deny', actorUser: f.owner.id })
-  const rows = await rulesMatching(payload, { principalType: 'Character', resourceType: 'Folder', capability: 'manage_folders', principal: charPrincipal, resource: { relationTo: 'folders', value: folders[0].id } })
+  await upsertPermissionRule({ payload, domainId: f.domain.id, principalType: 'Character', principal: charPrincipal(), resourceType: 'Folder', resource: { relationTo: 'folders', value: folders[0].id }, capability: 'manage_folders', effect: 'deny', actorUser: f.owner.id })
+  const rows = await rulesMatching(payload, { principalType: 'Character', resourceType: 'Folder', capability: 'manage_folders', principal: charPrincipal(), resource: { relationTo: 'folders', value: folders[0].id } })
   assert.equal(rows.length, 1)
   assert.equal(rows[0].effect, 'deny')
 })
