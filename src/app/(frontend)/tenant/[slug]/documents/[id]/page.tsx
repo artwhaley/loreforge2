@@ -82,16 +82,6 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
       switcherTenants={user ? await getTenantsForUser(user.id) : []}
     >
       <article className={styles.record}>
-        {supersededBy ? (
-          <div className={styles.supersededNotice} role="status">
-            <strong>Document superseded by:</strong>{' '}
-            <a href={`/domain/${tenant.slug}/documents/${supersededBy.id}`}>
-              {supersededBy.title}
-            </a>{' '}
-            prepared on {formatDate(supersededBy.createdAt)} by {supersededPreparedLabel}
-          </div>
-        ) : null}
-
         <div className={styles.actions} aria-label="Document controls">
           {user && !isSuperseded ? <a className={styles.action} href={`${base}/edit`}>Edit</a> : null}
           <a className={styles.action} href={`${base}/history`}>History</a>
@@ -129,70 +119,62 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
           ) : null}
         </div>
 
-        <header className={styles.recordHeader}>
-          <h1 className={styles.title}>{doc.title}</h1>
-          <div className={styles.meta}>
-            <span>Prepared by {preparedByLabel}</span>
-            <span>Date {formatDate(doc.createdAt)}</span>
-          </div>
-        </header>
-
-        <section className={styles.concerns} aria-label="Concerns">
-          <h2>Concerns</h2>
-          {concernLinks.length > 0 ? (
-            <ul>
-              {concernLinks.map((link) => (
-                <li key={link.id}>
-                  {typeof link.character === 'object' ? link.character.name : `Character ${link.character}`}
-                  {link.relationshipLabel ? ` · ${link.relationshipLabel}` : ''}
-                  {role === 'admin' ? (
-                    <form action="/api/document-links" method="post">
-                      <input type="hidden" name="domainSlug" value={tenant.slug} />
-                      <input type="hidden" name="documentId" value={doc.id} />
-                      <input type="hidden" name="characterId" value={typeof link.character === 'object' ? link.character.id : link.character} />
-                      <input type="hidden" name="kind" value="concerns" />
-                      <input type="hidden" name="action" value="remove" />
-                      <button type="submit">Remove</button>
-                    </form>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          ) : <p>No Characters attached.</p>}
-          {role === 'admin' ? (
-            <form action="/api/document-links" method="post" className={styles.inlineForm}>
-              <input type="hidden" name="domainSlug" value={tenant.slug} />
-              <input type="hidden" name="documentId" value={doc.id} />
-              <input type="hidden" name="kind" value="concerns" />
-              <input name="characterId" type="number" min="1" required placeholder="Character ID" />
-              <input name="relationshipLabel" placeholder="Relationship" />
-              <button type="submit">Add concern</button>
-            </form>
+        <div className={styles.documentPage}>
+          {supersededBy ? (
+            <div className={styles.supersededNotice} role="status">
+              <strong>Document superseded by:</strong>{' '}
+              <a href={`/domain/${tenant.slug}/documents/${supersededBy.id}`}>
+                {supersededBy.title}
+              </a>{' '}
+              prepared on {formatDate(supersededBy.createdAt)} by {supersededPreparedLabel}
+            </div>
           ) : null}
-        </section>
 
-        {source === '1' ? (
-          <pre className={styles.source}>{doc.body}</pre>
-        ) : (
-          <div className={styles.body} dangerouslySetInnerHTML={{ __html: html }} />
-        )}
+          <header className={styles.recordHeader}>
+            <h1 className={styles.title}>{doc.title}</h1>
+            <div className={styles.meta}>
+              <span>Prepared by {preparedByLabel}</span>
+              <span>Date {formatDate(doc.createdAt)}</span>
+            </div>
+          </header>
 
-        {tagLinks.docs.length > 0 ? (
-          <section className={styles.tags} aria-label="Tags">
-            <h2>Tags</h2>
-            <ul>
-              {tagLinks.docs.map((link) => (
-                <li key={link.id}>{typeof link.tag === 'object' ? link.tag.name : `Tag ${link.tag}`}</li>
-              ))}
-            </ul>
+          {source === '1' ? (
+            <pre className={styles.source}>{doc.body}</pre>
+          ) : (
+            <div className={styles.body} dangerouslySetInnerHTML={{ __html: html }} />
+          )}
+
+          <section className={styles.concerns} aria-label="Concerns">
+            <h2>Concerns</h2>
+            {concernLinks.length > 0 ? (
+              <ul>
+                {concernLinks.map((link) => (
+                  <li key={link.id}>
+                    {typeof link.character === 'object' ? link.character.name : `Character ${link.character}`}
+                    {link.relationshipLabel ? ` · ${link.relationshipLabel}` : ''}
+                  </li>
+                ))}
+              </ul>
+            ) : <p>No Characters attached.</p>}
           </section>
-        ) : null}
 
-        {supersedesLink?.target && typeof supersedesLink.target === 'object' ? (
-          <p className={styles.supersedesLine}>
-            Supersedes <a href={`/domain/${tenant.slug}/documents/${supersedesLink.target.id}`}>{supersedesLink.target.title}</a>.
-          </p>
-        ) : null}
+          {tagLinks.docs.length > 0 ? (
+            <section className={styles.tags} aria-label="Tags">
+              <h2>Tags</h2>
+              <ul>
+                {tagLinks.docs.map((link) => (
+                  <li key={link.id}>{typeof link.tag === 'object' ? link.tag.name : `Tag ${link.tag}`}</li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {supersedesLink?.target && typeof supersedesLink.target === 'object' ? (
+            <p className={styles.supersedesLine}>
+              Supersedes <a href={`/domain/${tenant.slug}/documents/${supersedesLink.target.id}`}>{supersedesLink.target.title}</a>.
+            </p>
+          ) : null}
+        </div>
 
         <div className={styles.bottomActions}>
           {user && !isSuperseded ? (

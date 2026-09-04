@@ -6,6 +6,7 @@ import { DocumentEditor } from '@/components/editor/DocumentEditor'
 import { canEditDocumentBody } from '@/lib/documents/lifecycle'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getDocumentForTenant, getTenantsForUser } from '@/lib/tenant/queries'
+import { getDocumentCharacterLinks } from '@/lib/documents/links'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 
 type Props = {
@@ -30,7 +31,24 @@ export default async function EditDocumentPage({ params }: Props) {
     notFound()
   }
 
-  const myTenants = await getTenantsForUser(user.id)
+  const [myTenants, payload] = await Promise.all([
+    getTenantsForUser(user.id),
+    (await import('@/lib/payload')).getLorePayload(),
+  ])
+  const characterLinks = await getDocumentCharacterLinks(payload, doc.id)
+  const preparedBy = characterLinks.docs.find((link) => link.kind === 'prepared_by')?.character
+  const preparedByLabel = preparedBy && typeof preparedBy === 'object' ? preparedBy.name : 'No Character credit'
+  const concerns = characterLinks.docs
+    .filter((link) => link.kind === 'concerns')
+    .flatMap((link) => {
+      if (!link.character || typeof link.character !== 'object') return []
+      return [{
+        id: Number(link.id),
+        characterId: Number(link.character.id),
+        name: link.character.name,
+        relationshipLabel: link.relationshipLabel ?? '',
+      }]
+    })
   const tokens = resolveThemeTokens(tenant)
   const editable = canEditDocumentBody(doc.lifecycle)
 
@@ -51,6 +69,10 @@ export default async function EditDocumentPage({ params }: Props) {
           initialTitle={doc.title}
           initialMarkdown={doc.body}
           readOnly={!editable}
+          preparedByLabel={preparedByLabel}
+          dateLabel={new Date(doc.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+          concerns={concerns}
+          canManageConcerns={role === 'admin' && editable}
         />
       </section>
     </TenantShell>

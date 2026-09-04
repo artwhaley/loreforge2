@@ -28,6 +28,11 @@ type Props = {
   initialMarkdown: string
   /** Render the editor as a read-only historical/current snapshot. */
   readOnly?: boolean
+  /** Optional document metadata and concern controls for document editing. */
+  preparedByLabel?: string
+  dateLabel?: string
+  concerns?: Array<{ id: number; characterId: number | string; name: string; relationshipLabel?: string | null }>
+  canManageConcerns?: boolean
 }
 
 type Mode = 'edit' | 'source'
@@ -45,6 +50,10 @@ export function DocumentEditor({
   initialTitle,
   initialMarkdown,
   readOnly = false,
+  preparedByLabel,
+  dateLabel,
+  concerns,
+  canManageConcerns = false,
 }: Props) {
   const editorRef = useRef<MDXEditorMethods>(null)
   const [title, setTitle] = useState(initialTitle)
@@ -167,47 +176,56 @@ export function DocumentEditor({
   return (
     <div className={styles.editor}>
       <div className={styles.editorHeader}>
-        <label className={styles.titleLabel} htmlFor="doc-title">
-          Title
-        </label>
-        <input
-          id="doc-title"
-          className={styles.titleInput}
-          value={title}
-          readOnly={readOnly}
-          onChange={(e) => {
-            const nextTitle = e.target.value
-            setTitle(nextTitle)
-            updateCurrent({ title: nextTitle })
-          }}
-        />
-        <span className={styles.spacer} />
-        <div className={styles.modeToggle} role="group" aria-label="Edit mode">
-          <button
-            type="button"
-            className={mode === 'edit' ? styles.modeActive : styles.modeBtn}
-            aria-pressed={mode === 'edit'}
-            disabled={readOnly}
-            onClick={() => switchMode('edit')}
-          >
-            Edit
-          </button>
-          <button
-            type="button"
-            className={mode === 'source' ? styles.modeActive : styles.modeBtn}
-            aria-pressed={mode === 'source'}
-            disabled={readOnly}
-            onClick={() => switchMode('source')}
-          >
-            Source (advanced)
+        <div className={styles.titleBlock}>
+          <label className={styles.titleLabel} htmlFor="doc-title">
+            Title
+          </label>
+          <input
+            id="doc-title"
+            className={styles.titleInput}
+            value={title}
+            readOnly={readOnly}
+            onChange={(e) => {
+              const nextTitle = e.target.value
+              setTitle(nextTitle)
+              updateCurrent({ title: nextTitle })
+            }}
+          />
+          {preparedByLabel || dateLabel ? (
+            <div className={styles.meta}>
+              {preparedByLabel ? <span>Prepared by {preparedByLabel}</span> : null}
+              {dateLabel ? <span>Date {dateLabel}</span> : null}
+            </div>
+          ) : null}
+        </div>
+        <div className={styles.editorControls}>
+          <div className={styles.modeToggle} role="group" aria-label="Edit mode">
+            <button
+              type="button"
+              className={mode === 'edit' ? styles.modeActive : styles.modeBtn}
+              aria-pressed={mode === 'edit'}
+              disabled={readOnly}
+              onClick={() => switchMode('edit')}
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              className={mode === 'source' ? styles.modeActive : styles.modeBtn}
+              aria-pressed={mode === 'source'}
+              disabled={readOnly}
+              onClick={() => switchMode('source')}
+            >
+              Source (advanced)
+            </button>
+          </div>
+          <span className={styles.status} aria-live="polite">
+            {statusText}
+          </span>
+          <button className={styles.saveButton} onClick={onSave} disabled={readOnly || saveState.pending || transitionPending}>
+            {readOnly ? 'Read-only' : 'Save'}
           </button>
         </div>
-        <span className={styles.status} aria-live="polite">
-          {statusText}
-        </span>
-        <button className={styles.saveButton} onClick={onSave} disabled={readOnly || saveState.pending || transitionPending}>
-          {readOnly ? 'Read-only' : 'Save'}
-        </button>
       </div>
 
       <div className={styles.bodyEditor} role="region" aria-label="Document editor content">
@@ -235,6 +253,41 @@ export function DocumentEditor({
           readOnly={readOnly}
           aria-label="Markdown source"
         />
+
+        {concerns ? (
+          <section className={styles.concerns} aria-label="Concerns">
+            <h2>Concerns</h2>
+            {concerns.length > 0 ? (
+              <ul>
+                {concerns.map((concern) => (
+                  <li key={concern.id}>
+                    {concern.name}{concern.relationshipLabel ? ` · ${concern.relationshipLabel}` : ''}
+                    {canManageConcerns ? (
+                      <form action="/api/document-links" method="post">
+                        <input type="hidden" name="domainSlug" value={tenantSlug} />
+                        <input type="hidden" name="documentId" value={entityId} />
+                        <input type="hidden" name="characterId" value={concern.characterId} />
+                        <input type="hidden" name="kind" value="concerns" />
+                        <input type="hidden" name="action" value="remove" />
+                        <button type="submit">Remove</button>
+                      </form>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : <p>No Characters attached.</p>}
+            {canManageConcerns ? (
+              <form action="/api/document-links" method="post" className={styles.concernForm}>
+                <input type="hidden" name="domainSlug" value={tenantSlug} />
+                <input type="hidden" name="documentId" value={entityId} />
+                <input type="hidden" name="kind" value="concerns" />
+                <input name="characterId" type="number" min="1" required placeholder="Character ID" aria-label="Character ID" />
+                <input name="relationshipLabel" placeholder="Relationship" aria-label="Relationship" />
+                <button type="submit">Add concern</button>
+              </form>
+            ) : null}
+          </section>
+        ) : null}
       </div>
     </div>
   )
