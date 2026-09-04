@@ -58,7 +58,8 @@ export const DocumentRelationships: CollectionConfig = {
           collection: 'document-relationships',
           where: { and: [{ kind: { equals: 'supersedes' } }, { domain: { equals: domainId } }] },
           depth: 0,
-          limit: 5000,
+          limit: 0,
+          pagination: false,
           overrideAccess: true,
           req: txReq,
         })

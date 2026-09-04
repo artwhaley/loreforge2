@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { TenantShell } from '@/components/theme/TenantShell'
 import { DocumentEditor } from '@/components/editor/DocumentEditor'
 import { canEditDocumentBody } from '@/lib/documents/lifecycle'
+import { isAllowed } from '@/lib/authz/evaluate'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getDocumentForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 import { getDocumentCharacterLinks } from '@/lib/documents/links'
@@ -17,7 +18,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function EditDocumentPage({ params }: Props) {
   const { slug, id } = await params
-  const { tenant, role, user } = await getActiveTenant()
+  const { tenant, role, user, activeCharacter } = await getActiveTenant()
 
   if (!tenant || tenant.slug !== slug) {
     notFound()
@@ -35,6 +36,9 @@ export default async function EditDocumentPage({ params }: Props) {
     getTenantsForUser(user.id),
     (await import('@/lib/payload')).getLorePayload(),
   ])
+  const actor = { userId: user.id, activeCharacterId: activeCharacter?.id }
+  if (!await isAllowed({ payload, actor, domainId: tenant.id, capability: 'read', resource: { type: 'Document', id: doc.id } })) notFound()
+  if (!await isAllowed({ payload, actor, domainId: tenant.id, capability: 'edit_document', resource: { type: 'Document', id: doc.id } })) redirect(`/domain/${slug}/documents/${doc.id}`)
   const characterLinks = await getDocumentCharacterLinks(payload, doc.id)
   // P05R-T04 I: render ALL Prepared-by credits in deterministic order (by
   // link id) — services can store more than one, and showing only the first

@@ -6,6 +6,7 @@ import { getTenantsForUser } from '@/lib/tenant/queries'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 import { getLorePayload } from '@/lib/payload'
 import { isAllowed } from '@/lib/authz/evaluate'
+import { canOpenPeople } from '@/lib/authz/workspaces'
 
 import { PeopleSearch } from './PeopleSearch'
 import styles from './people.module.scss'
@@ -19,7 +20,7 @@ export default async function PeoplePage({ params }: Props) {
   if (!tenant || tenant.slug !== slug || !user) notFound()
   const payload = await getLorePayload()
   const allowed = await Promise.all(['manage_members', 'manage_roles', 'manage_access'].map((capability) => isAllowed({ payload, actor: { userId: user.id, activeCharacterId: activeCharacter?.id ?? null }, domainId: tenant.id, capability, resource: { type: 'Domain', id: tenant.id } })))
-  if (!allowed.some(Boolean)) notFound()
+  if (!allowed.some(Boolean) && !await canOpenPeople(payload, { userId: user.id, activeCharacterId: activeCharacter?.id }, tenant.id)) notFound()
   const domains = user ? await getTenantsForUser(user.id) : []
   return <TenantShell tenant={tenant} cssVars={themeTokensToCssVars(resolveThemeTokens(tenant))} role={role} switcherTenants={domains}>
     <section className={styles.page}>

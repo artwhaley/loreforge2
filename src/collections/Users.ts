@@ -16,6 +16,10 @@ export const Users: CollectionConfig = {
     {
       name: 'isPlatformAdmin',
       type: 'checkbox',
+      access: {
+        create: ({ req }) => Boolean(req.user?.isPlatformAdmin),
+        update: ({ req }) => Boolean(req.user?.isPlatformAdmin),
+      },
       defaultValue: false,
       label: 'Platform administrator',
       admin: { description: 'Explicit platform authority; every use is audited.' },

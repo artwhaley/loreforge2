@@ -1,6 +1,14 @@
 # Phase 7 Orchestrator — Real Authorization and Delegated Administration
 
-**Status:** blocked until P06-GATE owner-approved state is explicitly approved.
+**Status:** Phase 7 implementation exists; owner acceptance remains pending.
+The owner bypassed the Phase 6 gate. Phase 7 manual testing is paused before
+the Head Scribe section for the requested performance remediation.
+
+**Current addendum:** `references/P07P_DATABASE_ACCESS_PATCH.md`, P07P-01
+through P07P-06. The implementation and automated verification are recorded in
+`execution-notes/P07P-01.md` through `execution-notes/P07P-06.md` and
+`execution-notes/P07-GATE.md`. Owner browser acceptance and warm release
+measurements remain open; do not begin Phase 8.
 
 ## Phase outcome
 Enforce the frozen hierarchy-plus-exceptions authorization model everywhere, including delegation and explicit deny behavior.

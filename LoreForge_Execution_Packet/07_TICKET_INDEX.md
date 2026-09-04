@@ -1,5 +1,15 @@
 # LoreForge Ticket Index
 
+## Current Phase 7 performance remediation
+
+Owner-requested executable addendum:
+`references/P07P_DATABASE_ACCESS_PATCH.md` (P07P-01 through P07P-06).
+Status: implementation and automated verification complete; owner manual gate
+pending. These six ordered work units supplement the original 84 ticket files;
+they are not six additional phase gates. P07-GATE must remain open until the
+owner completes the visible acceptance and release measurements before Phase 8.
+Repository-root entry point: `P07_DATABASE_ACCESS_PATCH.md`.
+
 **Total ticket files:** 84 (69 implementation/design tickets plus 15 mandatory human review gates).
 
 This index is navigation only. `01_ORCHESTRATOR.md`, each phase's `00_PHASE_ORCHESTRATOR.md`, and the ticket itself control execution.

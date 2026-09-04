@@ -1,3 +1,4 @@
+import { isAllowed } from '@/lib/authz/evaluate'
 import { notFound } from 'next/navigation'
 
 import { TenantShell } from '@/components/theme/TenantShell'
@@ -23,13 +24,14 @@ const labelLifecycle = (value: string | undefined) => (value ?? 'unknown').repla
 export default async function DocumentHistoryPage({ params, searchParams }: Props) {
   const { slug, id } = await params
   const query = await searchParams
-  const { tenant, role, user } = await getActiveTenant()
+  const { tenant, role, user, activeCharacter } = await getActiveTenant()
   if (!tenant || tenant.slug !== slug || !user) notFound()
 
   const document = await getDocumentForTenant(tenant, id, { includeDeleted: true })
   if (!document) notFound()
 
   const payload = await getLorePayload()
+  if (!await isAllowed({ payload, actor: { userId: user.id, activeCharacterId: activeCharacter?.id }, domainId: tenant.id, capability: 'read', resource: { type: 'Document', id: document.id } })) notFound()
   const revisions = await payload.findVersions({
     collection: 'documents',
     where: { parent: { equals: document.id } },

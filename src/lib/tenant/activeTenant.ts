@@ -43,7 +43,8 @@ export async function getActiveContext(): Promise<ActiveContext> {
       and: [{ controlledBy: { equals: user.id } }, { status: { equals: 'active' } }],
     },
     depth: 1,
-    limit: 100,
+    limit: 0,
+    pagination: false,
     sort: 'name',
   })
   const characters = characterResult.docs
@@ -82,7 +83,7 @@ export async function getActiveContext(): Promise<ActiveContext> {
     depth: 0,
     limit: 1,
   })
-  const isDomainAdmin = Number(tenant.ownerUser && typeof tenant.ownerUser === 'object' ? tenant.ownerUser.id : tenant.ownerUser) === Number(user.id) || domainAdmins.docs.length > 0
+  const isDomainAdmin = Boolean(user.isPlatformAdmin) || Number(tenant.ownerUser && typeof tenant.ownerUser === 'object' ? tenant.ownerUser.id : tenant.ownerUser) === Number(user.id) || domainAdmins.docs.length > 0
   const activeMembership = activeCharacter
     ? await payload.find({
         collection: 'domain-memberships',

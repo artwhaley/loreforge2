@@ -1,0 +1,17 @@
+{
+  "runDate": "2026-09-04",
+  "scale": "small",
+  "database": "disposable SQLite database",
+  "domains": 3,
+  "folders": 60,
+  "documents": 120,
+  "sessionLoadMs": 3.2,
+  "sessionSqlStatements": 8,
+  "pureDecisions": 1000,
+  "pureDecisionsMs": 0.3,
+  "pureDecisionSqlStatements": 0,
+  "compiledReadScopeMs": 0.1,
+  "versionParentQueryMs": 6.3,
+  "navigationDecisionsMs": 0.2,
+  "cleanup": "deferred on Windows when the SQLite WAL handle remains open; non-fatal"
+}

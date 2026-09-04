@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       }) : { docs: [] }
       const admins = await payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: tenant.id } }, { user: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
       const ownerId = typeof tenant.ownerUser === 'object' ? tenant.ownerUser?.id : tenant.ownerUser
-      const isAdmin = String(ownerId) === String(user.id) || admins.docs.length > 0
+      const isAdmin = Boolean(user.isPlatformAdmin) || String(ownerId) === String(user.id) || admins.docs.length > 0
       if (memberships.docs.length > 0 || isAdmin) {
         const res = NextResponse.redirect(new URL(`/domain/${slug}`, request.url), 303)
         res.cookies.set(ACTIVE_TENANT_COOKIE, slug, {

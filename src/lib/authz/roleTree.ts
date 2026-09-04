@@ -26,7 +26,6 @@ export function roleMatchesHeldRole(ruleRoleId: number, heldRoleIds: number[], r
 }
 
 export async function getRoleTree(payload: Payload, domainId: number | string): Promise<RoleNode[]> {
-  const result = await payload.find({ collection: 'roles', where: { domain: { equals: domainId } }, depth: 0, limit: 10000, overrideAccess: true })
+  const result = await payload.find({ collection: 'roles', where: { domain: { equals: domainId } }, depth: 0, limit: 0, pagination: false, overrideAccess: true })
   return result.docs.map((role) => ({ id: Number(role.id), domainId: Number(idOf(role.domain)), departmentId: Number(idOf(role.subdomain)), parentId: idOf(role.parentRole), active: Boolean(role.active) }))
 }
-

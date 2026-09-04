@@ -27,6 +27,9 @@ export type FolderTreeNode = {
   systemManaged: boolean
   readState: PermissionState
   writeState: PermissionState
+  canManageAccess?: boolean
+  canGrantRead?: boolean
+  canGrantWrite?: boolean
   effectiveRead?: PermissionExplanation
   effectiveWrite?: PermissionExplanation
   children: FolderTreeNode[]
@@ -115,7 +118,7 @@ export function RoleTree({ domainSlug, characterId, departments, initialMode = '
   const [lastFilterKey, setLastFilterKey] = useState<string | null>(null)
   if (lastFilterKey !== filterKey) {
     setLastFilterKey(filterKey)
-    if (mode === 'held' || normalizedQuery) {
+    if (mode === 'held' || normalizedQuery || mode === 'assignable') {
       setExpanded((current) => {
         const next = new Set(current)
         for (const department of visibleDepartments) {
@@ -168,7 +171,7 @@ function folderMatches(node: FolderTreeNode, query: string): FolderTreeNode | nu
  * direct rules on save. Each axis is its own radiogroup; mouse and keyboard
  * both select exactly one state.
  */
-function PermissionAxis({ label, state, onChange }: { label: string; state: PermissionState; onChange: (next: PermissionState) => void }) {
+function PermissionAxis({ label, state, onChange, disabled, canGrant = true }: { label: string; state: PermissionState; onChange: (next: PermissionState) => void; disabled?: boolean; canGrant?: boolean }) {
   const name = useId()
   const options: Array<{ value: PermissionState; text: string }> = [
     { value: 'inherit', text: 'Inherited' },
@@ -178,7 +181,7 @@ function PermissionAxis({ label, state, onChange }: { label: string; state: Perm
   return <div className={styles.permissionAxis} role="radiogroup" aria-label={`${label} access`}>
     <span className={styles.permissionName}>{label}</span>
     <span className={styles.permissionOptions}>{options.map((option) => <label key={option.value} className={`${styles.permissionOption} ${state === option.value ? styles.permissionOptionActive : ''}`} title={option.value === 'inherit' ? `${label} is inherited (no direct rule).` : option.value === 'grant' ? `${label} explicitly allowed here.` : `${label} explicitly denied here.`}>
-      <input type="radio" name={name} value={option.value} checked={state === option.value} onChange={() => onChange(option.value)} />
+      <input type="radio" name={name} value={option.value} checked={state === option.value} disabled={disabled || (option.value === 'grant' && !canGrant)} onChange={() => onChange(option.value)} />
       <span>{option.text}</span>
     </label>)}</span>
   </div>
@@ -194,8 +197,8 @@ function FolderNode({ node, domainSlug, principalType, principalId, expanded, to
     <form action="/api/permission-rules" method="post" className={styles.folderRow}>
       <input type="hidden" name="domainSlug" value={domainSlug} /><input type="hidden" name={principalType === 'Role' ? 'roleId' : 'characterId'} value={principalId} /><input type="hidden" name="principalType" value={principalType} /><input type="hidden" name="folderId" value={node.id} /><input type="hidden" name="readState" value={readState} /><input type="hidden" name="writeState" value={writeState} />
       <div className={styles.folderIdentity}>{hasChildren ? <button type="button" className={styles.disclosure} aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${node.name}`} aria-expanded={isOpen} onClick={() => toggle(key)}>{isOpen ? '⌄' : '›'}</button> : <span className={styles.disclosureSpacer} aria-hidden="true" />}<span className={styles.folderIcon} aria-hidden="true">{node.systemManaged ? '⌂' : '▱'}</span><span className={styles.folderName}>{node.name}</span></div>
-      <div className={styles.permissionSet}><PermissionAxis label="Read" state={readState} onChange={setReadState} /><PermissionAxis label="Write" state={writeState} onChange={setWriteState} />{node.effectiveRead || node.effectiveWrite ? <div className={styles.effectiveSummary}>{node.effectiveRead ? <span>Effective read: <strong>{node.effectiveRead.allowed ? 'Allowed' : 'Denied'}</strong> · {node.effectiveRead.source}</span> : null}{node.effectiveWrite ? <span>Effective write: <strong>{node.effectiveWrite.allowed ? 'Allowed' : 'Denied'}</strong> · {node.effectiveWrite.source}</span> : null}</div> : null}</div>
-      <button type="submit" className={styles.saveButton}>Save</button>
+      <div className={styles.permissionSet}><PermissionAxis label="Read" state={readState} onChange={setReadState} disabled={node.canManageAccess === false} canGrant={node.canGrantRead} /><PermissionAxis label="Write" state={writeState} onChange={setWriteState} disabled={node.canManageAccess === false} canGrant={node.canGrantWrite} />{node.effectiveRead || node.effectiveWrite ? <div className={styles.effectiveSummary}>{node.effectiveRead ? <span>Effective read: <strong>{node.effectiveRead.allowed ? 'Allowed' : 'Denied'}</strong> · {node.effectiveRead.source}</span> : null}{node.effectiveWrite ? <span>Effective write: <strong>{node.effectiveWrite.allowed ? 'Allowed' : 'Denied'}</strong> · {node.effectiveWrite.source}</span> : null}</div> : null}</div>
+      <button type="submit" className={styles.saveButton} disabled={node.canManageAccess === false}>Save</button>
     </form>
     {hasChildren && isOpen ? <ul className={styles.folderTree} role="group">{node.children.map((child) => <FolderNode key={`${principalType}-${principalId}-${child.id}`} node={child} domainSlug={domainSlug} principalType={principalType} principalId={principalId} expanded={expanded} toggle={toggle} />)}</ul> : null}
   </li>

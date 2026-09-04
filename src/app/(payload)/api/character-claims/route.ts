@@ -3,14 +3,9 @@ import { getPayload } from 'payload'
 
 import config from '@payload-config'
 
-import { applyClaimDecision } from '@/lib/characters/claims'
+import { decideCharacterClaim } from '@/lib/characters/decideClaim'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
-import { isAllowed } from '@/lib/authz/evaluate'
 
-const relationId = (value: unknown): number =>
-  typeof value === 'object' && value !== null && 'id' in value
-    ? Number((value as { id: number | string }).id)
-    : Number(value)
 
 export async function POST(request: Request) {
   const payload = await getPayload({ config })
@@ -68,47 +63,11 @@ export async function POST(request: Request) {
     if (!Number.isFinite(claimId) || (decision !== 'approved' && decision !== 'rejected')) {
       return NextResponse.redirect(new URL(redirectTo, request.url), 303)
     }
-    const claims = await payload.find({
-      collection: 'character-claim-requests',
-      where: { id: { equals: claimId } },
-      depth: 1,
-      limit: 1,
-    })
-    const claim = claims.docs[0]
-    if (!claim) return NextResponse.redirect(new URL(redirectTo, request.url), 303)
-    const claimDomainId = relationId(claim.domain) ?? relationId(claim.tenant)
-    const authorized = await isAllowed({ payload, actor: { userId: user.id }, domainId: claimDomainId, capability: 'manage_claims', resource: { type: 'Domain', id: claimDomainId } })
-    const currentCharacter = await payload.findByID({ collection: 'characters', id: relationId(claim.character), depth: 0 })
-    const currentController =
-      typeof currentCharacter.controlledBy === 'object'
-        ? currentCharacter.controlledBy?.id
-        : currentCharacter.controlledBy
-    const result = applyClaimDecision(
-      { status: claim.status, characterControlledBy: currentController },
-      decision,
-      relationId(claim.claimant),
-      { userId: user.id, authorized },
-    )
-    if (typeof result === 'string') return NextResponse.redirect(new URL(redirectTo, request.url), 303)
-
     const context = await getActiveContext()
-    if (decision === 'approved') {
-      await payload.update({
-        collection: 'characters',
-        id: currentCharacter.id,
-        data: { controlledBy: Number(result.characterControlledBy) },
-      })
-    }
-    await payload.update({
-      collection: 'character-claim-requests',
-      id: claim.id,
-      data: {
-        status: result.status,
-        decidedAt: new Date().toISOString(),
-        decidedBy: user.id,
-        decidingCharacter: context.activeCharacter?.id,
-        decisionNote: String(formData.get('decisionNote') ?? '').trim() || undefined,
-      },
+    await decideCharacterClaim(payload, {
+      actor: { userId: user.id, activeCharacterId: context.tenant?.slug === tenantSlug ? context.activeCharacter?.id : null },
+      domainId: domain.id, characterId, claimId, decision,
+      note: String(formData.get('decisionNote') ?? '').trim() || undefined,
     })
   }
 

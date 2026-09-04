@@ -79,8 +79,9 @@ export async function POST(request: Request) {
 
   if (action === 'move') {
     const parentId = idOf(form.get('parentId'))
+    if (parentId === null && !domainAllowed) return NextResponse.redirect(new URL(returnTo, request.url), 303)
     if (parentId !== null && !domainAllowed && !await isAllowed({ payload, actor, domainId: domain.id, capability: 'manage_folders', resource: { type: 'Folder', id: parentId } })) return NextResponse.redirect(new URL(returnTo, request.url), 303)
-    const allFolders = await payload.find({ collection: 'folders', where: { domain: { equals: domain.id } }, depth: 0, limit: 10000 })
+      const allFolders = await payload.find({ collection: 'folders', where: { domain: { equals: domain.id } }, depth: 0, limit: 0, pagination: false })
     const parent = parentId === null ? null : allFolders.docs.find((candidate) => Number(candidate.id) === parentId)
     if (parentId !== null && !parent) return NextResponse.redirect(new URL(returnTo, request.url), 303)
     try {

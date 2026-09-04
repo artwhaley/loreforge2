@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   try {
     await runInTransaction(payload, async (transactionID) => {
       const req = { transactionID }
-      const existing = await payload.find({ collection: 'permission-rules', where: { and: [{ domain: { equals: domain.id } }, { principalType: { equals: principalType } }] }, depth: 0, limit: 5000, req })
+      const existing = await payload.find({ collection: 'permission-rules', where: { and: [{ domain: { equals: domain.id } }, { principalType: { equals: principalType } }] }, depth: 0, limit: 0, pagination: false, req })
       const directRules = existing.docs.filter((rule) => idOf(rule.principal) === principalId && rule.resourceType === resourceType && idOf(rule.resource) === resourceId)
       const removeCapabilities = async (capabilities: string[]) => {
         for (const rule of directRules.filter((item) => capabilities.includes(item.capability))) await payload.delete({ collection: 'permission-rules', id: rule.id, req })
@@ -79,6 +79,7 @@ export async function POST(request: Request) {
       payload.logger.info(`P07-T05 audit: saved direct permission override domain=${domain.id} principalType=${principalType} principal=${principalRecord.id} resourceType=${resourceType} resource=${resource.id} actorUser=${user.id}`)
       await recordDomainAudit({
         payload, domainId: domain.id, eventType: 'folder_access_changed', actorUser: user.id,
+        actorCharacter: activeCharacterId,
         targetType: resourceType === 'Document' ? 'document' : 'folder', targetId: resource.id,
         action: 'saved',
         context: { principalType, principalId: principalRecord.id, resourceType, resourceId: resource.id, readState, writeState, capabilities: ['read', 'create_document', 'edit_document'] },

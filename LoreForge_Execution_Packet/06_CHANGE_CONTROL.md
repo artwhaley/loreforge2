@@ -1,5 +1,16 @@
 # Change Control and Executor Guardrails
 
+## CC-P07P-2026-09-04 — performant access without weaker authorization
+
+Owner requested a concrete patch specification after unusably slow Phase 7
+acceptance. `references/P07P_DATABASE_ACCESS_PATCH.md` is the current ordered
+remediation addendum. This request authorizes specification, not implementation.
+It preserves frozen precedence and active-Character identity while replacing
+repeated database loads and post-fetch filtering. No RLS/provider migration,
+new permission product, or Phase 8 work is authorized. The previously requested
+recent-record action metadata correction is included as a bounded companion
+change, not a new feed implementation. P07-GATE remains owner-pending.
+
 ## Priority
 1. Explicit owner instruction issued after this packet.
 2. Frozen product decisions.

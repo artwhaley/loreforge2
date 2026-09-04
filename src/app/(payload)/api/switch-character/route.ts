@@ -50,8 +50,16 @@ export async function POST(request: Request) {
     if (domain) {
       const membership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domain.id } }, { character: { equals: character.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
       if (!membership.docs[0]) {
-        response.cookies.delete(ACTIVE_CHARACTER_COOKIE)
-        return finish('/', response)
+        // A stale Domain from another account must not prevent selecting a
+        // Character on the Loreforge dashboard. Leave that Domain, not the
+        // newly selected identity.
+        response.cookies.delete(ACTIVE_TENANT_COOKIE)
+        if (returnTo === `/domain/${tenantSlug}` || returnTo.startsWith(`/domain/${tenantSlug}/`)) {
+          if (wantsJson) return NextResponse.json({ redirectTo: '/' }, { headers: response.headers })
+          const redirect = NextResponse.redirect(new URL('/', request.url), 303)
+          for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie)
+          return redirect
+        }
       }
     }
   }

@@ -1,123 +1,80 @@
 import type { Payload } from 'payload'
 
-import { isCapability, type Capability, type PrincipalType, type ResourceType } from '@/lib/permissions/capabilities'
-import { resolveResourceTree, resourceSpecificity, type ResourceRef } from './resourceTree'
-import { getRoleTree, roleMatchesHeldRole, type RoleNode } from './roleTree'
+import { isCapability, type Capability } from '@/lib/permissions/capabilities'
+import { decideInSession, folderAncestry, loadAuthorizationSession, resolveDocumentTarget, type AuthzActor, type AuthzResourceRef, type SessionDecision } from './session'
+import { loadCachedAuthorizationSession } from './sessionCache'
 
-export type PermissionActor = { userId: number | string; activeCharacterId?: number | string | null }
-export type PermissionDecision = { allowed: boolean; reason: string; matchedRule?: { id: number | string; effect: 'grant' | 'deny'; principalType: PrincipalType; resourceType: ResourceType; resourceId: number; specificity: number }; trace: string[] }
+/**
+ * P07P-02 compatible wrapper.
+ *
+ * Same signature and frozen semantics as the previous per-call evaluator, but
+ * each call loads one request-owned session of facts and decides purely
+ * against it. Callers are migrated to explicit session passing during this
+ * same patch; this wrapper exists so intermediate states stay authorized.
+ *
+ * NOTE (owner decision 2026-09-04): the acting Character is a first-order
+ * identity. This wrapper evaluates exactly the passed actor — never a union
+ * of the User's other controlled Characters. With no validated acting
+ * Character the decision is User-level authority only.
+ */
+
+export type PermissionActor = AuthzActor
+export type PermissionDecision = SessionDecision
 
 const idOf = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null
   if (typeof value === 'object' && value !== null && 'id' in value) return Number((value as { id: number | string }).id)
   return Number(value)
 }
-const polymorphic = (value: unknown): { relationTo: string | null; id: number | null } => {
-  if (!value || typeof value !== 'object') return { relationTo: null, id: idOf(value) }
-  const row = value as Record<string, unknown>
-  const relationTo = row.relationTo === undefined ? null : String(row.relationTo)
-  return { relationTo, id: idOf(row.value ?? row.id) }
-}
 
-const relationForPrincipal: Record<PrincipalType, string> = { Character: 'characters', User: 'users', Role: 'roles', DomainMembership: 'domain-memberships' }
-const relationForResource: Record<ResourceType, string> = { Domain: 'domains', Subdomain: 'subdomains', Folder: 'folders', Document: 'documents' }
-
-async function domainAuthority(payload: Payload, actor: PermissionActor, domainId: number): Promise<{ kind: 'platform' | 'owner' | 'admin' | 'personal-owner' | null; reason?: string }> {
-  const [user, domain] = await Promise.all([
-    payload.findByID({ collection: 'users', id: actor.userId, depth: 0, overrideAccess: true }).catch(() => null),
-    payload.findByID({ collection: 'domains', id: domainId, depth: 0, overrideAccess: true }).catch(() => null),
-  ])
-  if (!domain) return { kind: null }
-  if (Boolean((user as { isPlatformAdmin?: unknown } | null)?.isPlatformAdmin)) return { kind: 'platform', reason: 'Platform Admin bypass.' }
-  const ownerUserId = idOf((domain as { ownerUser?: unknown }).ownerUser)
-  const ownerCharacterId = idOf((domain as { ownerCharacter?: unknown }).ownerCharacter)
-  if (String(ownerUserId) === String(actor.userId)) return { kind: 'owner', reason: 'Community Domain Owner authority.' }
-  if (String((domain as { kind?: unknown }).kind) === 'personal' && actor.activeCharacterId != null && ownerCharacterId === Number(actor.activeCharacterId)) return { kind: 'personal-owner', reason: 'Personal Domain owner Character authority.' }
-  const admins = await payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: domainId } }, { user: { equals: actor.userId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true })
-  if (admins.docs.length > 0) return { kind: 'admin', reason: 'Operational Domain Admin authority.' }
-  return { kind: null }
-}
-
-async function activeCharacterState(payload: Payload, actor: PermissionActor, domainId: number) {
-  if (actor.activeCharacterId == null) return null
-  const character = await payload.findByID({ collection: 'characters', id: actor.activeCharacterId, depth: 0, overrideAccess: true }).catch(() => null)
-  if (!character || character.status !== 'active') return null
-  // An active Character selector is a User -> Character tuple, not a caller
-  // supplied ID. Without this ownership check a user could forge another
-  // user's Character as their acting identity on direct API requests.
-  const characterRecord = character as { controlledBy?: unknown }
-  const controllerId = idOf(characterRecord.controlledBy)
-  // Payload always materializes this relationship for persisted Characters;
-  // tolerate an omitted property only for lightweight test doubles.
-  if (Object.prototype.hasOwnProperty.call(characterRecord, 'controlledBy') && (controllerId == null || Number(controllerId) !== Number(actor.userId))) return null
-  const membership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domainId } }, { character: { equals: actor.activeCharacterId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true })
-  if (!membership.docs[0]) return null
-  return { characterId: Number(actor.activeCharacterId), membershipId: Number(membership.docs[0].id) }
-}
-
-function rulePrincipalId(rule: Record<string, unknown>): { type: PrincipalType | null; id: number | null; relation: string | null } {
-  const type = String(rule.principalType ?? '') as PrincipalType
-  if (!['Character', 'User', 'Role', 'DomainMembership'].includes(type)) return { type: null, id: null, relation: null }
-  const value = polymorphic(rule.principal)
-  return { type, id: value.id, relation: value.relationTo }
-}
-
-function ruleResourceId(rule: Record<string, unknown>): { type: ResourceType | null; id: number | null; relation: string | null } {
-  const type = String(rule.resourceType ?? '') as ResourceType
-  if (!['Domain', 'Subdomain', 'Folder', 'Document'].includes(type)) return { type: null, id: null, relation: null }
-  const value = polymorphic(rule.resource)
-  return { type, id: value.id, relation: value.relationTo }
-}
-
-/**
- * Single authoritative permission evaluator. It returns an explanation even
- * for denials so People and Folder-centered views can show the same result.
- */
-export async function evaluatePermission(args: { payload: Payload; actor: PermissionActor; domainId: number | string; capability: string; resource: ResourceRef }): Promise<PermissionDecision> {
+export async function evaluatePermission(args: { payload: Payload; actor: PermissionActor; domainId: number | string; capability: string; resource: AuthzResourceRef; transactionID?: number | string | null }): Promise<PermissionDecision> {
   const domainId = Number(args.domainId)
   if (!Number.isInteger(domainId) || !isCapability(args.capability)) return { allowed: false, reason: 'Invalid Domain or capability.', trace: [] }
+  // P07P-02: request-local memoized session — repeated wrapper calls in one
+  // request (pages, shells, hooks) share facts instead of reloading them.
+  // Transaction callers pass transactionID and bypass the cache explicitly.
+  const session = args.transactionID != null
+    ? await loadAuthorizationSession(args.payload, args.actor, domainId, { transactionID: args.transactionID })
+    : await loadCachedAuthorizationSession(args.payload, Number(args.actor.userId), args.actor.activeCharacterId ?? null, domainId)
   const capability = args.capability as Capability
-  const tree = await resolveResourceTree(args.payload, args.resource).catch(() => null)
-  if (!tree) return { allowed: false, reason: 'Resource not found.', trace: ['Resource lookup failed.'] }
-  if (tree.domainId !== domainId) return { allowed: false, reason: 'Resource belongs to another Domain.', trace: ['Cross-Domain resource rejected.'] }
-  const authority = await domainAuthority(args.payload, args.actor, domainId)
-  if (authority.kind) {
-    if (authority.kind === 'platform') (args.payload as unknown as { logger?: { info?: (message: string) => void } }).logger?.info?.(`P07-AUTHZ platform_admin_bypass actorUser=${args.actor.userId} domain=${domainId} capability=${capability} resource=${args.resource.type}:${args.resource.id}`)
-    return { allowed: true, reason: authority.reason ?? 'Administrative authority.', trace: [authority.reason ?? 'Administrative authority.'] }
+  const { type, id } = args.resource
+  if (type === 'Document') {
+    // A Document decision needs its folder ancestry (Folder/Department/Domain
+    // rules apply through it). Fetch the lightweight row once; the chain
+    // itself resolves in-memory from session facts.
+    // Transaction rule: a check inside a caller's open transaction MUST pass
+    // req with the transactionID — without it the Local API auto-commits a
+    // separate read that cannot see rows created earlier in that transaction
+    // (see db/transactions.ts); the just-created Document would look missing.
+    const document = await args.payload.findByID({ collection: 'documents', id, depth: 0, overrideAccess: true, ...(args.transactionID == null ? {} : { req: { transactionID: args.transactionID } }) }).catch(() => null) as unknown as Record<string, unknown> | null
+    if (!document) return { allowed: false, reason: 'Resource not found.', trace: ['Resource lookup failed.'] }
+    if (idOf(document.domain) !== session.domainId) return { allowed: false, reason: 'Resource belongs to another Domain.', trace: ['Cross-Domain resource rejected.'] }
+    if (document.softDeletedAt) return { allowed: false, reason: 'Document is soft-deleted.', trace: ['Soft-deleted resource rejected.'] }
+    const target = resolveDocumentTarget(session, { id: Number(id), folderId: idOf(document.folder), subdomainId: idOf(document.subdomain) })
+    return decideInSession(session, capability, target)
   }
-  const actorState = await activeCharacterState(args.payload, args.actor, domainId)
-  if (!actorState) return { allowed: false, reason: 'An active member Character is required.', trace: ['No active Character/Domain membership tuple.'] }
-  const roles = await getRoleTree(args.payload, domainId)
-  const assignments = await args.payload.find({ collection: 'role-assignments', where: { and: [{ character: { equals: actorState.characterId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 10000, overrideAccess: true })
-  const heldRoleIds = assignments.docs.map((assignment) => Number(idOf(assignment.role))).filter((id) => Number.isFinite(id) && roles.some((role) => role.id === id && role.active))
-  const rulesResult = await args.payload.find({ collection: 'permission-rules', where: { and: [{ domain: { equals: domainId } }, { capability: { equals: capability } }, { active: { equals: true } }] }, depth: 1, limit: 10000, overrideAccess: true })
-  const candidates: Array<{ rule: Record<string, unknown>; classRank: number; specificity: number; principal: PrincipalType; resource: ResourceType; resourceId: number; effect: 'grant' | 'deny' }> = []
-  for (const raw of rulesResult.docs) {
-    const rule = raw as unknown as Record<string, unknown>
-    // Keep the evaluator fail-closed even when a Local API adapter or test
-    // double does not enforce the capability filter from the query.
-    if (String(rule.capability ?? '') !== capability) continue
-    const principal = rulePrincipalId(rule)
-    const resource = ruleResourceId(rule)
-    if (!principal.type || !resource.type || !principal.id || !resource.id) continue
-    if (principal.relation !== relationForPrincipal[principal.type] || resource.relation !== relationForResource[resource.type]) continue
-    const specificity = resourceSpecificity(tree.nodes, resource.type, resource.id)
-    if (specificity < 0) continue
-    let matches = false
-    let classRank = 0
-    if (principal.type === 'User') { matches = Number(principal.id) === Number(args.actor.userId); classRank = 3 }
-    else if (principal.type === 'Character') { matches = Number(principal.id) === actorState.characterId; classRank = 3 }
-    else if (principal.type === 'Role') { matches = roleMatchesHeldRole(Number(principal.id), heldRoleIds, roles); classRank = 2 }
-    else { matches = Number(principal.id) === actorState.membershipId; classRank = 1 }
-    if (!matches) continue
-    const effect = String(rule.effect) === 'deny' ? 'deny' : 'grant'
-    candidates.push({ rule, classRank, specificity, principal: principal.type, resource: resource.type, resourceId: Number(resource.id), effect })
+  if (type === 'Folder') {
+    const folder = session.folders.get(Number(id)) ?? await (async () => {
+      const row = await args.payload.findByID({ collection: 'folders', id, depth: 0, overrideAccess: true, ...(args.transactionID == null ? {} : { req: { transactionID: args.transactionID } }) }).catch(() => null) as unknown as Record<string, unknown> | null
+      if (!row) return null
+      if (idOf(row.domain) !== session.domainId) return 'cross-domain' as const
+      return { id: Number(id), parentId: idOf(row.parent), subdomainId: idOf(row.subdomain) }
+    })()
+    if (folder === null) return { allowed: false, reason: 'Resource not found.', trace: ['Resource lookup failed.'] }
+    if (folder === 'cross-domain') return { allowed: false, reason: 'Resource belongs to another Domain.', trace: ['Cross-Domain resource rejected.'] }
+    if (!session.folders.has(Number(id))) session.folders.set(Number(id), folder)
+    const ancestry = folderAncestry(session, Number(id))
+    return decideInSession(session, capability, { type: 'Folder', id: Number(id), folderChain: ancestry.chain, subdomainId: ancestry.subdomainId })
   }
-  if (candidates.length === 0) return { allowed: false, reason: 'No matching grant.', trace: ['No applicable rule; default deny.'] }
-  candidates.sort((a, b) => b.classRank - a.classRank || b.specificity - a.specificity || (a.effect === 'deny' ? -1 : 1))
-  const winner = candidates[0]
-  const winnerText = `${winner.effect} via ${winner.principal} on ${winner.resource} ${winner.resourceId} (specificity ${winner.specificity})`
-  return { allowed: winner.effect === 'grant', reason: winner.effect === 'grant' ? `Allowed: ${winnerText}.` : `Denied: ${winnerText}.`, matchedRule: { id: winner.rule.id as number | string, effect: winner.effect, principalType: winner.principal, resourceType: winner.resource, resourceId: winner.resourceId, specificity: winner.specificity }, trace: [winnerText, ...candidates.slice(1).map((candidate) => `${candidate.effect} via ${candidate.principal} on ${candidate.resource} ${candidate.resourceId} (specificity ${candidate.specificity})`)] }
+  if (type === 'Subdomain') {
+    if (!session.subdomains.has(Number(id))) {
+      const row = await args.payload.findByID({ collection: 'subdomains', id, depth: 0, overrideAccess: true, ...(args.transactionID == null ? {} : { req: { transactionID: args.transactionID } }) }).catch(() => null) as unknown as Record<string, unknown> | null
+      if (!row) return { allowed: false, reason: 'Resource not found.', trace: ['Resource lookup failed.'] }
+      if (idOf(row.domain) !== session.domainId) return { allowed: false, reason: 'Resource belongs to another Domain.', trace: ['Cross-Domain resource rejected.'] }
+    }
+    return decideInSession(session, capability, { type: 'Subdomain', id: Number(id) })
+  }
+  return decideInSession(session, capability, { type: 'Domain', id: session.domainId })
 }
 
 export async function explainPermission(args: Parameters<typeof evaluatePermission>[0]) { return evaluatePermission(args) }

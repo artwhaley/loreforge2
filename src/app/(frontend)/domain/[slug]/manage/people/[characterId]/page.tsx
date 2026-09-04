@@ -7,9 +7,11 @@ import { getTenantsForUser } from '@/lib/tenant/queries'
 import { buildFolderTree } from '@/lib/archive/folderTree'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 import { FolderTree, RoleTree, type FolderTreeNode, type PermissionState, type RoleDepartment, type RoleTreeNode } from '@/components/people/PersonAccessTrees'
-import { canAssignRole } from '@/lib/authz/delegation'
-import { isAllowed } from '@/lib/authz/evaluate'
-import { resolveFolderPermission } from '@/lib/authz/folderAccess'
+import { canAssignRoleInSession } from '@/lib/authz/delegation'
+import { decideOne, loadAuthorizationSession } from '@/lib/authz/session'
+import { resolveFolderPermissionInSession } from '@/lib/authz/folderAccess'
+import { canOpenPeopleSession, folderControlsSession } from '@/lib/authz/workspaces'
+import { loadCachedAuthorizationSession } from '@/lib/authz/sessionCache'
 import styles from '@/components/people/PersonWorkspace.module.scss'
 
 type Props = { params: Promise<{ slug: string; characterId: string }>; searchParams?: Promise<{ roleFilter?: string }> }
@@ -33,25 +35,32 @@ export default async function PersonWorkspacePage({ params, searchParams }: Prop
   if (!tenant || tenant.slug !== slug || !Number.isFinite(characterId)) notFound()
   const payload = await getLorePayload()
   const actor = { userId: user?.id ?? 0, activeCharacterId: activeCharacter?.id ?? null }
-  const workspaceAllowed = contextRole === 'admin' || Boolean(user && (await Promise.all(['manage_members', 'manage_roles', 'manage_access'].map((capability) => isAllowed({ payload, actor, domainId: tenant.id, capability, resource: { type: 'Domain', id: tenant.id } })))).some(Boolean))
+  // P07P-02: one request-owned session for the ACTOR decides admission and
+  // every capability below with zero per-folder SQL. The SUBJECT's effective
+  // permissions use a separate explicitly identified session (never swapping
+  // the actor identity in the shared one).
+  const session = user ? await loadCachedAuthorizationSession(payload, Number(user.id), activeCharacter?.id ?? null, tenant.id) : null
+  const workspaceAllowed = contextRole === 'admin' || (session ? (session.authority != null
+    || ['manage_members', 'manage_roles', 'manage_access'].some((capability) => decideOne(session, capability as never, { type: 'Domain', id: session.domainId }).allowed)
+    || await canOpenPeopleSession(session)) : false)
   if (!workspaceAllowed) notFound()
-  const canManageMembers = Boolean(user && await isAllowed({ payload, actor, domainId: tenant.id, capability: 'manage_members', resource: { type: 'Domain', id: tenant.id } }))
+  const canManageMembers = Boolean(session && (session.authority != null || decideOne(session, 'manage_members', { type: 'Domain', id: Number(tenant.id) }).allowed))
   const [character, membershipRows, contexts, departments, roles, assignments, folders, permissionRules, domains] = await Promise.all([
     payload.findByID({ collection: 'characters', id: characterId, depth: 1 }).catch(() => null),
     payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: tenant.id } }, { character: { equals: characterId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 }),
     payload.find({ collection: 'domain-character-contexts', where: { and: [{ domain: { equals: tenant.id } }, { character: { equals: characterId } }] }, depth: 0, limit: 1 }),
-    payload.find({ collection: 'subdomains', where: { domain: { equals: tenant.id } }, depth: 0, limit: 200, sort: 'name' }),
-    payload.find({ collection: 'roles', where: { and: [{ domain: { equals: tenant.id } }, { active: { equals: true } }] }, depth: 1, limit: 1000, sort: 'name' }),
-    payload.find({ collection: 'role-assignments', where: { and: [{ character: { equals: characterId } }, { status: { equals: 'active' } }] }, depth: 1, limit: 1000 }),
-    payload.find({ collection: 'folders', where: { domain: { equals: tenant.id } }, depth: 1, limit: 1000, sort: 'name' }),
-    payload.find({ collection: 'permission-rules', where: { and: [{ domain: { equals: tenant.id } }, { principalType: { equals: 'Character' } }] }, depth: 0, limit: 5000 }).catch(() => ({ docs: [] })),
+    payload.find({ collection: 'subdomains', where: { domain: { equals: tenant.id } }, depth: 0, limit: 0, pagination: false, sort: 'name' }),
+    payload.find({ collection: 'roles', where: { and: [{ domain: { equals: tenant.id } }, { active: { equals: true } }] }, depth: 1, limit: 0, pagination: false, sort: 'name' }),
+    payload.find({ collection: 'role-assignments', where: { and: [{ character: { equals: characterId } }, { status: { equals: 'active' } }] }, depth: 1, limit: 0, pagination: false }),
+    payload.find({ collection: 'folders', where: { domain: { equals: tenant.id } }, depth: 1, limit: 0, pagination: false, sort: 'name' }),
+    payload.find({ collection: 'permission-rules', where: { and: [{ domain: { equals: tenant.id } }, { principalType: { equals: 'Character' } }] }, depth: 0, limit: 0, pagination: false }).catch(() => ({ docs: [] })),
     user ? getTenantsForUser(user.id) : Promise.resolve([]),
   ])
   if (!character || !membershipRows.docs[0]) notFound()
   const localContext = contexts.docs[0]
   const roleById = new Map(roles.docs.map((item) => [String(item.id), item]))
   const assignedRoleIds = new Set(assignments.docs.map((assignment) => String(relationId(assignment.role))))
-  const assignableRoleIds = new Set((await Promise.all(roles.docs.map(async (item) => (user && await canAssignRole(payload, { actor: { userId: user.id, activeCharacterId: activeCharacter?.id ?? null }, domainId: tenant.id, targetRoleId: item.id }) ? Number(item.id) : null)))).filter((id): id is number => id !== null))
+  const assignableRoleIds = new Set(session ? roles.docs.map((item) => canAssignRoleInSession(session, item.id) ? Number(item.id) : null).filter((id): id is number => id !== null) : [])
   const assignedRules = permissionRules.docs.filter((rule) => polyId(rule.principal) === characterId && rule.resourceType === 'Folder' && rule.active !== false)
   const ruleFor = (folderId: number, capabilities: string[]) => assignedRules.find((rule) => polyId(rule.resource) === folderId && capabilities.includes(rule.capability))
   const folderTree = buildFolderTree(folders.docs)
@@ -81,27 +90,33 @@ export default async function PersonWorkspacePage({ params, searchParams }: Prop
   const roleDepartments: RoleDepartment[] = departments.docs.map((department) => ({ id: Number(department.id), name: department.name, roles: rolesByDepartment.get(Number(department.id)) ?? [] })).filter((department) => department.roles.length > 0)
   const toPermissionState = (folderId: number, capabilities: string[]): PermissionState => (ruleFor(folderId, capabilities)?.effect as PermissionState | undefined) ?? 'inherit'
   const controllerId = relationId(character.controlledBy)
-  const subjectActor = controllerId == null ? null : { userId: controllerId, activeCharacterId: characterId }
-  const explanation = async (folderId: number) => {
-    if (!subjectActor) return null
-    const decision = await resolveFolderPermission({ payload, actor: subjectActor, domainId: tenant.id, folderId })
+  // P07P-02: the SUBJECT evaluation is a separately identified session for
+  // the subject's controller+Character, not an actor swap of the shared one.
+  const subjectSession = controllerId == null ? null : await loadAuthorizationSession(payload, { userId: controllerId, activeCharacterId: characterId }, tenant.id).catch(() => null)
+  const explanation = (folderId: number) => {
+    if (!subjectSession) return null
+    const decision = resolveFolderPermissionInSession(subjectSession, folderId)
     const source = (value: typeof decision.read) => value.matchedRule ? `${value.matchedRule.principalType} rule` : value.reason.replace(/\.$/, '')
     return { read: { allowed: decision.read.allowed, source: source(decision.read) }, write: { allowed: decision.write.allowed, source: source(decision.write) } }
   }
-  const toFolderNode = async (node: ReturnType<typeof buildFolderTree>[number]): Promise<FolderTreeNode> => {
-    const effective = await explanation(Number(node.folder.id))
+  const toFolderNode = (node: ReturnType<typeof buildFolderTree>[number]): FolderTreeNode => {
+    const effective = explanation(Number(node.folder.id))
+    const controls = session ? folderControlsSession(session, [node.folder.id]).get(Number(node.folder.id)) : undefined
     return {
       id: Number(node.folder.id),
       name: node.folder.name,
       systemManaged: Boolean(node.folder.systemManaged),
+      canManageAccess: controls?.canManageAccess ?? false,
+      canGrantRead: controls?.canGrantRead ?? false,
+      canGrantWrite: controls?.canGrantWrite ?? false,
       readState: toPermissionState(Number(node.folder.id), ['read']),
       writeState: toPermissionState(Number(node.folder.id), ['create_document', 'edit_document']),
       effectiveRead: effective?.read,
       effectiveWrite: effective?.write,
-      children: await Promise.all(node.children.map(toFolderNode)),
+      children: node.children.map(toFolderNode),
     }
   }
-  const folderNodes = await Promise.all(folderTree.map(toFolderNode))
+  const folderNodes = folderTree.map(toFolderNode)
   const controller = character.controlledBy && typeof character.controlledBy === 'object' ? character.controlledBy : null
   return <TenantShell tenant={tenant} cssVars={themeTokensToCssVars(resolveThemeTokens(tenant))} role={contextRole} switcherTenants={domains} activeCharacter={activeCharacter}>
     <section className={styles.page}>

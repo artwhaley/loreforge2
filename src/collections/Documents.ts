@@ -5,6 +5,22 @@ import { evaluatePermission } from '@/lib/authz/evaluate'
 import { assertLifecycleTransition, canEditDocumentBody, type Lifecycle } from '@/lib/documents/lifecycle'
 
 const relationId = (value: unknown): number | null => value && typeof value === 'object' && 'id' in value ? Number((value as { id: number | string }).id) : value === null || value === undefined || value === '' ? null : Number(value)
+// Keep this literal local to the collection config: importing activeTenant
+// here creates a payload.config -> Documents -> activeTenant -> payload cycle.
+const ACTIVE_CHARACTER_COOKIE = 'sl-civic-active-character'
+
+/** Resolve the selected acting Character from the authenticated request only.
+ * canAccessDocument still validates controller ownership and active Domain
+ * membership; this merely carries the browser's server-set selector into
+ * Payload's collection access boundary. */
+function requestActiveCharacterId(req: { headers?: Headers | Record<string, string | string[] | undefined> }): number | null {
+  const rawCookie = req.headers instanceof Headers ? req.headers.get('cookie') : req.headers?.cookie
+  const cookie = Array.isArray(rawCookie) ? rawCookie.join(';') : rawCookie ?? ''
+  const match = cookie.match(new RegExp(`(?:^|;\\s*)${ACTIVE_CHARACTER_COOKIE}=([^;]+)`))
+  if (!match) return null
+  const id = Number(decodeURIComponent(match[1]))
+  return Number.isInteger(id) && id > 0 ? id : null
+}
 
 export const Documents: CollectionConfig = {
   slug: 'documents',
@@ -21,18 +37,25 @@ export const Documents: CollectionConfig = {
     // server queries use Local API overrideAccess after their own tenant
     // boundary has been established; the Local API in Payload 3.88 defaults
     // to overrideAccess, so these functions guard the HTTP surface.
+    //
+    // P07P-04 (owner decision 2026-09-04): REST with no validated acting
+    // Character receives only actual User-level authority. The previous
+    // controlled-Character union fallback is removed — Characters are
+    // evaluated strictly separately for roleplay immersion. Application
+    // routes that resolve an active Character pass it explicitly.
     read: async ({ req, id }) => {
       if (!req.user || id === undefined || id === null) return false
-      return canAccessDocument({ payload: req.payload, user: req.user, documentId: id, capability: 'read' })
+      return canAccessDocument({ payload: req.payload, user: req.user, activeCharacterId: requestActiveCharacterId(req), documentId: id, capability: 'read' })
     },
     update: async ({ req, id }) => {
       if (!req.user || id === undefined || id === null) return false
-      return canAccessDocument({ payload: req.payload, user: req.user, documentId: id, capability: 'update' })
+      return canAccessDocument({ payload: req.payload, user: req.user, activeCharacterId: requestActiveCharacterId(req), documentId: id, capability: 'update' })
     },
     readVersions: async ({ req, id }) => {
       if (!req.user) return false
-      if (id !== undefined && id !== null) return canAccessDocumentVersion({ payload: req.payload, user: req.user, versionId: id })
-      return readableVersionParentQuery({ payload: req.payload, user: req.user })
+      const activeCharacterId = requestActiveCharacterId(req)
+      if (id !== undefined && id !== null) return canAccessDocumentVersion({ payload: req.payload, user: req.user, activeCharacterId, versionId: id })
+      return readableVersionParentQuery({ payload: req.payload, user: req.user, activeCharacterId })
     },
     // Permanent deletion is never an ordinary Domain action. P04 workflow
     // uses softDeletedAt/softDeletedBy and a reversible restore path.

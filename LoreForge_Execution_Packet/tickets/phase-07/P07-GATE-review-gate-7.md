@@ -22,11 +22,18 @@ Hard security/behavior gate before public surfaces and starter packs multiply co
 - P07-T03
 - P07-T04
 - P07-T05
+- Owner-requested performance addendum P07P-01 through P07P-06, defined in
+  `references/P07P_DATABASE_ACCESS_PATCH.md` (implemented and verified; owner
+  manual acceptance remains required).
 
 ## Frozen context for this ticket
 - The goal is understandable RP administration, not bank-grade complexity, but no known privilege-escalation or tenant leak is acceptable.
 
 ## Required work
+0. Complete the performance addendum and attach query-count, warm latency,
+   pure-evaluator/query parity, and revocation/isolation evidence before asking
+   the owner to resume the Head Scribe acceptance section. A passing functional
+   suite alone does not close the reported unusable page latency.
 1. Run exhaustive permission matrix and integration/API tests.
 2. Execute golden scenarios for Commander/Captains/Warrior, cross-hierarchy grant, explicit deny, multi-role Character, and delegation chain.
 3. Produce permission explanation outputs for each fixture actor and compare the People Folder-access tree with the equivalent Folder-centered permissions view. Separately inspect the Role tree and prove its mutations do not alter direct Folder rules.
@@ -43,6 +50,13 @@ Hard security/behavior gate before public surfaces and starter packs multiply co
 
 
 ## Manual acceptance
+
+Owner execution guide: `PHASE_07_TESTING.md` at repository root (rewritten and
+checked against the working database on 2026-09-04). Use its actual accounts,
+Domains, links, and click sequences. The previously recorded fixture and
+permission-presentation blockers were repaired; see execution-notes/P07-GATE.md.
+Owner acceptance is still required; automated results are not self-approval.
+
 - All authorization tests green.
 - No tenant leak.
 - No lower actor can grant more authority/scope than possessed.

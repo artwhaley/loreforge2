@@ -37,7 +37,8 @@ async function allSupersedesEdges(payload: Payload, domainId: number | string, t
     collection: 'document-relationships',
     where: { and: [{ domain: { equals: domainId } }, { kind: { equals: 'supersedes' } }] },
     depth: 0,
-    limit: 5000,
+    limit: 0,
+    pagination: false,
     overrideAccess: true,
     req: transactionID == null ? undefined : { transactionID },
   })

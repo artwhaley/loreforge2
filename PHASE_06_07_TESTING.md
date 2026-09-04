@@ -1,8 +1,12 @@
 # LoreForge Phase 6 + Phase 7 acceptance checks
 
 The Phase 6 human gate was bypassed by explicit owner instruction. Phase 7 is
-implemented but remains a human review gate. Run these checks against the local
-server at `http://localhost:3055`.
+implemented and repaired, and remains a human review gate.
+**For Phase 7, use [PHASE_07_TESTING.md](PHASE_07_TESTING.md)**:
+it replaces the old generic scenarios with verified accounts, Domains, direct
+HTTP links, exact controls, and cleanup steps. Dedicated P7 fixtures are already installed.
+The Phase 6 instructions below are retained separately; the Form Studio UX
+replacement discussion is paused pending the owner's direction.
 
 ## Start and sign in
 
@@ -18,10 +22,12 @@ active Character, owner/admin-only document creation remains available, while
 ordinary member document creation must be rejected with its entered fields
 preserved.
 
-Local fixture credentials:
+Local Phase 6 fixture credentials (not the Phase 7 actor matrix):
 
-- Domain/platform admin: `admin@example.test` / `test-password-123`
-- Ordinary officer: `officer@example.test` / `test-password-123`
+- Ar Domain owner: `admin@example.test` / `test-password-123`; acting Character Lucan.
+- `officer@example.test` signs in with `test-password-123`, but currently lacks
+  a canonical active Domain membership. Do not use it as the Phase 7 ordinary
+  member. The Phase 7 guide identifies the actual member fixture.
 
 These are development-only accounts; they are not production credentials.
 
@@ -53,65 +59,12 @@ These are development-only accounts; they are not production credentials.
 
 ## Phase 7 — authorization and delegation
 
-### Direct boundaries and scope
+Follow [Phase 7's step-by-step guide](PHASE_07_TESTING.md), starting at section 1.
+It contains the actual password/account/Character/Domain combinations and blue
+HTTP links for the running local application. Do not use the old generic
+instructions from earlier revisions.
 
-1. As an ordinary active Domain member, try the management URLs and their
-   matching REST endpoints (`/api/roles`, `/api/folders`,
-   `/api/permission-rules`, `/api/domain-memberships`, `/api/people-search`).
-   Confirm unauthorized pages do not render and forged writes do not persist.
-2. Try IDs from a second Domain in a URL/form/API request. Confirm the request
-   is denied even when the acting user is an owner or platform administrator
-   of the first Domain; no foreign document, folder, role, or rule is exposed.
-3. Confirm the primary Domain navigation stays **Home, About, Departments,
-   Records**. Management links appear only for capabilities the current actor
-   actually holds; there is no “Manage <Domain>” label or administration mode.
-
-### People, Roles, and folders
-
-1. Open management **People**, search for a Character, and open the Character
-   workspace. The role tree and folder tree are separate; changing Folder
-   Read/Write does not add, remove, or alter a RoleAssignment.
-2. Switch between **Held roles** and **Roles I can assign**. Confirm held
-   branches auto-open and only server-authorized Role checkboxes are enabled.
-   Attempt a disabled Role through a forged request and confirm no assignment
-   is created.
-3. In the folder tree, set Read and Write independently to Allow, Deny, and
-   Inherited. Confirm Write is stored as the atomic create/edit pair, Inherit
-   removes the direct rules, and explicit Character Deny wins over an inherited
-   Role grant without changing the held Role.
-4. Open **Roles**, select a Role, inspect its holders, and edit its **Default
-   folder access**. Confirm the operation contains no RoleAssignment Folder
-   scope. Right-click a Role and verify subordinate creation, assignment, and
-   deletion are bounded by the current evaluator.
-5. Open **Folders**, create a child beneath a managed Folder, then try to
-   create/move/delete outside that branch. Confirm only the in-scope mutation
-   succeeds and each successful mutation appears in the Domain audit trail.
-
-### Delegated administration chain
-
-1. Build a same-Department chain such as Head Scribe → Property Archivist →
-   Deeds clerk. Give the Head Scribe `assign_subordinates` and test assigning
-   each strict descendant.
-2. From each lower-level actor, attempt to assign itself, a peer, its ancestor,
-   an inactive Role, and a Role in another Department. Every escalation must
-   fail. Holding `assign_subordinates` alone must not create a Role.
-3. Give a manager `manage_access` but not `edit_document`; attempt to grant
-   edit access. Confirm the grant fails. Confirm a manager may deny/revoke only
-   within the resource scope they actually manage.
-4. Have a Folder manager attempt to create a Role. Confirm the Role creation
-   is denied, while an explicitly Department-scoped `manage_roles` holder can
-   create only in that Department.
-5. Use a Character claim request for an unclaimed Character. Confirm only an
-   authorized claim manager can approve it, concurrent approvals leave one
-   winner, and an already claimed Character cannot be rebound.
-
-### Lifecycle and audit spot checks
-
-- Direct document/folder/role/membership mutations go through the evaluator;
-  UI hiding is not the security boundary.
-- Superseded documents remain locked and the relationship tree remains
-  tenant-scoped; the deferred Share button remains inert and does not grant
-  access.
-- Review the Domain audit records for membership, Role, RoleAssignment,
-  Folder, and PermissionRule changes. Confirm actor User and active Character
-  context are present where applicable.
+The guide distinguishes runnable owner checks from missing delegated fixtures
+and agent-owned forged-write, concurrency, and audit verification. GET links
+to POST-only endpoints are not permission tests. Phase 7 remains unaccepted;
+finishing the available checks does not waive its remaining requirements.

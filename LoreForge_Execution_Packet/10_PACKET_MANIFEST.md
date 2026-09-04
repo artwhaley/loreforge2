@@ -26,6 +26,12 @@
 - `11_DEFERRED_WORK_REGISTER.md` — permanent register of deliberately deferred work, each row with a reason and a named owning ticket/path (added by P05R-T00).
 
 ## References
+- `references/P07P_DATABASE_ACCESS_PATCH.md` — owner-requested Phase 7
+  performance patch specification, six ordered work units. Implementation and
+  automated verification are recorded in the repository-root
+  `execution-notes/P07P-01.md` through `execution-notes/P07P-06.md`; the owner
+  browser/release gate remains open. This is an additive reference beyond the
+  original reference-count snapshot.
 - `references/FULL_PRODUCT_SPEC.md` — detailed full-product intent and phased roadmap.
 - `references/STALE_LOREFORGE_FUNCTIONAL_SPEC.md` — historical requirements mine only; superseded when it conflicts with frozen decisions.
 - `references/sl-civic-archive-mvp-source.zip` — exact submitted MVP spike source.

@@ -8,8 +8,10 @@ import { getDocumentForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 import { renderMarkdown } from '@/lib/markdown/render'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 import { getDocumentCharacterLinks, getDocumentTags } from '@/lib/documents/links'
-import { getDocumentRelationships } from '@/lib/documents/relationships'
 import { canSupersedeDocument } from '@/lib/documents/lifecycle'
+import { canEditDocumentBody } from '@/lib/documents/lifecycle'
+import { decideInSession, resolveDocumentTarget } from '@/lib/authz/session'
+import { loadCachedAuthorizationSession } from '@/lib/authz/sessionCache'
 
 import styles from './document.module.scss'
 
@@ -39,7 +41,7 @@ const formatDate = (value: unknown) => {
 export default async function DocumentViewPage({ params, searchParams }: Props) {
   const { slug, id } = await params
   const { source, error: errorCode } = await searchParams
-  const { tenant, role, user } = await getActiveTenant()
+  const { tenant, role, user, activeCharacter } = await getActiveTenant()
 
   if (!tenant || tenant.slug !== slug) notFound()
 
@@ -47,19 +49,30 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
   if (!doc) notFound()
 
   const payload = await (await import('@/lib/payload')).getLorePayload()
+  const session = user ? await loadCachedAuthorizationSession(payload, Number(user.id), activeCharacter?.id ?? null, tenant.id) : null
+  const docTarget = session ? resolveDocumentTarget(session, { id: Number(doc.id), folderId: relationId(doc.folder), subdomainId: relationId((doc as unknown as { subdomain?: unknown }).subdomain) }) : null
+  if (!session || !docTarget || !decideInSession(session, 'read', docTarget).allowed) notFound()
+  const canEdit = canEditDocumentBody(doc.lifecycle) && decideInSession(session, 'edit_document', docTarget).allowed
   const [characterLinks, tagLinks, relationshipLinks] = await Promise.all([
     getDocumentCharacterLinks(payload, doc.id),
     getDocumentTags(payload, doc.id),
-    getDocumentRelationships(payload, doc.id).catch(() => ({ docs: [] })),
+    payload.find({ collection: 'document-relationships', where: { or: [{ source: { equals: doc.id } }, { target: { equals: doc.id } }] }, depth: 0, limit: 0, pagination: false, overrideAccess: true }).catch(() => ({ docs: [] })),
   ])
 
-  const supersedesLink = relationshipLinks.docs.find(
-    (link) => link.kind === 'supersedes' && relationId(link.source) === Number(doc.id),
-  )
-  const successorLink = relationshipLinks.docs.find(
-    (link) => link.kind === 'supersedes' && relationId(link.target) === Number(doc.id),
-  )
-  const supersededBy = successorLink?.source && typeof successorLink.source === 'object' ? successorLink.source : null
+  // Relationship rows are IDs only. Fetch linked-document metadata after the
+  // current document is authorized, then apply the same read decision before
+  // rendering a title, date, or credit for any related record.
+  const linkedIds = [...new Set(relationshipLinks.docs.flatMap((link) => [relationId(link.source), relationId(link.target)]).filter((linkedId): linkedId is number => linkedId !== null && linkedId !== Number(doc.id)))]
+  const linkedDocs = linkedIds.length === 0 ? { docs: [] } : await payload.find({ collection: 'documents', where: { and: [{ domain: { equals: tenant.id } }, { id: { in: linkedIds } }, { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] }] }, select: { id: true, domain: true, folder: true, documentType: true, title: true, createdAt: true, updatedAt: true, lifecycle: true }, depth: 0, limit: 0, pagination: false, overrideAccess: true })
+  const readableLinked = new Map<number, typeof linkedDocs.docs[number]>()
+  for (const linked of linkedDocs.docs) {
+    const target = resolveDocumentTarget(session, { id: Number(linked.id), folderId: relationId(linked.folder), subdomainId: relationId((linked as unknown as { subdomain?: unknown }).subdomain) })
+    if (decideInSession(session, 'read', target).allowed) readableLinked.set(Number(linked.id), linked)
+  }
+
+  const supersedesLink = relationshipLinks.docs.find((link) => link.kind === 'supersedes' && relationId(link.source) === Number(doc.id) && readableLinked.has(relationId(link.target) ?? -1))
+  const successorLink = relationshipLinks.docs.find((link) => link.kind === 'supersedes' && relationId(link.target) === Number(doc.id) && readableLinked.has(relationId(link.source) ?? -1))
+  const supersededBy = successorLink ? readableLinked.get(relationId(successorLink.source) ?? -1) ?? null : null
   const supersededPreparedBy = supersededBy
     ? await getDocumentCharacterLinks(payload, supersededBy.id).catch(() => ({ docs: [] }))
     : { docs: [] }
@@ -93,7 +106,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
       ) : null}
       <article className={styles.record}>
         <div className={styles.actions} aria-label="Document controls">
-          {user && !isSuperseded ? <a className={styles.action} href={`${base}/edit`}>Edit</a> : null}
+          {canEdit && !isSuperseded ? <a className={styles.action} href={`${base}/edit`}>Edit</a> : null}
           <a className={styles.action} href={`${base}/history`}>History</a>
           {doc.lifecycle === 'draft' ? (
             <form action={documentWorkflowAction}>
@@ -179,9 +192,9 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
             </section>
           ) : null}
 
-          {supersedesLink?.target && typeof supersedesLink.target === 'object' ? (
+          {supersedesLink && readableLinked.get(relationId(supersedesLink.target) ?? -1) ? (
             <p className={styles.supersedesLine}>
-              Supersedes <a href={`/domain/${tenant.slug}/documents/${supersedesLink.target.id}`}>{supersedesLink.target.title}</a>.
+              Supersedes <a href={`/domain/${tenant.slug}/documents/${relationId(supersedesLink.target)}`}>{readableLinked.get(relationId(supersedesLink.target) ?? -1)?.title}</a>.
             </p>
           ) : null}
         </div>

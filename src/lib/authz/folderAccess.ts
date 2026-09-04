@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 import { evaluatePermission } from './evaluate'
 import { buildFolderTree } from '@/lib/archive/folderTree'
+import { decideInSession, folderAncestry, type AuthzSession, type SessionDecision } from './session'
 
 export type EffectiveFolderAccess = {
   folderId: number
@@ -15,6 +16,16 @@ export async function resolveFolderPermission(args: { payload: Payload; domainId
     evaluatePermission({ payload: args.payload, actor: args.actor, domainId: args.domainId, capability: 'edit_document', resource: { type: 'Folder', id: args.folderId } }),
   ])
   return { read, write }
+}
+
+/**
+ * P07P-02 session form: pure folder read/write decision, zero SQL. The
+ * ancestry resolves in-memory from session facts.
+ */
+export function resolveFolderPermissionInSession(session: AuthzSession, folderId: number): { read: SessionDecision; write: SessionDecision } {
+  const ancestry = folderAncestry(session, folderId)
+  const target = { type: 'Folder' as const, id: folderId, folderChain: ancestry.chain, subdomainId: ancestry.subdomainId }
+  return { read: decideInSession(session, 'read', target), write: decideInSession(session, 'edit_document', target) }
 }
 
 /** One evaluator-backed source for People and Folder-centered permission views. */

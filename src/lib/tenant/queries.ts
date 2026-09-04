@@ -76,7 +76,8 @@ export async function getFoldersForTenant(tenant: DomainRecord): Promise<Folder[
     collection: 'folders',
     where: domainWhere(domainId(tenant)),
     depth: 1,
-    limit: 200,
+    limit: 0,
+    pagination: false,
     sort: 'name',
   })
   return result.docs
@@ -148,32 +149,26 @@ export async function getPageForTenant(tenant: DomainRecord, slug: string): Prom
 
 export async function getTenantsForUser(userId: number | string): Promise<DomainRecord[]> {
   const payload = await getLorePayload()
-  const characters = await payload.find({
-    collection: 'characters',
+  // P07P-02: one unbounded memberships query replaces one query per controlled
+  // Character, and unbounded pagination removes the silent caps (owner
+  // decision 2026-09-04: aggregates must be complete across many Domains).
+  const memberships = await payload.find({
+    collection: 'domain-memberships',
     where: {
-      and: [{ controlledBy: { equals: userId } }, { status: { equals: 'active' } }],
+      and: [
+        { status: { equals: 'active' } },
+        { 'character.controlledBy': { equals: userId } },
+        { 'character.status': { equals: 'active' } },
+      ],
     },
-    depth: 0,
-    limit: 100,
+    depth: 1,
+    limit: 0,
+    pagination: false,
   })
   const tenantsById = new Map<string, DomainRecord>()
-  if (characters.docs.length > 0) {
-    const membershipResults = await Promise.all(
-      characters.docs.map((character) =>
-        payload.find({
-          collection: 'domain-memberships',
-          where: { and: [{ character: { equals: character.id } }, { status: { equals: 'active' } }] },
-          depth: 1,
-          limit: 100,
-        }),
-      ),
-    )
-    for (const result of membershipResults) {
-      for (const membership of result.docs) {
-        const tenant = membership.domain ?? membership.tenant
-        if (tenant && typeof tenant === 'object') tenantsById.set(String(tenant.id), tenant as DomainRecord)
-      }
-    }
+  for (const membership of memberships.docs) {
+    const tenant = membership.domain ?? membership.tenant
+    if (tenant && typeof tenant === 'object') tenantsById.set(String(tenant.id), tenant as DomainRecord)
   }
   // User-level ownership/administration is a Domain relationship, not a
   // substitute Character membership. It still belongs in the one selector.
@@ -185,8 +180,10 @@ export async function getTenantsForUser(userId: number | string): Promise<Domain
 /** User-level Administration domains, intentionally separate from Character membership. */
 export async function getAdministrationDomainsForUser(userId: number | string): Promise<DomainRecord[]> {
   const payload = await getLorePayload()
-  const owned = await payload.find({ collection: 'domains', where: { 'ownerUser': { equals: userId } }, depth: 0, limit: 200 })
-  const adminRows = await payload.find({ collection: 'domain-admins', where: { and: [{ user: { equals: userId } }, { status: { equals: 'active' } }] }, depth: 1, limit: 200 })
+  const user = await payload.findByID({ collection: 'users', id: userId, depth: 0 })
+  if (user.isPlatformAdmin) return (await payload.find({ collection: 'domains', depth: 0, limit: 0, pagination: false })).docs
+  const owned = await payload.find({ collection: 'domains', where: { 'ownerUser': { equals: userId } }, depth: 0, limit: 0, pagination: false })
+  const adminRows = await payload.find({ collection: 'domain-admins', where: { and: [{ user: { equals: userId } }, { status: { equals: 'active' } }] }, depth: 1, limit: 0, pagination: false })
   const byId = new Map<string, DomainRecord>()
   for (const domain of owned.docs) byId.set(String(domain.id), domain)
   for (const row of adminRows.docs) if (row.domain && typeof row.domain === 'object') byId.set(String(row.domain.id), row.domain as DomainRecord)
@@ -199,13 +196,16 @@ export async function getCharactersForTenant(
   userId: number | string,
 ): Promise<Character[]> {
   const payload = await getLorePayload()
+  // P07P-02: memberships for the one Domain in a single unbounded query; the
+  // controller filter stays in memory on the populated relation.
   const memberships = await payload.find({
     collection: 'domain-memberships',
     where: {
       and: [{ or: [{ domain: { equals: domainId(tenant) } }, { tenant: { equals: domainId(tenant) } }] }, { status: { equals: 'active' } }],
     },
     depth: 1,
-    limit: 200,
+    limit: 0,
+    pagination: false,
   })
   return memberships.docs
     .map((membership) => membership.character)
@@ -223,7 +223,8 @@ export async function getDomainMembershipsForTenant(tenant: DomainRecord): Promi
     collection: 'domain-memberships',
     where: { or: [{ domain: { equals: domainId(tenant) } }, { tenant: { equals: domainId(tenant) } }] },
     depth: 1,
-    limit: 200,
+    limit: 0,
+    pagination: false,
     sort: 'updatedAt',
   })
   return result.docs

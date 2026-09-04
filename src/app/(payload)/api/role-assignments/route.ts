@@ -51,7 +51,7 @@ export async function POST(request: Request) {
         if (existing.docs[0]) {
           await payload.delete({ collection: 'role-assignments', id: existing.docs[0].id, req })
           await recordDomainAudit({
-            payload, domainId: domain.id, eventType: 'role_assignment_changed', actorUser: user.id,
+            payload, domainId: domain.id, eventType: 'role_assignment_changed', actorUser: user.id, actorCharacter: activeCharacterId,
             targetType: 'role-assignment', targetId: existing.docs[0].id,
             action: 'removed', context: { roleId: role.id, characterId: character.id, roleName: role.name },
             transactionID,
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       } else if (!existing.docs[0]) {
         const created = await payload.create({ collection: 'role-assignments', req, data: { character: character.id, role: role.id, status: 'active', assignedBy: user.id, assignedByCharacter: activeCharacterId ?? undefined } })
         await recordDomainAudit({
-          payload, domainId: domain.id, eventType: 'role_assignment_changed', actorUser: user.id,
+          payload, domainId: domain.id, eventType: 'role_assignment_changed', actorUser: user.id, actorCharacter: activeCharacterId,
           targetType: 'role-assignment', targetId: created.id,
           action: 'assigned', context: { roleId: role.id, characterId: character.id, roleName: role.name },
           transactionID,

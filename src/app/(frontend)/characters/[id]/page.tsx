@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { publicCharacterProjection } from '@/lib/characters/publicProjection'
+import { isAllowed } from '@/lib/authz/evaluate'
 import { getLorePayload } from '@/lib/payload'
 
 type Props = { params: Promise<{ id: string }> }
@@ -30,7 +31,8 @@ export default async function CharacterProfilePage({ params }: Props) {
       })
     : { docs: [] }
   const localContext = localContexts.docs[0]
-  const pendingClaims = tenant
+  const isAdmin = Boolean(tenant && context.user && await isAllowed({ payload, actor: { userId: context.user.id, activeCharacterId: context.activeCharacter?.id }, domainId: tenant.id, capability: 'manage_claims', resource: { type: 'Domain', id: tenant.id } }))
+  const pendingClaims = tenant && isAdmin
     ? await payload.find({
         collection: 'character-claim-requests',
         where: { and: [{ character: { equals: character.id } }, { domain: { equals: tenant.id } }, { status: { equals: 'pending' } }] },
@@ -46,7 +48,6 @@ export default async function CharacterProfilePage({ params }: Props) {
         limit: 1,
       })
     : { docs: [] }
-  const isAdmin = context.role === 'admin'
 
   return (
     <main style={{ maxWidth: 760, margin: '2rem auto', padding: '0 1.5rem' }}>

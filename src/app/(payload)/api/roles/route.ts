@@ -41,11 +41,11 @@ export async function POST(request: Request) {
       await runInTransaction(payload, async (transactionID) => {
         const req = { transactionID }
         await payload.update({ collection: 'roles', id: roleId, data: { active: false }, req })
-        const assignments = await payload.find({ collection: 'role-assignments', where: { and: [{ role: { equals: roleId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 5000, req })
+        const assignments = await payload.find({ collection: 'role-assignments', where: { and: [{ role: { equals: roleId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 0, pagination: false, req })
         for (const assignment of assignments.docs) await payload.update({ collection: 'role-assignments', id: assignment.id, data: { status: 'inactive' }, req })
         payload.logger.info(`Phase 5 role archived: actorUser=${user.id} operation=delete_role resource=${roleId}`)
         await recordDomainAudit({
-          payload, domainId: domain.id, eventType: 'role_changed', actorUser: user.id,
+          payload, domainId: domain.id, eventType: 'role_changed', actorUser: user.id, actorCharacter: actor.activeCharacterId,
           targetType: 'role', targetId: roleId,
           action: 'archived',
           context: { name: role.name, active: false, deactivatedAssignmentCount: assignments.docs.length },
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
   const parentRoleId = idOf(form.get('parentRoleId'))
   const subdomainId = idOf(form.get('subdomainId'))
   if (!name || !subdomainId) return NextResponse.redirect(new URL(destination, request.url), 303)
-  const roles = await payload.find({ collection: 'roles', where: { domain: { equals: domain.id } }, depth: 0, limit: 500 })
+  const roles = await payload.find({ collection: 'roles', where: { domain: { equals: domain.id } }, depth: 0, limit: 0, pagination: false })
   const parent = parentRoleId ? roles.docs.find((role) => Number(role.id) === parentRoleId) : null
   if (parentRoleId && !parent) return NextResponse.redirect(new URL(destination, request.url), 303)
   if (subdomainId) {
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
       const created = await payload.create({ collection: 'roles', req: { transactionID }, data: { domain: domain.id, subdomain: subdomainId, name, parentRole: parentRoleId, active: true, system: false } })
       payload.logger.info(`Phase 3 role created: actorUser=${user.id} operation=create_role resource=${created.id}`)
       await recordDomainAudit({
-        payload, domainId: domain.id, eventType: 'role_changed', actorUser: user.id,
+        payload, domainId: domain.id, eventType: 'role_changed', actorUser: user.id, actorCharacter: actor.activeCharacterId,
         targetType: 'role', targetId: created.id,
         action: 'created',
         context: { name, subdomainId, parentRoleId },

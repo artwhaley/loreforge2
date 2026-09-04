@@ -4,11 +4,11 @@ fd2b710a012bc24ff6e6c0ef9fe08bfff8ba6d0ca6789a434f7825fad7010208  ./02_FROZEN_PR
 6b22f3402bceac3acc540afa183a347fc29e60f09eb180896f6b23e1a35cc9bf  ./03_ARCHITECTURE_CONTRACT.md
 b022e8b59fd676f4c48e305f5c51beb28c97811574f93a98cacc01bdd42fd50c  ./04_SPIKE_BASELINE.md
 a3fe9d377214e53ca56e1bc6cc4590371d95dec5e10aca255f4f83b65b12dca8  ./05_FIXTURE_AND_ACCEPTANCE_CONTRACT.md
-83b4959a4bc76d92b3b53e018ff6c521a61a41891f4a26d69e9eeb54effee899  ./06_CHANGE_CONTROL.md
-1c622f1c7e75a5c640a3d25d54ac731e3d886cf1516b42f3e5fdd0131a4941ee  ./07_TICKET_INDEX.md
+a4803a8a82a8687199cf9f458ced4cbbb3a463adcbd69dacbd8b999d98ad4943  ./06_CHANGE_CONTROL.md
+bdcc3decb40ca11eed453f030932f04c361e3639725cbb02ea25a3784f242f0b  ./07_TICKET_INDEX.md
 10088ef7dc33c4684d36cff0a56056ce7491ecf709e2b821a67373cbc4461d2c  ./08_EXECUTOR_KICKOFF_PROMPT.md
 1b159fcc97dc134151d747816fb0dbcca581ba3f0ff5fde0da749d1c511248b0  ./09_REVIEW_KICKOFF_PROMPT.md
-f44ff0d2d09763199d69751d60dfec0ced197e501088a6d147e317fa29ef2340  ./10_PACKET_MANIFEST.md
+6c1d294cac65075e67862bbfa4c14d9e47a7f5b7846322c11ad85c4408959a96  ./10_PACKET_MANIFEST.md
 b4377372495bc6271a4fc07017c7a0d40d5fe5507ce4b14aa8d2d60bd1c8242d  ./11_DEFERRED_WORK_REGISTER.md
 035bcb12366878dbabf43bb15e52be293b566289d9368d71e9b106b2f7befb0d  ./REVIEW_AGENT_BRIEF.md
 b3c8e3596610d428dfff245ccb49405794226566a4be8816eea3e011002ffbe1  ./VALIDATION_REPORT.txt
@@ -66,8 +66,8 @@ d961ead1d26f9dcdd77a70c2c8f03f16f560a55872077dbcffa141ed81b23660  ./tickets/phas
 89355e2a4571acd0b0ab838aa31a0ff7a1aa323425802b9410e046ac35f35c15  ./tickets/phase-06/P06-T02-neutral-form-schema-and-payload-migration.md
 70e98e563c20d320c85184e708940de26e0b174a8665b2a67fc5d022e23301ce  ./tickets/phase-06/P06-T03-customer-form-studio.md
 3926625b3dfcdcc6447d23152822be87a9bfea6e05a80a67dc87683efd5f7406  ./tickets/phase-06/P06-T04-form-document-creation.md
-985ffeed382bef8e8b2fc6ee4d75c94ad50a89172ca9f37a65c5054936a03f7d  ./tickets/phase-07/00_PHASE_ORCHESTRATOR.md
-d322542a7c3a37a2291df288eb332bfcd55224cbe2c890af4e2e5080ff7e4977  ./tickets/phase-07/P07-GATE-review-gate-7.md
+256ef3e58544d008a3346d6b5e05374d45e08ec417f8e361f43aa1598f73817c  ./tickets/phase-07/00_PHASE_ORCHESTRATOR.md
+558c6b79939be6cbf65638afd31d300b04cbd0f4511ef9e3ee0e79dabdbae53e  ./tickets/phase-07/P07-GATE-review-gate-7.md
 386d1b4166ddf0ddf28b297a3b58852091963a1f5aefc003dcabacd7b2951ab8  ./tickets/phase-07/P07-T01-authorization-rule-model-and-evaluator.md
 3d6317bd6c76f0a070e66b726393d5cd3c3d3786d722f7f1b67da68a9f6b4cb4  ./tickets/phase-07/P07-T02-server-and-payload-enforcement.md
 0f820337a05387a29628e6db47ae33d06a6c18a46157a0688b0fc5f0fca3906d  ./tickets/phase-07/P07-T03-role-defaults-hierarchy-and-scoped-authority.md
@@ -126,3 +126,4 @@ b390ee6f6cdea21897654e8c98917de21070595608010fa620de620ac33d69f2  ./tickets/phas
 7b420962b395064f1bdc171f71cf3f8c70db9dc0e43fb3734e36bfa5dad41fe1  ./tickets/phase-15/P15-T04-sl-notecard-import-export-and-provenance.md
 a1a8e5a0e6c6caba3737d03bef2ca24f79f8a48300f81768651d50194614a65a  ./tickets/phase-15/P15-T05-inworld-resource-links-and-authorized-delivery.md
 26fdbdc2b2c9f6ed67758f0cbc9d4079ddd305a2d77cd3dca754a5210c5dfecc  ./tools/validate_packet.py
+54f569efd82f9c74b1784f489c4c49bde202aa20ab908fadafcd75a3fea9fa3e  ./references/P07P_DATABASE_ACCESS_PATCH.md

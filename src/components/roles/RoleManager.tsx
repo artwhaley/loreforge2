@@ -13,6 +13,8 @@ type FolderState = { readState: PermissionState; writeState: PermissionState }
 
 type Props = {
   domainSlug: string
+  manageableDepartmentIds: number[]
+  assignableRoleIds: number[]
   departments: RoleDepartment[]
   roleRecords: RoleRecord[]
   holdersByRole: Record<string, Holder[]>
@@ -31,7 +33,7 @@ function applyFolderStates(nodes: FolderTreeNode[], states: Record<string, Folde
   return nodes.map((node) => ({ ...node, ...(states[String(node.id)] ?? {}), children: applyFolderStates(node.children, states) }))
 }
 
-export function RoleManager({ domainSlug, departments, roleRecords, holdersByRole, folders, folderStatesByRole, initialRoleId }: Props) {
+export function RoleManager({ domainSlug, departments, roleRecords, holdersByRole, folders, folderStatesByRole, initialRoleId, manageableDepartmentIds, assignableRoleIds }: Props) {
   const allRoles = useMemo(() => departments.flatMap((department) => flatten(department.roles)), [departments])
   const firstRoleId = initialRoleId && allRoles.some((role) => role.id === initialRoleId) ? initialRoleId : allRoles[0]?.id ?? null
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(firstRoleId)
@@ -95,13 +97,13 @@ export function RoleManager({ domainSlug, departments, roleRecords, holdersByRol
   }
 
   return <div className={styles.page} onClick={() => menu && setMenu(null)}>
-    <div className={styles.toolbar}><span className={styles.muted}>Select a role to inspect holders and default folder access. Right-click a role for actions.</span><button type="button" className={styles.primaryButton} onClick={() => { setSelectedRoleId(null); setDialog('create'); setMenu(null) }}>New top-level role</button></div>
+    <div className={styles.toolbar}><span className={styles.muted}>Select a role to inspect holders and default folder access. Right-click a role for actions.</span><button type="button" className={styles.primaryButton} disabled={manageableDepartmentIds.length === 0} onClick={() => { setSelectedRoleId(null); setDialog('create'); setMenu(null) }}>New top-level role</button></div>
     <RoleTree domainSlug={domainSlug} characterId={0} departments={departments} showModeFilter={false} showAssignmentCheckbox={false} selectedRoleId={selectedRoleId} onSelectRole={selectRole} onContextRole={openMenu} />
 
     {menu ? <div className={styles.contextMenu} style={{ left: menu.x, top: menu.y }} onClick={(event) => event.stopPropagation()} role="menu">
-      <button type="button" onClick={() => openDialog('create')}>Create subordinate role</button>
-      <button type="button" onClick={() => openDialog('assign')}>Assign this role…</button>
-      <button type="button" onClick={() => openDialog('delete')}>Delete this role</button>
+      <button type="button" disabled={!manageableDepartmentIds.includes(menu.department.id)} onClick={() => openDialog('create')}>Create subordinate role</button>
+      <button type="button" disabled={!assignableRoleIds.includes(menu.node.id)} onClick={() => openDialog('assign')}>Assign this role…</button>
+      <button type="button" disabled={!manageableDepartmentIds.includes(menu.department.id)} onClick={() => openDialog('delete')}>Delete this role</button>
     </div> : null}
 
     {dialog === 'create' && selectedRole && selectedDepartment ? <section className={styles.dialog} aria-labelledby="create-role-heading">
@@ -111,7 +113,7 @@ export function RoleManager({ domainSlug, departments, roleRecords, holdersByRol
     </section> : null}
     {dialog === 'create' && !selectedRole ? <section className={styles.dialog} aria-labelledby="create-root-role-heading">
       <div className={styles.dialogHeader}><h2 id="create-root-role-heading">Create top-level role</h2><button type="button" className={styles.close} onClick={() => setDialog(null)} aria-label="Close">×</button></div>
-      <form action="/api/roles" method="post"><input type="hidden" name="domainSlug" value={domainSlug} /><label>Role name<input name="name" required autoFocus /></label><label>Department<select name="subdomainId" required defaultValue=""><option value="">Choose Department</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label><div className={styles.dialogActions}><button className={styles.primaryButton} type="submit">Create role</button><button className={styles.secondaryButton} type="button" onClick={() => setDialog(null)}>Cancel</button></div></form>
+      <form action="/api/roles" method="post"><input type="hidden" name="domainSlug" value={domainSlug} /><label>Role name<input name="name" required autoFocus /></label><label>Department<select name="subdomainId" required defaultValue=""><option value="">Choose Department</option>{departments.filter((department) => manageableDepartmentIds.includes(department.id)).map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label><div className={styles.dialogActions}><button className={styles.primaryButton} type="submit">Create role</button><button className={styles.secondaryButton} type="button" onClick={() => setDialog(null)}>Cancel</button></div></form>
     </section> : null}
 
     {dialog === 'delete' && selectedRole ? <section className={styles.dialog} aria-labelledby="delete-role-heading">
