@@ -13,6 +13,7 @@ corrective).
 | `c204cfe` | P06R: fix form-filing FK crash and add a multiple-Characters question (follow-up) | `generateDocument.ts`, `schema.ts`, `layout.ts`, `compose.ts`, `actions/forms.ts`, `actions/archive.ts`, `CharacterFieldPicker.tsx`, `FieldControl.tsx`, `NewDocumentForm.tsx`, `[formId]/page.tsx`, FormStudio `toolbox`/`inspector`/`recordPreview`, `schema.test.ts`, `layout.test.ts` |
 | `aa5ac4f` | P06R: join the caller's transaction inside link/tag collection hooks (follow-up) | `collections/DocumentCharacterLinks.ts`, `collections/DocumentTags.ts` |
 | `d608433` | P06R: add a Time question type alongside Date (follow-up) | `schema.ts`, `schema.test.ts`, `layout.test.ts`, `FieldControl.tsx`, FormStudio `toolbox`/`inspector`/`recordPreview`, `[formId]/page.tsx` |
+| `ea30699` | P06R: fix filing crash on Character links; treat create-act links as authorized (follow-up) | `generateDocument.ts`, `actions/archive.ts`, `documents/links.ts`, `actions/forms.ts` |
 
 ## New dependency (owner-authorized)
 
@@ -56,6 +57,19 @@ adoption. Recorded as the authorized exception in `00_START_HERE.md`.
   names joined in the record body, one Character link per choice.
 - (Follow-up) A `time` question type (native time input) beside `date`;
   time answers never name records.
+- (Follow-up) Character links attached inside a create transaction are part
+  of that create act: the `create_document` preflight on the destination
+  folder is the single gate, and the per-document `edit_document` check is
+  skipped on those attaches (mirrors `ensurePreparedBy` and the archive.ts
+  tags precedent). `edit_document` stays enforced on all later mutation
+  surfaces. This ends the `Resource not found.` filing crash, whose real
+  cause was the permission evaluator reading the just-created document
+  outside the open transaction.
+- (Follow-up) `requireDocumentEditor` / `requireTagManager` accept and
+  forward `transactionID`, so any future in-transaction permission check sees
+  the open transaction's rows.
+- (Follow-up) `submitReportFormAction` logs generation failures and returns a
+  friendly message instead of surfacing a server crash.
 - Pre-corrective forms that are edited are re-laid-out by the auto-layout
   composer (their previously hand-written body templates are regenerated from
   the question list on save).
@@ -67,6 +81,9 @@ adoption. Recorded as the authorized exception in `00_START_HERE.md`.
 - `eslint` on all changed files: clean.
 - Filing sequence replayed on a scratch copy of the live DB: in-transaction
   Document + Prepared-by credit commits (pre-fix: `Not Found`).
+- Filing with a Character question replayed on a scratch copy of the live DB:
+  pre-fix throws `Resource not found.`, post-fix commits the Document with
+  Prepared-by and concerns links atomically (commit `ea30699`).
 - Dev-server smoke requests to `/domain/{slug}/forms`,
   `/domain/{slug}/forms/new`, `/domain/{slug}/forms/1/edit`,
   `/domain/{slug}/forms/1` returned auth-shielded responses (no 500 /

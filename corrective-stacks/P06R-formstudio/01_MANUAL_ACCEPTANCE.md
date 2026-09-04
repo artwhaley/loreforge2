@@ -99,6 +99,34 @@ final check must be a real end-to-end filing in a browser.
    filing), with the time reading `HH:MM`, every Character name shown, and
    the acting Character visible as the Prepared-by credit.
 
+## Scenario F — follow-up: filing with Character questions (the `Resource not found.` crash)
+
+Added after the owner hit `Resource not found.` whenever filing a form with a
+Character question (follow-up 2026-09-04). The crash was NOT a permission
+decision: the concerns-link attach ran an `edit_document` check whose document
+lookup did not carry the open transaction's id, so it read a pre-create
+snapshot and reported the just-created document as not found. Fixed by treating
+the form's own Character links as part of the create act (skip the redundant
+post-create check; the `create_document` preflight on the destination folder is
+the real gate) and by threading `transactionID` through the permission helpers
+for any future in-transaction check. Verified by replaying the exact sequence
+on a scratch copy of the live DB.
+
+1. As a Domain Admin with an acting Character, fill the plumbing incident
+   form completely (Date, Time, single Character pick, multi-Character pick)
+   and submit — you must land on the record, never a server error.
+2. As a plain member with `create_document` in the destination folder, fill
+   and submit the same form — same result, record created with the acting
+   Character as Prepared-by and every picked Character linked with the
+   relationship label.
+3. As a member WITHOUT `create_document` in the destination folder, submit:
+   the fill page must show the graceful "Not authorized." message — never a
+   crash.
+4. From **records/new** with a form template that has Character questions,
+   create a document with Concerns and an extra Prepared-by credit and save:
+   the record must open in the editor (the same create-act skip applies
+   there).
+
 ## Keyboard-only pass (repeat scenario A #6)
 
 Add, edit, move up/down, remove, and save entirely without a mouse.
@@ -127,4 +155,8 @@ Add, edit, move up/down, remove, and save entirely without a mouse.
 | E: Time question in studio + record preview | | |
 | E: end-to-end filing with Date + Time + Characters lands on the record | | |
 | E: Prepared-by credit present on the filed record | | |
+| F: admin filing with Character questions lands on the record | | |
+| F: member filing with Character questions lands on the record | | |
+| F: member without create_document sees "Not authorized.", not a crash | | |
+| F: records/new with Concerns + extra Prepared-by creates the record | | |
 | Keyboard: full flow without a mouse | | |
