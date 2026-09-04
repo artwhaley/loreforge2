@@ -31,7 +31,9 @@ export function NewDocumentForm({ tenantSlug, types, folders, activeCharacter, i
         ? 'One of the Concerns entries was invalid. Your other fields are preserved.'
         : state.error === 'authorization'
           ? 'You are not authorized to create a record in this Domain.'
-          : null
+          : state.error === 'supersede-eligibility'
+            ? 'That record cannot be superseded in its current lifecycle state; only Filed or Locked records can gain a successor.'
+            : null
 
   return <form action={formAction} style={{ display: 'grid', gap: '1rem', padding: '1.25rem', border: '1px solid var(--tenant-accent)', background: 'var(--tenant-surface-bg)' }}>
     <input type="hidden" name="tenantSlug" value={tenantSlug} />

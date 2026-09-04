@@ -18,3 +18,10 @@ const ALLOWED: Record<Lifecycle, Lifecycle[]> = {
 export function canTransitionLifecycle(from: Lifecycle, to: Lifecycle): boolean { return from === to || ALLOWED[from].includes(to) }
 export function assertLifecycleTransition(from: Lifecycle, to: Lifecycle): void { if (!canTransitionLifecycle(from, to)) throw new Error(`Invalid lifecycle transition: ${from} -> ${to}`) }
 export function canEditDocumentBody(state: Lifecycle): boolean { return state === 'draft' || state === 'filed' }
+
+/**
+ * Which Documents may be superseded (P05R-T02 eligibility ruling): Filed and
+ * already-Locked records can gain a successor; Draft and Pending-Review
+ * records are edited/reviewed, never superseded.
+ */
+export function canSupersedeDocument(state: Lifecycle | string): boolean { return state === 'filed' || state === 'locked' }

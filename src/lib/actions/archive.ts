@@ -10,10 +10,10 @@ import config from '@/payload.config'
 
 import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
-import { resolveFilingPolicy, type FilingPolicy } from '@/lib/documents/lifecycle'
+import { canSupersedeDocument, resolveFilingPolicy, type FilingPolicy } from '@/lib/documents/lifecycle'
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
 import { attachDocumentCharacterLink, attachDocumentTag, findOrCreateDomainTag } from '@/lib/documents/links'
-import { addDocumentRelationship } from '@/lib/documents/relationships'
+import { addDocumentRelationship, runInTransaction } from '@/lib/documents/relationships'
 import { authorizeInterimOperation } from '@/lib/authorization/interim'
 import { domainAndIdWhere } from '@/lib/tenant/scope'
 import type { Domain, Tenant } from '@/payload-types'
@@ -27,7 +27,7 @@ type MemberTenant = {
 }
 
 export type DocumentEditorActionState = {
-  error?: 'missing' | 'type' | 'authorization' | 'concerns'
+  error?: 'missing' | 'type' | 'authorization' | 'concerns' | 'supersede-eligibility'
   values?: {
     title: string
     body: string
@@ -219,9 +219,14 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   if (!concernEntries) return { error: 'concerns', values }
   const folder = await tenantFolderId(ctx.payload, ctx.tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
   const supersedesDocumentId = Number(formData.get('supersedesDocumentId') ?? '')
-  if (Number.isFinite(supersedesDocumentId) && supersedesDocumentId > 0) {
+  const superseding = Number.isFinite(supersedesDocumentId) && supersedesDocumentId > 0
+  if (superseding) {
     const previous = await ctx.payload.find({ collection: 'documents', where: domainAndIdWhere(ctx.tenant.id, supersedesDocumentId), depth: 0, limit: 1 })
     if (!previous.docs[0]) return { error: 'authorization', values }
+    // P05R-T02 A: eligibility preflight BEFORE any create — Draft and
+    // Pending-Review records are edited/reviewed, never superseded (lifecycle
+    // contract; enforced server-side regardless of UI gating).
+    if (!canSupersedeDocument(String(previous.docs[0].lifecycle))) return { error: 'supersede-eligibility', values }
     const existingSuccessor = await ctx.payload.find({ collection: 'document-relationships', where: { and: [{ kind: { equals: 'supersedes' } }, { target: { equals: supersedesDocumentId } }] }, depth: 0, limit: 1, overrideAccess: true })
     if (existingSuccessor.docs[0]) return { error: 'authorization', values }
   }
@@ -231,6 +236,10 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   if (!selectedType) return { error: 'type', values }
   const interim = await authorizeInterimOperation(ctx.payload, { userId: ctx.user.id, activeCharacterId }, ctx.tenant.id)
   if (concernEntries.length > 0 && interim !== true) return { error: 'authorization', values }
+  // P05R-T02 A: superseding requires the interim decision BEFORE the successor
+  // is created — a non-admin member must not be able to file a near-duplicate
+  // that only fails relationship authorization afterwards.
+  if (superseding && interim !== true) return { error: 'authorization', values }
   if (interim === true) {
     const requestedCharacterIds = [...new Set(concernEntries.flatMap((entry) => entry.characterId ? [entry.characterId] : []))]
     if (requestedCharacterIds.length > 0) {
@@ -241,11 +250,22 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   const folderRecord = folder ? await ctx.payload.findByID({ collection: 'folders', id: folder, depth: 0 }).catch(() => null) : null
   const domainRecord = await ctx.payload.findByID({ collection: 'domains', id: ctx.tenant.id, depth: 0 })
   const policy = resolveFilingPolicy({ template: 'inherit', folder: (folderRecord?.filingPolicy ?? 'inherit') as FilingPolicy, documentType: selectedType.defaultFilingPolicy, domain: (domainRecord.defaultFilingPolicy ?? 'direct-file') as Exclude<FilingPolicy, 'inherit'> })
-  const created = await ctx.payload.create({ collection: 'documents', context: activeCharacterId ? { preparedByCharacterId: activeCharacterId, actorUserId: ctx.user.id } : { allowUserCreate: true, actorUserId: ctx.user.id }, data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body, origin: 'web-editor', sourceKind: 'web', documentType: selectedType.id, lifecycle: policy === 'review-required' ? 'pending_review' : 'filed', publicAccess: 'inherit', createdBy: ctx.user.id, folder } })
-  if (Number.isFinite(supersedesDocumentId) && supersedesDocumentId > 0) {
-    await addDocumentRelationship({ payload: ctx.payload, domainId: ctx.tenant.id, sourceId: created.id, targetId: supersedesDocumentId, kind: 'supersedes', actor: { userId: ctx.user.id, characterId: activeCharacterId } })
+  // P05R-T02 A: a superseding create is ONE atomic operation — create the
+  // successor, relate it, lock the predecessor, and record provenance on both
+  // records inside one DB transaction, so any failure after the preflights
+  // rolls everything back (no orphaned successor, no stale lock, no stray
+  // provenance). Non-superseding creates keep their previous behavior.
+  const createAndRelate = async (transactionID: number | string | null) => {
+    const req = transactionID == null ? undefined : { transactionID }
+    const created = await ctx.payload.create({ collection: 'documents', req, context: activeCharacterId ? { preparedByCharacterId: activeCharacterId, actorUserId: ctx.user.id } : { allowUserCreate: true, actorUserId: ctx.user.id }, data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body, origin: 'web-editor', sourceKind: 'web', documentType: selectedType.id, lifecycle: policy === 'review-required' ? 'pending_review' : 'filed', publicAccess: 'inherit', createdBy: ctx.user.id, folder } })
+    if (superseding) {
+      await addDocumentRelationship({ payload: ctx.payload, domainId: ctx.tenant.id, sourceId: created.id, targetId: supersedesDocumentId, kind: 'supersedes', actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
+    }
+    await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'created', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { lifecycle: created.lifecycle }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id, transactionID ?? undefined), transactionID })
+    if (created.lifecycle === 'filed') await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'filed', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { reason: 'filing-policy' }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id, transactionID ?? undefined), transactionID })
+    return created
   }
-  await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'created', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { lifecycle: created.lifecycle }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id) })
+  const created = superseding ? await runInTransaction(ctx.payload, (transactionID) => createAndRelate(transactionID)) : await createAndRelate(null)
   if (interim === true) {
     for (const entry of concernEntries) {
       let characterId = entry.characterId
@@ -264,7 +284,6 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
       await attachDocumentTag({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, tagId: tag.id, actor: { userId: ctx.user.id, characterId: activeCharacterId } })
     }
   }
-  if (created.lifecycle === 'filed') await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'filed', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { reason: 'filing-policy' }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id) })
   redirect(`${ctx.basePath}/documents/${created.id}/edit`)
 }
 

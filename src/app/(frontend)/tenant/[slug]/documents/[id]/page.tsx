@@ -8,6 +8,7 @@ import { renderMarkdown } from '@/lib/markdown/render'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 import { getDocumentCharacterLinks, getDocumentTags } from '@/lib/documents/links'
 import { getDocumentRelationships } from '@/lib/documents/relationships'
+import { canSupersedeDocument } from '@/lib/documents/lifecycle'
 
 import styles from './document.module.scss'
 
@@ -177,7 +178,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
         </div>
 
         <div className={styles.bottomActions}>
-          {user && !isSuperseded ? (
+          {user && !isSuperseded && canSupersedeDocument(doc.lifecycle) ? (
             <a className={styles.action} href={`/domain/${tenant.slug}/records/new?supersedes=${doc.id}`}>
               Create superseding document
             </a>

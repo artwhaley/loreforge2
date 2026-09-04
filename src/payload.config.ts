@@ -149,6 +149,17 @@ export default buildConfig({
     client: {
       url: process.env.DATABASE_URI,
     },
+    // P05R-T02 B: real DB transactions. Without transactionOptions the SQLite
+    // adapter wires beginTransaction to a no-op resolving null, so multi-step
+    // operations (supersede create, domain removal, corrections) could not be
+    // atomic. immediate acquires the write lock at BEGIN; busyTimeout keeps
+    // concurrent writers waiting instead of failing with SQLITE_BUSY, so the
+    // concurrency regression fails one attempt deterministically.
+    transactionOptions: { behavior: 'immediate' },
+    busyTimeout: 5000,
+    // WAL: writers no longer block readers, and concurrent writers serialize
+    // on the write lock instead of failing immediately.
+    wal: true,
   }),
   secret: process.env.PAYLOAD_SECRET,
   sharp,

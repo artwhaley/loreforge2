@@ -23,15 +23,19 @@ export type ProvenanceInput = {
   context?: ProvenanceContext
   revisionId?: number | string | null
   sourceDescriptor?: string | null
+  /** Join an explicit DB transaction started by the caller (P05R-T02). */
+  transactionID?: number | string | null
 }
 
 /** The sole application writer for Document provenance. */
 export async function recordDocumentProvenance(input: ProvenanceInput) {
   const payload = input.payload ?? (await (await import('@/lib/payload')).getLorePayload())
+  const req = input.transactionID == null ? undefined : { transactionID: input.transactionID }
   return payload.create({
     collection: 'document-provenance-events',
     overrideAccess: true,
     depth: 0,
+    req,
     data: {
       domain: Number(input.domainId),
       document: Number(input.documentId),
@@ -47,8 +51,8 @@ export async function recordDocumentProvenance(input: ProvenanceInput) {
 }
 
 /** Find the newest Payload revision for linking an edit/create event. */
-export async function latestDocumentRevisionId(payload: Payload, documentId: number | string): Promise<string | null> {
-  const result = await payload.findVersions({ collection: 'documents', where: { parent: { equals: documentId } }, depth: 0, limit: 1, sort: '-createdAt' })
+export async function latestDocumentRevisionId(payload: Payload, documentId: number | string, transactionID?: number | string | null): Promise<string | null> {
+  const result = await payload.findVersions({ collection: 'documents', where: { parent: { equals: documentId } }, depth: 0, limit: 1, sort: '-createdAt', req: transactionID == null ? undefined : { transactionID } })
   return result.docs[0]?.id ? String(result.docs[0].id) : null
 }
 
@@ -74,7 +78,7 @@ export function describeProvenanceEvent(eventType: ProvenanceEventType, context?
     case 'relationship-removed': return 'removed a record relationship'
     case 'relationship_added': return 'added a record relationship'
     case 'relationship_removed': return 'removed a record relationship'
-    case 'superseded': return 'superseded an older record'
+    case 'superseded': return context?.supersedingDocumentId ? 'was superseded by a newer record' : 'superseded an older record'
     case 'deleted': return 'soft-deleted the record'
     case 'restored': return 'restored the record'
     default: return 'changed the record'

@@ -73,7 +73,12 @@ export const Documents: CollectionConfig = {
         if (operation === 'update') {
           const supersedesLock = (req.context as Record<string, unknown> | undefined)?.supersedesLock === true
           if (supersedesLock) {
+            // P05R-T02: supersedesLock is not a general lifecycle bypass. Only
+            // Filed records may be locked by supersession; an already-Locked
+            // predecessor may stay Locked without a bogus transition; Draft /
+            // Pending-Review records must never jump to Locked through it.
             if (to !== 'locked') throw new Error('A superseded Document can only transition to Locked.')
+            if (from !== 'filed' && from !== 'locked') throw new Error('Only Filed or already-Locked Documents may be locked by supersession.')
           } else {
             assertLifecycleTransition(from, to)
           }
