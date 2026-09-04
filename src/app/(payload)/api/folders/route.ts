@@ -13,7 +13,8 @@ const idOf = (value: unknown): number | null => {
 }
 
 function destination(domainSlug: string, requested: string) {
-  return requested.startsWith(`/domain/${domainSlug}/manage/folders`) ? requested : `/domain/${domainSlug}/manage/folders`
+  const allowed = [`/domain/${domainSlug}/manage/folders`, `/domain/${domainSlug}/records`]
+  return allowed.some((path) => requested === path || requested.startsWith(`${path}?`)) ? requested : `/domain/${domainSlug}/manage/folders`
 }
 
 export async function POST(request: Request) {
@@ -54,6 +55,15 @@ export async function POST(request: Request) {
     if (children.totalDocs > 0 || documents.totalDocs > 0) return NextResponse.redirect(new URL(returnTo, request.url), 303)
     await payload.delete({ collection: 'folders', id: folderId })
     payload.logger.info(`Phase 5 folder deleted: actorUser=${user.id} domain=${domain.id} folder=${folderId}`)
+    return NextResponse.redirect(new URL(returnTo, request.url), 303)
+  }
+
+  if (action === 'rename') {
+    const name = String(form.get('name') ?? '').trim()
+    if (name) {
+      await payload.update({ collection: 'folders', id: folderId, data: { name } })
+      payload.logger.info(`Phase 5 folder renamed: actorUser=${user.id} domain=${domain.id} folder=${folderId}`)
+    }
     return NextResponse.redirect(new URL(returnTo, request.url), 303)
   }
 
