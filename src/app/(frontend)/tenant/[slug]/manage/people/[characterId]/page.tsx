@@ -7,6 +7,7 @@ import { getTenantsForUser } from '@/lib/tenant/queries'
 import { buildFolderTree } from '@/lib/archive/folderTree'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 import { FolderTree, RoleTree, type FolderTreeNode, type PermissionState, type RoleDepartment, type RoleTreeNode } from '@/components/people/PersonAccessTrees'
+import { computeAssignableRoleIds } from '@/lib/people/participation'
 import styles from '@/components/people/PersonWorkspace.module.scss'
 
 type Props = { params: Promise<{ slug: string; characterId: string }>; searchParams?: Promise<{ roleFilter?: string }> }
@@ -44,11 +45,36 @@ export default async function PersonWorkspacePage({ params, searchParams }: Prop
   const localContext = contexts.docs[0]
   const roleById = new Map(roles.docs.map((item) => [String(item.id), item]))
   const assignedRoleIds = new Set(assignments.docs.map((assignment) => String(relationId(assignment.role))))
+  // P05R-T03 B: "Roles I can assign" — conservative interim derivation. The
+  // workspace is admin-gated, so Domain Owners / operational Domain Admins see
+  // every in-Domain Role; anyone else would only assign Roles in Departments
+  // where they already hold a Role (or same-Department descendants of Roles
+  // they hold). P07-T03 replaces this calculation with the final evaluator.
+  const ownerId = typeof (tenant as { ownerUser?: unknown }).ownerUser === 'object' ? ((tenant as { ownerUser: { id?: number } }).ownerUser)?.id : (tenant as { ownerUser?: unknown }).ownerUser
+  const adminRows = user
+    ? await payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: tenant.id } }, { user: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
+    : { docs: [] }
+  const viewerIsAdmin = Boolean(user && (String(ownerId) === String(user.id) || adminRows.docs.length > 0))
+  let actorHeldRoleIds: Array<number | string> = []
+  if (user && !viewerIsAdmin) {
+    const actorCharacters = await payload.find({ collection: 'characters', where: { and: [{ controlledBy: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 200 })
+    const actorCharacterIds = actorCharacters.docs.map((item) => item.id)
+    if (actorCharacterIds.length > 0) {
+      const actorAssignments = await payload.find({ collection: 'role-assignments', where: { and: [{ character: { in: actorCharacterIds } }, { status: { equals: 'active' } }] }, depth: 0, limit: 2000 })
+      const domainRoleIds = new Set(roles.docs.map((item) => String(item.id)))
+      actorHeldRoleIds = actorAssignments.docs.map((assignment) => relationId(assignment.role)).filter((roleId): roleId is number => roleId !== null && domainRoleIds.has(String(roleId)))
+    }
+  }
+  const assignableRoleIds = computeAssignableRoleIds({
+    viewerIsAdmin,
+    roles: roles.docs.map((item) => ({ id: item.id, departmentId: relationId(item.subdomain), parentRoleId: relationId(item.parentRole) })),
+    actorHeldRoleIds,
+  })
   const assignedRules = permissionRules.docs.filter((rule) => polyId(rule.principal) === characterId && rule.resourceType === 'Folder' && rule.active !== false)
   const ruleFor = (folderId: number, capabilities: string[]) => assignedRules.find((rule) => polyId(rule.resource) === folderId && capabilities.includes(rule.capability))
   const folderTree = buildFolderTree(folders.docs)
   const roleNodes = new Map<number, RoleTreeNode>()
-  for (const item of roles.docs) roleNodes.set(Number(item.id), { id: Number(item.id), name: item.name, held: assignedRoleIds.has(String(item.id)), children: [] })
+  for (const item of roles.docs) roleNodes.set(Number(item.id), { id: Number(item.id), name: item.name, held: assignedRoleIds.has(String(item.id)), assignable: assignableRoleIds.has(Number(item.id)), children: [] })
   const rolesByDepartment = new Map<number, RoleTreeNode[]>()
   for (const item of roles.docs) {
     const node = roleNodes.get(Number(item.id))
@@ -89,7 +115,7 @@ export default async function PersonWorkspacePage({ params, searchParams }: Prop
         <div className={styles.nameLine}><h1>{localContext?.localDisplayName || character.name}</h1><span className={styles.characterHandle}>{controller?.name || controller?.email || 'Unclaimed Character'}</span></div>
         <form action="/api/domain-memberships" method="post" className={styles.removeForm}><input type="hidden" name="domainSlug" value={slug} /><input type="hidden" name="characterId" value={characterId} /><input type="hidden" name="action" value="remove" /><button type="submit">Remove from Domain</button></form>
       </header>
-      <RoleTree domainSlug={slug} characterId={characterId} departments={roleDepartments} initialMode={roleFilter === 'held' ? 'held' : 'all'} />
+      <RoleTree domainSlug={slug} characterId={characterId} departments={roleDepartments} initialMode={roleFilter} />
       <FolderTree domainSlug={slug} characterId={characterId} folders={folderNodes} />
       <section className={styles.recentWork}><h2>Recent Work</h2><p>Recent work will appear here when the activity feed is connected.</p></section>
     </section>

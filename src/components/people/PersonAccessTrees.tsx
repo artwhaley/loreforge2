@@ -1,6 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
+
+import { filterRoleTree, roleMatchesMode, ROLE_MODE_LABELS, ROLE_MODES, type RoleMode } from '@/lib/people/roleFilters'
 
 import styles from './PersonAccessTrees.module.scss'
 
@@ -8,6 +10,8 @@ export type RoleTreeNode = {
   id: number
   name: string
   held: boolean
+  /** Whether the viewing actor may assign this Role under interim rules (P05R-T03 B). */
+  assignable?: boolean
   children: RoleTreeNode[]
 }
 
@@ -27,7 +31,6 @@ export type FolderTreeNode = {
 }
 
 export type PermissionState = 'inherit' | 'grant' | 'deny'
-type RoleMode = 'all' | 'held'
 
 type RoleTreeProps = {
   domainSlug: string
@@ -52,12 +55,7 @@ type FolderTreeProps = {
 }
 
 function roleMatches(node: RoleTreeNode, query: string, mode: RoleMode): RoleTreeNode | null {
-  const children = node.children
-    .map((child) => roleMatches(child, query, mode))
-    .filter((child): child is RoleTreeNode => child !== null)
-  const ownMatch = (!query || node.name.toLocaleLowerCase().includes(query)) && (mode === 'all' || node.held)
-  if (ownMatch || children.length > 0) return { ...node, children }
-  return null
+  return filterRoleTree(node, (candidate) => (!query || candidate.name.toLocaleLowerCase().includes(query)) && roleMatchesMode(candidate, mode))
 }
 
 function filterDepartment(department: RoleDepartment, query: string, mode: RoleMode): RoleDepartment | null {
@@ -100,7 +98,7 @@ function RoleAssignmentToggle({ domainSlug, characterId, roleId, checked, label 
   </form>
 }
 
-export function RoleTree({ domainSlug, characterId, departments, initialMode = 'all', showModeFilter = true, showAssignmentCheckbox = true, selectedRoleId, onSelectRole, onContextRole }: RoleTreeProps) {
+export function RoleTree({ domainSlug, characterId, departments, initialMode = 'assignable', showModeFilter = true, showAssignmentCheckbox = true, selectedRoleId, onSelectRole, onContextRole }: RoleTreeProps) {
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState<RoleMode>(initialMode)
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(departments.map((department) => `department-${department.id}`)))
@@ -134,7 +132,7 @@ export function RoleTree({ domainSlug, characterId, departments, initialMode = '
     return next
   })
   return <section className={styles.panel} aria-labelledby="roles-heading">
-    <div className={styles.panelHeader}><div><h2 id="roles-heading">Roles</h2><p className={styles.panelMeta}>{displayedCount.held} held · {displayedCount.total} shown</p></div>{showModeFilter ? <div className={styles.modeTabs} role="group" aria-label="Role filter"><button type="button" className={mode === 'all' ? styles.modeActive : styles.modeButton} onClick={() => setMode('all')}>All roles</button><button type="button" className={mode === 'held' ? styles.modeActive : styles.modeButton} onClick={() => setMode('held')}>Held only</button></div> : null}</div>
+    <div className={styles.panelHeader}><div><h2 id="roles-heading">Roles</h2><p className={styles.panelMeta}>{displayedCount.held} held · {displayedCount.total} shown</p></div>{showModeFilter ? <div className={styles.modeTabs} role="group" aria-label="Role filter">{ROLE_MODES.map((candidate) => <button key={candidate} type="button" className={mode === candidate ? styles.modeActive : styles.modeButton} onClick={() => setMode(candidate)}>{ROLE_MODE_LABELS[candidate]}</button>)}</div> : null}</div>
     <div className={styles.searchBar}><span className={styles.searchIcon} aria-hidden="true">⌕</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search roles or departments" aria-label="Search roles or departments" /></div>
     <div className={styles.treeBox} role="tree" aria-label="Department roles">
       {visibleDepartments.map((department) => { const key = `department-${department.id}`; const isOpen = expanded.has(key); const count = countRoles(department.roles); return <div key={department.id} className={styles.departmentGroup}>
@@ -153,13 +151,26 @@ function folderMatches(node: FolderTreeNode, query: string): FolderTreeNode | nu
   return null
 }
 
-function PermissionCheckbox({ label, state, onChange }: { label: string; state: PermissionState; onChange: (next: PermissionState) => void }) {
-  const checked = state !== 'deny'
-  return <label className={`${styles.permission} ${state === 'inherit' ? styles.permissionInherited : ''}`} title={state === 'inherit' ? `${label} is inherited. Click to set an explicit Deny; click again for Allow.` : `${label}: ${state === 'grant' ? 'Allowed' : 'Denied'}`}>
-    <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked ? 'grant' : 'deny')} />
+/**
+ * P05R-T03 A: a real three-state control per access axis (Inherited | Allow |
+ * Deny), so a mistaken Deny is never a one-way ratchet — Inherited deletes the
+ * direct rules on save. Each axis is its own radiogroup; mouse and keyboard
+ * both select exactly one state.
+ */
+function PermissionAxis({ label, state, onChange }: { label: string; state: PermissionState; onChange: (next: PermissionState) => void }) {
+  const name = useId()
+  const options: Array<{ value: PermissionState; text: string }> = [
+    { value: 'inherit', text: 'Inherited' },
+    { value: 'grant', text: 'Allow' },
+    { value: 'deny', text: 'Deny' },
+  ]
+  return <div className={styles.permissionAxis} role="radiogroup" aria-label={`${label} access`}>
     <span className={styles.permissionName}>{label}</span>
-    <span className={styles.permissionState}>{state === 'inherit' ? 'Inherited' : state === 'grant' ? 'Allow' : 'Deny'}</span>
-  </label>
+    <span className={styles.permissionOptions}>{options.map((option) => <label key={option.value} className={`${styles.permissionOption} ${state === option.value ? styles.permissionOptionActive : ''}`} title={option.value === 'inherit' ? `${label} is inherited (no direct rule).` : option.value === 'grant' ? `${label} explicitly allowed here.` : `${label} explicitly denied here.`}>
+      <input type="radio" name={name} value={option.value} checked={state === option.value} onChange={() => onChange(option.value)} />
+      <span>{option.text}</span>
+    </label>)}</span>
+  </div>
 }
 
 function FolderNode({ node, domainSlug, principalType, principalId, expanded, toggle }: { node: FolderTreeNode; domainSlug: string; principalType: 'Character' | 'Role'; principalId: number; expanded: Set<string>; toggle: (key: string) => void }) {
@@ -172,7 +183,7 @@ function FolderNode({ node, domainSlug, principalType, principalId, expanded, to
     <form action="/api/permission-rules" method="post" className={styles.folderRow}>
       <input type="hidden" name="domainSlug" value={domainSlug} /><input type="hidden" name={principalType === 'Role' ? 'roleId' : 'characterId'} value={principalId} /><input type="hidden" name="principalType" value={principalType} /><input type="hidden" name="folderId" value={node.id} /><input type="hidden" name="readState" value={readState} /><input type="hidden" name="writeState" value={writeState} />
       <div className={styles.folderIdentity}>{hasChildren ? <button type="button" className={styles.disclosure} aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${node.name}`} aria-expanded={isOpen} onClick={() => toggle(key)}>{isOpen ? '⌄' : '›'}</button> : <span className={styles.disclosureSpacer} aria-hidden="true" />}<span className={styles.folderIcon} aria-hidden="true">{node.systemManaged ? '⌂' : '▱'}</span><span className={styles.folderName}>{node.name}</span></div>
-      <div className={styles.permissionSet}><PermissionCheckbox label="Read" state={readState} onChange={setReadState} /><PermissionCheckbox label="Write" state={writeState} onChange={setWriteState} /></div>
+      <div className={styles.permissionSet}><PermissionAxis label="Read" state={readState} onChange={setReadState} /><PermissionAxis label="Write" state={writeState} onChange={setWriteState} /></div>
       <button type="submit" className={styles.saveButton}>Save</button>
     </form>
     {hasChildren && isOpen ? <ul className={styles.folderTree} role="group">{node.children.map((child) => <FolderNode key={`${principalType}-${principalId}-${child.id}`} node={child} domainSlug={domainSlug} principalType={principalType} principalId={principalId} expanded={expanded} toggle={toggle} />)}</ul> : null}

@@ -30,5 +30,6 @@
 .quickResults { display: grid; gap: .4rem; margin: .15rem 0 0; padding: .4rem; border: 1px solid var(--tenant-accent); border-radius: 4px; background: var(--tenant-page-bg); list-style: none; }
 .quickResults a { display: grid; gap: .2rem; padding: .6rem .65rem; color: var(--tenant-primary); text-decoration: none; border-radius: 3px; }
 .quickResults a:hover, .quickResults a:focus-visible { background: var(--tenant-surface-bg); outline: 2px solid var(--tenant-accent); }
+.quickResults .quickOptionActive a { background: var(--tenant-surface-bg); outline: 2px solid var(--tenant-accent); }
 .quickResults span { color: var(--tenant-muted-text); font-size: .8rem; }
 @media (max-width: 760px) { .header { align-items: start; flex-direction: column; } .row { grid-template-columns: 1fr; } .open { justify-self: start; } }

@@ -49,7 +49,10 @@ export async function GET(request: Request) {
     const context = contextByCharacter.get(String(character.id))
     const controller = character.controlledBy && typeof character.controlledBy === 'object' ? character.controlledBy : null
     const data = roleData.get(String(character.id)) ?? { names: [], departments: [] }
-    const fields = [character.name, context?.localDisplayName, controller?.name, controller?.email, ...data.names, ...data.departments].filter(Boolean).map(String)
+    // P05R-T03 D: the controlling account EMAIL is never scored or surfaced —
+    // searching contracted identity fields only (name, local alias,
+    // Department, Role, controller display name) avoids an email side channel.
+    const fields = [character.name, context?.localDisplayName, controller?.name, ...data.names, ...data.departments].filter(Boolean).map(String)
     const haystack = fields.join(' ').toLowerCase()
     const score = fields.reduce((total, field) => total + (field.toLowerCase().startsWith(query) ? 100 : field.toLowerCase().includes(query) ? 50 : 0), 0)
     return { character, context, controller, roles: data.names, departments: data.departments, haystack, score }

@@ -63,13 +63,15 @@
 .folderIcon { width: 1.15rem; color: var(--tenant-primary); text-align: center; }
 .folderName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--tenant-primary); font-size: .86rem; }
 .folderTree > .folderItem > .folderTree { margin-left: 1.65rem; border-left: 1px solid color-mix(in srgb, var(--tenant-accent) 55%, #fff); }
-.permissionSet { display: inline-flex; align-items: center; gap: .35rem; }
-.permission { display: inline-flex; align-items: center; gap: .3rem; min-width: 5.45rem; padding: .25rem .35rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 60%, #fff); border-radius: 6px; color: var(--tenant-primary); background: var(--tenant-surface-bg); font-size: .7rem; cursor: pointer; }
-.permission input { width: .95rem; height: .95rem; accent-color: var(--tenant-primary); }
+/* P05R-T03 A: real three-state axis controls (Inherited | Allow | Deny). */
+.permissionSet { display: flex; flex-direction: column; align-items: flex-end; gap: .3rem; }
+.permissionAxis { display: flex; align-items: center; gap: .4rem; color: var(--tenant-primary); font-size: .72rem; }
 .permissionName { font-weight: 700; }
-.permissionState { color: var(--tenant-muted-text); font-size: .65rem; }
-.permissionInherited { opacity: .55; }
-.permissionInherited:hover, .permissionInherited:focus-within { opacity: .95; }
+.permissionOptions { display: inline-flex; padding: .12rem; gap: .1rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 60%, #fff); border-radius: 6px; background: var(--tenant-page-bg); }
+.permissionOption { position: relative; display: inline-flex; align-items: center; padding: .15rem .42rem; border-radius: 4px; color: var(--tenant-muted-text); cursor: pointer; font-size: .66rem; white-space: nowrap; }
+.permissionOption input { position: absolute; opacity: 0; pointer-events: none; }
+.permissionOptionActive { color: var(--tenant-text-on-primary); background: var(--tenant-primary); }
+.permissionOption:not(.permissionOptionActive):hover, .permissionOption:focus-within { background: color-mix(in srgb, var(--tenant-accent) 22%, var(--tenant-page-bg)); color: var(--tenant-primary); }
 .saveButton { border: 1px solid var(--tenant-primary); border-radius: 6px; padding: .38rem .62rem; color: var(--tenant-text-on-primary); background: var(--tenant-primary); font: inherit; font-size: .72rem; cursor: pointer; }
 .saveButton:hover, .saveButton:focus-visible { filter: brightness(1.08); outline: 2px solid color-mix(in srgb, var(--tenant-accent) 70%, transparent); outline-offset: 1px; }
 .legend { display: inline-flex; align-items: center; gap: .35rem; color: var(--tenant-muted-text); font-size: .72rem; }
@@ -81,6 +83,6 @@
   .modeTabs { align-self: stretch; }
   .modeButton, .modeActive { flex: 1; }
   .folderRow { grid-template-columns: 1fr; gap: .4rem; }
-  .permissionSet { padding-left: 1.7rem; }
+  .permissionSet { align-items: flex-start; padding-left: 1.7rem; }
   .saveButton { justify-self: start; margin-left: 1.7rem; }
 }
