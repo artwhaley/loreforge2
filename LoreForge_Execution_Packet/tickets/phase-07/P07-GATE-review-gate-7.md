@@ -31,6 +31,7 @@ Hard security/behavior gate before public surfaces and starter packs multiply co
 2. Execute golden scenarios for Commander/Captains/Warrior, cross-hierarchy grant, explicit deny, multi-role Character, and delegation chain.
 3. Produce permission explanation outputs for each fixture actor and compare the People Folder-access tree with the equivalent Folder-centered permissions view. Separately inspect the Role tree and prove its mutations do not alter direct Folder rules.
 4. Have reviewer attempt direct URL/API bypass and scope escalation.
+5. Confirm `P07-D01` (the Document Sharing decision brief at `references/P07-D01-DOCUMENT-SHARING-DECISION.md`, registered `DEF-SHARE-01`) has an owner-recorded result before this gate closes: a workflow approved for a named later implementation ticket, or another explicit deferral with a named future ticket. Gate 7 does **not** require Sharing to work.
 
 ## Likely code touchpoints
 - Inspect current adjacent files; do not broaden scope.
@@ -45,10 +46,11 @@ Hard security/behavior gate before public surfaces and starter packs multiply co
 - All authorization tests green.
 - No tenant leak.
 - No lower actor can grant more authority/scope than possessed.
-- Direct Document share and explicit deny follow frozen precedence.
+- Direct Document-level PermissionRules and explicit deny follow frozen precedence as generic permission exceptions; no customer-facing Share workflow is required or implied (Share deferred, CC-2026-09-03-04).
 - A Head Scribe can find one Character through quick search, assign only permitted descendant Roles with checkboxes, edit direct Read/Write overrides in a separate Folder tree, and understand effective sources without navigating collection tables.
 - Role mutation requests contain no Folder; Folder mutation requests contain no RoleAssignment operation; Department participation is derived from Roles.
 - Management navigation is capability-driven while the primary Domain navigation remains stable; no Administration mode returns.
+- Role, assignment, Folder access, membership, and PermissionRule changes have durable actor-aware audit evidence (P05R-T05 seam).
 
 ## Guardrails / non-goals
 - Do not advance work scheduled for a later phase merely because a nearby file is open.

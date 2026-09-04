@@ -323,12 +323,12 @@ All API/server-action/list paths use this subsystem. Filter inaccessible rows be
 Pre-P07 authority is a compatibility seam, not a product role and not permission-by-UI-hiding:
 - expose one server-side `authorizeInterimOperation` boundary and call it from every pre-P07 privileged API/action;
 - in P02 only, claim approval is limited to a User with the legacy Tenant `admin` membership for that Domain; P03 migrates that operational authority to `ownerUser`/DomainAdmin and removes this legacy branch;
-- from P03 through P06, ownerUser and operational DomainAdmins may manage Domain memberships, Department-owned Roles, RoleAssignments, and direct Folder-access records; review/approve/lock/restore; add/remove tags, Character links, or Document relationships; Share; manage Templates; and create unclaimed Characters inline;
+- from P03 through P06, ownerUser and operational DomainAdmins may manage Domain memberships, Department-owned Roles, RoleAssignments, and direct Folder-access records; review/approve/lock/restore; add/remove tags, Character links, or Document relationships; manage Templates; and create unclaimed Characters inline;
 - ordinary P06 form/document creation requires an authenticated User controlling the active Character, an active DomainMembership, and the existing server-validated destination scope; it never grants management authority;
 - all interim decisions record actor User, acting Character where applicable, operation, resource, and timestamp in audit/provenance;
 - P07-T02 replaces and deletes this helper/legacy branch, with integration tests proving no legacy User Membership still grants access.
 
-Interim Share is owner/admin-only. Do not substitute `edit_document` for final Share delegation: after P07, the actor must satisfy the delegation contract for `share_document` and the granted capability.
+Document Sharing is intentionally deferred by CC-2026-09-03-04. Pre-P07 code does not promise or expose a functional customer Share workflow, and Share is not a required pre-P07 management operation. Any existing Share adapter and mutation route is provisional residue only and may be removed when final authorization is wired; it must not be extended or completed. `share_document` remains reserved capability vocabulary and `shared`/`share_revoked` remain reserved provenance names so the deferred feature needs no gratuitous schema migration.
 
 ### Public/anonymous read policy
 
@@ -396,22 +396,25 @@ Soft delete is orthogonal and preserves prior state.
 - `supersedes` is a linear chain: one direct predecessor and one direct successor maximum; cycles and forks are rejected.
 - Documents never move or copy between Domains. Cross-Domain correspondence is a future messaging feature, not a record transfer.
 
-### Share
-- Same Document ID.
-- Document-specific PermissionRules, usually read and optional edit.
-- UI says Share, never Copy.
-- Revoke removes future access, not audit.
-- Personal Domains only allow Document-specific shares.
-
-Operation authorization is exact:
+Supersession operation authorization is exact:
 
 | Operation | Source requirement | Destination/extra requirement |
 |---|---|---|
 | Create superseding Document | `create_document` on the current Domain and `edit_document` on the older Document | older Document readable; operation locks the older Document and records provenance |
+
+### Share
+Share — DEFERRED / DECISION PENDING (CC-2026-09-03-04):
+- Sharing remains a future same-Document capability. Copy/Move remains prohibited.
+- Recipient identity model, Domain-membership requirements, read/edit behavior, invitation/discovery workflow, lifecycle interaction, delegation UX, revocation semantics, and notification behavior are intentionally **not frozen**.
+- The Share/revoke operation rows below are superseded by CC-2026-09-03-04 and retained only as the historical prototype contract. No pre-P07 customer workflow may create or revoke Share PermissionRules.
+- P07-D01 (decision brief at `references/P07-D01-DOCUMENT-SHARING-DECISION.md`) revisits the workflow after the final authorization model exists.
+
+Superseded prototype Share rows (historical only; not acceptance authority):
+
+| Operation | Source requirement | Destination/extra requirement |
+|---|---|---|
 | Share read/edit | `manage_access` and `share_document` on Document | actor also possesses the exact capability being granted (`read` or `edit_document`) on that Document |
 | Revoke Share | `manage_access` on Document | revocation remains audited |
-| Add/remove Tag or Character link | `edit_document` on Document | linked Tag belongs to Domain; Character link never grants read |
-| Add/remove Supersedes | `edit_document` on both Documents | both Documents readable; relationship itself never grants read |
 
 ## 11. Form/template contract
 Payload Form Builder is spike-only business-schema-wise. Permanent schema is neutral.

@@ -1,0 +1,21 @@
+# Deferred Work Register
+
+Authoritative list of work deliberately deferred out of its originally adjacent phase, each with a reason, a named owning ticket/path, and the acceptance consequence it gates. Rows are added or closed only through change control or a named ticket; "later" alone is never a valid owner. The P05 remediation stack (P05R-T00/T07) seeded this register; later phases extend it.
+
+| ID | Item | Why deferred | Owning ticket/path | Must be resolved before | Status |
+| --- | --- | --- | --- | --- | --- |
+| DEF-SHARE-01 | Share workflow and recipient model (15-question owner decision) | Owner deferral CC-2026-09-03-04: workflow not yet understood; current code is prototype residue | Decision brief `references/P07-D01-DOCUMENT-SHARING-DECISION.md`; result required by P07-GATE | P07-GATE (owner-recorded result required; Gate 7 does not require Share to work) | OPEN |
+| DEF-AUTH-01 | Principal-scoped Folder/list projections (no hidden titles/counts) | Needs final evaluator resource-scope model | P07-T02 | P07-GATE | OPEN |
+| DEF-AUTH-02 | Successor/metadata authorization (superseded-notice metadata obeys readable-resource rules) | Needs final evaluator; interim read path is placeheld by direct document decision | P07-T02 | P07-GATE | OPEN |
+| DEF-AUTH-03 | Remove interim authorization seams (`authorizeInterimOperation`, legacy Tenant-admin branch, temporary Share adapter) | Seam is deliberate pre-P07 compatibility; teardown inventory embedded in P07-T02 by P05R-T00 | P07-T02 (inventory appendix); integration tests prove no legacy authority | P07-GATE | OPEN |
+| DEF-AUDIT-01 | Final P07 audit coverage of authorization/permission mutations | Durable Domain audit seam created in P05R-T05; P07 must route final mutations through it | P07-T02/T03/T04/T05 | P07-GATE | OPEN |
+| DEF-ORIGIN-01 | Remove legacy `Documents.origin` once migration-safe | `sourceKind` is canonical (P05R-T04); `origin` removal needs DB migration window | P10-T01/T02 | P10-GATE | OPEN |
+| DEF-TENANT-01 | Remove legacy Tenant collections/fields and dual Domain/Tenant fallback after compatibility ends | Compatibility-only surface retained by P05R-T06; removal needs DB migration window | P10-T01/T02 | P10-GATE | OPEN |
+| DEF-FORM-01 | Retire permissive legacy Payload Form Builder submission surface | Spike-only business schema; neutral schema is canonical | P06-T02 | P06-GATE | OPEN |
+| DEF-PUBLIC-01 | Activate Folder/Document public-access semantics (`Folders.publicAccess` field added by P05R-T04) | Field exists; behavior belongs to the public-read phase | P08-T02 | P08-GATE | OPEN |
+| DEF-SEARCH-01 | Production search/pagination/large-result behavior (no hard-coded 100-result lists, no `limit: 5000` edge load) | Pre-P12 simple search allowed by contract | P12-T01/T02 | P12-GATE | OPEN |
+| DEF-PERF-01 | Authorization read-path query-count/N+1 cleanup | New `access.update` batches its lookups (P05R-T01); residual chains measured and removed in the evaluator phase | P07-T02 (broader scale in P12) | P07-GATE | OPEN |
+| DEF-FTS-01 | SQLite FTS5 not implemented; production search becomes Postgres-native | Adapter support decision recorded; Postgres native FTS is the P12 contract | P12-T01 | P12-GATE | OPEN |
+| DEF-SEARCH-02 | Search/list surfaces must filter superseded and soft-deleted Documents out of active results | No stale "current fact" retrieval in active lists | P12-T01/T02 | P12-GATE | OPEN |
+| DEF-SHELL-01 | UX-shell invariants regression module (one Domain selector, no Administration mode, nav order, persona rendering) | Verified manually at gates only; regression module created by P05R-T07; later phases extend it | P05R-T07 (module); future phases extend | Every later phase gate | OPEN |
+| DEF-CHAR-01 | "New unlinked Character" contract semantics (filing creates a globally active, unclaimed Character with no controller/Domain membership; provenance is not membership) | Contract note recorded by P05R-T00; claiming/linking is a separate future flow | P05R-T00 note (execution-notes/P05-T01.md); later Character/claim phases | Claim/Character phases | OPEN |

@@ -1,5 +1,7 @@
 # P05-T01 — Prepared-by credits, Concerns links, and Domain tag vocabulary
 
+> **STATUS NOTE — CC-2026-09-03-05 (Prepared-by / acting-Character ruling):** any Character-authored Document creation includes the acting Character as a non-removable Prepared-by credit; creation UI cannot remove that Character but may add more credits. A Domain Owner (or an explicitly platform-authorized user path) may create without an acting Character and therefore without a Prepared-by credit. Ordinary members must create through an acting Character. P06 form-driven creation requires an active member Character. The "Character-authored create fails without the active Character's `prepared_by` link" acceptance bullet is amended to the owner ruling above; historical execution evidence is not rewritten.
+
 **Mode:** IMPLEMENTATION TICKET  
 **Phase:** 5  
 **Commit prefix:** `P05-T01:`

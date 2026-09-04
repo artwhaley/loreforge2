@@ -9,7 +9,7 @@
 - 69 implementation/design tickets.
 - 15 mandatory human review gates.
 - 15 phase orchestrators plus the master orchestrator.
-- 9 spike/spec reference artifacts.
+- 10 spike/spec/decision reference artifacts (includes the P07-D01 Document Sharing decision brief added by P05R-T00).
 
 ## Root control documents
 - `00_START_HERE.md` — authority/read order and immediate Phase 1 boundary.
@@ -23,6 +23,7 @@
 - `08_EXECUTOR_KICKOFF_PROMPT.md` — clean-context executor prompt.
 - `09_REVIEW_KICKOFF_PROMPT.md` — clean-context review prompt.
 - `REVIEW_AGENT_BRIEF.md` — reviewer mission/checklist.
+- `11_DEFERRED_WORK_REGISTER.md` — permanent register of deliberately deferred work, each row with a reason and a named owning ticket/path (added by P05R-T00).
 
 ## References
 - `references/FULL_PRODUCT_SPEC.md` — detailed full-product intent and phased roadmap.
@@ -32,6 +33,7 @@
 - `references/SPIKE_MVP_REVIEW.md` — original executor's end-of-spike findings.
 - `references/SPIKE_README.md` — original runnable-spike notes.
 - `references/SPIKE_ORIGINAL_*` — the build packet that produced the spike.
+- `references/P07-D01-DOCUMENT-SHARING-DECISION.md` — owner decision brief for the deferred Document Sharing workflow (CC-2026-09-03-04); decision required before P07-GATE closes.
 
 ## Deliberate owner-only gates
 - `owner-gates/P00_MVP_BASELINE_APPROVAL.md` — Phase 1 cannot start until the exact source revision is approved.

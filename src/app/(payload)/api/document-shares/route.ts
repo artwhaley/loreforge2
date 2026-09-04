@@ -1,29 +1,22 @@
 import { NextResponse } from 'next/server'
-import { getPayload } from 'payload'
 
-import config from '@payload-config'
-import { revokeDocumentShare, shareDocument } from '@/lib/documents/sharing'
+// Document Sharing is deferred by owner decision CC-2026-09-03-04 (see
+// LoreForge_Execution_Packet/06_CHANGE_CONTROL.md and the decision brief
+// references/P07-D01-DOCUMENT-SHARING-DECISION.md). This route remains
+// registered so any existing caller fails cleanly with a stable, controlled
+// response, and it performs NO mutation: no Share PermissionRule is created
+// or revoked, and the temporary share service is not invoked.
 
-export async function POST(request: Request) {
-  const payload = await getPayload({ config })
-  const { user } = await payload.auth({ headers: request.headers })
-  const form = await request.formData()
-  const domainSlug = String(form.get('domainSlug') ?? '')
-  const documentId = Number(form.get('documentId') ?? '')
-  const action = String(form.get('action') ?? 'share')
-  const destination = `/domain/${domainSlug}/documents/${documentId}`
-  if (!user || !domainSlug || !Number.isFinite(documentId)) return NextResponse.redirect(new URL(destination, request.url), 303)
-  const domainResult = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
-  const domain = domainResult.docs[0]
-  if (!domain) return NextResponse.redirect(new URL(destination, request.url), 303)
-  try {
-    const principalType = String(form.get('principalType') ?? 'Character') as 'User' | 'Character'
-    const principalId = Number(form.get('principalId') ?? '')
-    const capability = String(form.get('capability') ?? 'read') as 'read' | 'edit_document'
-    if (action === 'revoke') await revokeDocumentShare({ payload, domainId: domain.id, documentId, principalType, principalId, capability, actorUserId: user.id })
-    else if (Number.isFinite(principalId)) await shareDocument({ payload, domainId: domain.id, documentId, principalType, principalId, capability, actorUserId: user.id })
-  } catch {
-    // Stable redirect; do not leak recipient or provider details.
-  }
-  return NextResponse.redirect(new URL(destination, request.url), 303)
+export async function POST() {
+  return NextResponse.json(
+    { error: 'share_unavailable', message: 'Document sharing is not available (CC-2026-09-03-04).' },
+    { status: 403 },
+  )
+}
+
+export async function GET() {
+  return NextResponse.json(
+    { error: 'share_unavailable', message: 'Document sharing is not available (CC-2026-09-03-04).' },
+    { status: 403 },
+  )
 }

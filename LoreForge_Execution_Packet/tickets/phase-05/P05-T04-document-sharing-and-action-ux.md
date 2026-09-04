@@ -1,5 +1,7 @@
 # P05-T04 — Document sharing and document action UX
 
+> **STATUS: PARTIALLY IMPLEMENTED THEN DEFERRED BY OWNER — CC-2026-09-03-04.** The Share portion of this ticket is no longer acceptance authority. Existing code may remain as prototype residue until the final permission system is in place, but no executor should complete or extend Share without the later owner workflow decision (see `DEF-SHARE-01` in `11_DEFERRED_WORK_REGISTER.md` and the decision brief `references/P07-D01-DOCUMENT-SHARING-DECISION.md`).
+
 **Mode:** IMPLEMENTATION TICKET  
 **Phase:** 5  
 **Commit prefix:** `P05-T04:`

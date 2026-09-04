@@ -23,7 +23,7 @@ Complete practical folder/document permission administration including temporary
 - Folder is the primary unit of record access and permission inheritance.
 - Domain membership and Role definitions can carry defaults, but RoleAssignments never carry Folder access.
 - Explicit deny is required (e.g. Warrior under investigation retains Role but loses sensitive access).
-- Document-specific exceptions are supported.
+- Document-specific exceptions are supported. Document-specific PermissionRules are generic permission exceptions under the frozen model — they are **not** the product Share workflow, which remains deferred under CC-2026-09-03-04 (`references/P07-D01-DOCUMENT-SHARING-DECISION.md`). Do not add a Share dialog or Share-specific UI in this ticket.
 - Personal folder sharing remains prohibited later; Community Domain folder access is normal.
 
 ## Required work
@@ -41,7 +41,7 @@ Complete practical folder/document permission administration including temporary
 - Parent grant reaches child unless more-specific applicable deny/rule precedence changes it.
 - Explicit Character deny removes access otherwise inherited from Role.
 - Unrelated soldier can receive direct First Platoon folder edit despite not holding Captain/First-Platoon Role.
-- Document-specific read grant exposes only target document.
+- Document-specific read grant exposes only target document, without implying any customer-facing Share feature.
 - People Access tree and Folder permission panel return the same effective result/explanation for the same Character, capability, and resource.
 - Changing any direct Read/Write override leaves every RoleAssignment unchanged.
 

@@ -184,21 +184,10 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
           ) : null}
 
           {role === 'admin' ? (
-            <form action="/api/document-shares" method="post" className={styles.shareForm}>
-              <input type="hidden" name="domainSlug" value={tenant.slug} />
-              <input type="hidden" name="documentId" value={doc.id} />
+            <span className={styles.shareForm} title="Document sharing is deferred by owner decision CC-2026-09-03-04.">
               <strong>Share record</strong>
-              <select name="principalType" defaultValue="Character" aria-label="Share with type">
-                <option value="Character">Character</option>
-                <option value="User">User</option>
-              </select>
-              <input name="principalId" type="number" min="1" required placeholder="Recipient ID" aria-label="Recipient ID" />
-              <select name="capability" defaultValue="read" aria-label="Share permission">
-                <option value="read">Read</option>
-                <option value="edit_document">Edit</option>
-              </select>
-              <button type="submit" className={styles.action}>Share</button>
-            </form>
+              <button type="button" disabled className={styles.action} aria-disabled="true">Share — planned</button>
+            </span>
           ) : null}
 
           <form action={softDeleteDocumentAction} className={styles.deleteForm}>
