@@ -9,6 +9,7 @@
 .toolbarButtonDanger:hover:not(:disabled) { color: #fff; background: #8f2d21; }
 .toolbarButton:disabled, .toolbarButtonDanger:disabled, .toolbarButtonDisabled, .openRecordDisabled { opacity: .42; cursor: not-allowed; pointer-events: none; }
 .toolbarGroup form { margin: 0; }
+.creationActions { display: inline-flex; align-items: center; gap: .45rem; margin-left: auto; }
 .toolbarDivider { width: 1px; height: 1.65rem; margin: 0 .1rem; background: color-mix(in srgb, var(--tenant-accent) 55%, #fff); }
 
 .panes { display: grid; grid-template-columns: minmax(250px, .65fr) minmax(0, 1.35fr); min-height: 590px; border: 1px solid color-mix(in srgb, var(--tenant-accent) 68%, #fff); border-radius: 13px; background: var(--tenant-surface-bg); overflow: hidden; }
