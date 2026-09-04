@@ -61,7 +61,8 @@ export async function deactivateDomainParticipation(args: {
       collection: 'roles',
       where: { domain: { equals: domainId } },
       depth: 0,
-      limit: 500,
+      limit: 0,
+      pagination: false,
       overrideAccess: true,
       req: txReq,
     })
@@ -76,7 +77,8 @@ export async function deactivateDomainParticipation(args: {
         ],
       },
       depth: 0,
-      limit: 500,
+      limit: 0,
+      pagination: false,
       overrideAccess: true,
       req: txReq,
     })
@@ -108,7 +110,8 @@ export async function deactivateDomainParticipation(args: {
         ],
       },
       depth: 0,
-      limit: 500,
+      limit: 0,
+      pagination: false,
       overrideAccess: true,
       req: txReq,
     })
