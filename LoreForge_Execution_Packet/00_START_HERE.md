@@ -37,7 +37,7 @@ Phases 1–4 have been executed and owner-approved in the working repository. Co
 
 > **Phase 5 — Archive Relationships, Tags, Character Links, Supersedes/Share**
 
-Continue on `phase-05-document-supersession-and-sharing`, which includes the completed Phase 5 implementation and owner-requested corrections. `P05-T00`, `P05-T01`, `P05-T02`, and `P05-T04` are implemented; `P05-T03` is retired. The current step is owner validation of `P05-GATE`, using `execution-notes/P05-GATE.md` in the repository. Do not restart completed tickets or create a branch from an older Phase 4 snapshot. **Stop at the gate.** Do not begin Phase 6 until the project owner explicitly approves Review Gate 5.
+Phase 5 is complete and `P05-GATE` was `APPROVED_BY_OWNER` on 2026-09-04. Continue from `phase-05-document-supersession-and-sharing`; do not restart completed tickets or create a branch from an older Phase 4 snapshot. The next phase is Phase 6, which requires its own ticket execution and review gate.
 
 The original P00/Phase 1 kickoff remains historical evidence of how the project began; it is not the current continuation point.
 

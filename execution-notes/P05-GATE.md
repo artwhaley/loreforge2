@@ -1,6 +1,6 @@
 # P05-GATE execution note
 
-**Status: implementation complete; owner manual acceptance remains open.** This note records the automated evidence and the exact browser scenarios required to close Review Gate 5. No self-approval is recorded here.
+**Status: APPROVED_BY_OWNER — Phase 5 accepted on 2026-09-04.** The owner reviewed the Phase 5 implementation and accepted the gate. Phase 6 may begin from the current branch.
 
 ## Delivered commits
 
@@ -58,4 +58,4 @@ Run the server with `npm run dev` (the script pins `PAYLOAD_PUSH=false`) and ope
 - Template-directed filing and the unified Template/Form chooser remain P06 work.
 - Bayview starter-pack regression is intentionally deferred to P08, where the pack is installed and GS-09 is rerun.
 
-**Gate decision:** owner/reviewer must record Pass, Fail, or exact remediation notes after the scenarios above. Stop here until that decision is explicit; do not begin Phase 6 from this note.
+**Gate decision:** `APPROVED_BY_OWNER` — accepted by the project owner on 2026-09-04. Proceed to Phase 6 from the current Phase 5 branch.

@@ -32,8 +32,8 @@ This sequence is retained for historical clean-start reconstruction. The current
 1. Confirm the repository's `execution-notes/P04-GATE.md` is `APPROVED_BY_OWNER` and this packet contains `CC-2026-09-03-03`.
 2. Continue on `phase-05-document-supersession-and-sharing`, preserving the completed Phase 5 implementation and corrections.
 3. Read `tickets/phase-05/00_PHASE_ORCHESTRATOR.md` completely.
-4. Resume owner validation at `P05-GATE` using `execution-notes/P05-GATE.md`. P05-T00/T01/T02/T04 are implemented; P05-T03 is retired. Address owner-reported defects without restarting completed tickets.
-5. Stop after `P05-GATE`; Phase 6 requires explicit owner approval.
+4. `P05-GATE` was approved by the owner on 2026-09-04. Begin Phase 6 only through the Phase 6 orchestrator and its ordered tickets.
+5. Preserve the Phase 5 gate evidence in `execution-notes/P05-GATE.md`.
 
 ## Ticket loop
 
