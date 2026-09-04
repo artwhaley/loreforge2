@@ -84,6 +84,7 @@ export interface Config {
     'document-tags': DocumentTag;
     'document-relationships': DocumentRelationship;
     'document-types': DocumentType;
+    templates: Template;
     'document-provenance-events': DocumentProvenanceEvent;
     'domain-audit-events': DomainAuditEvent;
     tenants: Tenant;
@@ -118,6 +119,7 @@ export interface Config {
     'document-tags': DocumentTagsSelect<false> | DocumentTagsSelect<true>;
     'document-relationships': DocumentRelationshipsSelect<false> | DocumentRelationshipsSelect<true>;
     'document-types': DocumentTypesSelect<false> | DocumentTypesSelect<true>;
+    templates: TemplatesSelect<false> | TemplatesSelect<true>;
     'document-provenance-events': DocumentProvenanceEventsSelect<false> | DocumentProvenanceEventsSelect<true>;
     'domain-audit-events': DomainAuditEventsSelect<false> | DomainAuditEventsSelect<true>;
     tenants: TenantsSelect<false> | TenantsSelect<true>;
@@ -667,6 +669,41 @@ export interface DocumentRelationship {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "templates".
+ */
+export interface Template {
+  id: number;
+  domain: number | Domain;
+  documentType: number | DocumentType;
+  name: string;
+  kind: 'document' | 'form';
+  scopeFolder: number | Folder;
+  destinationFolder: number | Folder;
+  allowDestinationOverride?: boolean | null;
+  availableToDescendants?: boolean | null;
+  baseTemplate?: (number | null) | Template;
+  titleTemplate: string;
+  bodyTemplate: string;
+  /**
+   * Versioned neutral form schema; managed through Form Studio.
+   */
+  formSchema?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  lifecyclePolicy: 'inherit' | 'direct-file' | 'review-required';
+  active?: boolean | null;
+  version: number;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "document-provenance-events".
  */
 export interface DocumentProvenanceEvent {
@@ -1047,6 +1084,10 @@ export interface PayloadLockedDocument {
         value: number | DocumentType;
       } | null)
     | ({
+        relationTo: 'templates';
+        value: number | Template;
+      } | null)
+    | ({
         relationTo: 'document-provenance-events';
         value: number | DocumentProvenanceEvent;
       } | null)
@@ -1411,6 +1452,29 @@ export interface DocumentTypesSelect<T extends boolean = true> {
   defaultFilingPolicy?: T;
   defaultFolder?: T;
   templateFilingPolicy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "templates_select".
+ */
+export interface TemplatesSelect<T extends boolean = true> {
+  domain?: T;
+  documentType?: T;
+  name?: T;
+  kind?: T;
+  scopeFolder?: T;
+  destinationFolder?: T;
+  allowDestinationOverride?: T;
+  availableToDescendants?: T;
+  baseTemplate?: T;
+  titleTemplate?: T;
+  bodyTemplate?: T;
+  formSchema?: T;
+  lifecyclePolicy?: T;
+  active?: T;
+  version?: T;
   updatedAt?: T;
   createdAt?: T;
 }

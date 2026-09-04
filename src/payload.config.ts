@@ -32,6 +32,7 @@ import { Memberships } from './collections/Memberships'
 import { Pages } from './collections/Pages'
 import { Tenants } from './collections/Tenants'
 import { Users } from './collections/Users'
+import { Templates } from './collections/Templates'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -72,7 +73,12 @@ const formBuilder = formBuilderPlugin({
       defaultColumns: ['title', 'domain', 'updatedAt'],
     },
     access: {
-      read: () => true,
+      // The Payload collection remains available only to the migration seam;
+      // customer Form Studio reads LoreForge Templates instead.
+      read: () => false,
+      create: () => false,
+      update: () => false,
+      delete: () => false,
     },
     fields: ({ defaultFields }) => [
       ...defaultFields,
@@ -129,8 +135,12 @@ const formBuilder = formBuilderPlugin({
   },
   formSubmissionOverrides: {
     access: {
-      create: () => true,
-      read: () => true,
+      // Legacy submission rows are not product data. Keep the plugin only as
+      // a migration/import seam; no unrestricted submission API survives P06.
+      create: () => false,
+      read: () => false,
+      update: () => false,
+      delete: () => false,
     },
   },
 })
@@ -142,7 +152,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Characters, CharacterClaimRequests, CharacterMergeRequests, DomainCharacterContexts, DomainMemberships, Domains, DomainAdmins, Subdomains, Roles, RoleAssignments, PermissionRules, DocumentCharacterLinks, Tags, DocumentTags, DocumentRelationships, DocumentTypes, DocumentProvenanceEvents, DomainAuditEvents, Tenants, Memberships, Documents, Folders, Pages, Media],
+  collections: [Users, Characters, CharacterClaimRequests, CharacterMergeRequests, DomainCharacterContexts, DomainMemberships, Domains, DomainAdmins, Subdomains, Roles, RoleAssignments, PermissionRules, DocumentCharacterLinks, Tags, DocumentTags, DocumentRelationships, DocumentTypes, Templates, DocumentProvenanceEvents, DomainAuditEvents, Tenants, Memberships, Documents, Folders, Pages, Media],
   plugins: [formBuilder],
   editor: lexicalEditor(),
   db: sqliteAdapter({
