@@ -21,6 +21,8 @@ type Props = {
   fields: LoreForgeFormField[]
   recordNameKey: string | null
   baseTemplateName: string | null
+  headerMarkdown?: string | null
+  footerMarkdown?: string | null
 }
 
 /**
@@ -28,7 +30,7 @@ type Props = {
  * same auto-layout rules the server saves — with sample answers standing in
  * for what a real person types.
  */
-export function RecordPreview({ name, fields, recordNameKey, baseTemplateName }: Props) {
+export function RecordPreview({ name, fields, recordNameKey, baseTemplateName, headerMarkdown, footerMarkdown }: Props) {
   const titleTemplate = autoTitleTemplate(fields, recordNameKey)
   const namingField = titleTemplate ? fields.find((field) => `{{${field.key}}}` === titleTemplate) : undefined
   const title = namingField ? sampleAnswer(namingField) : name
@@ -40,12 +42,14 @@ export function RecordPreview({ name, fields, recordNameKey, baseTemplateName }:
       </p>
       <div className={styles.recordCard}>
         <h2 className={styles.recordTitle}>{title}</h2>
+        {headerMarkdown?.trim() ? <pre style={{ whiteSpace: 'pre-wrap', margin: '0 0 1.1rem' }}>{headerMarkdown.trim()}</pre> : null}
         {fields.map((field, index) => (
           <section className={styles.recordSection} key={field.key}>
             <h3 className={styles.recordHeading}>{headingText(field.label || `Question ${index + 1}`)}</h3>
             <p className={styles.recordValue}>{sampleAnswer(field)}</p>
           </section>
         ))}
+        {footerMarkdown?.trim() ? <pre style={{ whiteSpace: 'pre-wrap', margin: '1.1rem 0 0' }}>{footerMarkdown.trim()}</pre> : null}
       </div>
     </div>
   )

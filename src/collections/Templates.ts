@@ -1,6 +1,7 @@
 import type { CollectionConfig, Payload } from 'payload'
 
-import { assertFormSchema, validateFormSchema } from '@/lib/forms/schema'
+import { assertFormSchema } from '@/lib/forms/schema'
+import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 
 const relationId = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null
@@ -103,7 +104,14 @@ export const Templates: CollectionConfig = {
       const formSchema = kind === 'form' ? assertFormSchema(next.formSchema ?? previous?.formSchema) : undefined
       if (kind === 'form' && !formSchema) throw new Error('Form Templates require a neutral form schema.')
       validateTemplateTokens({ kind, titleTemplate, bodyTemplate, formSchema })
-      const normalized: Record<string, unknown> = { ...next, domain: domainId, documentType: typeId, scopeFolder: scopeFolderId, destinationFolder: destinationFolderId, name, titleTemplate, bodyTemplate, kind, allowDestinationOverride: Boolean(next.allowDestinationOverride ?? previous?.allowDestinationOverride ?? false), availableToDescendants: Boolean(next.availableToDescendants ?? previous?.availableToDescendants ?? true), active: Boolean(next.active ?? previous?.active ?? true), version: Number(next.version ?? previous?.version ?? 1) }
+      const headerMarkdown = kind === 'form' ? canonicalizeMarkdown(String(next.headerMarkdown ?? previous?.headerMarkdown ?? '')) : ''
+      const footerMarkdown = kind === 'form' ? canonicalizeMarkdown(String(next.footerMarkdown ?? previous?.footerMarkdown ?? '')) : ''
+      // Header/footer are fixed layout sections, not answer-token surfaces.
+      // Keeping them token-free also guarantees they cannot create structural
+      // Character links during generation.
+      const layoutTokens = [...new Set([...tokenNames(headerMarkdown), ...tokenNames(footerMarkdown)])]
+      if (layoutTokens.length > 0) throw new Error('Form header and footer Markdown cannot contain template tokens.')
+      const normalized: Record<string, unknown> = { ...next, domain: domainId, documentType: typeId, scopeFolder: scopeFolderId, destinationFolder: destinationFolderId, name, titleTemplate, bodyTemplate, headerMarkdown, footerMarkdown, kind, allowDestinationOverride: Boolean(next.allowDestinationOverride ?? previous?.allowDestinationOverride ?? false), availableToDescendants: Boolean(next.availableToDescendants ?? previous?.availableToDescendants ?? true), active: Boolean(next.active ?? previous?.active ?? true), version: Number(next.version ?? previous?.version ?? 1) }
       if (kind === 'form') normalized.formSchema = formSchema
       else normalized.formSchema = null
       if (baseId) normalized.baseTemplate = baseId
@@ -123,6 +131,8 @@ export const Templates: CollectionConfig = {
     { name: 'baseTemplate', type: 'relationship', relationTo: 'templates' },
     { name: 'titleTemplate', type: 'text', required: true },
     { name: 'bodyTemplate', type: 'textarea', required: true },
+    { name: 'headerMarkdown', type: 'textarea', admin: { condition: (_, siblingData) => siblingData?.kind === 'form', description: 'Optional fixed Markdown before the generated Form answers. HTML and answer tokens are not supported.' } },
+    { name: 'footerMarkdown', type: 'textarea', admin: { condition: (_, siblingData) => siblingData?.kind === 'form', description: 'Optional fixed Markdown after the generated Form answers. HTML and answer tokens are not supported.' } },
     { name: 'formSchema', type: 'json', admin: { description: 'Versioned neutral form schema; managed through Form Studio.' } },
     { name: 'lifecyclePolicy', type: 'select', required: true, defaultValue: 'inherit', options: [{ label: 'Inherit', value: 'inherit' }, { label: 'Direct file', value: 'direct-file' }, { label: 'Review required', value: 'review-required' }] },
     { name: 'active', type: 'checkbox', defaultValue: true },

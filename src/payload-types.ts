@@ -724,6 +724,14 @@ export interface Template {
   titleTemplate: string;
   bodyTemplate: string;
   /**
+   * Optional fixed Markdown before the generated Form answers. HTML and answer tokens are not supported.
+   */
+  headerMarkdown?: string | null;
+  /**
+   * Optional fixed Markdown after the generated Form answers. HTML and answer tokens are not supported.
+   */
+  footerMarkdown?: string | null;
+  /**
    * Versioned neutral form schema; managed through Form Studio.
    */
   formSchema?:
@@ -1521,6 +1529,8 @@ export interface TemplatesSelect<T extends boolean = true> {
   baseTemplate?: T;
   titleTemplate?: T;
   bodyTemplate?: T;
+  headerMarkdown?: T;
+  footerMarkdown?: T;
   formSchema?: T;
   lifecyclePolicy?: T;
   active?: T;

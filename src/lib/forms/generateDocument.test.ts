@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { renderNeutralTemplate, renderTemplate } from './generateDocument'
+import { composeFormSections, renderNeutralTemplate, renderTemplate } from './generateDocument'
 
 describe('renderTemplate (form -> document generation seam)', () => {
   it('renders the fixture title template from fixture answers', () => {
@@ -58,5 +58,12 @@ describe('renderTemplate (form -> document generation seam)', () => {
     const template = { id: 1, name: 'Incident', kind: 'form' as const, titleTemplate: '{{title}}', bodyTemplate: '{{title}}', formSchema: { version: 1 as const, fields: [{ key: 'title', type: 'text' as const, label: 'Title' }] } }
     assert.equal(renderNeutralTemplate(template, { title: '*unsafe*' }).body, '\\*unsafe\\*')
     assert.throws(() => renderNeutralTemplate({ ...template, bodyTemplate: '{{missing}}' }, { title: 'ok' }), /Unknown template token/)
+  })
+
+  it('composes fixed Form header and footer around the generated body', () => {
+    assert.equal(composeFormSections('## Header\r\n\r\nPrepared', '## Answers\n\nBody', '— Footer'), '## Header\n\nPrepared\n\n## Answers\n\nBody\n\n— Footer')
+    assert.equal(composeFormSections('', '## Answers\n\nBody', ''), '## Answers\n\nBody')
+    const rendered = renderNeutralTemplate({ id: 2, name: 'Incident', kind: 'form', titleTemplate: 'Incident', bodyTemplate: '## Answers\n\n{{answer}}', headerMarkdown: '# Header', footerMarkdown: '— Footer', formSchema: { version: 1, fields: [{ key: 'answer', type: 'text', label: 'Answer' }] } }, { answer: 'Body' })
+    assert.equal(rendered.body, '# Header\n\n## Answers\n\nBody\n\n— Footer')
   })
 })

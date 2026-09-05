@@ -57,6 +57,17 @@ export type NeutralTemplateMetadata = {
   destinationFolder?: number | string | null
   documentType?: number | string | null
   lifecyclePolicy?: 'inherit' | 'direct-file' | 'review-required'
+  /** Fixed, author-supplied Markdown framing a generated Form record. */
+  headerMarkdown?: string | null
+  footerMarkdown?: string | null
+}
+
+/** Join fixed Form layout sections around generated answers canonically. */
+export function composeFormSections(headerMarkdown: string | null | undefined, bodyMarkdown: string, footerMarkdown: string | null | undefined): string {
+  return canonicalizeMarkdown([headerMarkdown, bodyMarkdown, footerMarkdown]
+    .map((section) => String(section ?? '').trim())
+    .filter(Boolean)
+    .join('\n\n')).trim()
 }
 
 /** Strict neutral-schema rendering used by all Phase 6 creation paths. */
@@ -67,11 +78,12 @@ export function renderNeutralTemplate(template: NeutralTemplateMetadata, answers
   }
   const composed = composeTemplate(template, lookup)
   const schema = template.kind === 'form' ? template.formSchema : undefined
+  const body = canonicalizeMarkdown(renderTemplateTokens(composed.bodyTemplate, answers, schema)).trim()
   return {
     // Titles are plain text (never Markdown), so values are not escaped there:
     // a date must read 2026-09-04, not 2026\-09\-04.
     title: renderTemplateTokens(composed.titleTemplate, answers, schema, { escapeMarkdown: false }).trim(),
-    body: canonicalizeMarkdown(renderTemplateTokens(composed.bodyTemplate, answers, schema)).trim(),
+    body: template.kind === 'form' ? composeFormSections(template.headerMarkdown, body, template.footerMarkdown) : body,
     chain: composed.chain,
   }
 }

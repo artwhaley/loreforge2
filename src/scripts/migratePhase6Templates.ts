@@ -36,6 +36,8 @@ function ensureTemplateSchema() {
       base_template_id integer,
       title_template text NOT NULL,
       body_template text NOT NULL,
+      header_markdown text,
+      footer_markdown text,
       form_schema text,
       lifecycle_policy text DEFAULT 'inherit' NOT NULL,
       active integer DEFAULT true,
@@ -48,6 +50,9 @@ function ensureTemplateSchema() {
       FOREIGN KEY (destination_folder_id) REFERENCES folders(id) ON UPDATE no action ON DELETE set null,
       FOREIGN KEY (base_template_id) REFERENCES templates(id) ON UPDATE no action ON DELETE set null
     )`)
+    const templateColumns = new Set((db.prepare('PRAGMA table_info(templates)').all() as Array<{ name: string }>).map((row) => row.name))
+    if (!templateColumns.has('header_markdown')) db.exec('ALTER TABLE templates ADD COLUMN header_markdown text')
+    if (!templateColumns.has('footer_markdown')) db.exec('ALTER TABLE templates ADD COLUMN footer_markdown text')
     for (const [name, columns] of [
       ['templates_domain_idx', 'domain_id'], ['templates_document_type_idx', 'document_type_id'],
       ['templates_scope_folder_idx', 'scope_folder_id'], ['templates_destination_folder_idx', 'destination_folder_id'],
@@ -91,7 +96,7 @@ for (const domain of domains.docs) {
   if (!type) type = await payload.create({ collection: 'document-types', overrideAccess: true, data: { domain: domain.id, name: 'Plain Text', active: true, allowBlank: true, allowTemplate: true, allowForm: false, defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit' } })
   if (type.allowBlank === undefined || type.allowBlank === null || type.allowTemplate === undefined || type.allowTemplate === null) await payload.update({ collection: 'document-types', id: type.id, overrideAccess: true, data: { allowBlank: type.allowBlank ?? true, allowTemplate: type.allowTemplate ?? true } })
   const existing = (await payload.find({ collection: 'templates', where: { and: [{ domain: { equals: domain.id } }, { name: { equals: 'Plain Text' } }, { kind: { equals: 'document' } }] }, depth: 0, limit: 1, overrideAccess: true })).docs[0]
-  const data = { domain: domain.id, documentType: type.id, name: 'Plain Text', kind: 'document' as const, scopeFolder: root.id, destinationFolder: root.id, allowDestinationOverride: true, availableToDescendants: true, baseTemplate: null, titleTemplate: 'Plain Text', bodyTemplate: '{{content}}', lifecyclePolicy: 'inherit' as const, active: true, version: Number(existing?.version ?? 1) }
+  const data = { domain: domain.id, documentType: type.id, name: 'Plain Text', kind: 'document' as const, scopeFolder: root.id, destinationFolder: root.id, allowDestinationOverride: true, availableToDescendants: true, baseTemplate: null, titleTemplate: 'Plain Text', bodyTemplate: '{{content}}', headerMarkdown: '', footerMarkdown: '', lifecyclePolicy: 'inherit' as const, active: true, version: Number(existing?.version ?? 1) }
   if (existing) await payload.update({ collection: 'templates', id: existing.id, overrideAccess: true, data })
   else await payload.create({ collection: 'templates', overrideAccess: true, data })
   if (type.allowTemplate !== true) await payload.update({ collection: 'document-types', id: type.id, overrideAccess: true, data: { allowTemplate: true } })
@@ -134,6 +139,8 @@ for (const form of forms.docs) {
     allowDestinationOverride: false,
     titleTemplate: String(archive?.titleTemplate ?? name),
     bodyTemplate: String(archive?.markdownTemplate ?? ''),
+    headerMarkdown: String((form as { headerMarkdown?: unknown }).headerMarkdown ?? ''),
+    footerMarkdown: String((form as { footerMarkdown?: unknown }).footerMarkdown ?? ''),
     formSchema: adapted.schema,
     lifecyclePolicy: 'inherit' as const,
     active: adapted.warnings.length === 0,

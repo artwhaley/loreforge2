@@ -132,6 +132,8 @@ export async function submitReportFormAction(
         kind: 'form',
         titleTemplate: form.titleTemplate,
         bodyTemplate: form.bodyTemplate,
+        headerMarkdown: form.headerMarkdown,
+        footerMarkdown: form.footerMarkdown,
         formSchema: schema,
         destinationFolder: folderValue == null ? null : Number(typeof folderValue === 'object' ? folderValue.id : folderValue),
         documentType: typeof form.documentType === 'object' ? form.documentType.id : form.documentType,

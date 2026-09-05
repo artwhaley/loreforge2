@@ -51,6 +51,8 @@ export default async function EditFormPage({ params }: Props) {
     baseTemplateId: relationId(form.baseTemplate) ?? '',
     recordNameKey,
     fields,
+    headerMarkdown: form.headerMarkdown ?? '',
+    footerMarkdown: form.footerMarkdown ?? '',
   }
   return <TenantShell tenant={tenant} cssVars={themeTokensToCssVars(resolveThemeTokens(tenant))} role={role} switcherTenants={domains} activeCharacter={activeCharacter}>
     <section style={{ maxWidth: 1400, margin: '0 auto' }}><p><a href={`/domain/${slug}/forms`}>Forms</a> / Edit form</p><h1>{initial.name}</h1><p>Saving updates the questions and produces the next version of this form.</p><FormStudio mode="edit" templateId={Number(form.id)} domainSlug={slug} folders={flatFolders.map(({ folder }) => ({ id: Number(folder.id), name: folder.name, parentId: typeof folder.parent === 'object' && folder.parent ? Number(folder.parent.id) : folder.parent == null ? null : Number(folder.parent) }))} types={types.docs.map((type) => ({ id: Number(type.id), name: type.name }))} baseTemplates={baseTemplates.docs.map((template) => ({ id: Number(template.id), name: template.name, scopeFolderId: relationId(template.scopeFolder) ?? 0, availableToDescendants: Boolean(template.availableToDescendants) }))} initial={initial} /></section>

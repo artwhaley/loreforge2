@@ -309,7 +309,7 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
       // Records read select labels, boolean checkboxes, and Character names;
       // raw ids/option values are kept for the concern-link step below.
       const renderAnswers = await answersForRecordRender({ payload: ctx.payload, schema, answers })
-      const rendered = renderNeutralTemplate({ id: selectedTemplate!.id, name: String(selectedTemplate!.name), kind: 'form', titleTemplate: String(selectedTemplate!.titleTemplate), bodyTemplate: String(selectedTemplate!.bodyTemplate), formSchema: schema, baseTemplate: selectedTemplate!.baseTemplate as never }, renderAnswers)
+      const rendered = renderNeutralTemplate({ id: selectedTemplate!.id, name: String(selectedTemplate!.name), kind: 'form', titleTemplate: String(selectedTemplate!.titleTemplate), bodyTemplate: String(selectedTemplate!.bodyTemplate), headerMarkdown: String(selectedTemplate!.headerMarkdown ?? ''), footerMarkdown: String(selectedTemplate!.footerMarkdown ?? ''), formSchema: schema, baseTemplate: selectedTemplate!.baseTemplate as never }, renderAnswers)
       renderedBody = rendered.body
       title = rendered.title || title
       for (const field of schema.fields) {

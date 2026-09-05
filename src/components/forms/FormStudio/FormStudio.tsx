@@ -13,6 +13,7 @@ import styles from './FormStudio.module.scss'
 import { Canvas } from './canvas'
 import { Inspector } from './inspector'
 import { RecordPreview } from './recordPreview'
+import { MarkdownSectionEditor } from './MarkdownSectionEditor'
 import { FIELD_TYPE_LABELS, Toolbox } from './toolbox'
 
 export type FolderOption = { id: number; name: string; parentId?: number | null }
@@ -26,6 +27,8 @@ export type StudioFormInitial = {
   baseTemplateId: number | string
   recordNameKey: string | null
   fields: LoreForgeFormField[]
+  headerMarkdown?: string | null
+  footerMarkdown?: string | null
 }
 
 type FormStudioProps = {
@@ -66,6 +69,8 @@ export function FormStudio({ domainSlug, folders, types, baseTemplates = [], mod
   const [details, setDetails] = useState(() => initialDetails(initial))
   const [fields, setFields] = useState<LoreForgeFormField[]>(() => initial?.fields ?? [])
   const [recordNameKey, setRecordNameKey] = useState<string | null>(initial?.recordNameKey ?? null)
+  const [headerMarkdown, setHeaderMarkdown] = useState(() => initial?.headerMarkdown ?? '')
+  const [footerMarkdown, setFooterMarkdown] = useState(() => initial?.footerMarkdown ?? '')
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [view, setView] = useState<'questions' | 'record'>('questions')
   const [dirty, setDirty] = useState(false)
@@ -256,6 +261,15 @@ export function FormStudio({ domainSlug, folders, types, baseTemplates = [], mod
         </div>
       </section>
 
+      <section aria-label="Document framing" style={{ display: 'grid', gap: '.85rem' }}>
+        <div>
+          <h2 style={{ marginBottom: '.25rem' }}>Document framing</h2>
+          <p className={styles.muted}>Optional fixed Markdown appears before and after the generated question sections. It is stored as safe canonical Markdown and cannot contain answer tokens.</p>
+        </div>
+        <MarkdownSectionEditor name="headerMarkdown" label="Header" description="Appears before the generated Form answers." initialValue={headerMarkdown} onDirty={() => setDirty(true)} onValueChange={setHeaderMarkdown} />
+        <MarkdownSectionEditor name="footerMarkdown" label="Footer" description="Appears after the generated Form answers." initialValue={footerMarkdown} onDirty={() => setDirty(true)} onValueChange={setFooterMarkdown} />
+      </section>
+
       <div className={styles.viewBar} role="group" aria-label="Studio view">
         <button type="button" className={styles.viewButton} aria-pressed={view === 'questions'} onClick={() => setView('questions')}>Questions</button>
         <button type="button" className={styles.viewButton} aria-pressed={view === 'record'} onClick={() => setView('record')}>Record preview</button>
@@ -280,7 +294,7 @@ export function FormStudio({ domainSlug, folders, types, baseTemplates = [], mod
           />
         </div>
       ) : (
-        <RecordPreview name={details.name.trim() || 'Untitled form'} fields={fields} recordNameKey={recordNameKey} baseTemplateName={baseName} />
+        <RecordPreview name={details.name.trim() || 'Untitled form'} fields={fields} recordNameKey={recordNameKey} baseTemplateName={baseName} headerMarkdown={headerMarkdown} footerMarkdown={footerMarkdown} />
       )}
 
       <div className={styles.saveRow}>
