@@ -60,9 +60,9 @@ export async function seedPhase7Acceptance(payload: Payload) {
     const rows = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domainId } }, { name: { equals: name } }] }, limit: 1, depth: 0 })
     folders[key] = Number((rows.docs[0] ?? await payload.create({ collection: 'folders', data: { domain: domainId, name, parent: parent ? folders[parent] : null, subdomain: department ? departments[department] : null, systemManaged: key === 'root', filingPolicy: 'inherit', publicAccess: 'inherit' } })).id)
   }
-  const rule = async (principalType: 'Character' | 'Role', principal: number, resourceType: 'Domain' | 'Subdomain' | 'Folder', resource: number, capability: Capability, effect: 'grant' | 'deny' = 'grant') => {
+  const rule = async (principalType: 'Character' | 'Role', principal: number, resourceType: 'Domain' | 'Subdomain' | 'Folder' | 'DocumentType', resource: number, capability: Capability, effect: 'grant' | 'deny' = 'grant') => {
     const principalCollection = principalType === 'Character' ? 'characters' : 'roles'
-    const resourceCollection = resourceType === 'Domain' ? 'domains' : resourceType === 'Subdomain' ? 'subdomains' : 'folders'
+    const resourceCollection = resourceType === 'Domain' ? 'domains' : resourceType === 'Subdomain' ? 'subdomains' : resourceType === 'DocumentType' ? 'document-types' : 'folders'
     const ruleKey = JSON.stringify([domainId, principalType, principalCollection, principal, resourceType, resourceCollection, resource, capability])
     if ((await payload.find({ collection: 'permission-rules', where: { ruleKey: { equals: ruleKey } }, depth: 0, limit: 1 })).docs.length) return
     await payload.create({ collection: 'permission-rules', data: { ruleKey, domain: domainId, principalType, principal: { relationTo: principalCollection, value: principal }, resourceType, resource: { relationTo: resourceCollection, value: resource }, capability, effect, active: true, actorUser: users.owner, actorCharacter: characters.owner } })
@@ -81,6 +81,23 @@ export async function seedPhase7Acceptance(payload: Payload) {
   }
   await rule('Character', characters.denied, 'Folder', folders.incidents, 'read', 'deny')
   await rule('Character', characters.warrior, 'Folder', folders.courts, 'read')
+  // P07X-T03: Document Type is the primary ordinary record-authorization unit.
+  // The seed mirrors every record-capability Folder grant onto the Domain's
+  // Plain Text Type (the deterministic translation the corrective stack
+  // prescribes); Folder DENIES stay Folder-scoped so they narrow Type grants.
+  const plainTextType = (await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: domainId } }, { name: { equals: 'Plain Text' } }, { active: { equals: true } }] }, depth: 0, limit: 1 })).docs[0]
+  if (plainTextType) {
+    const typeRules: Array<[string, number, Capability]> = [
+      ['head', roles.head, 'read'], ['head', roles.head, 'create_document'], ['head', roles.head, 'edit_document'],
+      ['clerk', roles.clerk, 'read'],
+      ['captain1', roles.captain1, 'read'], ['captain1', roles.captain1, 'create_document'], ['captain1', roles.captain1, 'edit_document'],
+      ['captain2', roles.captain2, 'read'], ['captain2', roles.captain2, 'create_document'], ['captain2', roles.captain2, 'edit_document'],
+      ['warrior', roles.warrior, 'read'], ['warrior', roles.warrior, 'create_document'], ['warrior', roles.warrior, 'edit_document'],
+      ['magistrate', roles.magistrate, 'read'], ['magistrate', roles.magistrate, 'create_document'], ['magistrate', roles.magistrate, 'edit_document'],
+    ]
+    for (const [key, roleId, capability] of typeRules) await rule('Role', roleId, 'DocumentType', Number(plainTextType.id), capability)
+    await rule('Character', characters.access, 'DocumentType', Number(plainTextType.id), 'read')
+  }
   const documents: Record<string, number> = {}
   for (const [key, title, folderKey, lifecycle] of [
     ['deed', 'P7 Working Deed', 'deeds', 'filed'], ['old', 'P7 Superseded Deed', 'deeds', 'locked'],

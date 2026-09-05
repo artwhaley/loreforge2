@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 
-import type { Capability, PrincipalType, ResourceType } from '@/lib/permissions/capabilities'
+import { isRecordCapability, type Capability, type PrincipalType, type ResourceType } from '@/lib/permissions/capabilities'
 import type { RoleNode } from './roleTree'
 
 /**
@@ -32,10 +32,10 @@ const polymorphic = (value: unknown): { relationTo: string | null; id: number | 
 }
 
 const relationForPrincipal: Record<PrincipalType, string> = { Character: 'characters', User: 'users', Role: 'roles', DomainMembership: 'domain-memberships' }
-const relationForResource: Record<ResourceType, string> = { Domain: 'domains', Subdomain: 'subdomains', Folder: 'folders', Document: 'documents' }
+const relationForResource: Record<ResourceType, string> = { Domain: 'domains', Subdomain: 'subdomains', Folder: 'folders', Document: 'documents', DocumentType: 'document-types' }
 
 export type AuthzActor = { userId: number | string; activeCharacterId?: number | string | null }
-export type AuthzResourceRef = { type: ResourceType; id: number | string }
+export type AuthzResourceRef = { type: ResourceType; id: number | string; documentTypeId?: number | string | null }
 
 type RuleRow = {
   id: number | string
@@ -70,12 +70,14 @@ export type AuthzSession = {
   readonly characterState: { characterId: number; membershipId: number } | null
   /** All Domain Roles (for senior-role descendant matching). */
   readonly roles: RoleNode[]
+  /** Document Type names in the Domain, for effective-explanation reports. */
+  readonly typeNames: Map<number, string>
   /** Strictly active Role assignments held by the acting Character. */
   readonly heldRoleIds: number[]
   /** Every active rule in the Domain, indexed by capability. */
   readonly rulesByCapability: Map<Capability, RuleRow[]>
   /** Folder/Department/Domain ancestry metadata, id -> node. */
-  readonly folders: Map<number, { id: number; parentId: number | null; subdomainId: number | null }>
+  readonly folders: Map<number, { id: number; parentId: number | null; subdomainId: number | null; name: string }>
   readonly subdomains: Map<number, { id: number }>
   /** Documents with exception rules (Document-scope rules exist for them). */
   readonly documentExceptions: Map<number, RuleRow[]>
@@ -128,12 +130,13 @@ async function loadFacts(payload: Payload, actor: AuthzActor, domainId: number, 
       }
     }
   }
-  const [rolesResult, assignmentsResult, rulesResult, foldersResult, subdomainsResult] = await Promise.all([
+  const [rolesResult, assignmentsResult, rulesResult, foldersResult, subdomainsResult, typesResult] = await Promise.all([
     find({ collection: 'roles', where: { domain: { equals: domainId } }, depth: 0, req: txReq }),
     actor.activeCharacterId == null ? Promise.resolve({ docs: [] }) : find({ collection: 'role-assignments', where: { and: [{ character: { equals: actor.activeCharacterId } }, { status: { equals: 'active' } }] }, depth: 0, req: txReq }),
     find({ collection: 'permission-rules', where: { and: [{ domain: { equals: domainId } }, { active: { equals: true } }] }, depth: 1, req: txReq }),
     find({ collection: 'folders', where: { domain: { equals: domainId } }, depth: 0, req: txReq }),
     find({ collection: 'subdomains', where: { domain: { equals: domainId } }, depth: 0, req: txReq }),
+    find({ collection: 'document-types', where: { domain: { equals: domainId } }, depth: 0, req: txReq }),
   ])
 
   const roles: RoleNode[] = (rolesResult.docs as unknown as Record<string, unknown>[]).map((role) => ({
@@ -142,6 +145,7 @@ async function loadFacts(payload: Payload, actor: AuthzActor, domainId: number, 
     departmentId: Number(idOf(role.subdomain)),
     parentId: idOf(role.parentRole),
     active: Boolean(role.active),
+    name: String(role.name ?? ''),
   }))
 
   const rulesByCapability = new Map<Capability, RuleRow[]>()
@@ -171,9 +175,10 @@ async function loadFacts(payload: Payload, actor: AuthzActor, domainId: number, 
   // every fetch below the Payload boundary uses unbounded pagination.
   const folders = new Map((foldersResult.docs as unknown as Record<string, unknown>[]).map((folder) => {
     const id = Number(folder.id)
-    return [id, { id, parentId: idOf(folder.parent), subdomainId: idOf(folder.subdomain) }]
+    return [id, { id, parentId: idOf(folder.parent), subdomainId: idOf(folder.subdomain), name: String(folder.name ?? '') }]
   }))
   const subdomains = new Map((subdomainsResult.docs as unknown as Record<string, unknown>[]).map((subdomain) => [Number(subdomain.id), { id: Number(subdomain.id) }]))
+  const typeNames = new Map((typesResult.docs as unknown as Record<string, unknown>[]).map((type) => [Number(type.id), String(type.name ?? '')]))
 
   const domainRow = domain as unknown as { ownerUser?: unknown; ownerCharacter?: unknown; kind?: unknown }
   // P07X-T02 authority resolution — kind-driven, no ambient User authority:
@@ -201,7 +206,7 @@ async function loadFacts(payload: Payload, actor: AuthzActor, domainId: number, 
     .map((assignment) => idOf(assignment.role))
     .filter((id): id is number => id != null && roles.some((role) => role.id === id && role.active))
 
-  return { authority, characterState, roles, heldRoleIds, rulesByCapability, documentExceptions, folders, subdomains, domain }
+  return { authority, characterState, roles, typeNames, heldRoleIds, rulesByCapability, documentExceptions, folders, subdomains, domain }
 }
 
 /**
@@ -231,11 +236,13 @@ export function folderAncestry(session: AuthzSession, folderId: number): { chain
  * Resolve a Document decision target from its already-known folder/subdomain
  * columns. The document's own subdomain wins over the nearest ancestor
  * folder's, matching the interim evaluator's node order. folderChain is the
- * document's folder ancestry (folder first), computed in-memory.
+ * document's folder ancestry (folder first), computed in-memory. The
+ * documentTypeId feeds the P07X-T03 two-axis record decision (Type grant +
+ * Folder narrowing); without it a Document target fails closed.
  */
-export function resolveDocumentTarget(session: AuthzSession, document: { id: number; folderId: number | null; subdomainId: number | null }): { type: 'Document'; id: number; folderChain: number[]; subdomainId: number | null } {
+export function resolveDocumentTarget(session: AuthzSession, document: { id: number; folderId: number | null; subdomainId: number | null; documentTypeId?: number | null }): { type: 'Document'; id: number; folderChain: number[]; subdomainId: number | null; documentTypeId: number | null } {
   const ancestry = document.folderId == null ? { chain: [], subdomainId: null } : folderAncestry(session, document.folderId)
-  return { type: 'Document', id: document.id, folderChain: document.folderId == null ? [] : [document.folderId, ...ancestry.chain], subdomainId: document.subdomainId ?? ancestry.subdomainId }
+  return { type: 'Document', id: document.id, folderChain: document.folderId == null ? [] : [document.folderId, ...ancestry.chain], subdomainId: document.subdomainId ?? ancestry.subdomainId, documentTypeId: document.documentTypeId == null ? null : Number(document.documentTypeId) }
 }
 
 /**
@@ -316,7 +323,116 @@ export type SessionDecision = { allowed: boolean; reason: string; matchedRule?: 
  * more-specific direct grant overrides broader direct deny; Role grant cannot
  * override an applicable direct deny.
  */
-export function decideInSession(session: AuthzSession, capability: Capability, target: { type: ResourceType; id: number; folderChain?: number[]; subdomainId?: number | null }): SessionDecision {
+type Candidate = { rule: RuleRow; classRank: number; specificity: Specificity }
+
+const classRankOf = (principalType: PrincipalType): number => principalType === 'User' || principalType === 'Character' ? 3 : principalType === 'Role' ? 2 : 1
+
+/** Pick the winning candidate: principal precedence, then specificity, deny wins ties. */
+function pickWinner(candidates: Candidate[]): Candidate {
+  candidates.sort((a, b) => b.classRank - a.classRank || specificitiesCompare(b.specificity, a.specificity) || (a.rule.effect === 'deny' ? -1 : 1))
+  return candidates[0]
+}
+
+function winnerText(winner: Candidate): string {
+  return `${winner.rule.effect} via ${winner.rule.principalType} on ${winner.rule.resourceType} ${winner.rule.resourceId} (${winner.specificity.tier}/${winner.specificity.chain.join(',')})`
+}
+
+function decisionForWinner(winner: Candidate, reason: string, trace: string[]): SessionDecision {
+  return { allowed: winner.rule.effect === 'grant', reason, matchedRule: { id: winner.rule.id, effect: winner.rule.effect, principalType: winner.rule.principalType, resourceType: winner.rule.resourceType, resourceId: winner.rule.resourceId, specificity: winner.specificity }, trace }
+}
+
+function principalText(session: AuthzSession, rule: RuleRow): string {
+  if (rule.principalType === 'Role') {
+    const name = session.roles.find((role) => role.id === rule.principalId)?.name
+    return name ? `${name} role` : 'Role'
+  }
+  if (rule.principalType === 'Character') return 'Character'
+  if (rule.principalType === 'User') return 'User'
+  return 'Domain membership'
+}
+
+function typeName(session: AuthzSession, id: number | null | undefined): string {
+  return id != null ? session.typeNames.get(id) ?? `Document Type ${id}` : 'this Document Type'
+}
+
+function folderName(session: AuthzSession, id: number): string {
+  return session.folders.get(id)?.name ?? `Folder ${id}`
+}
+
+/**
+ * P07X-T03 two-axis record decision for a Document target.
+ *
+ * Grant axis (the normal source of record capability): direct Document rules
+ * on the same record win when present (exceptional most-specific same-record
+ * path); otherwise Document-Type rules on the record's type decide.
+ * Narrowing axis: Folder/Subdomain/Domain DENIES narrow any Type or Document
+ * grant; their grants never create a missing record capability. With no
+ * Type/Document grant the decision denies even when the Folder is visible.
+ * Principal precedence and deny-wins-ties match the legacy tier engine.
+ */
+function decideRecordDocument(session: AuthzSession, capability: Capability, target: { type: 'Document'; id: number; folderChain?: number[]; subdomainId?: number | null; documentTypeId?: number | null }): SessionDecision {
+  const rules = (session.rulesByCapability.get(capability) ?? []).filter((rule) => ruleMatchesPrincipal(session, rule))
+  const docRules = rules.filter((rule) => rule.resourceType === 'Document' && rule.resourceId === target.id)
+  const typeRules = rules.filter((rule) => rule.resourceType === 'DocumentType' && target.documentTypeId != null && rule.resourceId === target.documentTypeId)
+  const narrowingDenies: Candidate[] = rules
+    .filter((rule) => rule.effect === 'deny' && (rule.resourceType === 'Folder' || rule.resourceType === 'Subdomain' || rule.resourceType === 'Domain'))
+    .map((rule) => ({ rule, classRank: classRankOf(rule.principalType), specificity: ruleSpecificity(session, target, rule) }))
+    .filter((candidate): candidate is Candidate => candidate.specificity !== null)
+  if (narrowingDenies.length > 0) {
+    const denial = pickWinner(narrowingDenies).rule
+    const where = denial.resourceType === 'Folder'
+      ? `Folder restriction on ${folderName(session, denial.resourceId)}`
+      : denial.resourceType === 'Subdomain' ? `Department restriction on ${denial.resourceId}` : `Domain restriction on ${session.domainId}`
+    const reason = `Denied by ${where}.`
+    return { allowed: false, reason, trace: [reason, ...narrowingDenies.map((candidate) => winnerText(candidate))] }
+  }
+  const grantRules = docRules.length > 0 ? docRules : typeRules.length > 0 ? typeRules : []
+  if (grantRules.length === 0) {
+    const reason = `Denied: no Document Type grant for ${typeName(session, target.documentTypeId)}.`
+    return { allowed: false, reason, trace: [reason, 'Default deny: no Type/Document grant.'] }
+  }
+  const candidates = grantRules.map((rule) => ({ rule, classRank: classRankOf(rule.principalType), specificity: { tier: docRules.length > 0 ? 0 : 1, chain: [rule.resourceId] } as Specificity }))
+  const winner = pickWinner(candidates)
+  const text = winnerText(winner)
+  const reason = winner.rule.effect === 'grant'
+    ? winner.rule.resourceType === 'DocumentType'
+      ? `Allowed by ${principalText(session, winner.rule)} on ${typeName(session, target.documentTypeId)}.`
+      : `Allowed by ${principalText(session, winner.rule)} on the Document.`
+    : `Denied: ${text}.`
+  return decisionForWinner(winner, reason, [text, ...candidates.filter((candidate) => candidate !== winner).map((candidate) => winnerText(candidate))])
+}
+
+/**
+ * P07X-T03: create_document (and other record capabilities) evaluated against
+ * a chosen Document Type before a Document exists. Type rules decide; a
+ * Domain-level deny still narrows creation in that Domain. Folder/Department
+ * denies cannot be evaluated until the initial Folder is resolved from Type
+ * lifecycle routing (P07X-T05).
+ */
+function decideDocumentTypeTarget(session: AuthzSession, capability: Capability, target: { type: 'DocumentType'; id: number }): SessionDecision {
+  const rules = (session.rulesByCapability.get(capability) ?? []).filter((rule) => ruleMatchesPrincipal(session, rule))
+  const domainDenies = rules
+    .filter((rule) => rule.effect === 'deny' && rule.resourceType === 'Domain')
+    .map((rule) => ({ rule, classRank: classRankOf(rule.principalType), specificity: { tier: 3, chain: [] } as Specificity }))
+  if (domainDenies.length > 0) {
+    const reason = `Denied by Domain restriction on ${session.domainId}.`
+    return { allowed: false, reason, trace: [reason, ...domainDenies.map((candidate) => winnerText(candidate))] }
+  }
+  const typeRules = rules.filter((rule) => rule.resourceType === 'DocumentType' && rule.resourceId === target.id)
+  if (typeRules.length === 0) {
+    const reason = `Denied: no Document Type grant for ${typeName(session, target.id)}.`
+    return { allowed: false, reason, trace: [reason, 'Default deny: no Type grant.'] }
+  }
+  const candidates = typeRules.map((rule) => ({ rule, classRank: classRankOf(rule.principalType), specificity: { tier: 1, chain: [rule.resourceId] } as Specificity }))
+  const winner = pickWinner(candidates)
+  const text = winnerText(winner)
+  const reason = winner.rule.effect === 'grant'
+    ? `Allowed by ${principalText(session, winner.rule)} on ${typeName(session, target.id)}.`
+    : `Denied: ${text}.`
+  return decisionForWinner(winner, reason, [text, ...candidates.filter((candidate) => candidate !== winner).map((candidate) => winnerText(candidate))])
+}
+
+export function decideInSession(session: AuthzSession, capability: Capability, target: { type: ResourceType; id: number; folderChain?: number[]; subdomainId?: number | null; documentTypeId?: number | null }): SessionDecision {
   if (session.authority) {
     // P07X-T02: 'platform'/'owner' kinds are unreachable here (platform work
     // uses authorizePlatformOperation; ownerUser authority requires the
@@ -325,28 +441,24 @@ export function decideInSession(session: AuthzSession, capability: Capability, t
     return { allowed: true, reason, trace: [reason] }
   }
   if (session.characterState == null) return { allowed: false, reason: 'An active member Character is required.', trace: ['No active Character/Domain membership tuple.'] }
+  if (target.type === 'Document' && isRecordCapability(capability)) return decideRecordDocument(session, capability, target as { type: 'Document'; id: number; folderChain?: number[]; subdomainId?: number | null; documentTypeId?: number | null })
+  if (target.type === 'DocumentType') return decideDocumentTypeTarget(session, capability, { type: 'DocumentType', id: Number(target.id) })
   const rules = session.rulesByCapability.get(capability) ?? []
-  type Candidate = { rule: RuleRow; classRank: number; specificity: Specificity }
   const candidates: Candidate[] = []
   for (const rule of rules) {
     const specificity = ruleSpecificity(session, target, rule)
     if (!specificity) continue
     if (!ruleMatchesPrincipal(session, rule)) continue
-    let classRank: number
-    if (rule.principalType === 'User' || rule.principalType === 'Character') classRank = 3
-    else if (rule.principalType === 'Role') classRank = 2
-    else classRank = 1
-    candidates.push({ rule, classRank, specificity })
+    candidates.push({ rule, classRank: classRankOf(rule.principalType), specificity })
   }
   if (candidates.length === 0) return { allowed: false, reason: 'No matching grant.', trace: ['No applicable rule; default deny.'] }
-  candidates.sort((a, b) => b.classRank - a.classRank || specificitiesCompare(b.specificity, a.specificity) || (a.rule.effect === 'deny' ? -1 : 1))
-  const winner = candidates[0]
-  const winnerText = `${winner.rule.effect} via ${winner.rule.principalType} on ${winner.rule.resourceType} ${winner.rule.resourceId} (${winner.specificity.tier}/${winner.specificity.chain.join(',')})`
+  const winner = pickWinner(candidates)
+  const text = winnerText(winner)
   return {
     allowed: winner.rule.effect === 'grant',
-    reason: winner.rule.effect === 'grant' ? `Allowed: ${winnerText}.` : `Denied: ${winnerText}.`,
+    reason: winner.rule.effect === 'grant' ? `Allowed: ${text}.` : `Denied: ${text}.`,
     matchedRule: { id: winner.rule.id, effect: winner.rule.effect, principalType: winner.rule.principalType, resourceType: winner.rule.resourceType, resourceId: winner.rule.resourceId, specificity: winner.specificity },
-    trace: [winnerText, ...candidates.slice(1).map((candidate) => `${candidate.rule.effect} via ${candidate.rule.principalType} on ${candidate.rule.resourceType} ${candidate.rule.resourceId} (${candidate.specificity.tier}/${candidate.specificity.chain.join(',')})`)],
+    trace: [text, ...candidates.slice(1).map((candidate) => winnerText(candidate))],
   }
 }
 
@@ -365,14 +477,16 @@ export async function loadAuthorizationSession(payload: Payload, actor: AuthzAct
 /** Decide many (capability, resource) pairs with zero SQL after preload. */
 export function decideManyInSession(session: AuthzSession, requests: Array<{ capability: Capability; resource: AuthzResourceRef }>): SessionDecision[] {
   return requests.map((request) => {
-    let target: { type: ResourceType; id: number; folderChain?: number[]; subdomainId?: number | null }
+    let target: { type: ResourceType; id: number; folderChain?: number[]; subdomainId?: number | null; documentTypeId?: number | null }
     if (request.resource.type === 'Document') {
-      target = { type: 'Document', id: Number(request.resource.id) }
+      target = { type: 'Document', id: Number(request.resource.id), documentTypeId: request.resource.documentTypeId == null ? null : Number(request.resource.documentTypeId) }
     } else if (request.resource.type === 'Folder') {
       const ancestry = folderAncestry(session, Number(request.resource.id))
       target = { type: 'Folder', id: Number(request.resource.id), folderChain: ancestry.chain, subdomainId: ancestry.subdomainId }
     } else if (request.resource.type === 'Subdomain') {
       target = { type: 'Subdomain', id: Number(request.resource.id) }
+    } else if (request.resource.type === 'DocumentType') {
+      target = { type: 'DocumentType', id: Number(request.resource.id) }
     } else {
       target = { type: 'Domain', id: session.domainId }
     }
@@ -383,4 +497,35 @@ export function decideManyInSession(session: AuthzSession, requests: Array<{ cap
 /** Convenience single-shot decision against a preloaded session. */
 export function decideOne(session: AuthzSession, capability: Capability, resource: AuthzResourceRef): SessionDecision {
   return decideManyInSession(session, [{ capability, resource }])[0]
+}
+
+/**
+ * P07X-T03: Document Types whose effective decision for `capability` is a
+ * grant — the grant axis of the two-axis record decision. Pure, zero SQL.
+ */
+export function grantedTypeIds(session: AuthzSession, capability: Capability): Set<number> {
+  const out = new Set<number>()
+  const buckets = new Map<number, Candidate[]>()
+  for (const rule of session.rulesByCapability.get(capability) ?? []) {
+    if (rule.resourceType !== 'DocumentType') continue
+    if (!ruleMatchesPrincipal(session, rule)) continue
+    const bucket = buckets.get(rule.resourceId) ?? []
+    bucket.push({ rule, classRank: classRankOf(rule.principalType), specificity: { tier: 1, chain: [rule.resourceId] } })
+    buckets.set(rule.resourceId, bucket)
+  }
+  for (const [typeId, candidates] of buckets) if (pickWinner(candidates).rule.effect === 'grant') out.add(typeId)
+  return out
+}
+
+/**
+ * P07X-T03: does an effective Folder/Subdomain/Domain DENY narrow `capability`
+ * for this Folder (self + ancestors)? Any applicable deny narrows — grants on
+ * those tiers never create a record capability. Pure, zero SQL.
+ */
+export function folderNarrowingDeny(session: AuthzSession, capability: Capability, folderId: number): boolean {
+  const ancestry = folderAncestry(session, folderId)
+  const target: { type: 'Folder'; id: number; folderChain: number[]; subdomainId: number | null } = { type: 'Folder', id: folderId, folderChain: ancestry.chain, subdomainId: ancestry.subdomainId }
+  return (session.rulesByCapability.get(capability) ?? [])
+    .filter((rule) => rule.effect === 'deny' && ruleMatchesPrincipal(session, rule) && (rule.resourceType === 'Folder' || rule.resourceType === 'Subdomain' || rule.resourceType === 'Domain'))
+    .some((rule) => ruleSpecificity(session, target, rule) !== null)
 }

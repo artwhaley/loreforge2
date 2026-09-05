@@ -1,7 +1,7 @@
 import type { Payload, User } from 'payload'
 
 import { canEditDocumentBody, type Lifecycle } from '@/lib/documents/lifecycle'
-import { loadAuthorizationSession } from '@/lib/authz/session'
+import { decideInSession, loadAuthorizationSession, resolveDocumentTarget } from '@/lib/authz/session'
 import { compileReadScope } from '@/lib/authz/readScope'
 
 const relationId = (value: unknown): number | null => value && typeof value === 'object' && 'id' in value ? Number((value as { id: number | string }).id) : value === null || value === undefined || value === '' ? null : Number(value)
@@ -39,21 +39,19 @@ export async function canAccessDocument(args: {
 }): Promise<boolean> {
   const { payload, user, activeCharacterId, documentId, capability } = args
   const currentResult = await payload.find({ collection: 'documents', where: { id: { equals: documentId } }, depth: 0, limit: 1, overrideAccess: true })
-  const current = currentResult.docs[0] as unknown as ({ domain?: unknown; tenant?: unknown; lifecycle?: unknown; softDeletedAt?: unknown } & Record<string, unknown>) | undefined
+  const current = currentResult.docs[0] as unknown as ({ domain?: unknown; tenant?: unknown; lifecycle?: unknown; softDeletedAt?: unknown; folder?: unknown; subdomain?: unknown; documentType?: unknown } & Record<string, unknown>) | undefined
   if (!current) return false
   if (current.softDeletedAt) return false
   const domainId = relationId(current.domain)
   if (!domainId) return false
   const session = await loadAuthorizationSession(payload, { userId: user.id, activeCharacterId: activeCharacterId ?? null }, domainId)
-  // Read and update are separate capabilities. Reusing a read scope for an
-  // update check would turn read-only folder access into write authority.
-  const scope = await compileReadScope(payload, session, capability === 'update' ? 'edit_document' : 'read')
-  const documentIdNum = Number(documentId)
-  const folderId = relationId(current.folder)
-  const allowed = scope.authorityBypass
-    || (folderId != null && scope.allowedFolderIds.has(folderId) && !scope.denyDocumentIds.has(documentIdNum))
-    || scope.grantDocumentIds.has(documentIdNum)
-  return allowed && (capability !== 'update' || lifecycleEditable(current.lifecycle))
+  // P07X-T03: the two-axis record decision (Type grant + Folder narrowing +
+  // direct Document exception) is the single per-record decision for read and
+  // update — never the old folder-baseline scope, which could expose a
+  // document through a Folder grant alone.
+  const target = resolveDocumentTarget(session, { id: Number(documentId), folderId: relationId(current.folder), subdomainId: relationId(current.subdomain), documentTypeId: relationId(current.documentType) })
+  const decision = decideInSession(session, capability === 'update' ? 'edit_document' : 'read', target)
+  return decision.allowed && (capability !== 'update' || lifecycleEditable(current.lifecycle))
 }
 
 /**
@@ -134,9 +132,10 @@ export async function readableVersionParentQuery(args: {
         and: [
           { domain: { equals: domainId } },
           { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] },
+          { id: { not_in: scope.denyDocumentIds.size > 0 ? [...scope.denyDocumentIds] : [-1] } },
           { or: [
-            { and: [{ folder: { in: [...scope.allowedFolderIds] } }, { id: { not_in: [...scope.denyDocumentIds] } }] },
-            { id: { in: [...scope.grantDocumentIds] } },
+            { and: [{ documentType: { in: scope.readableTypeIds.size > 0 ? [...scope.readableTypeIds] : [-1] } }, { folder: { not_in: scope.denyFolderIds.size > 0 ? [...scope.denyFolderIds] : [-1] } }] },
+            { id: { in: scope.grantDocumentIds.size > 0 ? [...scope.grantDocumentIds] : [-1] } },
           ] },
         ],
       },

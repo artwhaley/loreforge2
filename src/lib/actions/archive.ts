@@ -334,13 +334,15 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   selectedType = selectedType ?? (typeResult.docs.find((item) => Number(item.id) === requestedTypeId) ?? typeResult.docs.find((item) => String(item.name ?? '').toLowerCase() === 'plain text')) as typeof selectedType
   if (!selectedType) return { error: 'type', values }
   const actor = { userId: ctx.user.id, activeCharacterId }
-  // create_document on the destination folder is the single authorization gate
-  // for this whole create act. The links/prepared-by credits/tags attached
-  // inside the transaction below are part of that act, so they skip the
-  // per-document edit_document check (mirrors ensurePreparedBy and the
-  // generateDocument.ts filing path); edit_document stays enforced on every
-  // later mutation surface (document editor, /api/document-links).
-  const createDecision = await evaluatePermission({ payload: ctx.payload, actor, domainId: ctx.tenant.id, capability: 'create_document', resource: { type: 'Folder', id: folder } })
+  // P07X-T03: create_document is evaluated against the chosen Document Type
+  // — the Type grant is the single authorization gate for this whole create
+  // act (the Folder is Type-routed, never a customer capability source). The
+  // links/prepared-by credits/tags attached inside the transaction below are
+  // part of that act, so they skip the per-document edit_document check
+  // (mirrors ensurePreparedBy and the generateDocument.ts filing path);
+  // edit_document stays enforced on every later mutation surface (document
+  // editor, /api/document-links).
+  const createDecision = await evaluatePermission({ payload: ctx.payload, actor, domainId: ctx.tenant.id, capability: 'create_document', resource: { type: 'DocumentType', id: Number(selectedType.id) } })
   if (!createDecision.allowed) return { error: 'authorization', values }
   concernEntries.push(...formCharacterEntries)
   if (concernEntries.length > 0 && !ctx.isManager && concernEntries.some((entry) => entry.newName)) return { error: 'authorization', values }

@@ -41,24 +41,34 @@ export default async function RecordsPage({ params, searchParams }: Props) {
   // document bodies to the browser.
   const session = user ? await loadCachedAuthorizationSession(payload, Number(user.id), activeCharacter?.id ?? null, tenant.id) : null
   const scope = session ? await compileReadScope(payload, session) : null
+  // P07X-T03: the two-axis record predicate — readable Types as the grant
+  // source, denied-Folder ancestry as narrowing, plus direct Document
+  // exceptions. Folder-read grants alone no longer expose Documents.
   const documentsResult = await payload.find({ collection: 'documents', where: { and: [
     { domain: { equals: tenant.id } },
     { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] },
-    ...(scope && !scope.authorityBypass ? [{ or: [
-      { and: [{ folder: { in: scope.allowedFolderIds.size ? [...scope.allowedFolderIds] : [-1] } }, { id: { not_in: scope.denyDocumentIds.size ? [...scope.denyDocumentIds] : [-1] } }] },
-      { id: { in: scope.grantDocumentIds.size ? [...scope.grantDocumentIds] : [-1] } },
-    ] }] : []),
+    ...(scope && !scope.authorityBypass ? [
+      { id: { not_in: scope.denyDocumentIds.size ? [...scope.denyDocumentIds] : [-1] } },
+      { or: [
+        { and: [{ documentType: { in: scope.readableTypeIds.size ? [...scope.readableTypeIds] : [-1] } }, { folder: { not_in: scope.denyFolderIds.size ? [...scope.denyFolderIds] : [-1] } }] },
+        { id: { in: scope.grantDocumentIds.size ? [...scope.grantDocumentIds] : [-1] } },
+      ] },
+    ] : []),
   ] }, select: { id: true, domain: true, folder: true, documentType: true, title: true, updatedAt: true, lifecycle: true }, depth: 0, limit: 50, sort: '-updatedAt', overrideAccess: true })
   const permissions = new Map<number, { read: boolean; canEdit: boolean; canSupersede: boolean; canDelete: boolean }>()
   const visibleDocs: typeof documentsResult.docs = []
   if (session) {
     for (const document of documentsResult.docs) {
-      const target = resolveDocumentTarget(session, { id: Number(document.id), folderId: relationId(document.folder), subdomainId: null })
+      const target = resolveDocumentTarget(session, { id: Number(document.id), folderId: relationId(document.folder), subdomainId: null, documentTypeId: relationId(document.documentType) })
       const read = decideInSession(session, 'read', target).allowed
       if (!read) continue
       visibleDocs.push(document)
       const canEdit = decideInSession(session, 'edit_document', target).allowed
-      const canSupersede = document.folder ? decideInSession(session, 'create_document', { type: 'Folder', id: Number(relationId(document.folder)), folderChain: folderAncestry(session, Number(relationId(document.folder))).chain, subdomainId: folderAncestry(session, Number(relationId(document.folder))).subdomainId }).allowed : false
+      // P07X-T03: supersession is a Type-gated create (create_document on the
+      // record's Document Type) — the destination Folder is Type-routed, not
+      // a customer choice.
+      const typeId = relationId(document.documentType)
+      const canSupersede = typeId !== null && decideInSession(session, 'create_document', { type: 'DocumentType', id: typeId }).allowed
       const canDelete = decideInSession(session, 'delete_document', target).allowed
       permissions.set(Number(document.id), { read, canEdit, canSupersede, canDelete })
     }
@@ -100,13 +110,12 @@ export default async function RecordsPage({ params, searchParams }: Props) {
         if (allDocIds.has(documentId)) continue
         allDocIds.add(documentId)
         if (session) {
-          const target = resolveDocumentTarget(session, { id: documentId, folderId: relationId(document.folder), subdomainId: null })
+          const target = resolveDocumentTarget(session, { id: documentId, folderId: relationId(document.folder), subdomainId: null, documentTypeId: relationId(document.documentType) })
           if (!decideInSession(session, 'read', target).allowed) continue
           allDocs.push(document)
           const canEdit = decideInSession(session, 'edit_document', target).allowed
-          const folderId = relationId(document.folder)
-          const folderTarget = folderId === null ? null : folderAncestry(session, folderId)
-          const canSupersede = folderId !== null && folderTarget !== null && decideInSession(session, 'create_document', { type: 'Folder', id: folderId, folderChain: folderTarget.chain, subdomainId: folderTarget.subdomainId }).allowed
+          const typeId = relationId(document.documentType)
+          const canSupersede = typeId !== null && decideInSession(session, 'create_document', { type: 'DocumentType', id: typeId }).allowed
           permissions.set(documentId, { read: true, canEdit, canSupersede, canDelete: decideInSession(session, 'delete_document', target).allowed })
         }
         frontier.push(documentId)

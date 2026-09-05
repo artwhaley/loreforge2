@@ -498,7 +498,7 @@ export interface PermissionRule {
         relationTo: 'domain-memberships';
         value: number | DomainMembership;
       };
-  resourceType: 'Domain' | 'Subdomain' | 'Folder' | 'Document';
+  resourceType: 'Domain' | 'Subdomain' | 'Folder' | 'Document' | 'DocumentType';
   resource:
     | {
         relationTo: 'domains';
@@ -515,6 +515,10 @@ export interface PermissionRule {
     | {
         relationTo: 'documents';
         value: number | Document;
+      }
+    | {
+        relationTo: 'document-types';
+        value: number | DocumentType;
       };
   capability:
     | 'read'

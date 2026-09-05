@@ -78,5 +78,33 @@ export function isCapability(value: string): value is Capability {
 /** Frozen Contract PermissionRule principal/resource type vocabularies. */
 export const PRINCIPAL_TYPES = ['Character', 'User', 'Role', 'DomainMembership'] as const
 export type PrincipalType = (typeof PRINCIPAL_TYPES)[number]
-export const RESOURCE_TYPES = ['Domain', 'Subdomain', 'Folder', 'Document'] as const
+export const RESOURCE_TYPES = ['Domain', 'Subdomain', 'Folder', 'Document', 'DocumentType'] as const
 export type ResourceType = (typeof RESOURCE_TYPES)[number]
+
+/**
+ * Record capabilities (P07X-T03): ordinary record work attaches to Document
+ * Type, not to Folder grants. Folder/Subdomain/Domain rules for these
+ * capabilities only NARROW (deny) a Type/Document grant — they never create
+ * a missing record capability. Everything else keeps the linear Folder
+ * ancestry decision (Folder-scoped manage_folders/manage_access etc.).
+ */
+export const RECORD_CAPABILITIES: readonly Capability[] = [
+  'read',
+  'create_document',
+  'edit_document',
+  'submit_document',
+  'file_document',
+  'approve_document',
+  'lock_document',
+  'unlock_document',
+  'delete_document',
+  'restore_document',
+  'export_document',
+  'share_document',
+] as const
+
+export const RECORD_CAPABILITY_SET: ReadonlySet<Capability> = new Set<Capability>(RECORD_CAPABILITIES)
+
+export function isRecordCapability(capability: Capability): boolean {
+  return RECORD_CAPABILITY_SET.has(capability)
+}

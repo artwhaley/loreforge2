@@ -1,33 +1,42 @@
 import type { Payload } from 'payload'
 
-import { decideInSession, folderAncestry, type AuthzSession } from './session'
+import { decideInSession, folderAncestry, folderNarrowingDeny, grantedTypeIds, type AuthzSession } from './session'
 import type { Capability, ResourceType } from '@/lib/permissions/capabilities'
 
 /**
- * P07P-03: compile the effective document read scope into sets.
+ * P07X-T03: compile the effective record read scope into sets.
  *
- * For a Domain and actor session, derive (spec "Query-level filtering"):
- * - A: folders whose inherited effective Document read is allowed
- * - G: Documents whose final decision is allowed despite a denied folder baseline
- * - D: Documents whose final decision is denied despite an allowed folder baseline
+ * The two-axis record decision replaces the old folder-baseline model:
+ * - grant axis: Document Type rules (or a direct Document exception) grant the
+ *   record capability — Folder grants never create a missing record capability;
+ * - narrowing axis: Folder/Subdomain/Domain denies narrow a Type/Document grant.
  *
- * Direct grants/denies are resolved by the frozen tier/specificity rules
- * through the SAME pure decision engine — never a second SQL precedence
- * implementation. Empty permission sets compile to an empty scope (FALSE).
+ * The compiled scope gives list queries everything they need server-side:
+ * - A: readableTypeIds — Types with an effective grant for the capability;
+ * - N: denyFolderIds — Folders whose ancestry carries an effective deny;
+ * - G: documents allowed by a direct Document grant despite a denied baseline;
+ * - D: documents denied by a direct Document deny despite an allowed baseline;
+ * - V: visibleFolderIds — containers the actor may at least see (Folder-read
+ *   grants and their ancestors; refined by the T04 projection).
  *
- * All evaluation is pure (zero SQL): folder ancestry and document exception
- * metadata come from the session plus a bulk document-metadata fetch done by
- * the caller (compileReadScope below performs it in one bounded query).
+ * A document without exception rules is readable when its Type is in
+ * readableTypeIds AND its Folder is not in denyFolderIds. All evaluation is
+ * pure (zero SQL): rule/folder/type metadata comes from the session plus a
+ * bulk document-metadata fetch done by the caller.
  */
 
 export type ReadScope = {
-  /** Folders whose effective baseline read is allowed (folder itself + descendants by inheritance). */
-  allowedFolderIds: Set<number>
-  /** Documents explicitly allowed despite a denied folder baseline. */
+  /** Document Types whose effective record-capability decision is a grant (grant axis). */
+  readableTypeIds: Set<number>
+  /** Folders whose ancestry carries an effective Folder/Subdomain/Domain deny (narrowing axis). */
+  denyFolderIds: Set<number>
+  /** Documents allowed by a direct Document grant despite a denied baseline. */
   grantDocumentIds: Set<number>
-  /** Documents explicitly denied despite an allowed folder baseline. */
+  /** Documents denied by a direct Document deny despite an allowed baseline. */
   denyDocumentIds: Set<number>
-  /** True when the actor's authority bypasses ACL rules entirely (owner/admin/platform). */
+  /** Folders the actor may at least see (container visibility; T04 refines). */
+  visibleFolderIds: Set<number>
+  /** True when the actor's authority bypasses ACL rules entirely (owner/admin). */
   authorityBypass: boolean
 }
 
@@ -38,23 +47,25 @@ const idOf = (value: unknown): number | null => {
 }
 
 /**
- * Evaluate every folder's inherited effective read decision purely, then
- * intersect document exceptions through the same decision engine.
- *
- * `documents` is the bulk document metadata (id, folder) for the Domain —
- * fetched once by the caller via compileReadScope. Inheritance follows the
- * frozen contract: a folder's effective read is its own decision (Document
- * rules do not propagate upward; Folder/Department/Domain rules inherit down
- * through the folder chain naturally by the specificity engine).
+ * Evaluate the two-axis scope purely. `documents` is the bulk metadata of
+ * documents that carry a Document-scope rule (fetched once by the caller);
+ * documents without exception rules are covered by the baseline predicate.
  */
-export function computeReadScope(session: AuthzSession, documents: Array<{ id: number; folderId: number | null }>, capability: Capability = 'read'): ReadScope {
-  if (session.authority) return { allowedFolderIds: new Set(session.folders.keys()), grantDocumentIds: new Set(), denyDocumentIds: new Set(), authorityBypass: true }
+export function computeReadScope(session: AuthzSession, documents: Array<{ id: number; folderId: number | null; documentTypeId?: number | null }>, capability: Capability = 'read'): ReadScope {
+  if (session.authority) return { readableTypeIds: new Set(), denyFolderIds: new Set(), grantDocumentIds: new Set(), denyDocumentIds: new Set(), visibleFolderIds: new Set(session.folders.keys()), authorityBypass: true }
 
-  const allowedFolderIds = new Set<number>()
+  const readableTypeIds = grantedTypeIds(session, capability)
+
+  const denyFolderIds = new Set<number>()
+  const visibleFolderIds = new Set<number>()
   for (const folderId of session.folders.keys()) {
+    if (folderNarrowingDeny(session, capability, folderId)) denyFolderIds.add(folderId)
     const ancestry = folderAncestry(session, folderId)
-    const decision = decideFolder(session, capability, { type: 'Folder', id: folderId, folderChain: ancestry.chain, subdomainId: ancestry.subdomainId })
-    if (decision) allowedFolderIds.add(folderId)
+    const folderTarget: AnyTarget = { type: 'Folder', id: folderId, folderChain: ancestry.chain, subdomainId: ancestry.subdomainId }
+    if (decideInSession(session, 'read', folderTarget).allowed) {
+      visibleFolderIds.add(folderId)
+      for (const ancestorId of ancestry.chain) visibleFolderIds.add(ancestorId)
+    }
   }
 
   const grantDocumentIds = new Set<number>()
@@ -62,45 +73,41 @@ export function computeReadScope(session: AuthzSession, documents: Array<{ id: n
   for (const document of documents) {
     const exceptions = session.documentExceptions.get(document.id)
     if (!exceptions || exceptions.length === 0) continue
-    // Only documents with exception rules can deviate from their folder's
-    // baseline; evaluate the final decision through the same engine.
-    const target = documentTarget(session, document)
-    const finalAllowed = decideFolder(session, capability, target)
-    const baseline = document.folderId == null ? false : allowedFolderIds.has(document.folderId)
+    // Baseline: the two-axis predicate without the direct Document exception.
+    const narrowed = document.folderId == null ? false : denyFolderIds.has(document.folderId)
+    const typeGranted = document.documentTypeId != null && readableTypeIds.has(document.documentTypeId)
+    const baseline = typeGranted && !narrowed
+    // Final: the direct Document exception (most-specific same-record path)
+    // resolved through the SAME two-axis engine.
+    const finalAllowed = decideInSession(session, capability, documentTarget(session, document)).allowed
     if (finalAllowed && !baseline) grantDocumentIds.add(document.id)
     if (!finalAllowed && baseline) denyDocumentIds.add(document.id)
   }
-  return { allowedFolderIds, grantDocumentIds, denyDocumentIds, authorityBypass: false }
+  return { readableTypeIds, denyFolderIds, grantDocumentIds, denyDocumentIds, visibleFolderIds, authorityBypass: false }
 }
 
-type AnyTarget = { type: ResourceType; id: number; folderChain?: number[]; subdomainId?: number | null }
+type AnyTarget = { type: ResourceType; id: number; folderChain?: number[]; subdomainId?: number | null; documentTypeId?: number | null }
 
-function decideFolder(session: AuthzSession, capability: Capability, target: AnyTarget): boolean {
-  const decision = decideInSession(session, capability, target as never)
-  return decision.allowed
-}
-
-function documentTarget(session: AuthzSession, document: { id: number; folderId: number | null }): AnyTarget {
+function documentTarget(session: AuthzSession, document: { id: number; folderId: number | null; documentTypeId?: number | null }): AnyTarget {
   const ancestry = document.folderId == null ? { chain: [], subdomainId: null } : folderAncestry(session, document.folderId)
-  return { type: 'Document', id: document.id, folderChain: document.folderId == null ? [] : [document.folderId, ...ancestry.chain], subdomainId: ancestry.subdomainId }
+  return { type: 'Document', id: document.id, folderChain: document.folderId == null ? [] : [document.folderId, ...ancestry.chain], subdomainId: ancestry.subdomainId, documentTypeId: document.documentTypeId == null ? null : Number(document.documentTypeId) }
 }
 
 /**
- * Compile the read scope. The folder baseline is entirely session-local; the
- * only document metadata needed for A/G/D exceptions is the small set of
- * documents that actually have a Document-scope rule. Never scan the whole
- * Domain corpus just to decide whether a caller can open one record.
+ * Compile the read scope. The only document metadata needed for G/D exceptions
+ * is the small set of documents that actually have a Document-scope rule —
+ * never scan the whole Domain corpus just to decide one record.
  */
 export async function compileReadScope(payload: Payload, session: AuthzSession, capability: Capability = 'read'): Promise<ReadScope> {
-  if (session.authority) return { allowedFolderIds: new Set(session.folders.keys()), grantDocumentIds: new Set(), denyDocumentIds: new Set(), authorityBypass: true }
+  if (session.authority) return { readableTypeIds: new Set(), denyFolderIds: new Set(), grantDocumentIds: new Set(), denyDocumentIds: new Set(), visibleFolderIds: new Set(session.folders.keys()), authorityBypass: true }
   const exceptionIds = [...session.documentExceptions.keys()]
-  const rows: Array<{ id: number; folderId: number | null }> = []
+  const rows: Array<{ id: number; folderId: number | null; documentTypeId?: number | null }> = []
   // Keep each statement comfortably below SQLite's variable limit. This is
   // correctness-preserving exhaustive iteration, not a silent result cap.
   for (let offset = 0; offset < exceptionIds.length; offset += 400) {
     const ids = exceptionIds.slice(offset, offset + 400)
     const documents = await payload.find({ collection: 'documents', where: { and: [{ domain: { equals: session.domainId } }, { id: { in: ids } }, { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] }] }, depth: 0, limit: 0, pagination: false, overrideAccess: true })
-    rows.push(...documents.docs.map((document) => ({ id: Number(document.id), folderId: idOf((document as { folder?: unknown }).folder) })))
+    rows.push(...documents.docs.map((document) => ({ id: Number(document.id), folderId: idOf((document as { folder?: unknown }).folder), documentTypeId: idOf((document as { documentType?: unknown }).documentType) })))
   }
   return computeReadScope(session, rows, capability)
 }

@@ -78,8 +78,10 @@ export async function submitReportFormAction(
   })
   const form = forms.docs[0]
   if (!form) return { ok: false, message: 'Form not found.' }
-  const destinationFolder = form.destinationFolder == null ? null : Number(typeof form.destinationFolder === 'object' ? form.destinationFolder.id : form.destinationFolder)
-  if (!destinationFolder || !await isAllowed({ payload, actor: { userId: user.id, activeCharacterId }, domainId: tenant.id, capability: 'create_document', resource: { type: 'Folder', id: destinationFolder } })) return { ok: false, message: 'Not authorized.' }
+  // P07X-T03: the create gate is create_document on the Form's Document Type
+  // (the destination Folder is Type-routed, not a customer capability source).
+  const formTypeId = typeof form.documentType === 'object' && form.documentType !== null ? Number(form.documentType.id) : form.documentType != null ? Number(form.documentType) : null
+  if (formTypeId === null || !await isAllowed({ payload, actor: { userId: user.id, activeCharacterId }, domainId: tenant.id, capability: 'create_document', resource: { type: 'DocumentType', id: formTypeId } })) return { ok: false, message: 'Not authorized.' }
 
   const schema = assertFormSchema(form.formSchema)
 

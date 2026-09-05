@@ -16,7 +16,7 @@ const resolveRelation = (value: unknown): { relationTo: string | null; value: un
 }
 
 const principalCollection = (type: string): string | null => ({ Character: 'characters', User: 'users', Role: 'roles', DomainMembership: 'domain-memberships' })[type] ?? null
-const resourceCollection = (type: string): string | null => ({ Domain: 'domains', Subdomain: 'subdomains', Folder: 'folders', Document: 'documents' })[type] ?? null
+const resourceCollection = (type: string): string | null => ({ Domain: 'domains', Subdomain: 'subdomains', Folder: 'folders', Document: 'documents', DocumentType: 'document-types' })[type] ?? null
 
 /** Length-delimited JSON gives every logical identity one unambiguous key. */
 export const permissionRuleKey = (parts: { domainId: number; principalType: string; principalRelation: string; principalId: number; resourceType: string; resourceRelation: string; resourceId: number; capability: string }) => JSON.stringify([
@@ -44,7 +44,7 @@ export const PermissionRules: CollectionConfig = {
     { name: 'principalType', type: 'select', required: true, options: PRINCIPAL_TYPES.map((value) => ({ label: value === 'DomainMembership' ? 'Domain membership' : value, value })) },
     { name: 'principal', type: 'relationship', relationTo: ['characters', 'users', 'roles', 'domain-memberships'], required: true, index: true },
     { name: 'resourceType', type: 'select', required: true, options: RESOURCE_TYPES.map((value) => ({ label: value, value })) },
-    { name: 'resource', type: 'relationship', relationTo: ['domains', 'subdomains', 'folders', 'documents'], required: true, index: true },
+    { name: 'resource', type: 'relationship', relationTo: ['domains', 'subdomains', 'folders', 'documents', 'document-types'], required: true, index: true },
     { name: 'capability', type: 'select', required: true, options: CAPABILITIES.map((value) => ({ label: CAPABILITY_LABELS[value], value })) },
     { name: 'effect', type: 'select', required: true, options: [{ label: 'Grant', value: 'grant' }, { label: 'Deny', value: 'deny' }] },
     { name: 'active', type: 'checkbox', defaultValue: true },
@@ -78,7 +78,7 @@ export const PermissionRules: CollectionConfig = {
         throw new Error(`resourceType ${resourceType} requires a ${resourceCollectionName} relation, got ${resourceRelation.relationTo}.`)
       }
       if (!principalRelation.relationTo || !resourceRelation.relationTo) throw new Error('Permission rules require explicit polymorphic relation types.')
-      const scopedCollections = { roles: 'roles', 'domain-memberships': 'domain-memberships', folders: 'folders', documents: 'documents', subdomains: 'subdomains', domains: 'domains' } as const
+      const scopedCollections = { roles: 'roles', 'domain-memberships': 'domain-memberships', folders: 'folders', documents: 'documents', subdomains: 'subdomains', domains: 'domains', 'document-types': 'document-types' } as const
       for (const [label, relation] of [['principal', principalRelation], ['resource', resourceRelation]] as const) {
         const collectionName = relation.relationTo && scopedCollections[relation.relationTo as keyof typeof scopedCollections] ? scopedCollections[relation.relationTo as keyof typeof scopedCollections] : null
         if (!collectionName) continue

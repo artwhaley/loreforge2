@@ -35,14 +35,15 @@ export default async function NewDocumentPage({ params, searchParams }: Props) {
     const typeId = Number(typeof template.documentType === 'object' ? template.documentType.id : template.documentType)
     const normalDestinationId = Number(typeof template.destinationFolder === 'object' ? template.destinationFolder.id : template.destinationFolder)
     if (!typeIds.has(typeId) || !normalDestinationId) return null
+    // P07X-T03: create_document gates on the Template's Document Type (the
+    // single authorization unit for the create act). Destination availability
+    // stays a Template-UI concern via resolveTemplateDestinations.
+    const createAllowed = await isAllowed({ payload, actor, domainId: tenant.id, capability: 'create_document', resource: { type: 'DocumentType', id: typeId } })
+    if (!createAllowed) return null
     const available = await resolveTemplateDestinations(payload, template)
-    const allowed = (await Promise.all(available.map(async (folder) => {
-      const allowedDecision = await isAllowed({ payload, actor, domainId: tenant.id, capability: 'create_document', resource: { type: 'Folder', id: folder.id } })
-      return allowedDecision ? folder : null
-    }))).filter((folder): folder is NonNullable<typeof folder> => folder !== null)
-    const normal = allowed.find((folder) => Number(folder.id) === normalDestinationId)
+    const normal = available.find((folder) => Number(folder.id) === normalDestinationId)
     if (!normal) return null
-    const destinationIds = template.allowDestinationOverride ? allowed.map((folder) => Number(folder.id)) : [normalDestinationId]
+    const destinationIds = template.allowDestinationOverride ? available.map((folder) => Number(folder.id)) : [normalDestinationId]
     return {
       id: Number(template.id),
       name: template.name,

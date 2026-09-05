@@ -34,10 +34,14 @@ export default async function TenantHomePage({ params }: Props) {
   // per document.
   const session = await loadCachedAuthorizationSession(payload, Number(user.id), activeCharacter?.id ?? null, tenant.id)
   const scope = await compileReadScope(payload, session)
+  // P07X-T03: two-axis visibility — the Document's Type must carry a grant
+  // and its Folder must not be narrowed by an effective deny (plus direct
+  // Document exceptions). Folder-read grants alone no longer expose records.
   const docs = candidates.filter((doc) => {
     const id = Number(doc.id)
     const folderId = doc.folder && typeof doc.folder === 'object' ? Number(doc.folder.id) : doc.folder != null ? Number(doc.folder) : null
-    return scope.authorityBypass || (folderId != null && scope.allowedFolderIds.has(folderId) && !scope.denyDocumentIds.has(id)) || scope.grantDocumentIds.has(id)
+    const typeId = doc.documentType && typeof doc.documentType === 'object' ? Number(doc.documentType.id) : doc.documentType != null ? Number(doc.documentType) : null
+    return scope.authorityBypass || (typeId != null && scope.readableTypeIds.has(typeId) && folderId != null && !scope.denyFolderIds.has(folderId) && !scope.denyDocumentIds.has(id)) || scope.grantDocumentIds.has(id)
   })
   const homePage = await getPageForTenant(tenant, 'home')
   const tokens = resolveThemeTokens(tenant)

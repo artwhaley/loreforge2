@@ -67,7 +67,11 @@ export async function GET(request: Request) {
     folderIds = descendants
   }
 
-  const allowedFolderIds = [...scope.allowedFolderIds]
+  // P07X-T03: the record predicate is the two-axis scope — readable Types as
+  // the grant source, denied-Folder ancestry as the narrowing, plus direct
+  // Document exceptions. Folder grants alone no longer expose Documents.
+  const readableTypeIds = [...scope.readableTypeIds]
+  const denyFolderIds = [...scope.denyFolderIds]
   const grantIds = [...scope.grantDocumentIds]
   const denyIds = [...scope.denyDocumentIds]
   const textMatch = query ? { or: [{ title: { like: query } }, { body: { like: query } }] } : undefined
@@ -81,9 +85,10 @@ export async function GET(request: Request) {
       ...(typeMatch ? [typeMatch] : []),
       ...(textMatch ? [textMatch] : []),
       ...(scope.authorityBypass ? [] : [
+        { id: { not_in: denyIds.length > 0 ? denyIds : [-1] } },
         {
           or: [
-            { and: [{ folder: { in: allowedFolderIds.length > 0 ? allowedFolderIds : [-1] } }, { id: { not_in: denyIds.length > 0 ? denyIds : [-1] } }] },
+            { and: [{ documentType: { in: readableTypeIds.length > 0 ? readableTypeIds : [-1] } }, { folder: { not_in: denyFolderIds.length > 0 ? denyFolderIds : [-1] } }] },
             { id: { in: grantIds.length > 0 ? grantIds : [-1] } },
           ],
         },
@@ -128,10 +133,13 @@ export async function GET(request: Request) {
         { domain: { equals: domain.id } },
         { id: { in: batch } },
         { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] },
-        ...(scope.authorityBypass ? [] : [{ or: [
-          { and: [{ folder: { in: allowedFolderIds.length ? allowedFolderIds : [-1] } }, { id: { not_in: denyIds.length ? denyIds : [-1] } }] },
-          { id: { in: grantIds.length ? grantIds : [-1] } },
-        ] }]),
+        ...(scope.authorityBypass ? [] : [
+          { id: { not_in: denyIds.length ? denyIds : [-1] } },
+          { or: [
+            { and: [{ documentType: { in: readableTypeIds.length ? readableTypeIds : [-1] } }, { folder: { not_in: denyFolderIds.length ? denyFolderIds : [-1] } }] },
+            { id: { in: grantIds.length ? grantIds : [-1] } },
+          ] },
+        ]),
       ] }, select: documentSelect, depth: 0, limit: 0, pagination: false, overrideAccess: true })
       for (const linked of linkedResult.docs) {
         const id = Number(linked.id)

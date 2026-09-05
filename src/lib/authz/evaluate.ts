@@ -50,7 +50,7 @@ export async function evaluatePermission(args: { payload: Payload; actor: Permis
     if (!document) return { allowed: false, reason: 'Resource not found.', trace: ['Resource lookup failed.'] }
     if (idOf(document.domain) !== session.domainId) return { allowed: false, reason: 'Resource belongs to another Domain.', trace: ['Cross-Domain resource rejected.'] }
     if (document.softDeletedAt) return { allowed: false, reason: 'Document is soft-deleted.', trace: ['Soft-deleted resource rejected.'] }
-    const target = resolveDocumentTarget(session, { id: Number(id), folderId: idOf(document.folder), subdomainId: idOf(document.subdomain) })
+    const target = resolveDocumentTarget(session, { id: Number(id), folderId: idOf(document.folder), subdomainId: idOf(document.subdomain), documentTypeId: idOf(document.documentType) })
     return decideInSession(session, capability, target)
   }
   if (type === 'Folder') {
@@ -58,7 +58,7 @@ export async function evaluatePermission(args: { payload: Payload; actor: Permis
       const row = await args.payload.findByID({ collection: 'folders', id, depth: 0, overrideAccess: true, ...(args.transactionID == null ? {} : { req: { transactionID: args.transactionID } }) }).catch(() => null) as unknown as Record<string, unknown> | null
       if (!row) return null
       if (idOf(row.domain) !== session.domainId) return 'cross-domain' as const
-      return { id: Number(id), parentId: idOf(row.parent), subdomainId: idOf(row.subdomain) }
+      return { id: Number(id), parentId: idOf(row.parent), subdomainId: idOf(row.subdomain), name: String((row as { name?: unknown }).name ?? '') }
     })()
     if (folder === null) return { allowed: false, reason: 'Resource not found.', trace: ['Resource lookup failed.'] }
     if (folder === 'cross-domain') return { allowed: false, reason: 'Resource belongs to another Domain.', trace: ['Cross-Domain resource rejected.'] }
@@ -73,6 +73,16 @@ export async function evaluatePermission(args: { payload: Payload; actor: Permis
       if (idOf(row.domain) !== session.domainId) return { allowed: false, reason: 'Resource belongs to another Domain.', trace: ['Cross-Domain resource rejected.'] }
     }
     return decideInSession(session, capability, { type: 'Subdomain', id: Number(id) })
+  }
+  if (type === 'DocumentType') {
+    // P07X-T03: create_document (and other record capabilities) evaluate
+    // against the chosen Document Type before a Document exists. The Type
+    // must belong to the evaluated Domain — a Type from Domain A can never
+    // authorize a record in Domain B.
+    const type = await args.payload.findByID({ collection: 'document-types', id, depth: 0, overrideAccess: true, ...(args.transactionID == null ? {} : { req: { transactionID: args.transactionID } }) }).catch(() => null) as unknown as Record<string, unknown> | null
+    if (!type) return { allowed: false, reason: 'Resource not found.', trace: ['Resource lookup failed.'] }
+    if (idOf(type.domain) !== session.domainId) return { allowed: false, reason: 'Resource belongs to another Domain.', trace: ['Cross-Domain resource rejected.'] }
+    return decideInSession(session, capability, { type: 'DocumentType', id: Number(id) })
   }
   return decideInSession(session, capability, { type: 'Domain', id: session.domainId })
 }

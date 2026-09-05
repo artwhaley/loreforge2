@@ -82,7 +82,7 @@ const { compileReadScope } = await import('../lib/authz/readScope')
 const scopeStart = performance.now()
 const scope = await compileReadScope(payload, session)
 const scopeMs = performance.now() - scopeStart
-console.log(`compiled read scope: 1 bulk document metadata statement + pure evaluation, ${scopeMs.toFixed(1)} ms wall, allowedFolders=${scope.allowedFolderIds.size}`)
+console.log(`compiled read scope: 1 bulk document metadata statement + pure evaluation, ${scopeMs.toFixed(1)} ms wall, readableTypes=${scope.readableTypeIds.size} denyFolders=${scope.denyFolderIds.size} visibleFolders=${scope.visibleFolderIds.size}`)
 
 const { readableVersionParentQuery } = await import('../lib/authorization/documentAccess')
 const versionsStart = performance.now()

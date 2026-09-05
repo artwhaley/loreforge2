@@ -6,7 +6,7 @@ const idOf = (value: unknown): number | null => {
   return Number(value)
 }
 
-export type RoleNode = { id: number; domainId: number; departmentId: number; parentId: number | null; active: boolean }
+export type RoleNode = { id: number; domainId: number; departmentId: number; parentId: number | null; active: boolean; name?: string }
 
 export function isRoleDescendant(roleId: number, ancestorId: number, roles: RoleNode[]): boolean {
   const byId = new Map(roles.map((role) => [role.id, role]))

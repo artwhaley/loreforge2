@@ -21,8 +21,8 @@ export async function upsertPermissionRule(args: {
   domainId: number | string
   principalType: 'Character' | 'User' | 'Role' | 'DomainMembership'
   principal: { relationTo: 'characters' | 'users' | 'roles' | 'domain-memberships'; value: number | string }
-  resourceType: 'Domain' | 'Subdomain' | 'Folder' | 'Document'
-  resource: { relationTo: 'domains' | 'subdomains' | 'folders' | 'documents'; value: number | string }
+  resourceType: 'Domain' | 'Subdomain' | 'Folder' | 'Document' | 'DocumentType'
+  resource: { relationTo: 'domains' | 'subdomains' | 'folders' | 'documents' | 'document-types'; value: number | string }
   capability: string
   effect: 'grant' | 'deny'
   active?: boolean
