@@ -7,6 +7,7 @@ import config from '@/payload.config'
 import { evaluatePermission, isAllowed } from './evaluate'
 import { authorizePlatformOperation } from './platform'
 import { ensureDomainAdminIdentity, ensurePlatformAdminIdentity } from '@/lib/characters/provisioning'
+import { findDashboardIdentities } from '@/lib/characters/identitySelect'
 
 if (!/^file:.*p07x-t02-/.test(process.env.DATABASE_URI ?? '')) throw new Error('Use a fresh p07x-t02-*.db; never the working DB.')
 
@@ -66,6 +67,12 @@ const lucanRow = await payload.create({ collection: 'characters', overrideAccess
 await payload.create({ collection: 'domain-memberships', overrideAccess: true, data: { domain: arId, character: Number(lucanRow.id), status: 'active', addedBy: adminUserId } })
 // A player Character of the other User (forged-target test).
 const outsiderRow = await payload.create({ collection: 'characters', overrideAccess: true, data: { name: 'T02 Outsider', kind: 'player', controlledBy: otherOwnerId, status: 'active' } })
+
+test('GATE-A-1 same User can select Platform Admin, matching Domain Admin, and ordinary Character', async () => {
+  const identities = await findDashboardIdentities(payload, adminUserId)
+  const kinds = [...new Set(identities.map((identity) => String(identity.kind)))].sort()
+  assert.deepEqual(kinds, ['domain_admin', 'platform_admin', 'player'], 'the selector offers every acting identity of this User')
+})
 
 const actor = (characterId: number | null) => ({ userId: adminUserId, activeCharacterId: characterId })
 const resource = (domainId: number, id: number) => ({ type: 'Folder' as const, id })
