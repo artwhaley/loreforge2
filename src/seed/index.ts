@@ -302,6 +302,11 @@ for (const user of TEST_USERS) {
       await payload.update({
         collection: 'users',
         id: existing.docs[0].id,
+        // Seeding is an operator-owned reconciliation path. Existing fixture
+        // users may predate the platform-admin field, so use the same explicit
+        // override as the integrated P07X fixture helper to restore the
+        // reserved admin@example.test identity.
+        overrideAccess: true,
         data: { slVerificationState: 'unlinked', ...(user.isPlatformAdmin ? { isPlatformAdmin: true } : {}) },
       })
       payload.logger.info(`Initialized Second Life placeholder for ${user.email}`)
