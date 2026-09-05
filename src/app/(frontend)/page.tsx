@@ -61,7 +61,7 @@ export default async function HomePage({ searchParams }: Props) {
       <div className={styles.dashboardHeader}>
         <div><p className={styles.eyebrow}>Your Loreforge</p><h1 className={styles.sectionTitle}>Welcome back, {context.user.name ?? context.user.email}</h1><p className={styles.dashboardGreeting}>{activeCharacter ? `Acting as ${characterDisplayLabel(activeCharacter)}.` : 'Choose a Character to unlock your Domains.'}</p></div>
         <div className={styles.dashboardControls}>
-          <div className={styles.actions}><Link href="/account" className={styles.secondary}>Account</Link><form action="/api/logout" method="post"><button type="submit" className={styles.textButton}>Log out</button></form></div>
+          <div className={styles.actions}><Link href="/work" className={styles.secondary}>Work</Link><Link href="/account" className={styles.secondary}>Account</Link><form action="/api/logout" method="post"><button type="submit" className={styles.textButton}>Log out</button></form></div>
         </div>
       </div>
       <nav className={styles.subnav} aria-label="Account navigation"><Link href="/">Dashboard</Link><Link href="/account">Account</Link><Link href="/account/characters">Characters</Link></nav>
