@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 
 import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
+import { initialRouteFolder } from '@/lib/documents/creation'
 import { composeTemplate, renderTemplateTokens } from '@/lib/templates/compose'
 import { displayAnswersForRender, type DisplayAnswers } from './layout'
 import { runInTransaction } from '@/lib/documents/relationships'
@@ -157,27 +158,36 @@ export async function generateDocumentFromSubmission(args: {
   const title = rendered.title
   const body = rendered.body
 
-  // Confirm the destination folder belongs to this tenant before filing.
-  let folder: number | null = null
-  const configuredFolder = neutral ? form.destinationFolder : form.folder
-  if (configuredFolder) {
-    const found = await payload.find({
-      collection: 'folders',
-      where: { and: [{ or: [{ domain: { equals: tenant.id } }, { tenant: { equals: tenant.id } }] }, { id: { equals: configuredFolder } }] },
-      depth: 0,
-      limit: 1,
-    })
-    if (found.docs[0]) folder = Number(configuredFolder)
+  const documentType = neutral && form.documentType
+    ? Number(form.documentType)
+    : (await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: tenant.id } }, { name: { equals: 'Plain Text' } }, { active: { equals: true } }] }, depth: 0, limit: 1 })).docs[0]?.id
+  if (!documentType) throw new Error('The Domain has no active Plain Text Document Type.')
+  const typeRecord = await payload.findByID({ collection: 'document-types', id: documentType, depth: 0, overrideAccess: true }).catch(() => null) as unknown as { domain?: unknown; active?: unknown; allowForm?: unknown; defaultFolder?: unknown; draftFolder?: unknown; pendingReviewFolder?: unknown; filedFolder?: unknown; lockedFolder?: unknown } | null
+  if (!typeRecord || typeRecord.active === false) throw new Error('The selected Document Type is not active.')
+  if (neutral && typeRecord.allowForm !== true) throw new Error('The selected Document Type does not allow Form creation.')
+  const typeDomain = typeof typeRecord.domain === 'object' && typeRecord.domain !== null && 'id' in typeRecord.domain ? Number((typeRecord.domain as { id: number | string }).id) : Number(typeRecord.domain)
+  if (!Number.isFinite(typeDomain) || typeDomain !== Number(tenant.id)) throw new Error('The selected Document Type must belong to this Domain.')
+  const lifecyclePolicy = neutral ? (form as NeutralTemplateMetadata).lifecyclePolicy : undefined
+  const lifecycle = lifecyclePolicy === 'review-required' ? 'pending_review' : 'filed'
+  // Neutral Form creation is Type-first: legacy Template destinationFolder is
+  // deliberately ignored, and the Type owns the initial lifecycle route.
+  let folder: number | null = neutral ? initialRouteFolder(typeRecord, lifecycle, null) : null
+  if (!neutral) {
+    const configuredFolder = form.folder
+    if (configuredFolder) {
+      const found = await payload.find({
+        collection: 'folders',
+        where: { and: [{ or: [{ domain: { equals: tenant.id } }, { tenant: { equals: tenant.id } }] }, { id: { equals: configuredFolder } }] },
+        depth: 0,
+        limit: 1,
+      })
+      if (found.docs[0]) folder = Number(configuredFolder)
+    }
   }
   if (folder === null) {
     const roots = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: tenant.id } }, { systemManaged: { equals: true } }, { parent: { equals: null } }] }, depth: 0, limit: 1 })
     folder = roots.docs[0]?.id ?? null
   }
-
-  const documentType = neutral && form.documentType
-    ? Number(form.documentType)
-    : (await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: tenant.id } }, { name: { equals: 'Plain Text' } }, { active: { equals: true } }] }, depth: 0, limit: 1 })).docs[0]?.id
-  if (!documentType) throw new Error('The Domain has no active Plain Text Document Type.')
   if (!neutral) {
     // The legacy `tenant` column belongs to the retired tenants collection and
     // is only ever written when a real legacy tenant id exists (see archive.ts).
@@ -186,7 +196,6 @@ export async function generateDocumentFromSubmission(args: {
     const created = await payload.create({ collection: 'documents', context: actorCharacterId == null ? { allowUserCreate: true, actorUserId: user.id } : { preparedByCharacterId: actorCharacterId, actorUserId: user.id }, data: { domain: tenant.id, folder, title, body, origin: 'form', sourceKind: 'form', documentType, lifecycle: 'draft', publicAccess: 'inherit', createdBy: user.id }, depth: 0 })
     return { id: Number(created.id), title, body }
   }
-  const lifecycle = form.lifecyclePolicy === 'review-required' ? 'pending_review' : 'filed'
   const created = await runInTransaction(payload, async (transactionID) => {
     const req = { transactionID }
     // `domain` scopes the record; the legacy tenants collection has no row for

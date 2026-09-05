@@ -88,11 +88,13 @@ for (const domain of domains.docs) {
     payload.logger.info(`P06 migration created missing Domain root Folder ${root.id} for Domain ${domain.id}.`)
   }
   let type = (await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: domain.id } }, { name: { equals: 'Plain Text' } }] }, depth: 0, limit: 1, overrideAccess: true })).docs[0]
-  if (!type) type = await payload.create({ collection: 'document-types', overrideAccess: true, data: { domain: domain.id, name: 'Plain Text', active: true, defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit' } })
+  if (!type) type = await payload.create({ collection: 'document-types', overrideAccess: true, data: { domain: domain.id, name: 'Plain Text', active: true, allowBlank: true, allowTemplate: true, allowForm: false, defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit' } })
+  if (type.allowBlank === undefined || type.allowBlank === null || type.allowTemplate === undefined || type.allowTemplate === null) await payload.update({ collection: 'document-types', id: type.id, overrideAccess: true, data: { allowBlank: type.allowBlank ?? true, allowTemplate: type.allowTemplate ?? true } })
   const existing = (await payload.find({ collection: 'templates', where: { and: [{ domain: { equals: domain.id } }, { name: { equals: 'Plain Text' } }, { kind: { equals: 'document' } }] }, depth: 0, limit: 1, overrideAccess: true })).docs[0]
   const data = { domain: domain.id, documentType: type.id, name: 'Plain Text', kind: 'document' as const, scopeFolder: root.id, destinationFolder: root.id, allowDestinationOverride: true, availableToDescendants: true, baseTemplate: null, titleTemplate: 'Plain Text', bodyTemplate: '{{content}}', lifecyclePolicy: 'inherit' as const, active: true, version: Number(existing?.version ?? 1) }
   if (existing) await payload.update({ collection: 'templates', id: existing.id, overrideAccess: true, data })
   else await payload.create({ collection: 'templates', overrideAccess: true, data })
+  if (type.allowTemplate !== true) await payload.update({ collection: 'document-types', id: type.id, overrideAccess: true, data: { allowTemplate: true } })
 }
 
 for (const form of forms.docs) {
@@ -116,7 +118,7 @@ for (const form of forms.docs) {
   }
   const name = String((form as { title?: unknown }).title ?? `Imported Form ${form.id}`).trim()
   let type = (await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: domain.id } }, { name: { equals: name } }] }, depth: 0, limit: 1, overrideAccess: true })).docs[0]
-  if (!type) type = await payload.create({ collection: 'document-types', overrideAccess: true, data: { domain: domain.id, name, active: true, defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit' } })
+  if (!type) type = await payload.create({ collection: 'document-types', overrideAccess: true, data: { domain: domain.id, name, active: true, allowBlank: true, allowTemplate: false, allowForm: true, defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit' } })
   const adapted = adaptPayloadForm(form as unknown as { fields?: unknown })
   for (const warning of adapted.warnings) payload.logger.warn(`P06 migration Form ${form.id}: ${warning}`)
   const archive = (form as { archive?: { titleTemplate?: string; markdownTemplate?: string } }).archive
@@ -139,6 +141,7 @@ for (const form of forms.docs) {
   }
   if (existing) await payload.update({ collection: 'templates', id: existing.id, overrideAccess: true, data })
   else await payload.create({ collection: 'templates', overrideAccess: true, data })
+  if (type.allowForm !== true) await payload.update({ collection: 'document-types', id: type.id, overrideAccess: true, data: { allowForm: true } })
   imported += 1
 }
 

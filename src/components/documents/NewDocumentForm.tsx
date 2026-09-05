@@ -6,22 +6,23 @@ import { createDocumentFromEditorAction, type DocumentEditorActionState } from '
 import { ConcernCharacterChips } from '@/components/characters/ConcernCharacterChips'
 import { FieldControl, type FieldValue } from '@/components/forms/FieldControl'
 import type { LoreForgeFormField, LoreForgeFormSchema } from '@/lib/forms/schema'
+import type { CreationMethod } from '@/lib/documents/creation'
 
 type Option = { id: number; name: string; systemManaged?: boolean }
+type TypeOption = Option & { allowBlank?: boolean; allowTemplate?: boolean; allowForm?: boolean; methods: CreationMethod[] }
 type Character = { id: number; name: string }
-type TemplateOption = { id: number; name: string; kind: 'document' | 'form'; documentTypeId: number; destinationFolderId: number; allowDestinationOverride: boolean; destinations?: Array<Option & { depth?: number }>; formSchema?: LoreForgeFormSchema | null }
+type TemplateOption = { id: number; name: string; kind: 'document' | 'form'; creationMethod: Exclude<CreationMethod, 'blank'>; documentTypeId: number; formSchema?: LoreForgeFormSchema | null }
 
 type Props = {
   tenantSlug: string
-  types: Option[]
-  folders: Array<Option & { depth: number }>
+  types: TypeOption[]
   templates?: TemplateOption[]
   activeCharacter: Character | null
   initialState?: DocumentEditorActionState
   supersedesDocumentId?: number
 }
 
-const emptyState: DocumentEditorActionState = { values: { title: '', body: '', documentTypeId: '', folderId: '', concernLinks: '', tagNames: '', preparedByCharacterIds: '', templateId: '', formAnswers: '' } }
+const emptyState: DocumentEditorActionState = { values: { title: '', body: '', documentTypeId: '', folderId: '', concernLinks: '', tagNames: '', preparedByCharacterIds: '', templateId: '', formAnswers: '', creationMethod: '' } }
 
 /** Parse the hidden JSON answer snapshot without throwing. */
 function parseAnswers(raw: string): Record<string, FieldValue> {
@@ -50,25 +51,25 @@ function mergeDefaults(raw: string, schema: LoreForgeFormSchema | null | undefin
   return JSON.stringify(parsed)
 }
 
-export function NewDocumentForm({ tenantSlug, types, folders, templates = [], activeCharacter, initialState = emptyState, supersedesDocumentId }: Props) {
+export function NewDocumentForm({ tenantSlug, types, templates = [], activeCharacter, initialState = emptyState, supersedesDocumentId }: Props) {
   const [state, formAction, pending] = useActionState(createDocumentFromEditorAction, initialState)
   const values = state.values ?? emptyState.values!
-  const defaultType = types.find((item) => item.name.toLocaleLowerCase() === 'plain text')?.id ?? ''
-  const defaultTemplate = templates.find((item) => item.name.toLocaleLowerCase() === 'plain text' && item.kind === 'document') ?? templates[0]
-  const [selectedTemplateId, setSelectedTemplateId] = useState(String(values.templateId || defaultTemplate?.id || ''))
-  const [templateQuery, setTemplateQuery] = useState(() => {
-    const initial = templates.find((item) => String(item.id) === String(values.templateId || defaultTemplate?.id || ''))
-    return initial?.name ?? ''
-  })
+  const defaultType = types.find((item) => String(item.id) === String(values.documentTypeId)) ?? types[0]
+  const submittedMethod = values.creationMethod as CreationMethod
+  const initialMethod = defaultType?.methods.includes(submittedMethod) ? submittedMethod : defaultType?.methods[0] || 'blank'
+  const [selectedTypeId, setSelectedTypeId] = useState(String(defaultType?.id ?? ''))
+  const [selectedMethod, setSelectedMethod] = useState<CreationMethod>(initialMethod)
+  const [selectedTemplateId, setSelectedTemplateId] = useState(String(values.templateId || ''))
   const [formAnswers, setFormAnswers] = useState(() => {
-    const initialTemplate = templates.find((item) => String(item.id) === String(values.templateId || defaultTemplate?.id || ''))
+    const initialTemplate = templates.find((item) => String(item.id) === String(values.templateId || ''))
     return mergeDefaults(values.formAnswers ?? '', initialTemplate?.kind === 'form' ? initialTemplate.formSchema : null)
   })
   const [title, setTitle] = useState(values.title)
   const [body, setBody] = useState(values.body)
   const [tagNames, setTagNames] = useState(values.tagNames)
-  const [folderId, setFolderId] = useState(values.folderId || '')
-  const selectedTemplate = templates.find((item) => String(item.id) === selectedTemplateId)
+  const selectedType = types.find((item) => String(item.id) === selectedTypeId) ?? null
+  const availableTemplates = templates.filter((item) => item.documentTypeId === Number(selectedTypeId) && item.creationMethod === selectedMethod)
+  const selectedTemplate = availableTemplates.find((item) => String(item.id) === selectedTemplateId) ?? null
   const answerValues = useMemo(() => {
     try { return JSON.parse(formAnswers || '{}') as Record<string, FieldValue | null | undefined> } catch { return {} }
   }, [formAnswers])
@@ -77,38 +78,49 @@ export function NewDocumentForm({ tenantSlug, types, folders, templates = [], ac
   // controlled fields from it so the user never has to retype a document. The
   // guarded render keeps this synchronization local without an effect-driven
   // cascading render.
-  const stateSignature = JSON.stringify([values.title, values.body, values.tagNames, values.preparedByCharacterIds, values.folderId, values.formAnswers, values.templateId])
+  const stateSignature = JSON.stringify([values.title, values.body, values.tagNames, values.preparedByCharacterIds, values.formAnswers, values.templateId, values.documentTypeId, values.creationMethod])
   const [lastStateSignature, setLastStateSignature] = useState<string | null>(null)
   if (lastStateSignature !== stateSignature) {
     setLastStateSignature(stateSignature)
     setTitle(values.title)
     setBody(values.body)
     setTagNames(values.tagNames)
-    setFolderId(values.folderId || '')
     setFormAnswers(values.formAnswers ?? '')
-    if (values.templateId) {
-      setSelectedTemplateId(values.templateId)
-      const submittedTemplate = templates.find((item) => String(item.id) === values.templateId)
-      if (submittedTemplate) setTemplateQuery(submittedTemplate.name)
-    }
+    if (values.documentTypeId) setSelectedTypeId(values.documentTypeId)
+    if (values.creationMethod && (!selectedTypeId || types.find((type) => String(type.id) === String(values.documentTypeId))?.methods.includes(values.creationMethod as CreationMethod))) setSelectedMethod(values.creationMethod as CreationMethod)
+    setSelectedTemplateId(values.templateId ?? '')
   }
 
   const hasEnteredContent = Boolean(title.trim() || body.trim() || tagNames.trim() || Object.values(answerValues).some((value) => value !== '' && value !== null && value !== undefined))
-  const filteredTemplates = useMemo(() => {
-    const query = templateQuery.trim().toLocaleLowerCase()
-    if (!query) return []
-    return templates.filter((item) => `${item.name} ${types.find((type) => type.id === item.documentTypeId)?.name ?? ''}`.toLocaleLowerCase().includes(query))
-  }, [templateQuery, templates, types])
 
-  const chooseTemplate = (template: TemplateOption) => {
-    if (String(template.id) === selectedTemplateId) return
+  const chooseType = (typeId: string) => {
+    if (typeId === selectedTypeId) return
+    if (hasEnteredContent && !window.confirm('Change Document Type? Your entered fields will be kept, but the new Type may offer different creation methods.')) return
+    const nextType = types.find((type) => String(type.id) === typeId)
+    setSelectedTypeId(typeId)
+    setSelectedMethod(nextType?.methods[0] ?? 'blank')
+    setSelectedTemplateId('')
+    setFormAnswers('{}')
+  }
+
+  const chooseMethod = (method: CreationMethod) => {
+    if (method === selectedMethod) return
+    if (hasEnteredContent && !window.confirm('Change creation method? Your entered fields will be kept, but the new method may render them differently.')) return
+    setSelectedMethod(method)
+    setSelectedTemplateId('')
+    setFormAnswers('{}')
+  }
+
+  const chooseTemplate = (templateId: string) => {
+    if (templateId === selectedTemplateId) return
     if (hasEnteredContent && !window.confirm('Change Template? Your entered fields will be kept, but the new Template may render them differently.')) return
-    setSelectedTemplateId(String(template.id))
-    setTemplateQuery(template.name)
-    setFolderId(String(template.destinationFolderId || ''))
-    if (template.kind === 'form' && template.formSchema) {
+    const template = availableTemplates.find((item) => String(item.id) === templateId)
+    setSelectedTemplateId(templateId)
+    if (template?.kind === 'form' && template.formSchema) {
       // New questions start from their authored default; kept answers survive.
       setFormAnswers((current) => mergeDefaults(current, template.formSchema))
+    } else {
+      setFormAnswers('{}')
     }
   }
 
@@ -117,6 +129,7 @@ export function NewDocumentForm({ tenantSlug, types, folders, templates = [], ac
     current[key] = value
     setFormAnswers(JSON.stringify(current))
   }
+  const methodLabel = (method: CreationMethod) => method === 'blank' ? 'Blank document' : method === 'template' ? 'Document Template' : 'Form'
   const message = state.error === 'missing'
     ? 'A title is required.'
     : state.error === 'type'
@@ -133,8 +146,10 @@ export function NewDocumentForm({ tenantSlug, types, folders, templates = [], ac
               ? 'That record cannot be superseded in its current lifecycle state; only Filed or Locked records can gain a successor.'
               : state.error === 'form-validation'
                 ? 'Check the required form fields and template output. Your entries are still here.'
-                : state.error === 'template-destination'
-                  ? 'That Template is not available at the selected destination.'
+        : state.error === 'template-type' || state.error === 'template-kind' || state.error === 'method'
+                  ? 'Choose a creation method and a Template attached to the selected Document Type.'
+                  : state.error === 'template-destination'
+                  ? 'That Template is not available for the selected Document Type.'
                   : state.error === 'unable-to-create'
                     ? 'The record could not be created. Your entries are preserved so you can correct and retry.'
               : null
@@ -142,18 +157,20 @@ export function NewDocumentForm({ tenantSlug, types, folders, templates = [], ac
   return <form action={formAction} style={{ display: 'grid', gap: '1rem', padding: '1.25rem', border: '1px solid var(--tenant-accent)', background: 'var(--tenant-surface-bg)' }}>
     <input type="hidden" name="tenantSlug" value={tenantSlug} />
     {supersedesDocumentId ? <input type="hidden" name="supersedesDocumentId" value={supersedesDocumentId} /> : null}
+    <input type="hidden" name="creationMethod" value={selectedMethod} />
     <input type="hidden" name="templateId" value={selectedTemplate?.id ?? ''} />
     <input type="hidden" name="formAnswers" value={formAnswers} />
     {message ? <p role="alert" style={{ color: '#8f2d21' }}>{message}</p> : null}
-    <label style={{ display: 'grid', gap: '.35rem' }}><strong>Template</strong><input name="templateSearch" role="combobox" aria-controls="template-results" aria-autocomplete="list" aria-expanded={filteredTemplates.length > 0 && templateQuery.trim().toLocaleLowerCase() !== selectedTemplate?.name.toLocaleLowerCase()} value={templateQuery} onChange={(event) => { const next = event.target.value; setTemplateQuery(next); const match = templates.find((item) => item.name.toLocaleLowerCase() === next.trim().toLocaleLowerCase()); if (match) chooseTemplate(match); else setSelectedTemplateId('') }} placeholder="Search Templates or Types…" autoComplete="off" />{filteredTemplates.length > 0 && templateQuery.trim().toLocaleLowerCase() !== selectedTemplate?.name.toLocaleLowerCase() ? <div id="template-results" role="listbox" style={{ display: 'grid', gap: '.2rem', padding: '.35rem', border: '1px solid var(--tenant-accent)', maxHeight: '14rem', overflowY: 'auto' }}>{filteredTemplates.map((item) => <button key={item.id} type="button" role="option" aria-selected={String(item.id) === selectedTemplateId} onClick={() => chooseTemplate(item)} style={{ textAlign: 'left' }}>{types.find((type) => type.id === item.documentTypeId)?.name ?? 'Document'} · {item.name} · {item.kind === 'form' ? 'Form' : 'Document'}</button>)}</div> : null}<small>{selectedTemplate ? `${selectedTemplate.kind === 'form' ? 'Form' : 'Document'} template · ${types.find((type) => type.id === selectedTemplate.documentTypeId)?.name ?? 'Document Type'}` : 'Choose a Template to continue. Templates are filtered to authorized choices.'}</small></label>
-    <input type="hidden" name="documentTypeId" value={selectedTemplate?.documentTypeId ?? defaultType} />
-    <label style={{ display: 'grid', gap: '.35rem' }}><strong>Title</strong><input name="title" required autoFocus value={title} onChange={(event) => setTitle(event.target.value)} /></label>
-    <label style={{ display: 'grid', gap: '.35rem' }}><strong>Destination folder</strong>{selectedTemplate && !selectedTemplate.allowDestinationOverride ? <><input type="hidden" name="folderId" value={String(selectedTemplate.destinationFolderId)} /><select aria-label="Destination folder" value={String(selectedTemplate.destinationFolderId)} disabled><option value={String(selectedTemplate.destinationFolderId)}>{folders.find((item) => item.id === selectedTemplate.destinationFolderId)?.name ?? 'Declared destination'}</option></select><small>This Template files to its declared destination.</small></> : <select name="folderId" value={folderId || String(selectedTemplate?.destinationFolderId ?? '')} onChange={(event) => setFolderId(event.target.value)}><option value="">Domain Root</option>{(selectedTemplate?.destinations ?? folders).filter((item) => !item.systemManaged || item.id === selectedTemplate?.destinationFolderId).map((item) => <option key={item.id} value={item.id}>{'— '.repeat(item.depth ?? 0)}{item.name}</option>)}</select>}</label>
+    <label style={{ display: 'grid', gap: '.35rem' }}><strong>Document Type</strong><select name="documentTypeId" required value={selectedTypeId} onChange={(event) => chooseType(event.target.value)}><option value="">Choose a Document Type</option>{types.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select><small>Only Types with an effective create permission are listed.</small></label>
+    {selectedType ? selectedType.methods.length > 1 ? <fieldset style={{ display: 'grid', gap: '.45rem' }}><legend><strong>How do you want to create it?</strong></legend>{selectedType.methods.map((method) => <label key={method} style={{ display: 'flex', gap: '.45rem', alignItems: 'center' }}><input type="radio" name="creationMethodChoice" value={method} checked={selectedMethod === method} onChange={() => chooseMethod(method)} />{methodLabel(method)}</label>)}</fieldset> : <p role="status"><strong>Creation method:</strong> {methodLabel(selectedType.methods[0])}</p> : null}
+    {selectedMethod !== 'blank' && selectedType ? <label style={{ display: 'grid', gap: '.35rem' }}><strong>{selectedMethod === 'form' ? 'Form' : 'Template'}</strong><select required value={selectedTemplateId} onChange={(event) => chooseTemplate(event.target.value)}><option value="">Choose a {selectedMethod === 'form' ? 'Form' : 'Template'}</option>{availableTemplates.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><small>{selectedTemplate ? `${selectedTemplate.name} · attached to ${selectedType.name}` : `Only active ${selectedMethod === 'form' ? 'Forms' : 'Templates'} attached to ${selectedType.name} are available.`}</small></label> : null}
+    <input type="hidden" name="folderId" value="" />
+    <label style={{ display: 'grid', gap: '.35rem' }}><strong>Title{selectedMethod === 'form' ? ' (generated by the Form when available)' : ''}</strong><input name="title" required={selectedMethod !== 'form'} autoFocus value={title} onChange={(event) => setTitle(event.target.value)} /></label>
     <PreparedByCreditsPicker domainSlug={tenantSlug} activeCharacter={activeCharacter} initialValue={values.preparedByCharacterIds} />
     <ConcernCharacterChips domainSlug={tenantSlug} initialValue={values.concernLinks} />
     <TagPicker domainSlug={tenantSlug} initialValue={values.tagNames} onValueChange={setTagNames} />
     <input type="hidden" name="tagNames" value={tagNames} readOnly />
-    {selectedTemplate?.kind === 'form' && selectedTemplate.formSchema ? <section aria-label="Form fields" style={{ display: 'grid', gap: '.8rem' }}><h2>Form</h2>{selectedTemplate.formSchema.fields.map((field) => <FieldControl key={field.key} field={field} domainSlug={tenantSlug} value={controlValue(field, answerValues[field.key])} onValueChange={(value) => updateAnswers(field.key, value)} />)}</section> : <label style={{ display: 'grid', gap: '.35rem' }}><strong>Document</strong><textarea name="body" rows={18} placeholder="Begin writing in Markdown…" required value={body} onChange={(event) => setBody(event.target.value)} /></label>}
+    {selectedTemplate?.kind === 'form' && selectedTemplate.formSchema ? <section aria-label="Form fields" style={{ display: 'grid', gap: '.8rem' }}><h2>Form</h2>{selectedTemplate.formSchema.fields.map((field) => <FieldControl key={field.key} field={field} domainSlug={tenantSlug} value={controlValue(field, answerValues[field.key])} onValueChange={(value) => updateAnswers(field.key, value)} />)}</section> : selectedMethod === 'template' && selectedTemplate ? <section aria-label="Document Template preview" style={{ display: 'grid', gap: '.4rem' }}><h2>Document Template</h2><p>This Template supplies the initial title and Markdown composition. The Folder will be resolved from the Document Type.</p><pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{selectedTemplate.name}</pre></section> : <label style={{ display: 'grid', gap: '.35rem' }}><strong>Document</strong><textarea name="body" rows={18} placeholder="Begin writing in Markdown…" required value={body} onChange={(event) => setBody(event.target.value)} /></label>}
     <div style={{ display: 'flex', gap: '.75rem' }}><button type="submit" disabled={pending}>{pending ? 'Creating…' : 'Create document'}</button><a href={`/domain/${tenantSlug}/records`}>Cancel</a></div>
   </form>
 }

@@ -387,7 +387,10 @@ for (const fixture of domainFixtures) {
 const documentTypesByDomain: Record<string, { id: number }> = {}
 for (const [slug, domain] of Object.entries(domainsBySlug)) {
   const existing = await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: domain.id } }, { name: { equals: 'Plain Text' } }] }, depth: 0, limit: 1 })
-  const type = existing.docs[0] ?? await payload.create({ collection: 'document-types', data: { domain: domain.id, name: 'Plain Text', description: 'A freeform Markdown record.', active: true, defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit' } })
+  const type = existing.docs[0] ?? await payload.create({ collection: 'document-types', data: { domain: domain.id, name: 'Plain Text', description: 'A freeform Markdown record.', active: true, allowBlank: true, allowTemplate: true, allowForm: false, defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit' } })
+  // Keep existing seeded rows compatible with the Type-first chooser while
+  // preserving any deliberately configured method flags.
+  if (type.allowBlank === undefined || type.allowBlank === null || type.allowTemplate === undefined || type.allowTemplate === null || type.allowForm === undefined || type.allowForm === null) await payload.update({ collection: 'document-types', id: type.id, data: { allowBlank: type.allowBlank ?? true, allowTemplate: type.allowTemplate ?? true, allowForm: type.allowForm ?? false } })
   documentTypesByDomain[slug] = { id: type.id }
 }
 

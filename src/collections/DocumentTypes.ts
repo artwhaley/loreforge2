@@ -18,6 +18,17 @@ export const DocumentTypes: CollectionConfig = {
         const duplicate = existing.docs.find((item) => Number(item.id) !== Number(originalDoc?.id) && Boolean(item.active) && item.name.trim().toLocaleLowerCase() === name.toLocaleLowerCase())
         if (duplicate) throw new Error('An active Document Type with this name already exists in the Domain.')
       }
+      // P07X-T06: an active Type must expose at least one creation method. The
+      // blank method defaults on for legacy rows; Template/Form methods are
+      // enabled explicitly and become effective only when an active child
+      // Template of that kind exists (the customer chooser applies that
+      // second, child-availability check).
+      const allowBlank = data?.allowBlank ?? originalDoc?.allowBlank ?? true
+      const allowTemplate = data?.allowTemplate ?? originalDoc?.allowTemplate ?? false
+      const allowForm = data?.allowForm ?? originalDoc?.allowForm ?? false
+      if (Boolean(data?.active ?? originalDoc?.active ?? true) && allowBlank !== true && allowTemplate !== true && allowForm !== true) {
+        throw new Error('An active Document Type must enable at least one creation method.')
+      }
       // P07X-T05: every configured lifecycle route Folder must belong to this
       // Type's Domain. Multiple states may share one Folder; a foreign Folder
       // must never be routable from this Type.
@@ -41,6 +52,9 @@ export const DocumentTypes: CollectionConfig = {
     { name: 'name', type: 'text', required: true },
     { name: 'description', type: 'textarea' },
     { name: 'active', type: 'checkbox', defaultValue: true },
+    { name: 'allowBlank', type: 'checkbox', defaultValue: true, label: 'Allow blank documents' },
+    { name: 'allowTemplate', type: 'checkbox', defaultValue: false, label: 'Allow document Templates' },
+    { name: 'allowForm', type: 'checkbox', defaultValue: false, label: 'Allow Forms' },
     { name: 'defaultFilingPolicy', type: 'select', required: true, defaultValue: 'direct-file', options: [{ label: 'Direct file', value: 'direct-file' }, { label: 'Review required', value: 'review-required' }] },
     { name: 'defaultFolder', type: 'relationship', relationTo: 'folders', label: 'Default folder', admin: { description: 'Fallback route Folder when a lifecycle state has no specific route.' } },
     { name: 'draftFolder', type: 'relationship', relationTo: 'folders', label: 'Draft folder', admin: { description: 'P07X-T05 lifecycle route for Draft records.' } },

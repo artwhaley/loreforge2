@@ -230,11 +230,9 @@ export function FormStudio({ domainSlug, folders, types, baseTemplates = [], mod
           </select>
         </div>
         <div className={styles.detailField}>
-          <label className={styles.groupLabel} htmlFor="destination">Normal destination</label>
-          <select id="destination" name="destinationFolderId" className={styles.select} required value={details.destinationFolderId} onChange={(event) => setDetail('destinationFolderId', event.target.value)}>
-            <option value="">Choose a Folder</option>
-            {folders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
-          </select>
+          <span className={styles.groupLabel}>Initial Folder</span>
+          <p className={styles.muted}>The selected Document Type routes new records through its lifecycle Folders. Forms no longer choose a destination Folder.</p>
+          <input type="hidden" name="destinationFolderId" value="" />
         </div>
         <div className={styles.detailField}>
           <label className={styles.groupLabel} htmlFor="base-template">Base template <span className={styles.optional}>(optional)</span></label>

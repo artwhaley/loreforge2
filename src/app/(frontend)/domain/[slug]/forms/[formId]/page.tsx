@@ -74,7 +74,7 @@ export default async function FillFormPage({ params }: Props) {
 
         <h1 className={styles.title}>{form.name}</h1>
         <p className={styles.intro}>
-          Submitting generates a normal archive record{form.destinationFolder ? ' filed in its destination folder' : ''} — you can edit, search, and export it like any other document.
+          Submitting generates a normal archive record routed by its Document Type lifecycle Folders — you can edit, search, and export it like any other document.
         </p>
 
         <FillForm

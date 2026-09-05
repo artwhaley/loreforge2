@@ -81,7 +81,9 @@ export async function submitReportFormAction(
   // P07X-T03: the create gate is create_document on the Form's Document Type
   // (the destination Folder is Type-routed, not a customer capability source).
   const formTypeId = typeof form.documentType === 'object' && form.documentType !== null ? Number(form.documentType.id) : form.documentType != null ? Number(form.documentType) : null
-  if (formTypeId === null || !await isAllowed({ payload, actor: { userId: user.id, activeCharacterId }, domainId: tenant.id, capability: 'create_document', resource: { type: 'DocumentType', id: formTypeId } })) return { ok: false, message: 'Not authorized.' }
+  const formType = formTypeId === null ? null : await payload.findByID({ collection: 'document-types', id: formTypeId, depth: 0, overrideAccess: true }).catch(() => null)
+  const formTypeDomainId = formType && typeof formType.domain === 'object' && formType.domain !== null ? Number(formType.domain.id) : formType ? Number(formType.domain) : null
+  if (formTypeId === null || !formType || formTypeDomainId !== Number(tenant.id) || formType.active === false || formType.allowForm !== true || !await isAllowed({ payload, actor: { userId: user.id, activeCharacterId }, domainId: tenant.id, capability: 'create_document', resource: { type: 'DocumentType', id: formTypeId } })) return { ok: false, message: 'This Form is not enabled for its Document Type or you are not authorized.' }
 
   const schema = assertFormSchema(form.formSchema)
 

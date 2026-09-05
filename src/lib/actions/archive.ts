@@ -11,6 +11,7 @@ import config from '@/payload.config'
 import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { canSupersedeDocument, resolveFilingPolicy, type FilingPolicy } from '@/lib/documents/lifecycle'
+import { assertEffectiveCreationMethod, effectiveCreationMethods, initialRouteFolder, type CreationMethod } from '@/lib/documents/creation'
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
 import { attachDocumentCharacterLink, attachDocumentTag, ensurePreparedBy, findOrCreateDomainTag } from '@/lib/documents/links'
 import { addDocumentRelationship, runInTransaction } from '@/lib/documents/relationships'
@@ -19,7 +20,6 @@ import { domainAndIdWhere } from '@/lib/tenant/scope'
 import { assertFormSchema, type FormAnswers } from '@/lib/forms/schema'
 import { characterIsAdministrative } from '@/lib/characters/kinds'
 import { answersForRecordRender, renderNeutralTemplate } from '@/lib/forms/generateDocument'
-import { isTemplateAvailableAt } from '@/lib/templates/resolve'
 import type { Domain, Tenant } from '@/payload-types'
 
 type MemberTenant = {
@@ -43,9 +43,10 @@ export type DocumentEditorActionState = {
     folderId: string
     concernLinks: string
     tagNames: string
-    preparedByCharacterIds: string
-    templateId: string
-    formAnswers: string
+      preparedByCharacterIds: string
+      templateId: string
+      formAnswers: string
+      creationMethod: string
   }
 }
 
@@ -60,6 +61,7 @@ function editorValues(formData: FormData): DocumentEditorActionState['values'] {
     preparedByCharacterIds: String(formData.get('preparedByCharacterIds') ?? ''),
     templateId: String(formData.get('templateId') ?? ''),
     formAnswers: String(formData.get('formAnswers') ?? ''),
+    creationMethod: String(formData.get('creationMethod') ?? formData.get('method') ?? ''),
   }
 }
 
@@ -240,12 +242,11 @@ export async function createDocumentAction(formData: FormData): Promise<void> {
  * selected it is automatically recorded as the required Prepared by credit. */
 export async function createDocumentFromEditorAction(_previousState: DocumentEditorActionState, formData: FormData): Promise<DocumentEditorActionState> {
   const tenantSlug = String(formData.get('tenantSlug') ?? '')
-  const title = String(formData.get('title') ?? '').trim()
+  let title = String(formData.get('title') ?? '').trim()
   const body = canonicalizeMarkdown(String(formData.get('body') ?? '')).trim() || `# ${title}`
   const values = editorValues(formData)!
   const ctx = await getMemberTenant(tenantSlug)
   if (!ctx) return { error: 'authorization', values }
-  if (!title) return { error: 'missing', values }
 
   const context = await getActiveContext()
   const activeCharacterId = context.tenant?.slug === tenantSlug ? context.activeCharacter?.id : undefined
@@ -258,6 +259,8 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   if (!concernEntries) return { error: 'concerns', values }
   const additionalPreparedByIds = parsePreparedByCharacterIds(values.preparedByCharacterIds)
   if (!additionalPreparedByIds) return { error: 'prepared-by', values }
+  const requestedTypeId = Number(formData.get('documentTypeId') ?? '')
+  const requestedMethod = String(formData.get('creationMethod') ?? formData.get('method') ?? '').trim() as CreationMethod | ''
   const requestedTemplateId = Number(formData.get('templateId') ?? '')
   const templateResult = Number.isFinite(requestedTemplateId) && requestedTemplateId > 0
     ? await ctx.payload.find({ collection: 'templates', where: { and: [{ id: { equals: requestedTemplateId } }, { domain: { equals: ctx.tenant.id } }, { active: { equals: true } }] }, depth: 2, limit: 1, overrideAccess: true })
@@ -265,58 +268,81 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   const selectedTemplate = templateResult.docs[0] as unknown as (Record<string, unknown> & { id: number | string }) | undefined
   let formCharacterEntries: ConcernSubmission[] = []
   let renderedBody = body
-  let selectedType: { id: number | string; name?: string; defaultFilingPolicy?: FilingPolicy } | undefined
-  if (selectedTemplate) {
-    const templateTypeId = typeof selectedTemplate.documentType === 'object' && selectedTemplate.documentType !== null ? (selectedTemplate.documentType as { id: number | string }).id : selectedTemplate.documentType
-    const typeResult = await ctx.payload.find({ collection: 'document-types', where: { and: [{ id: { equals: templateTypeId } }, { domain: { equals: ctx.tenant.id } }, { active: { equals: true } }] }, depth: 0, limit: 1, overrideAccess: true })
+  let selectedType: { id: number | string; name?: string; defaultFilingPolicy?: FilingPolicy; allowBlank?: unknown; allowTemplate?: unknown; allowForm?: unknown; defaultFolder?: unknown; draftFolder?: unknown; pendingReviewFolder?: unknown; filedFolder?: unknown; lockedFolder?: unknown } | undefined
+  const templateTypeId = selectedTemplate
+    ? (typeof selectedTemplate.documentType === 'object' && selectedTemplate.documentType !== null ? (selectedTemplate.documentType as { id: number | string }).id : selectedTemplate.documentType)
+    : null
+  // Type is the first, authoritative choice. A missing type is only inferred
+  // from a selected legacy Template so old links remain understandable; the
+  // new UI always sends both values explicitly.
+  const effectiveRequestedTypeId = Number.isFinite(requestedTypeId) && requestedTypeId > 0 ? requestedTypeId : templateTypeId
+  if (effectiveRequestedTypeId !== null && effectiveRequestedTypeId !== undefined) {
+    const typeResult = await ctx.payload.find({ collection: 'document-types', where: { and: [{ id: { equals: effectiveRequestedTypeId } }, { domain: { equals: ctx.tenant.id } }, { active: { equals: true } }] }, depth: 0, limit: 1, overrideAccess: true })
     selectedType = typeResult.docs[0] as typeof selectedType
-    if (!selectedType) return { error: 'type', values }
-    if (String(selectedTemplate.kind ?? 'document') === 'form') {
-      if (!activeCharacterId) return { error: 'character', values }
-      let answers: FormAnswers
-      try { answers = JSON.parse(String(formData.get('formAnswers') ?? '{}')) as FormAnswers } catch { return { error: 'form-validation', values } }
-      let schema
-      try { schema = assertFormSchema(selectedTemplate.formSchema) } catch { return { error: 'form-validation', values } }
-      const unanswered = (value: FormAnswers[string]) => value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0)
-      const missing = schema.fields.filter((field) => field.required && unanswered(answers[field.key])).map((field) => field.label)
-      if (missing.length > 0) return { error: 'form-validation', values }
-      try {
-        // Records read select labels, boolean checkboxes, and Character names;
-        // raw ids/option values are kept for the concern-link step below.
-        const renderAnswers = await answersForRecordRender({ payload: ctx.payload, schema, answers })
-        const rendered = renderNeutralTemplate({ id: selectedTemplate.id, name: String(selectedTemplate.name), kind: 'form', titleTemplate: String(selectedTemplate.titleTemplate), bodyTemplate: String(selectedTemplate.bodyTemplate), formSchema: schema, baseTemplate: selectedTemplate.baseTemplate as never }, renderAnswers)
-        renderedBody = rendered.body
-        for (const field of schema.fields) {
-          if (field.type === 'character') {
-            const raw = String(answers[field.key] ?? '').trim()
-            if (!raw) continue
-            const id = Number(raw)
+  }
+  if (!selectedType) return { error: 'type', values }
+  if (selectedTemplate && templateTypeId !== undefined && templateTypeId !== null && Number(templateTypeId) !== Number(selectedType.id)) {
+    // Never let a Template from another Type silently change the first choice.
+    return { error: 'template-type', values }
+  }
+  const method = (requestedMethod || (selectedTemplate ? String(selectedTemplate.kind ?? 'document') === 'form' ? 'form' : 'template' : 'blank')) as CreationMethod
+  if (!['blank', 'template', 'form'].includes(method)) return { error: 'method', values }
+  if (method === 'blank' && selectedTemplate) return { error: 'method', values }
+  if (method !== 'blank') {
+    if (!selectedTemplate) return { error: 'template', values }
+    const expectedKind = method === 'form' ? 'form' : 'document'
+    if (String(selectedTemplate.kind ?? 'document') !== expectedKind) return { error: 'template-kind', values }
+    try { assertEffectiveCreationMethod(selectedType, method, [selectedTemplate]) } catch { return { error: 'method', values } }
+  } else if (!effectiveCreationMethods(selectedType).includes('blank')) {
+    return { error: 'method', values }
+  }
+  if (method === 'form') {
+    if (!activeCharacterId) return { error: 'character', values }
+    let answers: FormAnswers
+    try { answers = JSON.parse(String(formData.get('formAnswers') ?? '{}')) as FormAnswers } catch { return { error: 'form-validation', values } }
+    let schema
+    try { schema = assertFormSchema(selectedTemplate?.formSchema) } catch { return { error: 'form-validation', values } }
+    const unanswered = (value: FormAnswers[string]) => value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0)
+    const missing = schema.fields.filter((field) => field.required && unanswered(answers[field.key])).map((field) => field.label)
+    if (missing.length > 0) return { error: 'form-validation', values }
+    try {
+      // Records read select labels, boolean checkboxes, and Character names;
+      // raw ids/option values are kept for the concern-link step below.
+      const renderAnswers = await answersForRecordRender({ payload: ctx.payload, schema, answers })
+      const rendered = renderNeutralTemplate({ id: selectedTemplate!.id, name: String(selectedTemplate!.name), kind: 'form', titleTemplate: String(selectedTemplate!.titleTemplate), bodyTemplate: String(selectedTemplate!.bodyTemplate), formSchema: schema, baseTemplate: selectedTemplate!.baseTemplate as never }, renderAnswers)
+      renderedBody = rendered.body
+      title = rendered.title || title
+      for (const field of schema.fields) {
+        if (field.type === 'character') {
+          const raw = String(answers[field.key] ?? '').trim()
+          if (!raw) continue
+          const id = Number(raw)
+          if (Number.isFinite(id) && id > 0) formCharacterEntries.push({ characterId: id, relationshipLabel: field.relationshipLabel })
+          else formCharacterEntries.push({ newName: raw, relationshipLabel: field.relationshipLabel })
+        } else if (field.type === 'characters') {
+          const raw = answers[field.key]
+          const ids = Array.isArray(raw) ? raw : raw === undefined || raw === null || raw === '' ? [] : [String(raw)]
+          for (const rawId of ids) {
+            const id = Number(rawId)
             if (Number.isFinite(id) && id > 0) formCharacterEntries.push({ characterId: id, relationshipLabel: field.relationshipLabel })
-            else formCharacterEntries.push({ newName: raw, relationshipLabel: field.relationshipLabel })
-          } else if (field.type === 'characters') {
-            const raw = answers[field.key]
-            const ids = Array.isArray(raw) ? raw : raw === undefined || raw === null || raw === '' ? [] : [String(raw)]
-            for (const rawId of ids) {
-              const id = Number(rawId)
-              if (Number.isFinite(id) && id > 0) formCharacterEntries.push({ characterId: id, relationshipLabel: field.relationshipLabel })
-            }
           }
         }
-      } catch { return { error: 'form-validation', values } }
-    }
+      }
+    } catch { return { error: 'form-validation', values } }
+  } else if (method === 'template') {
+    try {
+      // Document Templates provide the initial title/body composition. Any
+      // later editing happens on the ordinary Document editor; no destination
+      // from the legacy Template fields participates in this route.
+      const rendered = renderNeutralTemplate({ id: selectedTemplate!.id, name: String(selectedTemplate!.name), kind: 'document', titleTemplate: String(selectedTemplate!.titleTemplate), bodyTemplate: String(selectedTemplate!.bodyTemplate), baseTemplate: selectedTemplate!.baseTemplate as never }, {})
+      title = rendered.title || title
+      renderedBody = rendered.body.replace(/\{\{\s*content\s*\}\}/g, '').trim() || body
+    } catch { return { error: 'template-validation', values } }
   }
-  const foldersForTemplate = selectedTemplate ? await ctx.payload.find({ collection: 'folders', where: { domain: { equals: ctx.tenant.id } }, depth: 0, limit: 10000, overrideAccess: true }) : null
-  const templateDestinationId = selectedTemplate ? Number(typeof selectedTemplate.destinationFolder === 'object' && selectedTemplate.destinationFolder !== null ? (selectedTemplate.destinationFolder as { id: number | string }).id : selectedTemplate.destinationFolder) : null
-  const requestedFolderRaw = String(formData.get('folderId') ?? '')
-  const requestedFolderId = Number(requestedFolderRaw)
-  if (selectedTemplate && templateDestinationId && !Boolean(selectedTemplate.allowDestinationOverride) && Number.isFinite(requestedFolderId) && requestedFolderId > 0 && requestedFolderId !== templateDestinationId) return { error: 'template-destination', values }
-  const folder = selectedTemplate && templateDestinationId && (!Boolean(selectedTemplate.allowDestinationOverride) || !Number.isFinite(requestedFolderId) || requestedFolderId <= 0)
-    ? templateDestinationId
-    : await tenantFolderId(ctx.payload, ctx.tenant.id, ctx.legacyTenantId, requestedFolderRaw)
-  if (selectedTemplate && foldersForTemplate) {
-    const destination = foldersForTemplate.docs.find((item) => Number(item.id) === Number(folder))
-    if (!destination || !isTemplateAvailableAt(selectedTemplate as never, destination as never, foldersForTemplate.docs as never)) return { error: 'template-destination', values }
-  }
+  // Blank and Document-Template creation need a usable title before the
+  // aggregate can be persisted. Form creation may derive it from its title
+  // template, so this check intentionally follows rendering above.
+  if (!title) return { error: 'missing', values }
   const supersedesDocumentId = Number(formData.get('supersedesDocumentId') ?? '')
   const superseding = Number.isFinite(supersedesDocumentId) && supersedesDocumentId > 0
   if (superseding) {
@@ -329,9 +355,6 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
     const existingSuccessor = await ctx.payload.find({ collection: 'document-relationships', where: { and: [{ kind: { equals: 'supersedes' } }, { target: { equals: supersedesDocumentId } }] }, depth: 0, limit: 1, overrideAccess: true })
     if (existingSuccessor.docs[0]) return { error: 'authorization', values }
   }
-  const requestedTypeId = Number(formData.get('documentTypeId') ?? '')
-  const typeResult = selectedType ? { docs: [selectedType] } : await ctx.payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: ctx.tenant.id } }, { active: { equals: true } }] }, depth: 0, limit: 500 })
-  selectedType = selectedType ?? (typeResult.docs.find((item) => Number(item.id) === requestedTypeId) ?? typeResult.docs.find((item) => String(item.name ?? '').toLowerCase() === 'plain text')) as typeof selectedType
   if (!selectedType) return { error: 'type', values }
   const actor = { userId: ctx.user.id, activeCharacterId }
   // P07X-T03: create_document is evaluated against the chosen Document Type
@@ -364,9 +387,28 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
     ])
     if (characters.docs.length !== additionalPreparedByIds.length || memberships.docs.length !== additionalPreparedByIds.length) return { error: 'prepared-by', values }
   }
-  const folderRecord = folder ? await ctx.payload.findByID({ collection: 'folders', id: folder, depth: 0 }).catch(() => null) : null
   const domainRecord = await ctx.payload.findByID({ collection: 'domains', id: ctx.tenant.id, depth: 0 })
-  const policy = resolveFilingPolicy({ template: (selectedTemplate?.lifecyclePolicy ?? 'inherit') as FilingPolicy, folder: (folderRecord?.filingPolicy ?? 'inherit') as FilingPolicy, documentType: selectedType.defaultFilingPolicy, domain: (domainRecord.defaultFilingPolicy ?? 'direct-file') as Exclude<FilingPolicy, 'inherit'> })
+  // Blank creation opens a Draft. Template/Form generation may honor the
+  // existing filing policy, but its lifecycle route is still selected by the
+  // Type rather than by a caller-supplied Folder.
+  const domainPolicy = (domainRecord.defaultFilingPolicy ?? 'direct-file') as Exclude<FilingPolicy, 'inherit'>
+  const policyWithoutFolder = resolveFilingPolicy({ template: (selectedTemplate?.lifecyclePolicy ?? 'inherit') as FilingPolicy, documentType: selectedType.defaultFilingPolicy, domain: domainPolicy })
+  const initialLifecycle: 'draft' | 'pending_review' | 'filed' = method === 'blank'
+    ? 'draft'
+    : policyWithoutFolder === 'review-required' ? 'pending_review' : 'filed'
+  const routeFor = (lifecycle: 'draft' | 'pending_review' | 'filed') => initialRouteFolder(selectedType, lifecycle, null)
+  let folder = routeFor(initialLifecycle) ?? await tenantFolderId(ctx.payload, ctx.tenant.id, ctx.legacyTenantId, null)
+  let folderRecord = await ctx.payload.findByID({ collection: 'folders', id: folder, depth: 0 }).catch(() => null)
+  const policy = method === 'blank'
+    ? 'direct-file'
+    : resolveFilingPolicy({ template: (selectedTemplate?.lifecyclePolicy ?? 'inherit') as FilingPolicy, folder: (folderRecord?.filingPolicy ?? 'inherit') as FilingPolicy, documentType: selectedType.defaultFilingPolicy, domain: domainPolicy })
+  const lifecycle: 'draft' | 'pending_review' | 'filed' = method === 'blank'
+    ? 'draft'
+    : policy === 'review-required' ? 'pending_review' : 'filed'
+  if (lifecycle !== initialLifecycle) {
+    folder = routeFor(lifecycle) ?? folder
+    folderRecord = await ctx.payload.findByID({ collection: 'folders', id: folder, depth: 0 }).catch(() => null)
+  }
   // P05R-T02 A: every application create is ONE atomic operation — create the
   // successor, relate it, lock the predecessor, and record provenance on both
   // records inside one DB transaction, so any failure after the preflights
@@ -376,11 +418,11 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   const createAndRelate = async (transactionID: number | string | null) => {
     if (transactionID == null) throw new Error('Document creation requires a real database transaction.')
     const req = { transactionID }
-    const created = await ctx.payload.create({ collection: 'documents', req, context: activeCharacterId && !administrativeActor ? { preparedByCharacterId: activeCharacterId, actorUserId: ctx.user.id } : { allowUserCreate: true, actorUserId: ctx.user.id }, data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body: renderedBody, origin: selectedTemplate?.kind === 'form' ? 'form' : 'web-editor', sourceKind: selectedTemplate?.kind === 'form' ? 'form' : 'web', documentType: Number(selectedType.id), lifecycle: policy === 'review-required' ? 'pending_review' : 'filed', publicAccess: 'inherit', createdBy: ctx.user.id, folder } })
+    const created = await ctx.payload.create({ collection: 'documents', req, context: activeCharacterId && !administrativeActor ? { preparedByCharacterId: activeCharacterId, actorUserId: ctx.user.id } : { allowUserCreate: true, actorUserId: ctx.user.id }, data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body: renderedBody, origin: selectedTemplate?.kind === 'form' ? 'form' : 'web-editor', sourceKind: selectedTemplate?.kind === 'form' ? 'form' : 'web', documentType: Number(selectedType.id), lifecycle, publicAccess: 'inherit', createdBy: ctx.user.id, folder } })
     if (superseding) {
       await addDocumentRelationship({ payload: ctx.payload, domainId: ctx.tenant.id, sourceId: created.id, targetId: supersedesDocumentId, kind: 'supersedes', actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
     }
-    await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'created', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { lifecycle: created.lifecycle, ...(selectedTemplate ? { templateId: Number(selectedTemplate.id), sourceKind: selectedTemplate.kind } : {}) }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id, transactionID ?? undefined), transactionID })
+    await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'created', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { lifecycle: created.lifecycle, creationMethod: method, ...(selectedTemplate ? { templateId: Number(selectedTemplate.id), sourceKind: selectedTemplate.kind } : {}) }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id, transactionID ?? undefined), transactionID })
     if (created.lifecycle === 'filed') await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'filed', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { reason: 'filing-policy' }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id, transactionID ?? undefined), transactionID })
     if (activeCharacterId && !administrativeActor) await ensurePreparedBy({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
     for (const characterId of additionalPreparedByIds) {

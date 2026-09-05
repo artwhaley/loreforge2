@@ -40,7 +40,7 @@ const benchUserId = Number(benchUser.id)
 for (let d = 0; d < domainCount; d += 1) {
   const domain = await payload.create({ collection: 'domains', overrideAccess: true, data: { name: `Bench Domain ${d}`, slug: `bench-${d}`, kind: 'community', ownerUser: benchUserId, lifecycle: 'active', defaultFilingPolicy: 'direct-file', publicEnabled: false } as never })
   created.domains.push(Number(domain.id))
-  const benchType = await payload.create({ collection: 'document-types', overrideAccess: true, data: { domain: domain.id, name: 'Plain Text', active: true } as never })
+  const benchType = await payload.create({ collection: 'document-types', overrideAccess: true, data: { domain: domain.id, name: 'Plain Text', active: true, allowBlank: true, allowTemplate: false, allowForm: false } as never })
   const folderIds: number[] = []
   for (let f = 0; f < foldersPerDomain; f += 1) {
     const folder = await payload.create({ collection: 'folders', overrideAccess: true, data: { domain: domain.id, name: `F${f}`, systemManaged: false, filingPolicy: 'inherit', publicAccess: 'inherit' } as never })

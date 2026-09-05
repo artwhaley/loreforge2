@@ -11,6 +11,7 @@ import { autoBodyTemplate, autoTitleTemplate } from '@/lib/forms/layout'
 import { isAllowed } from '@/lib/authz/evaluate'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { isTemplateAvailableAt } from '@/lib/templates/resolve'
+import { initialRouteFolder } from '@/lib/documents/creation'
 
 export type TemplateActionState = { error?: string; ok?: boolean }
 
@@ -45,7 +46,10 @@ function deriveOutputTemplates(schema: LoreForgeFormSchema, name: string, record
 
 function readFormPlacement(formData: FormData) {
   const scopeFolder = Number(formData.get('scopeFolderId') ?? '')
-  const destinationFolder = Number(formData.get('destinationFolderId') ?? '')
+  // P07X-T06: destinationFolder is retained in the storage model only for
+  // migration compatibility. Customer Forms never choose it; assertPlacement
+  // derives it from the selected Document Type's lifecycle routing.
+  const destinationFolder = 0
   const documentType = Number(formData.get('documentTypeId') ?? '')
   const baseTemplateId = Number(formData.get('baseTemplateId') ?? '')
   return { scopeFolder, destinationFolder, documentType, baseTemplateId }
@@ -53,23 +57,27 @@ function readFormPlacement(formData: FormData) {
 
 /** Shared create/update checks: same-Domain folders/types/base availability. */
 async function assertPlacement(ctx: { payload: ManagerPayload; domain: { id: number } }, placement: { scopeFolder: number; destinationFolder: number; documentType: number; baseTemplateId: number }) {
-  const { scopeFolder, destinationFolder, documentType, baseTemplateId } = placement
-  if (!scopeFolder || !destinationFolder || !documentType) throw new Error('Document Type, availability Folder, and destination Folder are required.')
-  const [typeResult, scopeResult, destinationResult, baseResult] = await Promise.all([
+  const { scopeFolder, documentType, baseTemplateId } = placement
+  if (!scopeFolder || !documentType) throw new Error('Document Type and availability Folder are required.')
+  const [typeResult, scopeResult, baseResult] = await Promise.all([
     ctx.payload.find({ collection: 'document-types', where: { and: [{ id: { equals: documentType } }, { domain: { equals: ctx.domain.id } }, { active: { equals: true } }] }, depth: 0, limit: 1, overrideAccess: true }),
     ctx.payload.find({ collection: 'folders', where: { and: [{ id: { equals: scopeFolder } }, { domain: { equals: ctx.domain.id } }] }, depth: 0, limit: 1, overrideAccess: true }),
-    ctx.payload.find({ collection: 'folders', where: { and: [{ id: { equals: destinationFolder } }, { domain: { equals: ctx.domain.id } }] }, depth: 0, limit: 1, overrideAccess: true }),
     baseTemplateId ? ctx.payload.find({ collection: 'templates', where: { and: [{ id: { equals: baseTemplateId } }, { domain: { equals: ctx.domain.id } }, { active: { equals: true } }] }, depth: 0, limit: 1, overrideAccess: true }) : { docs: [] },
   ])
   if (!typeResult.docs[0]) throw new Error('Choose an active Document Type from this Domain.')
   const scope = scopeResult.docs[0]
-  const destination = destinationResult.docs[0]
   if (!scope) throw new Error('Choose an availability Folder from this Domain.')
-  if (!destination) throw new Error('Choose a destination Folder from this Domain.')
+  const type = typeResult.docs[0]
+  const routedId = initialRouteFolder(type, 'draft', null)
+  const destinationResult = routedId
+    ? await ctx.payload.find({ collection: 'folders', where: { and: [{ id: { equals: routedId } }, { domain: { equals: ctx.domain.id } }] }, depth: 0, limit: 1, overrideAccess: true })
+    : await ctx.payload.find({ collection: 'folders', where: { and: [{ domain: { equals: ctx.domain.id } }, { systemManaged: { equals: true } }, { parent: { equals: null } }] }, depth: 0, limit: 1, overrideAccess: true })
+  const destination = destinationResult.docs[0]
+  if (!destination) throw new Error('The selected Document Type has no lifecycle route or Domain root Folder.')
   const base = baseResult.docs[0]
   if (baseTemplateId && !base) throw new Error('The base Template is not available.')
   if (base && !isTemplateAvailableAt(base as never, scope as never, (await ctx.payload.find({ collection: 'folders', where: { domain: { equals: ctx.domain.id } }, depth: 0, limit: 10000, overrideAccess: true })).docs as never)) throw new Error('The base Template is not available at the selected Folder.')
-  return { scopeFolder, destinationFolder, documentType, baseTemplateId }
+  return { scopeFolder, destinationFolder: Number(destination.id), documentType, baseTemplateId }
 }
 
 function revalidateForms(domainSlug: string) {

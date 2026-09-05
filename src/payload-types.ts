@@ -618,6 +618,9 @@ export interface DocumentType {
   name: string;
   description?: string | null;
   active?: boolean | null;
+  allowBlank?: boolean | null;
+  allowTemplate?: boolean | null;
+  allowForm?: boolean | null;
   defaultFilingPolicy: 'direct-file' | 'review-required';
   /**
    * Fallback route Folder when a lifecycle state has no specific route.
@@ -1489,6 +1492,9 @@ export interface DocumentTypesSelect<T extends boolean = true> {
   name?: T;
   description?: T;
   active?: T;
+  allowBlank?: T;
+  allowTemplate?: T;
+  allowForm?: T;
   defaultFilingPolicy?: T;
   defaultFolder?: T;
   draftFolder?: T;
