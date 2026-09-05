@@ -19,7 +19,7 @@ test('only the interim Domain admin can decide a still-pending unclaimed Charact
 
 test('public Character projection contains only safe display fields', () => {
   const projected = publicCharacterProjection(
-    { id: 1, name: 'Traveler', bio: 'A profile', status: 'active', controlledBy: 2, aliases: [], createdAt: '', updatedAt: '' },
+    { id: 1, name: 'Traveler', kind: 'player', bio: 'A profile', status: 'active', controlledBy: 2, aliases: [], createdAt: '', updatedAt: '' },
     { id: 2, collection: 'users', name: 'Morgan Vale', email: 'secret@example.test', slAvatarUUID: 'secret-sl', slAvatarName: 'Secret Resident', slVerificationState: 'verified', createdAt: '', updatedAt: '' },
   )
   assert.deepEqual(projected.controller, { name: 'Morgan Vale' })

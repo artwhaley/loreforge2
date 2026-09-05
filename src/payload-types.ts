@@ -213,6 +213,14 @@ export interface User {
 export interface Character {
   id: number;
   name: string;
+  /**
+   * player and npc use the ordinary permission path; domain_admin and platform_admin are system-provisioned administrative identities.
+   */
+  kind: 'player' | 'npc' | 'domain_admin' | 'platform_admin';
+  /**
+   * Required for domain_admin Characters only; null/forbidden for every other kind.
+   */
+  administrativeDomain?: (number | null) | Domain;
   portrait?: (number | null) | Media;
   bio?: string | null;
   /**
@@ -228,6 +236,35 @@ export interface Character {
       }[]
     | null;
   createdBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "domains".
+ */
+export interface Domain {
+  id: number;
+  name: string;
+  slug: string;
+  kind: 'community' | 'personal';
+  ownerUser?: (number | null) | User;
+  ownerCharacter?: (number | null) | Character;
+  lifecycle: 'active' | 'grace' | 'read-only' | 'suspended' | 'archived';
+  defaultFilingPolicy: 'direct-file' | 'review-required';
+  motto?: string | null;
+  preset: 'heritage' | 'modern';
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  headingFontKey: 'georgia' | 'palatino' | 'verdana' | 'trebuchet';
+  bodyFontKey: 'verdana' | 'georgia' | 'trebuchet' | 'tahoma';
+  logo?: (number | null) | Media;
+  banner?: (number | null) | Media;
+  publicEnabled?: boolean | null;
+  installedPackKey?: string | null;
+  installedPackVersion?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -284,35 +321,6 @@ export interface CharacterClaimRequest {
   decidedBy?: (number | null) | User;
   decidingCharacter?: (number | null) | Character;
   decisionNote?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "domains".
- */
-export interface Domain {
-  id: number;
-  name: string;
-  slug: string;
-  kind: 'community' | 'personal';
-  ownerUser?: (number | null) | User;
-  ownerCharacter?: (number | null) | Character;
-  lifecycle: 'active' | 'grace' | 'read-only' | 'suspended' | 'archived';
-  defaultFilingPolicy: 'direct-file' | 'review-required';
-  motto?: string | null;
-  preset: 'heritage' | 'modern';
-  primaryColor: string;
-  secondaryColor: string;
-  accentColor: string;
-  backgroundColor: string;
-  headingFontKey: 'georgia' | 'palatino' | 'verdana' | 'trebuchet';
-  bodyFontKey: 'verdana' | 'georgia' | 'trebuchet' | 'tahoma';
-  logo?: (number | null) | Media;
-  banner?: (number | null) | Media;
-  publicEnabled?: boolean | null;
-  installedPackKey?: string | null;
-  installedPackVersion?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1208,6 +1216,8 @@ export interface UsersSelect<T extends boolean = true> {
  */
 export interface CharactersSelect<T extends boolean = true> {
   name?: T;
+  kind?: T;
+  administrativeDomain?: T;
   portrait?: T;
   bio?: T;
   controlledBy?: T;

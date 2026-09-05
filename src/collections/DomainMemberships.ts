@@ -22,6 +22,16 @@ export const DomainMemberships: CollectionConfig = {
     delete: () => false,
   },
   hooks: {
+    // P07X-T01: administrative Character kinds can never receive memberships.
+    beforeChange: [async ({ data, originalDoc, req }) => {
+      const characterId = relationId((data as Record<string, unknown> | undefined)?.character ?? (originalDoc as Record<string, unknown> | undefined)?.character)
+      if (characterId != null) {
+        const character = await req.payload.findByID({ collection: 'characters', id: characterId, depth: 0, overrideAccess: true }).catch(() => null) as { kind?: string } | null
+        const kind = String(character?.kind ?? 'player')
+        if (kind === 'domain_admin' || kind === 'platform_admin') throw new Error('Administrative Characters cannot receive DomainMemberships.')
+      }
+      return data
+    }],
     // P05R-T05 A: thin hook — deactivation cascades through the transactional
     // deactivateDomainParticipation service, JOINING this operation's
     // transaction via req.transactionID so the status flip, RoleAssignment /

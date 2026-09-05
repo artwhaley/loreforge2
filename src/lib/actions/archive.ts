@@ -382,7 +382,7 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
         if (!characterId && entry.newName) {
           const allCharacters = await ctx.payload.find({ collection: 'characters', where: { status: { equals: 'active' } }, depth: 0, limit: 5000, overrideAccess: true, req })
           const existing = allCharacters.docs.find((character) => character.name.trim().toLocaleLowerCase() === entry.newName?.toLocaleLowerCase())
-          const character = existing ?? await ctx.payload.create({ collection: 'characters', overrideAccess: true, req, data: { name: entry.newName, status: 'active', createdBy: ctx.user.id } })
+          const character = existing ?? await ctx.payload.create({ collection: 'characters', overrideAccess: true, req, data: { name: entry.newName, status: 'active', kind: 'player', createdBy: ctx.user.id } })
           characterId = Number(character.id)
         }
         if (characterId) await attachDocumentCharacterLink({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId, kind: 'concerns', relationshipLabel: entry.relationshipLabel, actor: { userId: ctx.user.id, characterId: activeCharacterId }, skipAuthorization: true, transactionID })

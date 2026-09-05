@@ -211,6 +211,9 @@ export async function getCharactersForTenant(
     .map((membership) => membership.character)
     .filter((character): character is Character => {
       if (!character || typeof character !== 'object' || character.status !== 'active') return false
+      // P07X-T01: administrative identities are system-managed and never
+      // ordinary Domain members (their scope comes from kind, not membership).
+      if (character.kind === 'domain_admin' || character.kind === 'platform_admin') return false
       const controlledBy = character.controlledBy
       const controllerId = typeof controlledBy === 'object' ? controlledBy?.id : controlledBy
       return String(controllerId) === String(userId)

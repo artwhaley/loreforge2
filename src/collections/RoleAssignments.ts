@@ -21,6 +21,12 @@ export const RoleAssignments: CollectionConfig = {
   },
   hooks: {
     beforeChange: [async ({ data, originalDoc, req }) => {
+      const targetCharacterId = relationId(data?.character ?? originalDoc?.character)
+      if (targetCharacterId != null) {
+        const targetCharacter = await req.payload.findByID({ collection: 'characters', id: targetCharacterId, depth: 0, overrideAccess: true }).catch(() => null) as { kind?: string } | null
+        const kind = String(targetCharacter?.kind ?? 'player')
+        if (kind === 'domain_admin' || kind === 'platform_admin') throw new Error('Administrative Characters cannot receive RoleAssignments.')
+      }
       const roleId = relationId(data?.role ?? originalDoc?.role)
       const characterId = relationId(data?.character ?? originalDoc?.character)
       const status = String(data?.status ?? originalDoc?.status ?? 'active')

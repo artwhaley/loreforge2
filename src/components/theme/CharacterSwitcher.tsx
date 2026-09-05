@@ -5,6 +5,7 @@ import { useState } from 'react'
 
 import type { Character } from '@/payload-types'
 
+import { characterDisplayLabel } from '@/lib/characters/labels'
 import styles from './TenantShell.module.scss'
 
 export function CharacterSwitcher({ characters, activeCharacter }: { characters: Character[]; activeCharacter: Character | null }) {
@@ -41,7 +42,7 @@ export function CharacterSwitcher({ characters, activeCharacter }: { characters:
     <label htmlFor="character-switcher" className={styles.contextLabel}>Acting as</label>
     <select id="character-switcher" name="characterId" value={selectedId} onChange={(event) => setSelectedId(event.target.value)} className={styles.contextSelect} disabled={pending}>
       <option value="">No participating Character</option>
-      {characters.map((character) => <option key={character.id} value={character.id}>{character.name}</option>)}
+      {characters.map((character) => <option key={character.id} value={character.id}>{characterDisplayLabel(character)}</option>)}
     </select>
     <input type="hidden" name="returnTo" value={returnTo} />
     <button type="submit" className={styles.contextButton} disabled={pending}>{pending ? 'Switching…' : 'Switch'}</button>

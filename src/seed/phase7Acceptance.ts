@@ -13,7 +13,7 @@ export async function seedPhase7Acceptance(payload: Payload) {
     users[key] = Number(user.id)
     const name = `P7 ${key}`
     const rows = await payload.find({ collection: 'characters', where: { and: [{ name: { equals: name } }, { controlledBy: { equals: user.id } }] }, depth: 0, limit: 1 })
-    characters[key] = Number((rows.docs[0] ?? await payload.create({ collection: 'characters', data: { name, controlledBy: user.id, status: 'active' } })).id)
+    characters[key] = Number((rows.docs[0] ?? await payload.create({ collection: 'characters', data: { name, controlledBy: user.id, status: 'active', kind: 'player' } })).id)
   }
   const domains: Record<string, number> = {}
   for (const [key, slug, name, owner] of [['workshop', 'p7-workshop', 'P7 Workshop', 'owner'], ['outside', 'p7-outside', 'P7 Outside', 'outside']]) {
@@ -105,7 +105,7 @@ export async function seedPhase7Acceptance(payload: Payload) {
   for (const key of ['claimTarget', 'raceTarget']) {
     const name = key === 'claimTarget' ? 'P7 Unclaimed Applicant' : 'P7 Concurrent Claim Target'
     const rows = await payload.find({ collection: 'characters', where: { name: { equals: name } }, depth: 0, limit: 1 })
-    characters[key] = Number((rows.docs[0] ?? await payload.create({ collection: 'characters', data: { name, status: 'active' } })).id)
+    characters[key] = Number((rows.docs[0] ?? await payload.create({ collection: 'characters', data: { name, status: 'active', kind: 'player' } })).id)
     await membership(characters[key], domainId)
   }
   return { users, characters, domains, departments, roles, folders, documents }

@@ -17,6 +17,9 @@ export default async function CharacterProfilePage({ params }: Props) {
   const payload = await getLorePayload()
   const character = await payload.findByID({ collection: 'characters', id: characterId, depth: 1 })
   if (!character) notFound()
+  // P07X-T01: administrative Character kinds are excluded from public/RP
+  // Character semantics and never render an ordinary profile or claim surface.
+  if (character.kind === 'domain_admin' || character.kind === 'platform_admin') notFound()
 
   const context = await getActiveTenant()
   const controller = character.controlledBy && typeof character.controlledBy === 'object' ? character.controlledBy : null

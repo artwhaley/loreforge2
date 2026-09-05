@@ -26,6 +26,11 @@ export async function POST(request: Request) {
   if (!character || !domain) return NextResponse.redirect(new URL('/', request.url), 303)
 
   if (action === 'request') {
+    // P07X-T01: administrative Character kinds are system-managed and can
+    // never be the target of an ordinary claim.
+    if (character.kind === 'domain_admin' || character.kind === 'platform_admin') {
+      return NextResponse.redirect(new URL(redirectTo, request.url), 303)
+    }
     if (character.status !== 'active' || character.controlledBy !== null && character.controlledBy !== undefined) {
       return NextResponse.redirect(new URL(redirectTo, request.url), 303)
     }

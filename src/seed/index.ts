@@ -350,6 +350,7 @@ for (const character of TEST_CHARACTERS) {
       bio: character.bio,
       controlledBy: character.controlledBy ? usersByEmail[character.controlledBy].id : null,
       status: 'active',
+      kind: 'player',
     },
   })
   charactersByKey[character.key] = created

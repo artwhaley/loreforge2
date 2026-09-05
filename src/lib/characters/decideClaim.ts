@@ -14,6 +14,8 @@ export async function decideCharacterClaim(payload: Payload, args: { actor: Perm
     if (!claim || idOf(claim.domain) !== args.domainId || idOf(claim.character) !== args.characterId) return false
     const character = await payload.findByID({ collection: 'characters', id: args.characterId, depth: 0, req })
     if (character.status !== 'active') return false
+    // P07X-T01: administrative kinds can never enter ordinary claim flows.
+    if (character.kind === 'domain_admin' || character.kind === 'platform_admin') return false
     const result = applyClaimDecision({ status: claim.status, characterControlledBy: character.controlledBy ? idOf(character.controlledBy) : null }, args.decision, idOf(claim.claimant), { userId: args.actor.userId, authorized: true })
     if (typeof result === 'string') return false
     if (args.decision === 'approved') await payload.update({ collection: 'characters', id: character.id, data: { controlledBy: Number(result.characterControlledBy) }, req })

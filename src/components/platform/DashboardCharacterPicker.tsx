@@ -3,9 +3,10 @@
 import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
 
+import { characterDisplayLabel } from '@/lib/characters/labels'
 import styles from './PlatformShell.module.scss'
 
-type PickerCharacter = { id: number | string; name: string }
+type PickerCharacter = { id: number | string; name: string; kind?: string | null; administrativeDomain?: { id?: number | string; name?: string } | number | string | null }
 
 /**
  * Dashboard Character listbox. Changing the selection switches the active
@@ -69,7 +70,7 @@ export function DashboardCharacterPicker({
         disabled={pending || characters.length === 0}
       >
         <option value="">No active Character</option>
-        {characters.map((character) => <option key={String(character.id)} value={String(character.id)}>{character.name}</option>)}
+        {characters.map((character) => <option key={String(character.id)} value={String(character.id)}>{characterDisplayLabel(character)}</option>)}
       </select>
     </>
   )
