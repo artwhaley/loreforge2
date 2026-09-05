@@ -6,14 +6,18 @@ import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { characterDisplayLabel } from '@/lib/characters/labels'
 import { getDomainsForCharacter } from '@/lib/tenant/characterDomains'
 import { getAdministrationDomainsForUser } from '@/lib/tenant/queries'
+import { isInvitationToken } from '@/lib/invitations/types'
 
 export const dynamic = 'force-dynamic'
 
-type Props = { searchParams?: Promise<{ error?: string }> }
+type Props = { searchParams?: Promise<{ error?: string; invite?: string }> }
 
 export default async function HomePage({ searchParams }: Props) {
   const context = await getActiveContext()
-  const error = (await searchParams)?.error
+  const params = await searchParams
+  const error = params?.error
+  const invite = isInvitationToken(params?.invite) ? params?.invite : undefined
+  const inviteQuery = invite ? `?invite=${encodeURIComponent(invite)}` : ''
 
   if (!context.user) {
     return (
@@ -22,7 +26,7 @@ export default async function HomePage({ searchParams }: Props) {
           <div className={styles.heroContent}>
             <h1 className={styles.heroTitle}>Write a world worth remembering.</h1>
             <p className={styles.heroCopy}>One place for all your static and living lore.</p>
-            <div className={styles.actions}><Link href="/about" className={styles.secondary}>Explore Loreforge</Link><Link href="/create-account" className={styles.primary}>Create your account</Link></div>
+            <div className={styles.actions}><Link href="/about" className={styles.secondary}>Explore Loreforge</Link><Link href={`/create-account${inviteQuery}`} className={styles.primary}>Create your account</Link></div>
           </div>
           <div className={styles.loginCard} id="login">
             <h2>Welcome back</h2>
@@ -30,10 +34,11 @@ export default async function HomePage({ searchParams }: Props) {
             <form action="/api/customer-login" method="post">
               <div className={styles.field}><label htmlFor="email">Email</label><input id="email" name="email" type="email" autoComplete="email" required /></div>
               <div className={styles.field}><label htmlFor="password">Password</label><input id="password" name="password" type="password" autoComplete="current-password" required /></div>
+              {invite ? <input type="hidden" name="invite" value={invite} /> : null}
               <label className={styles.remember}><input name="remember" value="1" type="checkbox" /> Remember me on this device</label>
               <button className={`${styles.primary} ${styles.loginButton}`} type="submit">Sign in</button>
             </form>
-            <div className={styles.formLinks}><Link href="/forgot-password">Forgot password?</Link><Link href="/create-account">Create account</Link></div>
+            <div className={styles.formLinks}><Link href="/forgot-password">Forgot password?</Link><Link href={`/create-account${inviteQuery}`}>Create account</Link></div>
           </div>
         </section>
         <section className={styles.section}>

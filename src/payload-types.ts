@@ -85,6 +85,7 @@ export interface Config {
     'document-relationships': DocumentRelationship;
     'document-types': DocumentType;
     templates: Template;
+    invitations: Invitation;
     'document-provenance-events': DocumentProvenanceEvent;
     'domain-audit-events': DomainAuditEvent;
     tenants: Tenant;
@@ -120,6 +121,7 @@ export interface Config {
     'document-relationships': DocumentRelationshipsSelect<false> | DocumentRelationshipsSelect<true>;
     'document-types': DocumentTypesSelect<false> | DocumentTypesSelect<true>;
     templates: TemplatesSelect<false> | TemplatesSelect<true>;
+    invitations: InvitationsSelect<false> | InvitationsSelect<true>;
     'document-provenance-events': DocumentProvenanceEventsSelect<false> | DocumentProvenanceEventsSelect<true>;
     'domain-audit-events': DomainAuditEventsSelect<false> | DomainAuditEventsSelect<true>;
     tenants: TenantsSelect<false> | TenantsSelect<true>;
@@ -250,7 +252,7 @@ export interface Domain {
   kind: 'community' | 'personal';
   ownerUser?: (number | null) | User;
   ownerCharacter?: (number | null) | Character;
-  lifecycle: 'active' | 'grace' | 'read-only' | 'suspended' | 'archived';
+  lifecycle: 'setup-pending' | 'active' | 'grace' | 'read-only' | 'suspended' | 'archived';
   defaultFilingPolicy: 'direct-file' | 'review-required';
   motto?: string | null;
   preset: 'heritage' | 'modern';
@@ -751,6 +753,26 @@ export interface Template {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "invitations".
+ */
+export interface Invitation {
+  id: number;
+  purpose: 'domain_bootstrap' | 'character_claim' | 'domain_join';
+  domain?: (number | null) | Domain;
+  character?: (number | null) | Character;
+  tokenHash: string;
+  issuedByUser: number | User;
+  issuedByCharacter: number | Character;
+  expiresAt?: string | null;
+  revokedAt?: string | null;
+  maxUses?: number | null;
+  useCount: number;
+  lastUsedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "document-provenance-events".
  */
 export interface DocumentProvenanceEvent {
@@ -1133,6 +1155,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'templates';
         value: number | Template;
+      } | null)
+    | ({
+        relationTo: 'invitations';
+        value: number | Invitation;
       } | null)
     | ({
         relationTo: 'document-provenance-events';
@@ -1535,6 +1561,25 @@ export interface TemplatesSelect<T extends boolean = true> {
   lifecyclePolicy?: T;
   active?: T;
   version?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "invitations_select".
+ */
+export interface InvitationsSelect<T extends boolean = true> {
+  purpose?: T;
+  domain?: T;
+  character?: T;
+  tokenHash?: T;
+  issuedByUser?: T;
+  issuedByCharacter?: T;
+  expiresAt?: T;
+  revokedAt?: T;
+  maxUses?: T;
+  useCount?: T;
+  lastUsedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }

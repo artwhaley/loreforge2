@@ -33,6 +33,7 @@ import { Pages } from './collections/Pages'
 import { Tenants } from './collections/Tenants'
 import { Users } from './collections/Users'
 import { Templates } from './collections/Templates'
+import { Invitations } from './collections/Invitations'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -152,7 +153,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Characters, CharacterClaimRequests, CharacterMergeRequests, DomainCharacterContexts, DomainMemberships, Domains, DomainAdmins, Subdomains, Roles, RoleAssignments, PermissionRules, DocumentCharacterLinks, Tags, DocumentTags, DocumentRelationships, DocumentTypes, Templates, DocumentProvenanceEvents, DomainAuditEvents, Tenants, Memberships, Documents, Folders, Pages, Media],
+  collections: [Users, Characters, CharacterClaimRequests, CharacterMergeRequests, DomainCharacterContexts, DomainMemberships, Domains, DomainAdmins, Subdomains, Roles, RoleAssignments, PermissionRules, DocumentCharacterLinks, Tags, DocumentTags, DocumentRelationships, DocumentTypes, Templates, Invitations, DocumentProvenanceEvents, DomainAuditEvents, Tenants, Memberships, Documents, Folders, Pages, Media],
   plugins: [formBuilder],
   editor: lexicalEditor(),
   db: sqliteAdapter({

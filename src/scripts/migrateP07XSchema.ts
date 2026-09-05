@@ -36,6 +36,44 @@ try {
   db.exec('CREATE INDEX IF NOT EXISTS document_types_pending_review_folder_idx ON document_types (pending_review_folder_id)')
   db.exec('CREATE INDEX IF NOT EXISTS document_types_filed_folder_idx ON document_types (filed_folder_id)')
   db.exec('CREATE INDEX IF NOT EXISTS document_types_locked_folder_idx ON document_types (locked_folder_id)')
+
+  // P07X-T08: one access-closed invitation table shared by bootstrap,
+  // character-claim, and general Domain links. Raw token material is never a
+  // column; token_hash stores only the SHA-256 digest.
+  db.exec(`CREATE TABLE IF NOT EXISTS invitations (
+    id integer PRIMARY KEY NOT NULL,
+    purpose text NOT NULL,
+    domain_id integer,
+    character_id integer,
+    token_hash text NOT NULL,
+    issued_by_user_id integer NOT NULL,
+    issued_by_character_id integer NOT NULL,
+    expires_at text,
+    revoked_at text,
+    max_uses numeric,
+    use_count numeric DEFAULT 0 NOT NULL,
+    last_used_at text,
+    updated_at text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+    created_at text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL
+  )`)
+  const invitationColumns = new Set((db.prepare('PRAGMA table_info(invitations)').all() as Array<{ name: string }>).map((row) => row.name))
+  for (const [name, definition] of [
+    ['purpose', "text NOT NULL DEFAULT 'domain_join'"],
+    ['domain_id', 'integer'], ['character_id', 'integer'], ['token_hash', "text NOT NULL DEFAULT ''"],
+    ['issued_by_user_id', 'integer NOT NULL DEFAULT 0'], ['issued_by_character_id', 'integer NOT NULL DEFAULT 0'],
+    ['expires_at', 'text'], ['revoked_at', 'text'], ['max_uses', 'numeric'],
+    ['use_count', 'numeric DEFAULT 0 NOT NULL'], ['last_used_at', 'text'],
+  ] as const) {
+    if (!invitationColumns.has(name)) db.exec(`ALTER TABLE invitations ADD COLUMN ${name} ${definition}`)
+  }
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS invitations_token_hash_unique ON invitations (token_hash)')
+  db.exec('CREATE INDEX IF NOT EXISTS invitations_purpose_idx ON invitations (purpose)')
+  db.exec('CREATE INDEX IF NOT EXISTS invitations_domain_idx ON invitations (domain_id)')
+  db.exec('CREATE INDEX IF NOT EXISTS invitations_character_idx ON invitations (character_id)')
+  db.exec('CREATE INDEX IF NOT EXISTS invitations_issued_by_user_idx ON invitations (issued_by_user_id)')
+  db.exec('CREATE INDEX IF NOT EXISTS invitations_issued_by_character_idx ON invitations (issued_by_character_id)')
+  db.exec('CREATE INDEX IF NOT EXISTS invitations_expires_at_idx ON invitations (expires_at)')
+  db.exec('CREATE INDEX IF NOT EXISTS invitations_revoked_at_idx ON invitations (revoked_at)')
   db.exec('COMMIT')
 } catch (error) {
   db.exec('ROLLBACK')

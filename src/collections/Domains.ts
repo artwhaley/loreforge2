@@ -4,9 +4,10 @@ import { assertDomainOwnership } from '@/lib/domains/invariants'
 
 const ownerInvariant = ({ data, originalDoc }: { data: Record<string, unknown>; originalDoc?: Record<string, unknown> }) => {
   const kind = (data.kind ?? originalDoc?.kind ?? 'community') as string
+  const lifecycle = (data.lifecycle ?? originalDoc?.lifecycle ?? 'active') as string
   const ownerUser = data.ownerUser ?? originalDoc?.ownerUser
   const ownerCharacter = data.ownerCharacter ?? originalDoc?.ownerCharacter
-  assertDomainOwnership({ kind, ownerUser, ownerCharacter })
+  assertDomainOwnership({ kind, lifecycle, ownerUser, ownerCharacter })
   return data
 }
 
@@ -30,7 +31,7 @@ export const Domains: CollectionConfig = {
     { name: 'kind', type: 'select', required: true, defaultValue: 'community', options: [{ label: 'Community', value: 'community' }, { label: 'Personal', value: 'personal' }] },
     { name: 'ownerUser', type: 'relationship', relationTo: 'users', label: 'Owner User', index: true },
     { name: 'ownerCharacter', type: 'relationship', relationTo: 'characters', label: 'Owner Character', index: true },
-    { name: 'lifecycle', type: 'select', required: true, defaultValue: 'active', options: [{ label: 'Active', value: 'active' }, { label: 'Grace', value: 'grace' }, { label: 'Read-only', value: 'read-only' }, { label: 'Suspended', value: 'suspended' }, { label: 'Archived / Closed', value: 'archived' }] },
+    { name: 'lifecycle', type: 'select', required: true, defaultValue: 'active', options: [{ label: 'Setup pending', value: 'setup-pending' }, { label: 'Active', value: 'active' }, { label: 'Grace', value: 'grace' }, { label: 'Read-only', value: 'read-only' }, { label: 'Suspended', value: 'suspended' }, { label: 'Archived / Closed', value: 'archived' }] },
     { name: 'defaultFilingPolicy', type: 'select', required: true, defaultValue: 'direct-file', options: [{ label: 'Direct file', value: 'direct-file' }, { label: 'Review required', value: 'review-required' }] },
     { name: 'motto', type: 'text' },
     { name: 'preset', type: 'select', label: 'Theme preset', options: [{ label: 'Heritage (traditional civic)', value: 'heritage' }, { label: 'Modern (coastal metropolitan)', value: 'modern' }], defaultValue: 'heritage', required: true },
