@@ -102,23 +102,33 @@ async function loadFacts(payload: Payload, actor: AuthzActor, domainId: number, 
     payload.findByID({ collection: 'domains', id: domainId, depth: 0, overrideAccess: true, req: txReq }).catch(() => null),
   ])
   if (!domain) throw new Error('Resource not found.')
-  const [admins, membershipRows, rolesResult, assignmentsResult, rulesResult, foldersResult, subdomainsResult] = await Promise.all([
-    find({ collection: 'domain-admins', where: { and: [{ domain: { equals: domainId } }, { user: { equals: actor.userId } }, { status: { equals: 'active' } }] }, depth: 0, req: txReq }),
-    actor.activeCharacterId == null ? Promise.resolve({ docs: [] }) : (async () => {
-      const [character, memberships] = await Promise.all([
-        payload.findByID({ collection: 'characters', id: actor.activeCharacterId as number | string, depth: 0, overrideAccess: true, req: txReq }).catch(() => null),
-        find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domainId } }, { character: { equals: actor.activeCharacterId } }, { status: { equals: 'active' } }] }, depth: 0, req: txReq }),
-      ])
-      const characterRecord = character as ({ controlledBy?: unknown } & Record<string, unknown>) | null
-      // An active Character selector is a User -> Character tuple, not a
-      // caller-supplied ID; the ownership check prevents forging another
-      // user's identity (unchanged interim semantics).
-      if (!character || (characterRecord as { status?: unknown }).status !== 'active') return { docs: [] }
-      if (Object.prototype.hasOwnProperty.call(characterRecord ?? {}, 'controlledBy') && idOf(characterRecord?.controlledBy) == null) return { docs: [] }
-      const controllerId = idOf(characterRecord?.controlledBy)
-      if (controllerId != null && controllerId !== Number(actor.userId)) return { docs: [] }
-      return memberships
-    })(),
+  // P07X-T02: the acting Character tuple (active + controlled by the caller)
+  // is resolved ONCE here and drives the authority decision. Administrative
+  // authority comes from the Character's kind, never from User flags,
+  // ownerUser, or legacy domain-admins rows. domain_admin Characters have no
+  // DomainMembership by invariant, so their membership rows stay empty while
+  // their scope authority still applies.
+  let characterRecord: ({ status?: unknown; kind?: unknown; administrativeDomain?: unknown; controlledBy?: unknown } & Record<string, unknown>) | null = null
+  let membershipRows: { docs: unknown[] } = { docs: [] }
+  if (actor.activeCharacterId != null) {
+    const [character, memberships] = await Promise.all([
+      payload.findByID({ collection: 'characters', id: actor.activeCharacterId as number | string, depth: 0, overrideAccess: true, req: txReq }).catch(() => null),
+      find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domainId } }, { character: { equals: actor.activeCharacterId } }, { status: { equals: 'active' } }] }, depth: 0, req: txReq }),
+    ])
+    const candidate = character as ({ status?: unknown; kind?: unknown; administrativeDomain?: unknown; controlledBy?: unknown } & Record<string, unknown>) | null
+    // A Character selector is a User -> Character tuple, not a caller-supplied
+    // ID; the ownership check prevents forging another user's identity.
+    if (candidate && candidate.status === 'active') {
+      const hasControllerField = Object.prototype.hasOwnProperty.call(candidate, 'controlledBy')
+      const controllerId = idOf(candidate.controlledBy)
+      const validTuple = (!hasControllerField || controllerId != null) && (controllerId == null || controllerId === Number(actor.userId))
+      if (validTuple) {
+        characterRecord = candidate
+        membershipRows = memberships
+      }
+    }
+  }
+  const [rolesResult, assignmentsResult, rulesResult, foldersResult, subdomainsResult] = await Promise.all([
     find({ collection: 'roles', where: { domain: { equals: domainId } }, depth: 0, req: txReq }),
     actor.activeCharacterId == null ? Promise.resolve({ docs: [] }) : find({ collection: 'role-assignments', where: { and: [{ character: { equals: actor.activeCharacterId } }, { status: { equals: 'active' } }] }, depth: 0, req: txReq }),
     find({ collection: 'permission-rules', where: { and: [{ domain: { equals: domainId } }, { active: { equals: true } }] }, depth: 1, req: txReq }),
@@ -166,13 +176,21 @@ async function loadFacts(payload: Payload, actor: AuthzActor, domainId: number, 
   const subdomains = new Map((subdomainsResult.docs as unknown as Record<string, unknown>[]).map((subdomain) => [Number(subdomain.id), { id: Number(subdomain.id) }]))
 
   const domainRow = domain as unknown as { ownerUser?: unknown; ownerCharacter?: unknown; kind?: unknown }
-  const authority = Boolean((user as { isPlatformAdmin?: unknown } | null)?.isPlatformAdmin)
-    ? { kind: 'platform' as const }
-    : String(idOf(domainRow.ownerUser)) === String(actor.userId) && idOf(domainRow.ownerUser) != null
-      ? { kind: 'owner' as const }
-      : String(domainRow.kind) === 'personal' && actor.activeCharacterId != null && idOf(domainRow.ownerCharacter) === Number(actor.activeCharacterId)
-        ? { kind: 'personal-owner' as const }
-        : (admins.docs as unknown as unknown[]).length > 0 ? { kind: 'admin' as const } : null
+  // P07X-T02 authority resolution — kind-driven, no ambient User authority:
+  // - domain_admin whose administrativeDomain equals the selected Domain
+  //   (controller equality with the Domain ownerUser is a T01 provisioning
+  //   invariant, so the validated tuple is sufficient) -> full Domain
+  //   customer-operational authority in exactly that Domain;
+  // - Personal Domain owner Character -> personal-owner authority;
+  // - platform_admin / player / npc / no Character -> NO Domain authority;
+  //   platform work uses the separate authorizePlatformOperation seam.
+  const characterKind = String(characterRecord?.kind ?? 'player')
+  const characterAdminDomainId = characterRecord == null ? null : idOf(characterRecord.administrativeDomain)
+  const authority = characterRecord != null && String(domainRow.kind) === 'personal' && idOf(domainRow.ownerCharacter) === Number(actor.activeCharacterId) && characterKind !== 'domain_admin' && characterKind !== 'platform_admin'
+    ? { kind: 'personal-owner' as const }
+    : characterRecord != null && characterKind === 'domain_admin' && characterAdminDomainId === domainId
+      ? { kind: 'admin' as const }
+      : null
 
   const membership = (membershipRows.docs as unknown as Record<string, unknown>[])[0]
   const characterState = membership && actor.activeCharacterId != null
@@ -300,7 +318,10 @@ export type SessionDecision = { allowed: boolean; reason: string; matchedRule?: 
  */
 export function decideInSession(session: AuthzSession, capability: Capability, target: { type: ResourceType; id: number; folderChain?: number[]; subdomainId?: number | null }): SessionDecision {
   if (session.authority) {
-    const reason = session.authority.kind === 'platform' ? 'Platform Admin bypass.' : session.authority.kind === 'owner' ? 'Community Domain Owner authority.' : session.authority.kind === 'personal-owner' ? 'Personal Domain owner Character authority.' : 'Operational Domain Admin authority.'
+    // P07X-T02: 'platform'/'owner' kinds are unreachable here (platform work
+    // uses authorizePlatformOperation; ownerUser authority requires the
+    // provisioned domain_admin identity, which resolves as 'admin').
+    const reason = session.authority.kind === 'platform' ? 'Platform Admin bypass.' : session.authority.kind === 'owner' ? 'Community Domain Owner authority.' : session.authority.kind === 'personal-owner' ? 'Personal Domain owner Character authority.' : 'Acting Domain Admin authority (Administrator of this Domain).'
     return { allowed: true, reason, trace: [reason] }
   }
   if (session.characterState == null) return { allowed: false, reason: 'An active member Character is required.', trace: ['No active Character/Domain membership tuple.'] }

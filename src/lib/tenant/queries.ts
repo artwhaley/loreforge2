@@ -190,34 +190,16 @@ export async function getAdministrationDomainsForUser(userId: number | string): 
   return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name))
 }
 
-/** Active Characters the User controls who are members of a Domain. */
+/** Acting identities for a Domain: member Characters plus the scoped
+ * provisioned administrative identities (platform_admin; the matching
+ * domain_admin). */
 export async function getCharactersForTenant(
   tenant: DomainRecord,
   userId: number | string,
 ): Promise<Character[]> {
   const payload = await getLorePayload()
-  // P07P-02: memberships for the one Domain in a single unbounded query; the
-  // controller filter stays in memory on the populated relation.
-  const memberships = await payload.find({
-    collection: 'domain-memberships',
-    where: {
-      and: [{ or: [{ domain: { equals: domainId(tenant) } }, { tenant: { equals: domainId(tenant) } }] }, { status: { equals: 'active' } }],
-    },
-    depth: 1,
-    limit: 0,
-    pagination: false,
-  })
-  return memberships.docs
-    .map((membership) => membership.character)
-    .filter((character): character is Character => {
-      if (!character || typeof character !== 'object' || character.status !== 'active') return false
-      // P07X-T01: administrative identities are system-managed and never
-      // ordinary Domain members (their scope comes from kind, not membership).
-      if (character.kind === 'domain_admin' || character.kind === 'platform_admin') return false
-      const controlledBy = character.controlledBy
-      const controllerId = typeof controlledBy === 'object' ? controlledBy?.id : controlledBy
-      return String(controllerId) === String(userId)
-    })
+  const { findDomainIdentities } = await import('@/lib/characters/identitySelect')
+  return findDomainIdentities(payload, { userId, domainId: domainId(tenant) })
 }
 
 export async function getDomainMembershipsForTenant(tenant: DomainRecord): Promise<DomainMembership[]> {

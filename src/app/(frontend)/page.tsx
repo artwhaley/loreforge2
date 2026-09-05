@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { DashboardCharacterPicker } from '@/components/platform/DashboardCharacterPicker'
 import { PlatformShell, platformStyles as styles } from '@/components/platform/PlatformShell'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
+import { characterDisplayLabel } from '@/lib/characters/labels'
 import { getDomainsForCharacter } from '@/lib/tenant/characterDomains'
 import { getAdministrationDomainsForUser } from '@/lib/tenant/queries'
 
@@ -53,7 +54,7 @@ export default async function HomePage({ searchParams }: Props) {
   return (
     <PlatformShell>
       <div className={styles.dashboardHeader}>
-        <div><p className={styles.eyebrow}>Your Loreforge</p><h1 className={styles.sectionTitle}>Welcome back, {context.user.name ?? context.user.email}</h1><p className={styles.dashboardGreeting}>{activeCharacter ? `Acting as ${activeCharacter.name}.` : 'Choose a Character to unlock your Domains.'}</p></div>
+        <div><p className={styles.eyebrow}>Your Loreforge</p><h1 className={styles.sectionTitle}>Welcome back, {context.user.name ?? context.user.email}</h1><p className={styles.dashboardGreeting}>{activeCharacter ? `Acting as ${characterDisplayLabel(activeCharacter)}.` : 'Choose a Character to unlock your Domains.'}</p></div>
         <div className={styles.dashboardControls}>
           <div className={styles.actions}><Link href="/account" className={styles.secondary}>Account</Link><form action="/api/logout" method="post"><button type="submit" className={styles.textButton}>Log out</button></form></div>
         </div>

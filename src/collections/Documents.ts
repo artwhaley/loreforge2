@@ -38,10 +38,12 @@ export const Documents: CollectionConfig = {
     // boundary has been established; the Local API in Payload 3.88 defaults
     // to overrideAccess, so these functions guard the HTTP surface.
     //
-    // P07P-04 (owner decision 2026-09-04): REST with no validated acting
-    // Character receives only actual User-level authority. The previous
-    // controlled-Character union fallback is removed — Characters are
-    // evaluated strictly separately for roleplay immersion. Application
+    // P07P-04 (owner decision 2026-09-04) removed the controlled-Character
+    // union fallback. P07X-T02 (superseding) removed ambient User-level
+    // authority entirely: with no validated acting Character the session
+    // resolves NO Domain authority, so direct reads/updates fail closed.
+    // The owner's authority is exercised through their provisioned
+    // domain_admin Character, carried by the selector cookie. Application
     // routes that resolve an active Character pass it explicitly.
     read: async ({ req, id }) => {
       if (!req.user || id === undefined || id === null) return false
@@ -107,8 +109,10 @@ export const Documents: CollectionConfig = {
           }
           const isPrivilegedTransition = from !== to && to !== 'pending_review'
           if (isPrivilegedTransition && !supersedesLock && req.user?.id && domainId) {
-            const decision = await evaluatePermission({ payload: req.payload, actor: { userId: req.user.id }, domainId, capability: to === 'locked' ? 'lock_document' : to === 'filed' ? (from === 'pending_review' ? 'approve_document' : 'file_document') : to === 'draft' ? 'edit_document' : 'unlock_document', resource: { type: 'Document', id: originalDoc?.id ?? 0 } })
-            if (!decision.allowed) throw new Error('Owner or an operational Domain Admin or authorized Role is required for this lifecycle transition.')
+            // P07X-T02: the transition decision evaluates the acting identity
+            // (carried by the selector cookie), never ambient User authority.
+            const decision = await evaluatePermission({ payload: req.payload, actor: { userId: req.user.id, activeCharacterId: requestActiveCharacterId(req) }, domainId, capability: to === 'locked' ? 'lock_document' : to === 'filed' ? (from === 'pending_review' ? 'approve_document' : 'file_document') : to === 'draft' ? 'edit_document' : 'unlock_document', resource: { type: 'Document', id: originalDoc?.id ?? 0 } })
+            if (!decision.allowed) throw new Error('An authorized acting identity or Role is required for this lifecycle transition.')
           }
           if (data?.body !== undefined && data.body !== originalDoc?.body && !canEditDocumentBody(from)) throw new Error('This Document is not editable in its current lifecycle state.')
         }
@@ -123,20 +127,25 @@ export const Documents: CollectionConfig = {
           const preparedCharacterId = relationId(context?.preparedByCharacterId)
           if (!actorUserId) throw new Error('Document creation requires an authenticated authoring context.')
           if (preparedCharacterId) {
-            const preparedCharacter = await req.payload.findByID({ collection: 'characters', id: preparedCharacterId, depth: 0, overrideAccess: true }).catch(() => null) as { status?: string; controlledBy?: unknown } | null
+            // P07X-T02: an active member Character, or the provisioned
+            // domain_admin of exactly this Domain (administrative create
+            // without RP membership or Prepared-by credit).
+            const preparedCharacter = await req.payload.findByID({ collection: 'characters', id: preparedCharacterId, depth: 0, overrideAccess: true }).catch(() => null) as { status?: string; kind?: string; controlledBy?: unknown; administrativeDomain?: unknown } | null
             const controllerId = relationId(preparedCharacter?.controlledBy)
             const membership = domainId ? await req.payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domainId } }, { character: { equals: preparedCharacterId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true }) : { docs: [] }
-            if (!preparedCharacter || preparedCharacter.status !== 'active' || controllerId !== actorUserId || !membership.docs[0]) throw new Error('The Prepared-by Character must be an active Character controlled by the author in this Domain.')
+            const kind = String(preparedCharacter?.kind ?? 'player')
+            const adminDomainId = relationId(preparedCharacter?.administrativeDomain)
+            const scopedDomainAdmin = kind === 'domain_admin' && domainId != null && adminDomainId === Number(domainId)
+            if (!preparedCharacter || preparedCharacter.status !== 'active' || controllerId !== actorUserId || (!membership.docs[0] && !scopedDomainAdmin)) throw new Error('The Prepared-by Character must be an active Character controlled by the author in this Domain.')
           } else {
-            // A no-Character create is reserved for the Domain owner or an
-            // operational/platform administrator. Ordinary members must act
-            // through the selected Character so its Prepared-by credit is
-            // durable and non-removable.
+            // A no-Character create is reserved for the Domain's owner User
+            // ONLY (the one person the domain_admin identity is provisioned
+            // for). Platform/legacy domain-admins no longer have ambient
+            // create authority (P07X-T02); ordinary members must act through
+            // the selected Character.
             const domain = domainId ? await req.payload.findByID({ collection: 'domains', id: domainId, depth: 0, overrideAccess: true }).catch(() => null) as { ownerUser?: unknown } | null : null
             const owner = relationId(domain?.ownerUser)
-            const account = await req.payload.findByID({ collection: 'users', id: actorUserId, depth: 0, overrideAccess: true }).catch(() => null) as { isPlatformAdmin?: unknown } | null
-            const admins = domainId ? await req.payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: domainId } }, { user: { equals: actorUserId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true }) : { docs: [] }
-            if (owner !== actorUserId && !Boolean(account?.isPlatformAdmin) && !admins.docs[0]) throw new Error('Document creation requires an acting Character unless the author is a Domain administrator.')
+            if (owner !== actorUserId) throw new Error('Document creation requires an acting Character unless the author is the Domain owner.')
           }
           if (!context?.allowUserCreate && !preparedCharacterId) throw new Error('Document creation requires an explicit authoring context.')
         }

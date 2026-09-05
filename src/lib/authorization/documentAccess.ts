@@ -104,26 +104,22 @@ export async function readableVersionParentQuery(args: {
   // ONE unbounded query across all readable Domains (100+ Domain platform
   // owner shapes stay correct without per-Domain iteration); scoped actors
   // compile the A/G/D predicate per Domain.
-  const [userRow, memberships, owned, adminRows, platformDomains] = await Promise.all([
-    payload.findByID({ collection: 'users', id: user.id, depth: 0, overrideAccess: true }).catch(() => null),
+  // P07X-T02: candidate Domains come from the ACTING identity only — active
+  // member Character Domains plus Domains the User owns (which hosts the
+  // provisioned domain_admin identity whose scope grants record authority).
+  // Platform/legacy domain-admins rows contribute nothing here; every Domain
+  // is then evaluated through the session, so a platform identity or a
+  // mismatched owner User resolves to an empty scope instead of a bypass.
+  const [memberships, owned] = await Promise.all([
     args.activeCharacterId == null ? { docs: [] } : payload.find({ collection: 'domain-memberships', where: { and: [{ character: { equals: args.activeCharacterId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 0, pagination: false, overrideAccess: true }),
     payload.find({ collection: 'domains', where: { ownerUser: { equals: user.id } }, depth: 0, limit: 0, pagination: false, overrideAccess: true }),
-    payload.find({ collection: 'domain-admins', where: { and: [{ user: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 0, pagination: false, overrideAccess: true }),
-    payload.find({ collection: 'domains', depth: 0, limit: 0, pagination: false, overrideAccess: true }),
   ])
-  const isPlatform = Boolean((userRow as { isPlatformAdmin?: unknown } | null)?.isPlatformAdmin)
   const relationIdOf = relationId
   const memberDomainIds = memberships.docs.map((membership) => relationIdOf((membership as { domain?: unknown }).domain) ?? relationIdOf((membership as { tenant?: unknown }).tenant)).filter((id): id is number => id !== null)
-  const adminDomainIds = adminRows.docs.map((row) => relationIdOf((row as { domain?: unknown }).domain)).filter((id): id is number => id !== null)
   const ownedDomainIds = owned.docs.map((domain) => Number(domain.id))
-  const authorityDomainIds = [...new Set([...memberDomainIds, ...adminDomainIds, ...ownedDomainIds])]
-  const bypassAll = isPlatform || authorityDomainIds.length === platformDomains.docs.length
+  const authorityDomainIds = [...new Set([...memberDomainIds, ...ownedDomainIds])]
   const visible: number[] = []
-  if (bypassAll) {
-    const docs = await payload.find({ collection: 'documents', where: { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] }, depth: 0, limit: 0, pagination: false, overrideAccess: true })
-    visible.push(...docs.docs.map((document) => Number(document.id)))
-    return { parent: { in: visible } }
-  }
+  if (authorityDomainIds.length === 0) return { parent: { in: [] } }
   for (const domainId of authorityDomainIds) {
     const session = await loadAuthorizationSession(payload, { userId: user.id, activeCharacterId: args.activeCharacterId ?? null }, domainId)
     const scope = await compileReadScope(payload, session)

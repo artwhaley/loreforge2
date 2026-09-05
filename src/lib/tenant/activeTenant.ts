@@ -37,17 +37,11 @@ export async function getActiveContext(): Promise<ActiveContext> {
     return { tenant: null, role: null, user: null, activeCharacter: null, characters: [] }
   }
 
-  const characterResult = await payload.find({
-    collection: 'characters',
-    where: {
-      and: [{ controlledBy: { equals: user.id } }, { status: { equals: 'active' } }],
-    },
-    depth: 1,
-    limit: 0,
-    pagination: false,
-    sort: 'name',
-  })
-  const characters = characterResult.docs
+  // P07X-T02: the selector list is the User's acting identities — ordinary
+  // Characters plus any provisioned platform_admin / domain_admin identities
+  // (scope filtering happens per selected Domain in findDomainIdentities).
+  const { findDashboardIdentities } = await import('@/lib/characters/identitySelect')
+  const characters = await findDashboardIdentities(payload, user.id)
   const cookieStore = await cookies()
   const activeCharacterRaw = cookieStore.get(ACTIVE_CHARACTER_COOKIE)?.value
   const activeCharacterId = activeCharacterRaw ? Number(activeCharacterRaw) : NaN
@@ -74,35 +68,32 @@ export async function getActiveContext(): Promise<ActiveContext> {
     return { tenant: null, role: null, user: contextUser, activeCharacter, characters }
   }
 
-  // A Domain can be selected by a User who manages it even when they have no
-  // participating Character. Character participation remains a separate,
-  // narrower requirement for roleplay actions.
+  // P07X-T02: authority is identity-driven. The selected Domain may still be
+  // reached by a User-level manager before identities are provisioned (UI
+  // compatibility), but every privileged action is re-authorized server-side
+  // against the acting Character.
+  const { isIdentityValidInDomain } = await import('@/lib/characters/identitySelect')
   const domainAdmins = await payload.find({
     collection: 'domain-admins',
     where: { and: [{ domain: { equals: tenant.id } }, { user: { equals: user.id } }, { status: { equals: 'active' } }] },
     depth: 0,
     limit: 1,
   })
-  const isDomainAdmin = Boolean(user.isPlatformAdmin) || Number(tenant.ownerUser && typeof tenant.ownerUser === 'object' ? tenant.ownerUser.id : tenant.ownerUser) === Number(user.id) || domainAdmins.docs.length > 0
-  const activeMembership = activeCharacter
-    ? await payload.find({
-        collection: 'domain-memberships',
-        where: { and: [{ character: { equals: activeCharacter.id } }, { or: [{ domain: { equals: tenant.id } }, { tenant: { equals: tenant.id } }] }, { status: { equals: 'active' } }] },
-        depth: 0,
-        limit: 1,
-      })
-    : { docs: [] }
+  const ownerUserId = Number(tenant.ownerUser && typeof tenant.ownerUser === 'object' ? tenant.ownerUser.id : tenant.ownerUser)
+  const isUserLevelManager = Boolean(user.isPlatformAdmin) || ownerUserId === Number(user.id) || domainAdmins.docs.length > 0
+  const userIsPlatformAdmin = Boolean(user.isPlatformAdmin)
+  const eligibleActiveCharacter = activeCharacter && await isIdentityValidInDomain(payload, { userId: user.id, characterId: activeCharacter.id, domainId: tenant.id, userIsPlatformAdmin }) ? activeCharacter : null
 
-  const eligibleActiveCharacter = activeMembership.docs[0] ? activeCharacter : null
-  if (isDomainAdmin) return { tenant, role: 'admin', user: contextUser, activeCharacter: eligibleActiveCharacter, characters }
+  const actingKind = String((eligibleActiveCharacter as { kind?: string } | null)?.kind ?? '')
+  const actingAdministrativeDomain = eligibleActiveCharacter ? Number((eligibleActiveCharacter as { administrativeDomain?: unknown }).administrativeDomain && typeof (eligibleActiveCharacter as { administrativeDomain?: unknown }).administrativeDomain === 'object' ? ((eligibleActiveCharacter as { administrativeDomain?: { id?: number } }).administrativeDomain as { id?: number })?.id : (eligibleActiveCharacter as { administrativeDomain?: unknown }).administrativeDomain) : NaN
+  const identityIsDomainAdmin = actingKind === 'domain_admin' && actingAdministrativeDomain === Number(tenant.id)
+  // Platform identity is NOT a Domain administrator role; platform tools are a
+  // separate surface gated by the platform seam.
+  const role: 'admin' | 'member' | null = identityIsDomainAdmin || (actingKind !== 'platform_admin' && isUserLevelManager) ? 'admin' : eligibleActiveCharacter ? 'member' : isUserLevelManager ? 'admin' : null
 
-  const controlledIds = characters.map((character) => character.id)
-  const anyMembership = controlledIds.length
-    ? await payload.find({ collection: 'domain-memberships', where: { and: [{ character: { in: controlledIds } }, { or: [{ domain: { equals: tenant.id } }, { tenant: { equals: tenant.id } }] }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
-    : { docs: [] }
-  if (anyMembership.docs.length === 0) return { tenant: null, role: null, user: contextUser, activeCharacter: null, characters }
+  if (role === null) return { tenant: null, role: null, user: contextUser, activeCharacter: null, characters }
 
-  return { tenant, role: 'member', user: contextUser, activeCharacter: eligibleActiveCharacter, characters }
+  return { tenant, role, user: contextUser, activeCharacter: eligibleActiveCharacter, characters }
 }
 
 export async function getActiveTenant(): Promise<{

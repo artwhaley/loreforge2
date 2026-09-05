@@ -40,16 +40,20 @@ export async function POST(request: Request) {
     sameSite: 'lax',
     path: '/',
   })
-  // Keep the selected Domain only when this Character is eligible there. The
-  // Character switch never silently changes Domain context.
+  // P07X-T02: keep the selected Domain only when this identity is eligible
+  // there (active member Character; platform_admin anywhere; domain_admin only
+  // inside its own administrativeDomain). The switch never silently changes
+  // Domain context.
+  const { isIdentityValidInDomain } = await import('@/lib/characters/identitySelect')
   const cookieStore = await cookies()
   const tenantSlug = cookieStore.get(ACTIVE_TENANT_COOKIE)?.value
   if (tenantSlug) {
     const domains = await payload.find({ collection: 'domains', where: { slug: { equals: tenantSlug } }, depth: 0, limit: 1 })
     const domain = domains.docs[0]
     if (domain) {
-      const membership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domain.id } }, { character: { equals: character.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
-      if (!membership.docs[0]) {
+      const accountRow = await payload.findByID({ collection: 'users', id: user.id, depth: 0, overrideAccess: true }).catch(() => null)
+      const valid = await isIdentityValidInDomain(payload, { userId: user.id, characterId: character.id, domainId: domain.id, userIsPlatformAdmin: Boolean((accountRow as { isPlatformAdmin?: unknown } | null)?.isPlatformAdmin) })
+      if (!valid) {
         // A stale Domain from another account must not prevent selecting a
         // Character on the Loreforge dashboard. Leave that Domain, not the
         // newly selected identity.

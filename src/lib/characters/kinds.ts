@@ -10,6 +10,8 @@
  * provisioning helpers.
  */
 
+import type { Payload } from 'payload'
+
 export const CHARACTER_KINDS = ['player', 'npc', 'domain_admin', 'platform_admin'] as const
 export type CharacterKind = (typeof CHARACTER_KINDS)[number]
 
@@ -50,4 +52,10 @@ export function assertCharacterKindFields(input: CharacterKindInput): true {
 /** Ordinary (non-admin) kinds only — used to filter RP/public projections. */
 export function isOrdinaryKind(kind: string | null | undefined): boolean {
   return kind === 'player' || kind === 'npc'
+}
+
+/** Resolve whether a Character row is an administrative kind. */
+export async function characterIsAdministrative(payload: Payload, characterId: number | string): Promise<boolean> {
+  const row = await payload.findByID({ collection: 'characters', id: Number(characterId), depth: 0, overrideAccess: true }).catch(() => null) as { kind?: string } | null
+  return isAdminKind(row?.kind ?? 'player')
 }

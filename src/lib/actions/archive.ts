@@ -17,6 +17,7 @@ import { addDocumentRelationship, runInTransaction } from '@/lib/documents/relat
 import { evaluatePermission } from '@/lib/authz/evaluate'
 import { domainAndIdWhere } from '@/lib/tenant/scope'
 import { assertFormSchema, type FormAnswers } from '@/lib/forms/schema'
+import { characterIsAdministrative } from '@/lib/characters/kinds'
 import { answersForRecordRender, renderNeutralTemplate } from '@/lib/forms/generateDocument'
 import { isTemplateAvailableAt } from '@/lib/templates/resolve'
 import type { Domain, Tenant } from '@/payload-types'
@@ -27,8 +28,10 @@ type MemberTenant = {
   tenant: Domain | Tenant
   basePath: string
   legacyTenantId?: number
-  /** Domain Owner or active Domain Admin (interim authorization). */
+  /** Domain Owner or legacy Domain Admin row (interim UI compatibility). */
   isManager: boolean
+  /** Exactly the Domain's one owner User (P07X-T02 no-Character create seam). */
+  isOwnerUser: boolean
 }
 
 export type DocumentEditorActionState = {
@@ -137,6 +140,7 @@ async function getMemberTenant(tenantSlug: string): Promise<MemberTenant | null>
         })
       : { docs: [] }
     const isManager = Number(ownerId) === Number(user.id) || domainAdmins.docs.length > 0
+    const isOwnerUser = Number(ownerId) === Number(user.id)
     if (!isManager && member.docs.length === 0) return null
 
     return {
@@ -146,6 +150,7 @@ async function getMemberTenant(tenantSlug: string): Promise<MemberTenant | null>
       basePath: `/domain/${domain.slug}`,
       legacyTenantId: undefined,
       isManager,
+      isOwnerUser,
     }
   }
 
@@ -195,17 +200,18 @@ export async function createDocumentAction(formData: FormData): Promise<void> {
   const { payload, user, tenant } = ctx
   const activeContext = await getActiveContext()
   const activeCharacterId = activeContext.tenant?.slug === tenantSlug ? activeContext.activeCharacter?.id : undefined
-  // P05R-T04 J (CC-2026-09-03-05): ordinary members must create through an
-  // acting Character (which always carries the Prepared-by credit); only the
-  // Domain Owner / Domain Admin may create without one.
-  if (!activeCharacterId && !ctx.isManager) redirect(`/domain/${tenantSlug}/records?error=character`)
+  // P07X-T02: acting identity is authoritative. Members and the provisioned
+  // Domain-admin identity create through a Character; only the Domain's one
+  // owner User may begin a no-Character create (compat seam until T06).
+  const administrativeActor = activeCharacterId != null && await characterIsAdministrative(payload, activeCharacterId)
+  if (!activeCharacterId && !ctx.isOwnerUser) redirect(`/domain/${tenantSlug}/records?error=character`)
   const documentType = await plainTextTypeId(payload, tenant.id)
   if (!documentType) redirect(`/domain/${tenantSlug}/records/new?error=type`)
   const folder = await tenantFolderId(payload, tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
 
   const created = await payload.create({
     collection: 'documents',
-    context: activeCharacterId ? { preparedByCharacterId: activeCharacterId, actorUserId: user.id } : { allowUserCreate: true, actorUserId: user.id },
+    context: activeCharacterId && !administrativeActor ? { preparedByCharacterId: activeCharacterId, actorUserId: user.id } : { allowUserCreate: true, actorUserId: user.id },
     data: {
       domain: tenant.id,
       ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}),
@@ -225,7 +231,8 @@ export async function createDocumentAction(formData: FormData): Promise<void> {
   // P05R-T04 J: the acting Character's non-removable Prepared-by credit is
   // applied AFTER the create commits — an afterChange hook cannot write on
   // this adapter while the create's own transaction is open (P05R-T02 B).
-  if (activeCharacterId) await ensurePreparedBy({ payload, domainId: tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: user.id, characterId: activeCharacterId } })
+  // Administrative identities never receive RP Prepared-by credits (P07X).
+  if (activeCharacterId && !administrativeActor) await ensurePreparedBy({ payload, domainId: tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: user.id, characterId: activeCharacterId } })
   redirect(`${ctx.basePath}/documents/${created.id}/edit`)
 }
 
@@ -242,10 +249,11 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
 
   const context = await getActiveContext()
   const activeCharacterId = context.tenant?.slug === tenantSlug ? context.activeCharacter?.id : undefined
-  // P05R-T04 J (CC-2026-09-03-05): ordinary members must create through an
-  // acting Character (which always carries the Prepared-by credit); only the
-  // Domain Owner / Domain Admin may create without one.
-  if (!activeCharacterId && !ctx.isManager) return { error: 'character', values }
+  // P07X-T02: acting identity is authoritative. Members and the provisioned
+  // Domain-admin identity create through a Character; only the Domain's one
+  // owner User may begin a no-Character create (compat seam until T06).
+  const administrativeActor = activeCharacterId != null && await characterIsAdministrative(ctx.payload, activeCharacterId)
+  if (!activeCharacterId && !ctx.isOwnerUser) return { error: 'character', values }
   const concernEntries = parseConcernLinks(values.concernLinks)
   if (!concernEntries) return { error: 'concerns', values }
   const additionalPreparedByIds = parsePreparedByCharacterIds(values.preparedByCharacterIds)
@@ -366,13 +374,13 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   const createAndRelate = async (transactionID: number | string | null) => {
     if (transactionID == null) throw new Error('Document creation requires a real database transaction.')
     const req = { transactionID }
-    const created = await ctx.payload.create({ collection: 'documents', req, context: activeCharacterId ? { preparedByCharacterId: activeCharacterId, actorUserId: ctx.user.id } : { allowUserCreate: true, actorUserId: ctx.user.id }, data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body: renderedBody, origin: selectedTemplate?.kind === 'form' ? 'form' : 'web-editor', sourceKind: selectedTemplate?.kind === 'form' ? 'form' : 'web', documentType: Number(selectedType.id), lifecycle: policy === 'review-required' ? 'pending_review' : 'filed', publicAccess: 'inherit', createdBy: ctx.user.id, folder } })
+    const created = await ctx.payload.create({ collection: 'documents', req, context: activeCharacterId && !administrativeActor ? { preparedByCharacterId: activeCharacterId, actorUserId: ctx.user.id } : { allowUserCreate: true, actorUserId: ctx.user.id }, data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body: renderedBody, origin: selectedTemplate?.kind === 'form' ? 'form' : 'web-editor', sourceKind: selectedTemplate?.kind === 'form' ? 'form' : 'web', documentType: Number(selectedType.id), lifecycle: policy === 'review-required' ? 'pending_review' : 'filed', publicAccess: 'inherit', createdBy: ctx.user.id, folder } })
     if (superseding) {
       await addDocumentRelationship({ payload: ctx.payload, domainId: ctx.tenant.id, sourceId: created.id, targetId: supersedesDocumentId, kind: 'supersedes', actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
     }
     await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'created', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { lifecycle: created.lifecycle, ...(selectedTemplate ? { templateId: Number(selectedTemplate.id), sourceKind: selectedTemplate.kind } : {}) }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id, transactionID ?? undefined), transactionID })
     if (created.lifecycle === 'filed') await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, eventType: 'filed', actorUserId: ctx.user.id, actorCharacterId: activeCharacterId, context: { reason: 'filing-policy' }, revisionId: await latestDocumentRevisionId(ctx.payload, created.id, transactionID ?? undefined), transactionID })
-    if (activeCharacterId) await ensurePreparedBy({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
+    if (activeCharacterId && !administrativeActor) await ensurePreparedBy({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
     for (const characterId of additionalPreparedByIds) {
       await attachDocumentCharacterLink({ payload: ctx.payload, domainId: ctx.tenant.id, documentId: created.id, characterId, kind: 'prepared_by', actor: { userId: ctx.user.id, characterId: activeCharacterId }, skipAuthorization: true, transactionID })
     }
@@ -453,10 +461,10 @@ export async function importMarkdownAction(formData: FormData): Promise<void> {
   const { payload, user, tenant } = ctx
   const activeContext = await getActiveContext()
   const activeCharacterId = activeContext.tenant?.slug === tenantSlug ? activeContext.activeCharacter?.id : undefined
-  // P05R-T04 J (CC-2026-09-03-05): ordinary members must create through an
-  // acting Character (which always carries the Prepared-by credit); only the
-  // Domain Owner / Domain Admin may create without one.
-  if (!activeCharacterId && !ctx.isManager) redirect(`${ctx.basePath}/records?error=character`)
+  // P07X-T02: acting identity is authoritative; only the owner User may begin
+  // a no-Character create (compat seam until T06).
+  const administrativeActor = activeCharacterId != null && await characterIsAdministrative(payload, activeCharacterId)
+  if (!activeCharacterId && !ctx.isOwnerUser) redirect(`${ctx.basePath}/records?error=character`)
   const documentType = await plainTextTypeId(payload, tenant.id)
   if (!documentType) redirect(`/domain/${tenantSlug}/records?error=type`)
   const folder = await tenantFolderId(payload, tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
@@ -465,7 +473,7 @@ export async function importMarkdownAction(formData: FormData): Promise<void> {
     const req = { transactionID }
     const created = await payload.create({
       collection: 'documents', req,
-      context: activeCharacterId ? { preparedByCharacterId: activeCharacterId, actorUserId: user.id } : { allowUserCreate: true, actorUserId: user.id },
+      context: activeCharacterId && !administrativeActor ? { preparedByCharacterId: activeCharacterId, actorUserId: user.id } : { allowUserCreate: true, actorUserId: user.id },
       data: {
         domain: tenant.id,
         ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}),
@@ -481,7 +489,7 @@ export async function importMarkdownAction(formData: FormData): Promise<void> {
       },
     })
     await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: created.id, eventType: 'created', actorUserId: user.id, actorCharacterId: activeCharacterId, revisionId: await latestDocumentRevisionId(payload, created.id, transactionID), context: { sourceKind: 'markdown-import' }, transactionID })
-    if (activeCharacterId) await ensurePreparedBy({ payload, domainId: tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: user.id, characterId: activeCharacterId }, transactionID })
+    if (activeCharacterId && !administrativeActor) await ensurePreparedBy({ payload, domainId: tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: user.id, characterId: activeCharacterId }, transactionID })
     return created
   })
   redirect(`${ctx.basePath}/documents/${created.id}`)

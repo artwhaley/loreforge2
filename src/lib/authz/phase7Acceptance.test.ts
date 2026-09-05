@@ -60,8 +60,11 @@ test('P7 golden matrix: Commander, Captains, Warrior, cross-hierarchy exception,
 
 test('P7 ownership, platform exception and forged acting Character remain separate boundaries', async () => {
   assert.equal(await allowed('owner', 'read', 'outside'), false)
-  assert.equal(await allowed('platform', 'read', 'outside'), false, 'even platform cannot mismatch resource and Domain')
-  assert.equal(await isAllowed({ payload, actor: actor('platform'), domainId: f.domains.outside, capability: 'read', resource: folder('outside') }), true)
+  assert.equal(await allowed('platform', 'read', 'outside'), false, 'even a platform user cannot mismatch resource and Domain')
+  // P07X-T02: the platform User's ordinary Character is not an ambient Domain
+  // record bypass — platform authority lives in the provisioned platform_admin
+  // identity and the separate platform seam, never in ordinary record reads.
+  assert.equal(await isAllowed({ payload, actor: actor('platform'), domainId: f.domains.outside, capability: 'read', resource: folder('outside') }), false, 'platform User identity is not Domain record authority (P07X-T02)')
   assert.equal(await isAllowed({ payload, actor: { userId: f.users.member, activeCharacterId: f.characters.head }, domainId, capability: 'manage_access', resource: folder('deeds') }), false)
 })
 
