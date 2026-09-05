@@ -25,11 +25,12 @@ export function CharacterSwitcher({ characters, activeCharacter }: { characters:
     setSelectedId(String(activeCharacter?.id ?? ''))
   }
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function submit(event: React.ChangeEvent<HTMLSelectElement>) {
+    const form = event.currentTarget.form
+    if (!form || pending) return
     setPending(true)
     try {
-      const response = await fetch('/api/switch-character', { method: 'POST', body: new FormData(event.currentTarget), credentials: 'same-origin', headers: { Accept: 'application/json', 'X-Loreforge-Character-Switch': 'fetch' } })
+      const response = await fetch('/api/switch-character', { method: 'POST', body: new FormData(form), credentials: 'same-origin', headers: { Accept: 'application/json', 'X-Loreforge-Character-Switch': 'fetch' } })
       const body = await response.json() as { redirectTo?: string }
       if (body.redirectTo === '/') router.push('/')
       else router.refresh()
@@ -38,13 +39,12 @@ export function CharacterSwitcher({ characters, activeCharacter }: { characters:
     }
   }
 
-  return <form action="/api/switch-character" method="post" className={styles.contextControl} onSubmit={submit}>
+  return <form className={styles.contextControl}>
     <label htmlFor="character-switcher" className={styles.contextLabel}>Acting as</label>
-    <select id="character-switcher" name="characterId" value={selectedId} onChange={(event) => setSelectedId(event.target.value)} className={styles.contextSelect} disabled={pending}>
+    <select id="character-switcher" name="characterId" value={selectedId} onChange={submit} className={styles.contextSelect} disabled={pending}>
       <option value="">No participating Character</option>
       {characters.map((character) => <option key={character.id} value={character.id}>{characterDisplayLabel(character)}</option>)}
     </select>
     <input type="hidden" name="returnTo" value={returnTo} />
-    <button type="submit" className={styles.contextButton} disabled={pending}>{pending ? 'Switching…' : 'Switch'}</button>
   </form>
 }

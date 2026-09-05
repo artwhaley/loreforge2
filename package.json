@@ -19,6 +19,7 @@
     "migrate:phase7-authz": "node --import tsx src/scripts/migratePhase7Authorization.ts",
     "migrate:p07x-schema": "node --import tsx src/scripts/migrateP07XSchema.ts",
     "migrate:p07x-t11": "node --import tsx src/scripts/migrateP07XT11.ts",
+    "migrate:p08-theme": "node --import tsx src/scripts/migrateP08ThemeTokens.ts",
     "migrate:p07x-kinds": "cross-env DATABASE_URI=file:./sl-civic-archive.db PAYLOAD_PUSH=true npx payload run ./src/scripts/migrateP07XKinds.ts",
     "migrate:p07p-indexes": "node --import tsx src/scripts/migrateP07PIndexes.ts",
     "bench:p7p": "node --import tsx src/scripts/benchP07P.ts",

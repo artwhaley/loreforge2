@@ -259,15 +259,21 @@ export interface Domain {
   lifecycle: 'setup-pending' | 'active' | 'grace' | 'read-only' | 'suspended' | 'archived';
   defaultFilingPolicy: 'direct-file' | 'review-required';
   motto?: string | null;
-  preset: 'heritage' | 'modern';
+  preset: 'heritage' | 'modern' | 'ink' | 'gallery' | 'verdant' | 'nocturne';
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
   backgroundColor: string;
-  headingFontKey: 'georgia' | 'palatino' | 'verdana' | 'trebuchet';
-  bodyFontKey: 'verdana' | 'georgia' | 'trebuchet' | 'tahoma';
+  headingFontKey: 'georgia' | 'palatino' | 'newsreader' | 'verdana' | 'trebuchet' | 'lato';
+  bodyFontKey: 'verdana' | 'georgia' | 'trebuchet' | 'tahoma' | 'lato' | 'newsreader';
   logo?: (number | null) | Media;
   banner?: (number | null) | Media;
+  designTemplate?: ('civic' | 'ledger' | 'poster') | null;
+  contentWidth?: ('narrow' | 'standard' | 'wide') | null;
+  headerLayout?: ('centered' | 'left-aligned' | 'banner-forward') | null;
+  documentStyle?: ('classic' | 'modern') | null;
+  backgroundTreatment?: ('plain' | 'washes' | 'soft' | 'vignette') | null;
+  backgroundImage?: (number | null) | Media;
   publicEnabled?: boolean | null;
   installedPackKey?: string | null;
   installedPackVersion?: string | null;
@@ -342,13 +348,13 @@ export interface Tenant {
    */
   slug: string;
   motto?: string | null;
-  preset: 'heritage' | 'modern';
+  preset: 'heritage' | 'modern' | 'ink' | 'gallery' | 'verdant' | 'nocturne';
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
   backgroundColor: string;
-  headingFontKey: 'georgia' | 'palatino' | 'verdana' | 'trebuchet';
-  bodyFontKey: 'verdana' | 'georgia' | 'trebuchet' | 'tahoma';
+  headingFontKey: 'georgia' | 'palatino' | 'newsreader' | 'verdana' | 'trebuchet' | 'lato';
+  bodyFontKey: 'verdana' | 'georgia' | 'trebuchet' | 'tahoma' | 'lato' | 'newsreader';
   /**
    * Optional Domain seal or logo (image).
    */
@@ -357,6 +363,12 @@ export interface Tenant {
    * Optional header banner (image).
    */
   banner?: (number | null) | Media;
+  designTemplate?: ('civic' | 'ledger' | 'poster') | null;
+  contentWidth?: ('narrow' | 'standard' | 'wide') | null;
+  headerLayout?: ('centered' | 'left-aligned' | 'banner-forward') | null;
+  documentStyle?: ('classic' | 'modern') | null;
+  backgroundTreatment?: ('plain' | 'washes' | 'soft' | 'vignette') | null;
+  backgroundImage?: (number | null) | Media;
   updatedAt: string;
   createdAt: string;
 }
@@ -1437,6 +1449,12 @@ export interface DomainsSelect<T extends boolean = true> {
   bodyFontKey?: T;
   logo?: T;
   banner?: T;
+  designTemplate?: T;
+  contentWidth?: T;
+  headerLayout?: T;
+  documentStyle?: T;
+  backgroundTreatment?: T;
+  backgroundImage?: T;
   publicEnabled?: T;
   installedPackKey?: T;
   installedPackVersion?: T;
@@ -1726,6 +1744,12 @@ export interface TenantsSelect<T extends boolean = true> {
   bodyFontKey?: T;
   logo?: T;
   banner?: T;
+  designTemplate?: T;
+  contentWidth?: T;
+  headerLayout?: T;
+  documentStyle?: T;
+  backgroundTreatment?: T;
+  backgroundImage?: T;
   updatedAt?: T;
   createdAt?: T;
 }

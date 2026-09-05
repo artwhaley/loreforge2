@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const purpose = String(formData.get('purpose') ?? '')
   const domainId = Number(formData.get('domainId') ?? '')
   const tenantSlug = String(formData.get('tenantSlug') ?? '').trim()
-  const fallback = tenantSlug ? `/domain/${encodeURIComponent(tenantSlug)}/manage/invitations` : '/platform/work'
+  const fallback = tenantSlug ? `/domain/${encodeURIComponent(tenantSlug)}/manage/invitations` : '/work'
   if (!isInvitationPurpose(purpose) || !Number.isInteger(domainId)) return failure(request, fallback)
   try {
     const payload = await getPayload({ config })

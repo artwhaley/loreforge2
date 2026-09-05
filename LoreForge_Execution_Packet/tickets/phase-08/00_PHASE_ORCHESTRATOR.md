@@ -1,4 +1,4 @@
-# Phase 8 Orchestrator — Theme/Vocabulary Productization, Public Surfaces, and Starter Packs
+﻿# Phase 8 Orchestrator — Theme Productization, Public Surfaces, and Starter Packs
 
 **Status:** blocked until P07-GATE owner-approved state is explicitly approved.
 

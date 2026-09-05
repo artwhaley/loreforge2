@@ -1,0 +1,8 @@
+
+.article { min-height: 300px; padding: 2rem 3rem; background: var(--tenant-surface-bg); border-top: 4px solid var(--tenant-primary); }
+.title { font: 500 clamp(2.5rem, 5cqi, 4.5rem)/1.05 var(--tenant-heading-font); margin: 0; color: var(--tenant-primary); }
+:global([data-template='ledger']) .article { padding: 0; border: 0; background: transparent; }
+:global([data-template='ledger']) .title { border-bottom: 3px double var(--tenant-primary); padding-bottom: 2rem; }
+:global([data-template='poster']) .article { padding: 2rem 0; border: 0; background: transparent; }
+:global([data-template='poster']) .title { font-size: clamp(3rem, 9cqi, 8rem); font-weight: 700; letter-spacing: -.06em; border-bottom: 8px solid var(--tenant-primary); padding-bottom: 2rem; }
+@container domain (max-width: 600px) { .article { padding: 1.5rem 1rem; } }

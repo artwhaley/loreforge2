@@ -39,13 +39,21 @@ const read = (p: string) => readFileSync(p, 'utf8')
 test('TenantShell exposes exactly one Domain selector and the frozen primary nav order', () => {
   const shell = read(path.join(SRC, 'components/theme/TenantShell.tsx'))
   // Exactly one Domain selector (label + select + switch button), not a mode toggle.
-  const selectorCount = (shell.match(/id="tenant-switcher"/g) ?? []).length
+  // P08-T01: the selector markup lives in DomainSwitcher, which the shell renders once.
+  const switcher = read(path.join(SRC, 'components/theme/DomainSwitcher.tsx'))
+  const selectorCount = (shell.match(/id="tenant-switcher"/g) ?? []).length + (switcher.match(/id="tenant-switcher"/g) ?? []).length
   assert.equal(selectorCount, 1, 'exactly one Domain selector control')
+  assert.equal((shell.match(/<DomainSwitcher/g) ?? []).length, 1, 'shell renders exactly one Domain switcher')
   // No Administration-mode entry point in the shell.
   assert.ok(!/Administration mode|Enter administration|Exit administration/i.test(shell), 'no Administration-mode entry')
-  // Frozen primary nav: Home/About/Departments/Records in order.
-  const navLabels = [...shell.matchAll(/\{ label: '([^']+)', segment: '([^']*)' \}/g)].map((m) => m[1])
-  assert.deepEqual(navLabels, ['Home', 'About', 'Departments', 'Records'], 'primary nav order frozen')
+  // Frozen primary nav SEGMENTS: Home/About/departments/records in order.
+  // P08-T01: display labels are Domain-vocabulary driven; the canonical route
+  // structure is what stays frozen (P08-T01 automated acceptance).
+  const frame = read(path.join(SRC, 'components/theme/DomainFrame.tsx'))
+  const navSegments = [...frame.matchAll(/segment: '([^']*)'/g)].map((m) => m[1])
+  assert.deepEqual(navSegments, ['', 'about', 'lore', 'departments', 'records'], 'primary nav route order frozen')
+  assert.ok(frame.includes("label: 'Departments'"), 'Departments uses the fixed platform noun')
+  assert.ok(frame.includes("label: 'Records'"), 'Records uses the fixed platform noun')
 })
 
 test('no customer page imports creep back into the /tenant legacy tree', () => {

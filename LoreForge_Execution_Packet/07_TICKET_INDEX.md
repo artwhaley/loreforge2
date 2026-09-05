@@ -1,4 +1,4 @@
-# LoreForge Ticket Index
+﻿# LoreForge Ticket Index
 
 ## Current Phase 7 performance remediation
 
@@ -226,7 +226,7 @@ This index is navigation only. `01_ORCHESTRATOR.md`, each phase's `00_PHASE_ORCH
 
 - **P08-T01** — Theme Studio productization and controlled vocabulary  
   `tickets/phase-08/P08-T01-theme-studio-productization-and-vocabulary.md`  
-  _Turn the spike Theme Studio into a deliberate, safe personalization feature and add vocabulary theming without building a general CMS/localization system._
+  _Turn the spike Theme Studio into a deliberate, safe personalization feature and three first-class design templates (owner-corrected 2026-09-05: vocabulary theming removed)._
 - **P08-T02** — Public Domain, member Domain Home, and Department surfaces  
   `tickets/phase-08/P08-T02-public-and-member-domain-surfaces.md`  
   _Hydrate and polish the approved public/User/Domain/Department surfaces without replacing their user-first information architecture._

@@ -3,6 +3,8 @@ import { getPayload } from 'payload'
 
 import config from '@payload-config'
 
+import { searchActiveCharacters } from '@/lib/people/characterSearch'
+
 const idOf = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null
   return typeof value === 'object' && value !== null && 'id' in value ? Number((value as { id: number | string }).id) : Number(value)
@@ -30,12 +32,6 @@ export async function GET(request: Request) {
     if (memberships.docs.length === 0) return NextResponse.json({ results: [] }, { status: 403 })
   }
 
-  const characters = await payload.find({ collection: 'characters', where: { status: { equals: 'active' } }, depth: 0, limit: 5000, sort: 'name', overrideAccess: true })
-  const results = characters.docs.map((character) => {
-    const aliases = (character.aliases ?? []).map((alias) => alias.value).filter(Boolean)
-    const haystack = [character.name, ...aliases].join(' ').toLocaleLowerCase()
-    const score = character.name.toLocaleLowerCase().startsWith(query) ? 100 : aliases.some((alias) => alias.toLocaleLowerCase().startsWith(query)) ? 75 : haystack.includes(query) ? 50 : 0
-    return { id: Number(character.id), name: character.name, score }
-  }).filter((result) => result.score > 0).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)).slice(0, 25)
-  return NextResponse.json({ results: results.map(({ id, name }) => ({ id, name })) })
+  const characters = await searchActiveCharacters(payload, query)
+  return NextResponse.json({ results: characters })
 }

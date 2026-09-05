@@ -7,6 +7,7 @@ import config from '@/payload.config'
 
 import type { Domain } from '@/payload-types'
 import { isAllowed } from '@/lib/authz/evaluate'
+import { resolveActingIdentity } from '@/lib/tenant/actingIdentity'
 import { isValidThemeInput, type ThemeInput } from '@/lib/theme/input'
 
 /**
@@ -33,8 +34,16 @@ export async function saveThemeAction(input: {
   })
   const tenant = tenants.docs[0]
   if (!tenant) return { ok: false }
-  if (!await isAllowed({ payload, actor: { userId: user.id }, domainId: tenant.id, capability: 'manage_domain_appearance', resource: { type: 'Domain', id: tenant.id } })) return { ok: false }
+  // P07X-T02: appearance authority is identity-driven — resolve the acting
+  // Character from the selector cookies exactly like the guarded routes, so a
+  // domain_admin identity (or platform/owner fallback) can exercise the save.
+  const acting = await resolveActingIdentity(payload, { headers: hdrs } as unknown as Request, user.id)
+  const actor = { userId: user.id, activeCharacterId: acting.tenantSlug === tenant.slug ? acting.characterId : null }
+  if (!await isAllowed({ payload, actor, domainId: tenant.id, capability: 'manage_domain_appearance', resource: { type: 'Domain', id: tenant.id } })) return { ok: false }
 
+  // Owner decision 2026-09-05: vocabulary customization is removed; platform
+  // nouns are code constants (src/lib/theme/nouns.ts) and the vocabulary
+  // column is dropped by the P08 corrective migration.
   await payload.update({
     collection: 'domains',
     id: tenant.id,
@@ -46,6 +55,12 @@ export async function saveThemeAction(input: {
       backgroundColor: theme.backgroundColor,
       headingFontKey: theme.headingFontKey as Domain['headingFontKey'],
       bodyFontKey: theme.bodyFontKey as Domain['bodyFontKey'],
+      designTemplate: theme.designTemplate as Domain['designTemplate'],
+      contentWidth: theme.contentWidth as Domain['contentWidth'],
+      headerLayout: theme.headerLayout as Domain['headerLayout'],
+      documentStyle: theme.documentStyle as Domain['documentStyle'],
+      backgroundTreatment: theme.backgroundTreatment as Domain['backgroundTreatment'],
+      ...(theme.backgroundImageSet === false ? { backgroundImage: null } : {}),
     },
     depth: 0,
   })

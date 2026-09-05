@@ -1,240 +1,109 @@
-.record {
-  max-width: 960px;
-  width: 100%;
-  margin: 0 auto;
+/* Document reading surface. Composition belongs to the design template
+   (civic sheet / ledger marginalia / poster open field); Classic/Modern
+   control the reading typography on top of that composition. */
+
+.record { max-width: 100%; }
+.record .documentPage { box-sizing: border-box; min-width: 0; border-radius: 0; box-shadow: none; }
+.record .body { color: var(--tenant-primary); max-width: 70ch; margin: 0 auto; overflow-wrap: anywhere; }
+.record .body table { display: block; overflow: auto; max-width: 100%; }
+.record .body img { max-width: 100%; height: auto; }
+.record .body pre { overflow: auto; }
+.record .source { overflow: auto; }
+.record .title { overflow-wrap: anywhere; }
+.record .documentPage .recordHeader { max-width: 70ch; margin-left: auto; margin-right: auto; }
+
+/* ---- Civic composition: an official sheet on a surface ---- */
+.record .documentPage { background: var(--tenant-surface-bg); border: 1px solid var(--tenant-accent); border-top: 6px solid var(--tenant-primary); padding: 2.5rem 3rem; }
+
+/* ---- Ledger composition: typeset page with a marginalia rail ---- */
+:global([data-template='ledger']) .record .documentPage { display: grid; grid-template-columns: minmax(130px, .3fr) minmax(0, 1fr); gap: 1.5rem 2rem; padding: 2rem 0; border: 0; border-top: 3px double var(--tenant-primary); background: transparent; }
+:global([data-template='ledger']) .record .documentPage .recordHeader { grid-column: 1 / -1; width: 100%; max-width: none; display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, .35fr); gap: 2rem; border-bottom: 1px solid var(--tenant-primary); }
+:global([data-template='ledger']) .record .title { font-size: clamp(2.2rem, 4cqi, 3.5rem); letter-spacing: -.04em; }
+:global([data-template='ledger']) .record .meta { display: flex; flex-direction: column; font-size: .7rem; line-height: 1.7; }
+:global([data-template='ledger']) .record .body, :global([data-template='ledger']) .record .source { grid-column: 2; grid-row: 2 / span 4; width: 100%; margin: 0; }
+:global([data-template='ledger']) .record .concerns, :global([data-template='ledger']) .record .tags { grid-column: 1; margin: 0; padding: 1rem 0; font-size: .75rem; line-height: 1.65; }
+:global([data-template='ledger']) .record .supersededNotice, :global([data-template='ledger']) .record .supersedesLine { grid-column: 1 / -1; }
+
+/* ---- Poster composition: open field, oversized opening, off-grid body ---- */
+:global([data-template='poster']) .record .documentPage { padding: 2rem 0; border: 0; background: transparent; }
+:global([data-template='poster']) .record .documentPage .recordHeader { max-width: none; padding-bottom: 2rem; margin-bottom: 3rem; border-bottom: 8px solid var(--tenant-primary); }
+:global([data-template='poster']) .record .title { font-size: clamp(3rem, 7cqi, 6rem); font-weight: 700; letter-spacing: -.055em; max-width: 18ch; }
+:global([data-template='poster']) .record .body { margin-left: auto; margin-right: 0; width: min(100%, 70ch); }
+:global([data-template='poster']) .record .concerns, :global([data-template='poster']) .record .tags { width: min(100%, 70ch); margin-left: auto; }
+
+/* ---- Reading styles: Classic (serif record sheet) vs Modern (clean article) ---- */
+.record[data-style='classic'] .title { font-family: var(--tenant-heading-font); font-size: 2rem; }
+.record[data-style='classic'] .recordHeader { border-bottom: 2px solid var(--tenant-accent); padding-bottom: 1rem; margin-bottom: 1.25rem; }
+.record[data-style='classic'] .body { font-size: 1rem; line-height: 1.65; }
+.record[data-style='classic'] .body h1 { font-size: 1.6rem; border-bottom: 1px solid var(--tenant-accent); padding-bottom: 0.3rem; }
+.record[data-style='classic'] .body h2 { font-size: 1.3rem; }
+.record[data-style='classic'] .body h3 { font-size: 1.15rem; }
+.record[data-style='classic'] .body blockquote { border-left: 4px solid var(--tenant-accent); margin: 1rem 0; padding: 0.5rem 1rem; background: var(--tenant-page-bg); color: var(--tenant-primary); font-style: italic; }
+.record[data-style='classic'] .body hr { border-top: 2px solid var(--tenant-accent); }
+
+.record[data-style='modern'] .title { font-family: var(--tenant-body-font); letter-spacing: -0.02em; line-height: 1.15; }
+.record[data-style='modern'] .recordHeader { border-bottom: 1px solid color-mix(in srgb, var(--tenant-primary) 20%, transparent); padding-bottom: 1.1rem; margin-bottom: 1.5rem; }
+.record[data-style='modern'] .meta { font-size: 0.82rem; letter-spacing: 0.02em; }
+.record[data-style='modern'] .body { font-size: 1.05rem; line-height: 1.75; }
+.record[data-style='modern'] .body h1,
+.record[data-style='modern'] .body h2,
+.record[data-style='modern'] .body h3 { font-family: var(--tenant-body-font); letter-spacing: -0.012em; line-height: 1.25; }
+.record[data-style='modern'] .body h1 { font-size: 1.7rem; border-bottom: none; }
+.record[data-style='modern'] .body h2 { font-size: 1.35rem; }
+.record[data-style='modern'] .body h3 { font-size: 1.12rem; }
+.record[data-style='modern'] .body blockquote { font-style: normal; background: transparent; border-left: 3px solid var(--tenant-accent); color: inherit; padding: 0.15rem 0 0.15rem 1.2rem; margin: 1.4rem 0; font-size: 1.12em; }
+.record[data-style='modern'] .body hr { border-top: 1px solid color-mix(in srgb, var(--tenant-primary) 24%, transparent); }
+.record[data-style='modern'] .concerns,
+.record[data-style='modern'] .tags { border-top: 1px solid color-mix(in srgb, var(--tenant-primary) 20%, transparent); }
+.record[data-style='modern'] .bottomActions { border-top: 1px solid color-mix(in srgb, var(--tenant-primary) 20%, transparent); }
+
+/* ---- Shared document chrome (actions, notices, related lists) ---- */
+.supersededNotice { margin: 0 0 1.75rem; padding: 1rem 1.25rem; border: 2px solid var(--tenant-accent); background: var(--tenant-page-bg); color: var(--tenant-primary); font-size: 1.15rem; line-height: 1.45; }
+.supersededNotice a, .supersedesLine a { color: var(--tenant-primary); text-decoration-color: var(--tenant-accent); }
+
+.actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+
+.action, .deleteBtn { font-family: var(--tenant-body-font); font-size: 0.85rem; color: var(--tenant-primary); text-decoration: none; border: 1px solid var(--tenant-accent); padding: 0.25rem 0.75rem; border-radius: 3px; background: var(--tenant-surface-bg); cursor: pointer; }
+.action:hover, .deleteBtn:hover { background: var(--tenant-page-bg); }
+
+.recordHeader { border-bottom: 2px solid var(--tenant-accent); padding-bottom: 1rem; margin-bottom: 1.25rem; }
+.title { font-family: var(--tenant-heading-font); color: var(--tenant-primary); font-size: 2rem; margin: 0 0 0.5rem; line-height: 1.2; }
+.meta { display: flex; flex-wrap: wrap; gap: 1rem; color: var(--tenant-muted-text); font-size: 0.9rem; }
+
+.concerns, .tags { margin: 2rem 0 0; padding: 1.25rem 0 0; border: 0; border-top: 1px solid var(--tenant-accent); background: transparent; }
+.concerns h2, .tags h2 { margin: 0 0 0.5rem; font-family: var(--tenant-heading-font); font-size: 1rem; color: var(--tenant-primary); }
+.concerns ul, .tags ul { margin: 0 0 0.75rem; padding-left: 1.1rem; }
+.concerns li { margin: 0.35rem 0; }
+.concerns li form { display: inline; margin-left: 0.5rem; }
+
+.inlineForm, .shareForm { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+.inlineForm input, .shareForm input, .shareForm select { min-width: 8rem; padding: 0.3rem 0.45rem; border: 1px solid var(--tenant-accent); background: var(--tenant-surface-bg); font: inherit; }
+
+.source { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; background: var(--tenant-page-bg); border: 1px solid var(--tenant-accent); border-radius: 4px; padding: 1rem; margin: 0; }
+
+.body { font-family: var(--tenant-body-font); font-size: 1rem; line-height: 1.65; color: var(--tenant-primary);
+  h1, h2, h3 { font-family: var(--tenant-heading-font); color: var(--tenant-primary); }
+  a { color: var(--tenant-primary); text-decoration-color: var(--tenant-accent); }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+  th, td { border: 1px solid var(--tenant-accent); padding: 0.4rem 0.6rem; text-align: left; }
+  th { background: var(--tenant-page-bg); font-family: var(--tenant-heading-font); color: var(--tenant-primary); }
 }
 
-.documentPage {
-  background: var(--tenant-surface-bg);
-  border: 1px solid var(--tenant-accent);
-  border-top: 6px solid var(--tenant-primary);
-  border-radius: 4px;
-  padding: 2.5rem 3rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
+.supersedesLine { margin: 1.5rem 0 0; color: var(--tenant-muted-text); }
 
-.supersededNotice {
-  margin: 0 0 1.75rem;
-  padding: 1rem 1.25rem;
-  border: 2px solid var(--tenant-accent);
-  background: var(--tenant-page-bg);
-  color: var(--tenant-primary);
-  font-size: 1.15rem;
-  line-height: 1.45;
-}
+.bottomActions { display: grid; gap: 0.75rem; margin-top: 2.5rem; padding-top: 1.25rem; border-top: 2px solid var(--tenant-accent); }
+.shareForm { justify-content: flex-start; }
+.shareForm strong { color: var(--tenant-primary); margin-right: 0.25rem; }
+.deleteForm { display: flex; justify-content: flex-end; }
 
-.supersededNotice a,
-.supersedesLine a {
-  color: var(--tenant-primary);
-  text-decoration-color: var(--tenant-accent);
-}
+.errorNotice { max-width: 960px; width: 100%; margin: 0 auto 1.25rem; padding: 0.9rem 1.25rem; border: 2px solid var(--tenant-accent); background: var(--tenant-page-bg); color: var(--tenant-primary); font-weight: 600; }
 
-.actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-  margin-bottom: 1.5rem;
-}
-
-.action,
-.deleteBtn {
-  font-family: var(--tenant-body-font);
-  font-size: 0.85rem;
-  color: var(--tenant-primary);
-  text-decoration: none;
-  border: 1px solid var(--tenant-accent);
-  padding: 0.25rem 0.75rem;
-  border-radius: 3px;
-  background: var(--tenant-surface-bg);
-  cursor: pointer;
-
-  &:hover {
-    background: var(--tenant-page-bg);
-  }
-}
-
-.recordHeader {
-  border-bottom: 2px solid var(--tenant-accent);
-  padding-bottom: 1rem;
-  margin-bottom: 1.25rem;
-}
-
-.title {
-  font-family: var(--tenant-heading-font);
-  color: var(--tenant-primary);
-  font-size: 2rem;
-  margin: 0 0 0.5rem;
-  line-height: 1.2;
-}
-
-.meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  color: var(--tenant-muted-text);
-  font-size: 0.9rem;
-}
-
-.concerns,
-.tags {
-  margin: 2rem 0 0;
-  padding: 1.25rem 0 0;
-  border: 0;
-  border-top: 1px solid var(--tenant-accent);
-  background: transparent;
-}
-
-.concerns h2,
-.tags h2 {
-  margin: 0 0 0.5rem;
-  font-family: var(--tenant-heading-font);
-  font-size: 1rem;
-  color: var(--tenant-primary);
-}
-
-.concerns ul,
-.tags ul {
-  margin: 0 0 0.75rem;
-  padding-left: 1.1rem;
-}
-
-.concerns li {
-  margin: 0.35rem 0;
-}
-
-.concerns li form {
-  display: inline;
-  margin-left: 0.5rem;
-}
-
-.inlineForm,
-.shareForm {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.inlineForm input,
-.shareForm input,
-.shareForm select {
-  min-width: 8rem;
-  padding: 0.3rem 0.45rem;
-  border: 1px solid var(--tenant-accent);
-  background: var(--tenant-surface-bg);
-  font: inherit;
-}
-
-.source {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.85rem;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
-  background: var(--tenant-page-bg);
-  border: 1px solid var(--tenant-accent);
-  border-radius: 4px;
-  padding: 1rem;
-  margin: 0;
-}
-
-.body {
-  font-family: var(--tenant-body-font);
-  font-size: 1rem;
-  line-height: 1.65;
-  color: #222;
-
-  h1,
-  h2,
-  h3 {
-    font-family: var(--tenant-heading-font);
-    color: var(--tenant-primary);
-  }
-
-  h1 {
-    font-size: 1.6rem;
-    border-bottom: 1px solid var(--tenant-accent);
-    padding-bottom: 0.3rem;
-  }
-
-  h2 { font-size: 1.3rem; }
-
-  blockquote {
-    border-left: 4px solid var(--tenant-accent);
-    margin: 1rem 0;
-    padding: 0.5rem 1rem;
-    background: var(--tenant-page-bg);
-    color: var(--tenant-primary);
-    font-style: italic;
-  }
-
-  a {
-    color: var(--tenant-primary);
-    text-decoration-color: var(--tenant-accent);
-  }
-
-  table {
-    border-collapse: collapse;
-    width: 100%;
-    margin: 1rem 0;
-  }
-
-  th,
-  td {
-    border: 1px solid var(--tenant-accent);
-    padding: 0.4rem 0.6rem;
-    text-align: left;
-  }
-
-  th {
-    background: var(--tenant-page-bg);
-    font-family: var(--tenant-heading-font);
-    color: var(--tenant-primary);
-  }
-
-  hr {
-    border: none;
-    border-top: 2px solid var(--tenant-accent);
-    margin: 1.5rem 0;
-  }
-}
-
-.supersedesLine {
-  margin: 1.5rem 0 0;
-  color: var(--tenant-muted-text);
-}
-
-.bottomActions {
-  display: grid;
-  gap: 0.75rem;
-  margin-top: 2.5rem;
-  padding-top: 1.25rem;
-  border-top: 2px solid var(--tenant-accent);
-}
-
-.shareForm {
-  justify-content: flex-start;
-}
-
-.shareForm strong {
-  color: var(--tenant-primary);
-  margin-right: 0.25rem;
-}
-
-.deleteForm {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.errorNotice {
-  max-width: 960px;
-  width: 100%;
-  margin: 0 auto 1.25rem;
-  padding: 0.9rem 1.25rem;
-  border: 2px solid var(--tenant-accent);
-  background: var(--tenant-page-bg);
-  color: var(--tenant-primary);
-  font-weight: 600;
+@container domain (max-width: 650px) {
+  .record .documentPage { padding: 1.5rem 1.25rem; }
+  :global([data-template='ledger']) .record .documentPage { display: block; padding: 1.5rem 0; }
+  :global([data-template='ledger']) .record .documentPage .recordHeader { display: block; }
+  :global([data-template='ledger']) .record .meta { margin-top: 1rem; }
+  :global([data-template='ledger']) .record .concerns, :global([data-template='ledger']) .record .tags { margin-top: 2rem; }
+  :global([data-template='poster']) .record .documentPage { padding: 1.5rem 0; }
+  :global([data-template='poster']) .record .body { margin-left: 0; margin-right: auto; }
 }

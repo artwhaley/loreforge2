@@ -1,3 +1,4 @@
+import { DocumentPaper } from '@/components/theme/DocumentPaper'
 import { notFound } from 'next/navigation'
 
 import { TenantShell } from '@/components/theme/TenantShell'
@@ -7,6 +8,7 @@ import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getDocumentForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 import { renderMarkdown } from '@/lib/markdown/render'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
+import { PLATFORM_NOUNS as vocab } from '@/lib/theme/nouns'
 import { getDocumentCharacterLinks, getDocumentTags } from '@/lib/documents/links'
 import { canSupersedeDocument } from '@/lib/documents/lifecycle'
 import { canEditDocumentBody } from '@/lib/documents/lifecycle'
@@ -104,7 +106,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
         // a stable public message; the page still renders so the user can retry.
         <p className={styles.errorNotice} role="alert">{DOCUMENT_MUTATION_ERROR_MESSAGES[errorCode]}</p>
       ) : null}
-      <article className={styles.record}>
+      <article className={styles.record} data-style={tokens.documentStyle}>
         <div className={styles.actions} aria-label="Document controls">
           {canEdit && !isSuperseded ? <a className={styles.action} href={`${base}/edit`}>Edit</a> : null}
           <a className={styles.action} href={`${base}/history`}>History</a>
@@ -142,7 +144,9 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
           ) : null}
         </div>
 
-        <div className={styles.documentPage}>
+        <DocumentPaper title={doc.title} html={html} source={source === '1' ? doc.body : undefined}
+          meta={<><span>Prepared by {preparedByLabel}</span><span>Date {formatDate(doc.createdAt)}</span></>}
+          before={<>
           {supersededBy ? (
             <div className={styles.supersededNotice} role="status">
               <strong>Document superseded by:</strong>{' '}
@@ -153,20 +157,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
             </div>
           ) : null}
 
-          <header className={styles.recordHeader}>
-            <h1 className={styles.title}>{doc.title}</h1>
-            <div className={styles.meta}>
-              <span>Prepared by {preparedByLabel}</span>
-              <span>Date {formatDate(doc.createdAt)}</span>
-            </div>
-          </header>
-
-          {source === '1' ? (
-            <pre className={styles.source}>{doc.body}</pre>
-          ) : (
-            <div className={styles.body} dangerouslySetInnerHTML={{ __html: html }} />
-          )}
-
+          </>} >
           <section className={styles.concerns} aria-label="Concerns">
             <h2>Concerns</h2>
             {concernLinks.length > 0 ? (
@@ -178,7 +169,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
                   </li>
                 ))}
               </ul>
-            ) : <p>No Characters attached.</p>}
+            ) : <p>No {vocab.member.plural} attached.</p>}
           </section>
 
           {tagLinks.docs.length > 0 ? (
@@ -197,7 +188,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
               Supersedes <a href={`/domain/${tenant.slug}/documents/${relationId(supersedesLink.target)}`}>{readableLinked.get(relationId(supersedesLink.target) ?? -1)?.title}</a>.
             </p>
           ) : null}
-        </div>
+        </DocumentPaper>
 
         <div className={styles.bottomActions}>
           {/* P05R-T08: supersede resolves to the interim admin boundary server-side, so the

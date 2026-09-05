@@ -85,3 +85,34 @@
 
 @media (max-width: 900px) { .explorerToolbar, .panes { grid-template-columns: 1fr; } .toolbarGroup + .toolbarGroup, .folderPane { border-left: 0; border-top: 1px solid color-mix(in srgb, var(--tenant-accent) 55%, #fff); } .folderPane { border-right: 0; } .panes { min-height: auto; } .folderTreeBox { max-height: 22rem; } }
 @media (max-width: 680px) { .filterBar { grid-template-columns: 1fr 1fr; } .searchField { grid-column: 1 / -1; } .recordColumns, .recordRow { grid-template-columns: minmax(0, 1fr) 6rem; } .recordPrepared { display: none; } .recordColumns span:nth-child(2) { display: none; } }
+
+/* Keep the folder/record workflow intact, with different spatial treatments. */
+:global([data-template='civic']) .panes { grid-template-columns: minmax(200px, .35fr) minmax(0, 1fr); border-radius: 0; border-top: 4px solid var(--tenant-primary); }
+:global([data-template='civic']) .explorerToolbar { border-radius: 0; }
+:global([data-template='ledger']) .explorerToolbar { border-radius: 0; border: 0; border-bottom: 3px double var(--tenant-primary); background: transparent; }
+:global([data-template='ledger']) .panes { grid-template-columns: minmax(160px, .4fr) minmax(0, 1fr); border: 0; border-radius: 0; background: transparent; }
+:global([data-template='ledger']) .folderPane { background: transparent; padding-left: 0; }
+:global([data-template='ledger']) .recordPane { padding-right: 0; }
+:global([data-template='ledger']) .folderTreeBox, :global([data-template='ledger']) .recordTreeBox { border: 0; border-radius: 0; }
+:global([data-template='ledger']) .recordRow { border-radius: 0; border-bottom: 1px solid var(--tenant-surface-border); min-height: 3rem; }
+:global([data-template='ledger']) .recordTitle { font-family: var(--tenant-heading-font); font-size: 1rem; font-weight: 500; }
+:global([data-template='poster']) .panes { border: 0; border-radius: 0; grid-template-columns: minmax(180px, .3fr) minmax(0, 1fr); background: transparent; }
+:global([data-template='poster']) .explorerToolbar { border: 0; border-radius: 0; border-bottom: 5px solid var(--tenant-primary); background: transparent; }
+:global([data-template='poster']) .folderPane { background: var(--tenant-surface-bg); border: 0; }
+:global([data-template='poster']) .recordPane { padding: 1rem 0 1rem 2rem; }
+:global([data-template='poster']) .recordTreeBox { border-radius: 0; border: 0; }
+:global([data-template='poster']) .recordRow { min-height: 4.5rem; border-radius: 0; border-bottom: 1px solid var(--tenant-primary); }
+:global([data-template='poster']) .recordTitle { font: 500 1.2rem var(--tenant-heading-font); }
+:global([data-template='poster']) .paneHeader h1 { font-size: 2.2rem; letter-spacing: -.04em; }
+@container domain (max-width: 950px) {
+  .filterBar { grid-template-columns: 1fr 1fr; }
+  .searchField { grid-column: 1 / -1; }
+  .recordColumns, .recordRow { grid-template-columns: minmax(0, 1fr) 6rem; }
+  .recordPrepared, .recordColumns span:nth-child(2) { display: none; }
+}
+@container domain (max-width: 650px) {
+  :global([data-template]) .panes, .explorerToolbar { grid-template-columns: 1fr; }
+  .folderPane { border: 0; }
+  .folderTreeBox { max-height: 15rem; }
+  :global([data-template='poster']) .recordPane { padding: 1rem 0; }
+}

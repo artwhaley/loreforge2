@@ -501,6 +501,57 @@
 .emptyCard { padding: 1.15rem; box-shadow: none; color: var(--ink); font-size: 0.88rem; }
 .emptyCard a,
 .panel a:not(.primary):not(.secondary):not(.domainLink) { color: var(--ink-dark); text-underline-offset: 3px; }
+
+/* Data table: ruled paper ledger with mono column heads, matching the panel. */
+.characterTable {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1.5px solid var(--ink-rule);
+  background: rgba(252, 250, 244, 0.55);
+  font-size: 0.86rem;
+}
+.characterTable th {
+  padding: 0.68rem 0.9rem;
+  border-bottom: 1.5px solid var(--ink-rule);
+  color: var(--ink);
+  background: rgba(252, 250, 244, 0.8);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.characterTable td {
+  padding: 0.72rem 0.9rem;
+  border-bottom: 1px solid var(--ink-hairline);
+  color: var(--ink-dark);
+  line-height: 1.5;
+  vertical-align: top;
+}
+.characterTable tbody tr:last-child td { border-bottom: 0; }
+.characterTable tbody tr:hover { background: var(--paper-light); }
+.kindBadge {
+  display: inline-block;
+  padding: 0.18rem 0.45rem;
+  border: 1px solid var(--ink-faint);
+  color: var(--ink);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.characterTable .muted { color: var(--ink-faint); }
+.cellNote { color: var(--ink-faint); font-size: 0.82rem; }
+.successFlash {
+  margin: 0.75rem 0;
+  padding: 0.65rem 0.75rem;
+  border-left: 3px solid var(--ink);
+  color: var(--ink-dark);
+  background: rgba(49, 93, 118, 0.08);
+  font-size: 0.86rem;
+}
 .subnav { display: flex; gap: 0; flex-wrap: wrap; margin: 0 0 2rem; border: 1px solid var(--ink-hairline); }
 .subnav a { padding: 0.65rem 0.9rem; border-right: 1px solid var(--ink-hairline); color: var(--ink-dark); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-decoration: none; text-transform: uppercase; }
 .subnav a:hover { color: var(--paper-light); background: var(--ink); }

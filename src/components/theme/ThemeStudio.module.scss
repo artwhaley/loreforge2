@@ -1,38 +1,98 @@
+/* ---------------------------------------------------------------------------
+   ThemeStudio — tabbed controls + a real-DOM preview (PreviewViewport renders
+   DomainFrame/DomainHome/DocumentPaper, the same components the domain uses).
+--------------------------------------------------------------------------- */
+
 .studio {
   display: grid;
-  grid-template-columns: minmax(260px, 340px) 1fr;
-  gap: 2rem;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 1.5rem;
   align-items: start;
+  /* The controls column must never spill under the sticky preview. */
+  contain: inline-size;
 }
 
 .sectionTitle {
   font-family: var(--tenant-heading-font, serif);
   color: var(--tenant-primary, #243145);
-  margin: 0 0 1rem;
+  margin: 0 0 0.4rem;
   font-size: 1.25rem;
 }
 
+.controlsHead { margin-bottom: 1rem; }
+
 .helpText {
-  margin: -0.5rem 0 1.25rem;
+  margin: 0;
   color: var(--tenant-muted-text, #777);
   font-size: 0.9rem;
   line-height: 1.4;
 }
 
+/* ---------------- Tabs ---------------- */
+
+.tabRow {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--tenant-accent, #999);
+}
+
+.tab {
+  appearance: none;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: var(--tenant-primary, #243145);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: .5rem .55rem;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.tab:hover { background: color-mix(in srgb, var(--tenant-accent, #999) 10%, transparent); }
+
+.tabActive {
+  background: var(--tenant-surface-bg, #fff);
+  border-color: var(--tenant-accent, #999);
+  color: var(--tenant-primary, #243145);
+  position: relative;
+  top: 1px;
+}
+
+.tabPanel {
+  background: var(--tenant-surface-bg, #fff);
+  border: 1px solid var(--tenant-accent, #999);
+  border-top: 0;
+  border-radius: 0 0 6px 6px;
+  padding: 1.1rem 1.25rem 1.25rem;
+  animation: panelIn 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.controls {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+/* ---------------- Form fields ---------------- */
+
 .groupTitle {
   color: var(--tenant-primary, #243145);
-  border-top: 1px solid var(--tenant-accent, #aaa);
+  border-top: 1px solid var(--tenant-accent, #999);
   padding-top: 0.9rem;
   margin: 1.25rem 0 0.8rem;
   font-size: 1rem;
 }
 
-.controls {
-  background: var(--tenant-surface-bg, #fff);
-  border: 1px solid var(--tenant-accent, #999);
-  border-radius: 6px;
-  padding: 1.25rem;
-}
+.tabPanel .groupTitle:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
 
 .field {
   display: flex;
@@ -53,6 +113,7 @@
   padding: 0.4rem 0.6rem;
   border: 1px solid var(--tenant-accent, #aaa);
   border-radius: 4px;
+  background: var(--tenant-page-bg, #fff);
 }
 
 .swatches {
@@ -74,8 +135,197 @@
   cursor: pointer;
 }
 
+/* ---------------- Design template cards (wireframes truthful to the
+   shipped compositions) ---------------- */
+
+.templateGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.templateCard {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 0.2rem 0.8rem;
+  padding: 0.7rem;
+  border: 1.5px solid var(--tenant-accent, #999);
+  border-radius: 6px;
+  background: var(--tenant-page-bg, #fff);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.templateCard:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1); }
+
+.templateCardActive {
+  border-color: var(--tenant-primary, #243145);
+  border-width: 2px;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--tenant-primary, #243145) 22%, transparent);
+}
+
+.templateName { font-weight: 700; font-size: 0.85rem; color: var(--tenant-primary, #243145); }
+
+.templateDesc { font-size: 0.72rem; color: var(--tenant-muted-text, #777); line-height: 1.35; }
+
+.templateThumb { grid-row: span 2; display: flex; flex-direction: column; gap: 3px; height: 65px; width: 84px; padding: 5px; border: 1px solid color-mix(in srgb, var(--tenant-primary, #333) 25%, transparent); background: var(--tenant-surface-bg, #fff); }
+.templateThumb .thumbHeader { height: 14px; background: var(--tenant-primary, #243145); }
+.templateThumb .thumbRule { height: 3px; background: var(--tenant-accent, #999); }
+.templateThumb .thumbBlocks { display: flex; gap: 3px; flex: 1; }
+.templateThumb .thumbBlocks span { flex: 1; border: 1px solid var(--tenant-accent, #999); border-top: 3px solid var(--tenant-primary, #243145); background: var(--tenant-surface-bg, #fff); }
+
+/* Civic thumb: full-width masthead band over a two-column directory. */
+.templateCard[data-template='civic'] .thumbHeader { width: 100%; }
+.templateCard[data-template='civic'] .thumbBlocks span { border-right-width: 1px; }
+.templateCard[data-template='civic'] .thumbBlocks span:last-child { border-right-width: 0; }
+
+/* Ledger thumb: narrow index rail beside a wide typeset column. */
+.templateCard[data-template='ledger'] .templateThumb { display: grid; grid-template-columns: 22% 1fr; gap: 4px; background: #f4f0e7; }
+.templateCard[data-template='ledger'] .thumbHeader { grid-row: 1 / 3; height: 100%; width: auto; border: 0; border-right: 1px solid currentColor; background: transparent; }
+.templateCard[data-template='ledger'] .thumbRule { height: 14px; width: 80%; background: currentColor; }
+.templateCard[data-template='ledger'] .thumbBlocks { grid-column: 2; display: flex; flex-direction: column; gap: 2px; }
+.templateCard[data-template='ledger'] .thumbBlocks span { height: 4px; border: 0; border-radius: 0; background: color-mix(in srgb, currentColor 45%, transparent); flex: none; }
+
+/* Poster thumb: oversized masthead word over an asymmetric field. */
+.templateCard[data-template='poster'] .templateThumb { border-radius: 0; background: #f4f0e7; color: #243145; gap: 4px; }
+.templateCard[data-template='poster'] .thumbHeader { background: currentColor; height: 22px; width: 80%; border-radius: 0; }
+.templateCard[data-template='poster'] .thumbRule { width: 45%; background: color-mix(in srgb, currentColor 55%, transparent); }
+.templateCard[data-template='poster'] .thumbBlocks span { border-radius: 0; height: 16px; background: #243145; flex: 1; }
+.templateCard[data-template='poster'] .thumbBlocks span:nth-child(2) { height: 9px; align-self: end; }
+
+/* ---------------- Header layout cards ---------------- */
+
+.headerLayoutGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.headerCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.7rem;
+  border: 1.5px solid var(--tenant-accent, #999);
+  border-radius: 6px;
+  background: var(--tenant-page-bg, #fff);
+  font: inherit;
+  cursor: pointer;
+  min-width: 0;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.headerCard:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1); }
+
+.headerCardActive {
+  border-color: var(--tenant-primary, #243145);
+  border-width: 2px;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--tenant-primary, #243145) 22%, transparent);
+}
+
+.headerName { font-weight: 700; font-size: 0.8rem; color: var(--tenant-primary, #243145); }
+
+.headerThumb {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: 54px;
+  padding: 5px;
+  border: 1px solid color-mix(in srgb, var(--tenant-primary, #333) 25%, transparent);
+  background: var(--tenant-surface-bg, #fff);
+  justify-content: center;
+  min-width: 0;
+}
+
+.thumbDot { width: 14px; height: 14px; border-radius: 3px; background: var(--tenant-accent, #999); flex: none; }
+
+.thumbNavRow { display: flex; gap: 4px; min-width: 0; }
+.thumbNavRow span { width: 14px; min-width: 0; flex: 1 1 0; height: 5px; border-radius: 2px; background: color-mix(in srgb, var(--tenant-primary, #333) 60%, transparent); }
+
+.thumbBar { display: flex; align-items: center; gap: 6px; height: 22px; padding: 0 5px; background: var(--tenant-primary, #243145); }
+.thumbBar .thumbNavRow span { background: color-mix(in srgb, #fff 70%, transparent); }
+
+.thumbHero { height: 16px; border-radius: 3px; background: linear-gradient(120deg, color-mix(in srgb, var(--tenant-accent, #999) 60%, transparent), color-mix(in srgb, var(--tenant-secondary, #869) 40%, transparent)); }
+
+/* ---------------- Typography specimen ---------------- */
+
+.typeSpecimen {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.9rem;
+  padding: 1rem 1.1rem;
+  border: 1px dashed var(--tenant-accent, #999);
+  border-radius: 6px;
+  background: var(--tenant-page-bg, #fff);
+}
+
+.specimenHeading { font-size: 1.5rem; font-weight: 700; color: var(--tenant-primary, #243145); }
+.specimenBody { font-size: 0.95rem; color: var(--tenant-muted-text, #555); line-height: 1.5; }
+
+/* ---------------- Reading style cards ---------------- */
+
+.docStyleGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+  margin-bottom: 0.9rem;
+}
+
+.docStyleCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.8rem;
+  border: 1.5px solid var(--tenant-accent, #999);
+  border-radius: 6px;
+  background: var(--tenant-page-bg, #fff);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.docStyleCard:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1); }
+
+.docStyleCardActive {
+  border-color: var(--tenant-primary, #243145);
+  border-width: 2px;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--tenant-primary, #243145) 22%, transparent);
+}
+
+.docStyleLabel { font-weight: 700; font-size: 0.8rem; color: var(--tenant-primary, #243145); }
+
+.docStyleSpecimen {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--tenant-accent, #999);
+  background: var(--tenant-surface-bg, #fff);
+}
+
+.docStyleSpecimen[data-style='classic'] { border-top: 5px solid var(--tenant-primary, #243145); border-radius: 3px; }
+.docStyleSpecimen[data-style='modern'] { border: 0; border-left: 3px solid var(--tenant-accent, #999); border-radius: 8px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07); }
+
+.specimenTitle { font-size: 0.95rem; font-weight: 700; color: var(--tenant-primary, #243145); line-height: 1.2; }
+.specimenTitle[data-style='classic'] { border-bottom: 2px solid var(--tenant-accent, #999); padding-bottom: 0.25rem; }
+.specimenTitle[data-style='modern'] { border: 0; padding: 0; letter-spacing: -0.01em; }
+
+.specimenMeta { font-size: 0.66rem; color: var(--tenant-muted-text, #777); }
+
+.specimenExcerpt { font-size: 0.78rem; line-height: 1.5; color: var(--tenant-muted-text, #555); }
+.specimenExcerpt[data-style='classic'] { font-style: italic; }
+.specimenExcerpt[data-style='modern'] { font-style: normal; line-height: 1.65; }
+
+/* ---------------- Image uploads ---------------- */
+
 .uploads {
-  margin-top: 1rem;
+  display: grid;
+  gap: 1rem;
 }
 
 .logoPreview {
@@ -95,17 +345,55 @@
   border-radius: 4px;
 }
 
+.backgroundPreview {
+  width: 100%;
+  max-height: 90px;
+  object-fit: cover;
+  border: 1px solid var(--tenant-accent);
+  border-radius: 4px;
+}
+
+.clearButton {
+  margin-top: 0.35rem;
+  align-self: flex-start;
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--tenant-accent, #999);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--tenant-primary, #243145);
+  cursor: pointer;
+}
+
+.clearButton:hover {
+  background: var(--tenant-page-bg);
+}
+
+/* ---------------- Save row ---------------- */
+
 .saveRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   margin-top: 1.25rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--tenant-accent, #999);
+  border-radius: 6px;
+  background: var(--tenant-surface-bg, #fff);
+  position: sticky;
+  bottom: 0;
 }
 
 .status {
   font-size: 0.85rem;
   color: var(--tenant-muted-text, #777);
+}
+
+.saveButtons {
+  display: flex;
+  gap: 0.6rem;
 }
 
 .saveButton {
@@ -128,148 +416,71 @@
   }
 }
 
-/* ---- Live preview scaffolding ---- */
-.preview {
-  min-width: 0;
+.resetButton {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--tenant-accent, #999);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--tenant-primary, #243145);
+  cursor: pointer;
 }
 
-.previewScaffold {
-  border: 1px solid var(--tenant-accent);
-  border-radius: 6px;
-  overflow: hidden;
+.resetButton:hover {
   background: var(--tenant-page-bg);
 }
 
-.siteHeader {
-  background: var(--tenant-primary);
-  color: var(--tenant-text-on-primary);
+.resetButton:disabled,
+.saveButton:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
-.siteHeaderInner {
-  padding: 1rem 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
+/* ---------------- Readability advisories ---------------- */
 
-.identity {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.seal {
-  width: 44px;
-  height: 44px;
-  object-fit: contain;
+.warningBox {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #b58a2b;
+  background: #fff7e0;
   border-radius: 4px;
+  font-size: 0.85rem;
+  color: #5c4708;
+  display: grid;
+  gap: 0.3rem;
 }
 
-.sealFallback {
-  width: 44px;
-  height: 44px;
-  border-radius: 6px;
-  background: var(--tenant-accent);
-  color: var(--tenant-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--tenant-heading-font);
-  font-size: 1.4rem;
-  font-weight: 700;
+.warningBox ul {
+  margin: 0;
+  padding-left: 1.1rem;
 }
 
-.domainName {
-  font-family: var(--tenant-heading-font);
-  font-size: 1.3rem;
-  line-height: 1.1;
-}
-
-.motto {
-  font-size: 0.8rem;
+.warningBox span {
   opacity: 0.85;
 }
 
-.nav {
+/* =================== Live preview =================== */
+
+.preview { position: sticky; top: 1rem; min-width: 0; }
+
+.previewHead {
   display: flex;
-  gap: 1rem;
-  font-size: 0.9rem;
-  opacity: 0.9;
+  align-items: baseline;
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
+  flex-wrap: wrap;
 }
 
-.headRule {
-  height: 4px;
-  background: var(--tenant-accent);
-}
-
-.banner {
-  width: 100%;
-  aspect-ratio: 1920 / 240;
-  height: auto;
-  object-fit: cover;
-  display: block;
-}
-
-/* Document preview card */
-.record {
-  margin: 1.5rem;
-  background: var(--tenant-surface-bg);
-  border: 1px solid var(--tenant-accent);
-  border-top: 6px solid var(--tenant-primary);
-  border-radius: 4px;
-  padding: 1.75rem 2rem;
-}
-
-.recordTitle {
-  font-family: var(--tenant-heading-font);
-  color: var(--tenant-primary);
-  font-size: 1.6rem;
-  border-bottom: 2px solid var(--tenant-accent);
-  padding-bottom: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.recordMeta {
+.previewCaption {
   font-size: 0.8rem;
-  color: var(--tenant-muted-text);
-  margin-bottom: 1rem;
+  color: var(--tenant-muted-text, #777);
 }
 
-.recordBody {
-  font-family: var(--tenant-body-font);
-  font-size: 0.95rem;
-  line-height: 1.6;
+.previewTools { display: flex; gap: .4rem; flex-wrap: wrap; margin: .75rem 0; }
+.previewTools button { font: inherit; font-size: .72rem; border: 1px solid #c9ced6; background: #fff; color: #243145; padding: .5rem .65rem; cursor: pointer; }
+.previewTools button[aria-pressed='true'] { background: #243145; color: #fff; }
+.previewExpanded { position: fixed; inset: 1rem; z-index: 100; overflow: auto; padding: 1.5rem; background: #f6f7f8; box-shadow: 0 0 0 2rem #172333bb; }
 
-  h1,
-  h2,
-  h3 {
-    font-family: var(--tenant-heading-font);
-    color: var(--tenant-primary);
-  }
-
-  blockquote {
-    border-left: 4px solid var(--tenant-accent);
-    background: var(--tenant-page-bg);
-    color: var(--tenant-primary);
-    padding: 0.5rem 1rem;
-    font-style: italic;
-    margin: 1rem 0;
-  }
-
-  a {
-    color: var(--tenant-primary);
-  }
-
-  hr {
-    border: none;
-    border-top: 2px solid var(--tenant-accent);
-  }
-}
-
-@media (max-width: 780px) {
-  .studio {
-    grid-template-columns: 1fr;
-  }
-}
+@media (max-width: 1100px) { .studio { grid-template-columns: 1fr; } .preview { position: static; } .previewExpanded { position: fixed; } .templateGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .templateCard { display: flex; } }
+@media (max-width: 600px) { .templateGrid { grid-template-columns: 1fr; } .templateCard { display: grid; } .docStyleGrid { grid-template-columns: 1fr; } }

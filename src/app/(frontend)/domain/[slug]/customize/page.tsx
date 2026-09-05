@@ -3,9 +3,9 @@ import { notFound } from 'next/navigation'
 
 import { TenantShell } from '@/components/theme/TenantShell'
 import { ThemeStudio } from '@/components/theme/ThemeStudio'
-import { originLabel } from '@/lib/origin'
+import { loadDomainHome } from '@/lib/theme/home'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
-import { getDocumentForTenant, getDocumentsForTenant, getTenantsForUser } from '@/lib/tenant/queries'
+import { getTenantsForUser } from '@/lib/tenant/queries'
 import { renderMarkdown } from '@/lib/markdown/render'
 import { mediaSrc, resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 import { getLorePayload } from '@/lib/payload'
@@ -34,14 +34,14 @@ export default async function CustomizePage({ params }: Props) {
   const tokens = resolveThemeTokens(tenant)
 
   // Representative document for the preview: prefer the fixture report.
-  const docs = await getDocumentsForTenant(tenant)
+  const { home, documents: docs } = await loadDomainHome(tenant, user, activeCharacter)
   const previewDoc = docs.find((d) => d.title === 'Incident Report 2026-014') ?? docs[0]
 
   const previewHtml = previewDoc
     ? renderMarkdown(previewDoc.body)
     : '<p>No record yet.</p>'
   const previewMeta = previewDoc
-    ? `Filed ${new Date(previewDoc.createdAt as string).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} · ${originLabel(previewDoc.origin)}`
+    ? `Filed ${new Date(previewDoc.createdAt as string).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`
     : ''
 
   return (
@@ -63,9 +63,17 @@ export default async function CustomizePage({ params }: Props) {
           backgroundColor: tenant.backgroundColor,
           headingFontKey: tenant.headingFontKey,
           bodyFontKey: tenant.bodyFontKey,
+          designTemplate: tenant.designTemplate ?? 'civic',
+          contentWidth: tenant.contentWidth ?? 'standard',
+          headerLayout: tenant.headerLayout ?? 'centered',
+          documentStyle: tenant.documentStyle ?? 'classic',
+          backgroundTreatment: tenant.backgroundTreatment ?? 'plain',
+          backgroundImageSet: Boolean(tenant.backgroundImage),
         }}
         logoUrl={mediaSrc(tenant.logo)}
         bannerUrl={mediaSrc(tenant.banner)}
+        backgroundUrl={mediaSrc(tenant.backgroundImage)}
+        home={home}
         previewHtml={previewHtml}
         previewDocTitle={previewDoc?.title ?? ''}
         previewMeta={previewMeta}

@@ -12,12 +12,12 @@ export async function POST(request: Request) {
   try {
     const payload = await getPayload({ config })
     const { user } = await payload.auth({ headers: request.headers })
-    if (!user) return NextResponse.redirect(new URL('/platform/work?error=login', request.url), 303)
+    if (!user) return NextResponse.redirect(new URL('/work?error=login', request.url), 303)
     const context = await getActiveContext()
     const result = await createSetupPendingDomain(payload, { actor: { userId: user.id, activeCharacterId: context.activeCharacter?.id ?? null }, name, slug })
-    return NextResponse.redirect(new URL(result.ok ? `/platform/work?created=${encodeURIComponent(result.domain.slug ?? slug)}` : '/platform/work?error=invalid', request.url), 303)
+    return NextResponse.redirect(new URL(result.ok ? `/work?created=${encodeURIComponent(result.domain.slug ?? slug)}` : '/work?error=invalid', request.url), 303)
   } catch {
-    return NextResponse.redirect(new URL('/platform/work?error=invalid', request.url), 303)
+    return NextResponse.redirect(new URL('/work?error=invalid', request.url), 303)
   }
 }
 

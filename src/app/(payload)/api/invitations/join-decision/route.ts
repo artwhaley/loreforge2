@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   const requestId = Number(formData.get('requestId') ?? '')
   const decision = String(formData.get('decision') ?? '')
   const tenantSlug = String(formData.get('tenantSlug') ?? '').trim()
-  const fallback = tenantSlug ? `/domain/${encodeURIComponent(tenantSlug)}/manage/invitations` : '/platform/work'
+  const fallback = tenantSlug ? `/domain/${encodeURIComponent(tenantSlug)}/manage/invitations` : '/work'
   try {
     const payload = await getPayload({ config })
     const { user } = await payload.auth({ headers: request.headers })

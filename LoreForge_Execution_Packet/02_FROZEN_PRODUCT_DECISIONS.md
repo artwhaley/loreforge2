@@ -1,4 +1,4 @@
-# Frozen Product Decisions
+﻿# Frozen Product Decisions
 
 These decisions came from the product-design conversation and supersede stale/speculative alternatives. Executors do not revisit them unless the owner explicitly changes them.
 
@@ -14,7 +14,7 @@ buildout exercise, not automatic Phase 8 starter-pack implementation.
 ## Product identity
 - LoreForge is a specialized roleplay institutional archive, **not a generic CMS**.
 - Initial marketing/content focus may be Gorean Roleplay Cities, but core code is genre-neutral.
-- Genre adaptation comes from first-party starter packs, vocabulary, templates, roles, folders, and visual theme—not conditional Gorean code.
+- Genre adaptation comes from first-party starter packs, templates, roles, folders, and visual theme—not conditional Gorean code.
 - `Domain` is the product term for a tenant. Use DNS/hostname terminology for actual internet DNS.
 - LoreForge owns a polished public platform home, ordinary customer login, account dashboard, account pages, and global context header. Ordinary users never enter through Payload Admin; Payload Admin remains an internal developer/operator back office.
 - Signed-out `/` is the LoreForge marketing/login home. Signed-in `/` is the LoreForge User dashboard. The LoreForge logo returns there; a selected Domain's `Home` navigation returns to that Domain's home.
@@ -102,11 +102,11 @@ There is one core document relationship:
 - Primary search scope is always one active Domain.
 
 ## Themes and starter packs
-- Core customization is identity/theme/vocabulary, not arbitrary page layout.
+- Core customization is identity/theme (three first-class design templates, each fully themeable), not arbitrary page layout.
 - No Puck/GrapesJS core page builder.
-- Theme Studio controls logo/seal, banner/background treatment, curated colors/fonts/presets and a few safe style options with live preview.
+- Theme Studio controls design template, header layout, logo/seal, banner/background treatment, curated colors/fonts/presets and safe style options with live preview, organized in tabs with a sticky full-home preview (owner decision 2026-09-05).
 - Raw custom CSS remains an open future escape hatch but is not core and is not implemented by these tickets.
-- Vocabulary is controlled terminology/default labels/content—not full localization of every interface string.
+- **Domain vocabulary customization is removed (owner decision 2026-09-05).** Customer-facing nouns are fixed platform constants; the earlier "controlled terminology" vocabulary rule is superseded.
 - Starter packs are first-party only for now.
 - Starter packs are **copy-on-install**. Installed Domain configuration is independent forever; pack updates never silently rewrite it.
 - Initial packs: Gorean City + one strongly contrasting modern pack.

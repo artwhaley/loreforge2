@@ -3,6 +3,7 @@ import type { Payload } from 'payload'
 import { authorizePlatformOperation, type PlatformActor } from '@/lib/authz/platform'
 import { runInTransaction } from '@/lib/db/transactions'
 import { ensureDomainAdminIdentity } from '@/lib/characters/provisioning'
+import { ensurePlainTextDocumentType } from '@/lib/documents/plainTextProvisioning'
 
 import { consumeInvitation, issueInvitation, resolveInvitation, revokeInvitation, type InvitationConsumeResult, type InvitationResolution, type SafeInvitationView } from './service'
 import { idOf, isInvitationPurpose, type InvitationPurpose } from './types'
@@ -184,6 +185,7 @@ export async function decideDomainBootstrapRequest(payload: Payload, args: { act
       }
       await payload.update({ collection: 'domains', id: domainId, overrideAccess: true, req, data: { ownerUser: userId, ownerCharacter: null, lifecycle: 'active' } as never })
       await ensureDomainAdminIdentity(payload, domainId, { transactionID })
+      await ensurePlainTextDocumentType(payload, domainId, { transactionID })
       const approved = await payload.update({ collection: 'domain-bootstrap-requests', id: requestId, overrideAccess: true, req, data: { status: 'approved', decidedAt, decidedBy: args.actor.userId, decidingCharacter: args.actor.activeCharacterId, decisionNote: args.note?.trim() || undefined } as never })
       return { ok: true, request: approved as unknown as RequestRow, domainId }
     })

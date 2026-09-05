@@ -1,243 +1,136 @@
-.root {
-  --tenant-shell-width: min(1400px, calc(100% - 3rem));
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--tenant-page-bg, #f5f5f5);
-  font-family: var(--tenant-body-font, sans-serif);
-  color: #222;
-}
+/* ---------------------------------------------------------------------------
+   DomainFrame — the three template compositions.
+   The root carries [data-template='civic'|'ledger'|'poster'] x
+   [data-header='centered'|'left-aligned'|'banner-forward']; all colors and
+   fonts come from theme CSS variables so every template stays themeable.
+   Access decisions and operating context stay in TenantShell (server).
+--------------------------------------------------------------------------- */
 
-.contextBar {
-  width: var(--tenant-shell-width);
-  max-width: 100%;
-  box-sizing: border-box;
-  margin: 0 auto;
-  padding: 0.65rem 1.5rem;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
-  gap: 1rem;
-  background: var(--tenant-surface-bg, #fff);
-  border-bottom: 1px solid var(--tenant-accent);
-}
+/* ---- Shared base ---- */
+.root { min-height: 100vh; position: relative; background-color: var(--tenant-page-bg); color: var(--tenant-primary); font-family: var(--tenant-body-font); isolation: isolate; }
+.root * { box-sizing: border-box; }
+.root a, .root button, .root input, .root select, .root summary { touch-action: manipulation; }
+.root :focus-visible { outline: 2px solid var(--tenant-primary); outline-offset: 4px; }
+.root img { max-width: 100%; }
+.root h1, .root h2, .root h3 { overflow-wrap: anywhere; }
+.bgOverlay { position: absolute; inset: 0; background: var(--tenant-background-overlay); pointer-events: none; z-index: -1; }
 
+/* The operating context is platform-owned chrome, deliberately unthemed. */
+.contextBar { width: 100%; padding: .7rem max(1.5rem, calc((100vw - 1400px) / 2)); display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto; gap: 1rem; align-items: center; background: #f9fafb; color: #243145; border-bottom: 1px solid #d5d9df; --tenant-primary: #243145; --tenant-accent: #b9c0c9; --tenant-surface-bg: #fff; --tenant-text-on-primary: #fff; --tenant-heading-font: Georgia, serif; --tenant-body-font: Verdana, sans-serif; font-family: Verdana, sans-serif; position: relative; z-index: 5; }
 .platformBrand { display: inline-flex; align-items: center; gap: .4rem; color: var(--tenant-primary); font-family: var(--tenant-heading-font); font-size: .95rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
 .platformMark { display: inline-grid; place-items: center; width: 1.55rem; height: 1.55rem; border: 1px solid var(--tenant-accent); border-radius: 50%; color: var(--tenant-text-on-primary); background: var(--tenant-primary); font-size: .75rem; }
-
-.contextControl {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
-}
-
-.contextLabel {
-  color: var(--tenant-primary);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.contextSelect {
-  min-width: 0;
-  flex: 1;
-  padding: 0.4rem 0.5rem;
-  border: 1px solid var(--tenant-accent);
-  border-radius: 3px;
-  background: var(--tenant-surface-bg, #fff);
-  color: var(--tenant-primary);
-  font: inherit;
-}
-
-.contextButton {
-  padding: 0.4rem 0.65rem;
-  border: 1px solid var(--tenant-primary);
-  border-radius: 3px;
-  background: var(--tenant-primary);
-  color: var(--tenant-text-on-primary);
-  font: inherit;
-  cursor: pointer;
-}
-
-.contextButton:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.accountControls {
-  align-self: center;
-  justify-self: end;
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  color: var(--tenant-primary);
-  font-size: 0.78rem;
-  white-space: nowrap;
-}
-
+.contextControl { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.contextLabel { color: var(--tenant-primary); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+.contextSelect { min-width: 0; flex: 1; padding: 0.4rem 0.5rem; border: 1px solid var(--tenant-accent); border-radius: 3px; background: var(--tenant-surface-bg, #fff); color: var(--tenant-primary); font: inherit; }
+.accountControls { align-self: center; justify-self: end; display: flex; align-items: center; gap: 0.55rem; color: var(--tenant-primary); font-size: 0.78rem; white-space: nowrap; }
 .accountMenu { position: relative; }
 .accountMenu summary { cursor: pointer; list-style: none; }
 .accountMenu summary::-webkit-details-marker { display: none; }
 .accountPopover { position: absolute; z-index: 5; right: 0; top: calc(100% + .45rem); display: grid; gap: .5rem; min-width: 150px; padding: .7rem; border: 1px solid var(--tenant-accent); border-radius: 4px; background: var(--tenant-surface-bg, #fff); box-shadow: 0 8px 20px rgba(0, 0, 0, .12); }
 .accountPopover a { color: var(--tenant-primary); text-decoration: none; }
 .accountPopover a:hover { text-decoration: underline; }
-
-.accountLink {
-  color: var(--tenant-primary);
-  text-decoration: none;
-
-  &:hover {
-    text-decoration: underline;
-  }
-}
-
-.readOnlyLabel {
-  color: #6b5a3b;
-  font-size: 0.72rem;
-}
-
-.logoutButton {
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: var(--tenant-primary);
-  font: inherit;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
+.logoutButton { border: 0; padding: 0; background: transparent; color: var(--tenant-primary); font: inherit; text-decoration: underline; cursor: pointer; }
 @media (max-width: 680px) {
-  .contextBar {
-    grid-template-columns: 1fr;
-  }
+  .contextBar { grid-template-columns: 1fr; }
   .accountControls { justify-self: start; }
 }
 
-.header {
-  background: var(--tenant-primary);
-  color: var(--tenant-text-on-primary);
+/* ---- Frame skeleton (template compositions restyle these regions) ---- */
+.domainGrid { width: var(--tenant-shell-width); max-width: 100%; margin: auto; display: grid; grid-template-columns: minmax(0, 1fr); min-height: calc(100vh - 65px); grid-template-rows: auto 1fr auto; }
+.header { min-width: 0; border-bottom: 3px solid var(--tenant-primary); }
+.headerInner { padding: 2rem 2.5rem 0; background: var(--tenant-primary); color: var(--tenant-text-on-primary); }
+.identity { display: flex; gap: 1rem; align-items: center; color: inherit; text-decoration: none; min-width: 0; }
+.identityText { min-width: 0; }
+.domainName { display: block; font: 500 1.75rem/1.12 var(--tenant-heading-font); overflow-wrap: anywhere; }
+.motto { display: block; margin-top: .5rem; font-size: .75rem; line-height: 1.6; max-width: 48ch; }
+.seal, .sealFallback { flex: 0 0 48px; width: 48px; height: 48px; object-fit: contain; }
+.sealFallback { display: grid; place-items: center; border: 1px solid currentColor; font: 2rem var(--tenant-heading-font); }
+.nav { display: flex; gap: 0; flex-wrap: wrap; margin-top: 1.8rem; }
+.navLink { display: block; color: inherit; text-decoration: none; padding: .9rem 1.2rem; border-top: 1px solid color-mix(in srgb, currentColor 35%, transparent); font-size: .8rem; }
+.navLink:hover { background: color-mix(in srgb, currentColor 12%, transparent); text-decoration: underline; text-underline-offset: .4em; }
+.managementNav { display: flex; gap: .6rem 1.3rem; flex-wrap: wrap; padding: .8rem 2.5rem; font-size: .7rem; line-height: 1.6; background: var(--tenant-surface-bg); border-bottom: 1px solid var(--tenant-surface-border); }
+.managementNav a { color: var(--tenant-primary); text-decoration: none; }
+.managementNav a:hover { text-decoration: underline; }
+.main { min-width: 0; padding: 3rem 2.5rem 4rem; container: domain / inline-size; }
+.footer { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 1.5rem 2.5rem; border-top: 1px solid var(--tenant-primary); font-size: .7rem; }
+.footer a { color: inherit; text-underline-offset: .2em; }
+.bannerWrap { line-height: 0; }
+.banner { width: 100%; height: 160px; object-fit: cover; }
+
+/* ---- Header layout axes (base = CIVIC presentation) ---- */
+.root[data-header='centered'] .identity { justify-content: center; text-align: center; flex-direction: column; }
+.root[data-header='centered'] .nav { justify-content: center; }
+.root[data-header='left-aligned'] .headerInner { padding-top: 1.2rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap; }
+.root[data-header='left-aligned'] .nav { margin-top: 0; }
+.root[data-header='left-aligned'] .identity { padding-bottom: 1rem; }
+.root[data-header='banner-forward'] .headerInner { padding-top: 4rem; }
+.root[data-header='banner-forward'] .domainName { font-size: 3rem; }
+.root[data-header='banner-forward'] .banner { height: 300px; }
+
+/* ================= LEDGER — editorial archive spread ================= */
+/* The whole domain is an asymmetric spread: one persistent index rail owns
+   navigation; the main column is a typeset page with marginal metadata. */
+.root[data-template='ledger'] .domainGrid { grid-template-columns: minmax(175px, 22%) minmax(0, 1fr); grid-template-rows: 1fr auto; border-left: 1px solid var(--tenant-surface-border); border-right: 1px solid var(--tenant-surface-border); }
+.root[data-template='ledger'] .header { grid-column: 1; grid-row: 1 / 3; border: 0; border-right: 1px solid var(--tenant-primary); padding: 2rem 1.5rem; }
+.root[data-template='ledger'] .headerInner { background: transparent; color: var(--tenant-primary); display: block; padding: 0; }
+.root[data-template='ledger'] .identity { align-items: flex-start; flex-direction: column; text-align: left; padding-bottom: 2rem; }
+.root[data-template='ledger'] .domainName { font-size: 1.75rem; }
+.root[data-template='ledger'] .nav { display: flex; flex-direction: column; margin: 0; counter-reset: index; }
+.root[data-template='ledger'] .navLink { display: flex; gap: .8rem; padding: 1rem 0; font-size: .75rem; border-color: var(--tenant-surface-border); }
+.root[data-template='ledger'] .navLink::before { counter-increment: index; content: '0' counter(index); font-size: .65rem; opacity: .6; }
+.root[data-template='ledger'] .managementNav { flex-direction: column; background: transparent; padding: 2rem 0 0; margin-top: 1rem; border: 0; border-top: 3px double var(--tenant-primary); font-size: .67rem; }
+.root[data-template='ledger'] .main { grid-column: 2; padding: 2.5rem 3rem 4rem; }
+.root[data-template='ledger'] .footer { grid-column: 2; padding: 1.5rem 3rem; }
+.root[data-template='ledger'] .banner { height: 180px; margin-bottom: 1.5rem; }
+/* Header layouts keep meaning inside the rail: centered stacks the identity;
+   compact turns the identity into a one-line imprint; banner-forward gives
+   the rail a heavy masthead opening. */
+.root[data-template='ledger'][data-header='centered'] .identity { align-items: center; text-align: center; }
+.root[data-template='ledger'][data-header='left-aligned'] .identity { flex-direction: row; gap: .6rem; }
+.root[data-template='ledger'][data-header='left-aligned'] .domainName { font-size: 1.2rem; }
+.root[data-template='ledger'][data-header='left-aligned'] .sealFallback, .root[data-template='ledger'][data-header='left-aligned'] .seal { width: 30px; height: 30px; flex-basis: 30px; font-size: 1.2rem; }
+.root[data-template='ledger'][data-header='banner-forward'] .identity { padding-top: 3rem; border-top: 6px solid var(--tenant-primary); }
+
+/* ================= POSTER — bold cultural publication ================= */
+/* A publication masthead over an open, generous field: no solid header band,
+   big display type, and content arranged as an asymmetric layout. */
+.root[data-template='poster'] .header { border: 0; }
+.root[data-template='poster'] .headerInner { background: transparent; color: var(--tenant-primary); display: grid; grid-template-columns: minmax(0, 1fr) auto; padding: 2rem 2.5rem; gap: 2rem; border-bottom: 1px solid var(--tenant-primary); }
+.root[data-template='poster'] .identity { flex-direction: row; text-align: left; justify-content: start; }
+.root[data-template='poster'] .domainName { font-size: 1.65rem; font-weight: 700; letter-spacing: -.05em; }
+.root[data-template='poster'] .nav { margin: 0; display: grid; grid-template-columns: repeat(3, auto); gap: .25rem 1.5rem; align-content: center; }
+.root[data-template='poster'] .navLink { padding: .4rem 0; border: 0; font-size: .75rem; }
+.root[data-template='poster'] .managementNav { background: transparent; padding-top: .6rem; padding-bottom: .6rem; }
+.root[data-template='poster'] .main { padding-top: 1rem; }
+.root[data-template='poster'] .footer { background: var(--tenant-primary); color: var(--tenant-text-on-primary); padding-top: 2rem; padding-bottom: 2rem; }
+.root[data-template='poster'][data-header='centered'] .headerInner { grid-template-columns: 1fr; gap: 1rem; }
+.root[data-template='poster'][data-header='centered'] .identity { justify-content: center; }
+.root[data-template='poster'][data-header='centered'] .nav { display: flex; justify-content: space-between; border-top: 1px solid var(--tenant-primary); padding-top: .75rem; }
+.root[data-template='poster'][data-header='banner-forward'] .headerInner { padding-top: 3rem; padding-bottom: 3rem; background: var(--tenant-primary); color: var(--tenant-text-on-primary); }
+.root[data-template='poster'][data-header='banner-forward'] .domainName { font-size: clamp(2rem, 4vw, 4rem); }
+
+/* ---- Studio framing: the customize page renders in the REAL themed frame
+   (owner decision 2026-09-05: saved changes must be visible immediately on
+   the customization page itself, including shell width). Only the main
+   padding is tightened so the controls/preview layout has room. ---- */
+.root:has([data-theme-studio]) > .domainGrid > .main { padding: 1.5rem; }
+.root[data-template='ledger']:has([data-theme-studio]) > .domainGrid { grid-template-columns: 180px minmax(0, 1fr); }
+
+/* ---- Responsive ---- */
+@media (max-width: 900px) {
+  .domainGrid { width: 100%; }
+  .main, .root[data-template='ledger'] .main { padding: 2rem 1.25rem; }
+  .root[data-template='ledger'] .domainGrid, .root[data-template='ledger']:has([data-theme-studio]) > .domainGrid { grid-template-columns: minmax(0, 1fr); }
+  .root[data-template='ledger'] .header { grid-column: 1; grid-row: auto; border-right: 0; border-bottom: 3px double var(--tenant-primary); padding: 1.5rem 1.25rem 0; }
+  .root[data-template='ledger'] .identity { flex-direction: row; padding-bottom: 1.25rem; }
+  .root[data-template='ledger'] .nav { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .root[data-template='ledger'] .managementNav { flex-direction: row; padding: .75rem 0; margin: 0; gap: .5rem 1rem; }
+  .root[data-template='ledger'] .main, .root[data-template='ledger'] .footer { grid-column: 1; }
+  .root[data-template='poster'] .headerInner { grid-template-columns: 1fr; padding: 1.5rem 1.25rem; gap: 1.25rem; }
+  .root[data-template='poster'] .nav { grid-template-columns: repeat(3, 1fr); }
+  .headerInner { padding: 1.5rem 1.25rem 0; }
+  .managementNav { padding: .75rem 1.25rem; }
+  .navLink { padding: .8rem; }
+  .footer, .root[data-template='ledger'] .footer { padding: 1.25rem; }
 }
-
-.identity {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.domainIdentity { display: inline-flex; align-items: center; gap: .75rem; color: inherit; text-decoration: none; }
-
-.seal {
-  width: 44px;
-  height: 44px;
-  object-fit: contain;
-  border-radius: 4px;
-}
-
-.sealFallback {
-  width: 44px;
-  height: 44px;
-  border-radius: 6px;
-  background: var(--tenant-accent);
-  color: var(--tenant-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--tenant-heading-font);
-  font-size: 1.4rem;
-  font-weight: 700;
-}
-
-.bannerWrap {
-  line-height: 0;
-  background: var(--tenant-primary);
-}
-
-.banner {
-  width: 100%;
-  aspect-ratio: 1920 / 240;
-  height: auto;
-  object-fit: cover;
-  display: block;
-}
-
-.headerInner {
-  width: var(--tenant-shell-width);
-  max-width: 100%;
-  box-sizing: border-box;
-  margin: 0 auto;
-  padding: 1.25rem 1.5rem;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.domainName {
-  font-family: var(--tenant-heading-font);
-  font-size: 1.6rem;
-  color: var(--tenant-text-on-primary);
-  text-decoration: none;
-  letter-spacing: 0.02em;
-}
-
-.motto {
-  font-family: var(--tenant-body-font);
-  font-size: 0.85rem;
-  opacity: 0.85;
-  margin-top: 0.15rem;
-}
-.domainName, .motto { display: block; }
-
-.nav {
-  display: flex;
-  gap: 1.25rem;
-  flex-wrap: wrap;
-}
-
-.managementNav { width: var(--tenant-shell-width); max-width: 100%; box-sizing: border-box; margin: 0 auto; padding: .55rem 1.5rem; display: flex; align-items: center; gap: 1.1rem; flex-wrap: wrap; font-size: .82rem; }
-.managementNav a { color: var(--tenant-text-on-primary); opacity: .92; text-decoration: none; }
-.managementNav a:hover { text-decoration: underline; text-decoration-color: var(--tenant-accent); }
-
-.navLink {
-  color: var(--tenant-text-on-primary);
-  text-decoration: none;
-  font-size: 0.95rem;
-  opacity: 0.9;
-  border-bottom: 2px solid transparent;
-  padding-bottom: 2px;
-
-  &:hover {
-    opacity: 1;
-    border-bottom-color: var(--tenant-accent);
-  }
-}
-
-.rule {
-  height: 4px;
-  background: var(--tenant-accent);
-}
-
-.main {
-  flex: 1;
-  padding: 2rem 1.5rem;
-  width: var(--tenant-shell-width);
-  max-width: 100%;
-  margin: 0 auto;
-  box-sizing: border-box;
-}
-
-.footer {
-  background: var(--tenant-primary);
-  color: var(--tenant-text-on-primary);
-  font-size: 0.8rem;
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  text-align: center;
-  padding: 0.75rem;
-  opacity: 0.95;
-}
-.footer a { color: var(--tenant-text-on-primary); opacity: .8; text-decoration: none; }
+@media (prefers-reduced-motion: reduce) { .root *, .root *::before, .root *::after { scroll-behavior: auto !important; transition: none !important; } }

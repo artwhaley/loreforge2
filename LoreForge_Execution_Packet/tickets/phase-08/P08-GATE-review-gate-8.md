@@ -1,4 +1,4 @@
-# P08-GATE — Review Gate 8 — product identity, public/member UX, starter packs
+﻿# P08-GATE — Review Gate 8 — product identity, public/member UX, starter packs
 
 **Mode:** REVIEW GATE — NO SELF-APPROVAL  
 **Phase:** 8  
@@ -37,7 +37,7 @@ Human product/UX gate proving LoreForge feels like a branded RP archive rather t
 
 ## Automated acceptance
 
-- Full Phase 8 suite passes for theme/vocabulary schema, safe media, public-read predicate, starter-pack idempotency, and public Character/User projections.
+- Full Phase 8 suite passes for theme schema (vocabulary removed by owner correction 2026-09-05), safe media, public-read predicate, starter-pack idempotency, and public Character/User projections.
 - Anonymous count/search/profile tests prove private resource existence is not disclosed.
 - Bayview installs from the Modern pack and GS-09 cross-Domain scenarios pass against it.
 

@@ -460,23 +460,24 @@ The ordinary creation route is `/domain/:domain/records/new`. Records presents o
 No raw CSS.
 
 Minimum theme tokens:
+- design template `civic | ledger | poster` (owner decision 2026-09-05; first-class top-level site designs, each fully themeable);
 - preset key;
 - primary/secondary/accent/background;
 - curated heading/body font keys;
 - logo/seal;
 - banner;
-- optional background image/treatment in P08;
-- header layout `left | centered`;
-- content width `standard | wide`;
-- document style `paper | flat`.
+- optional background image/treatment in P08 (treatments `plain | washes | soft | vignette`; washes needs no image);
+- header layout `centered | left-aligned | banner-forward` (three genuinely distinct presentations per template);
+- content width `narrow | standard | wide`;
+- document style `classic | modern`.
 
 Derive accessible text/surface colors rather than expose every CSS variable.
 
 Theme media accepts only decoded/re-encoded JPEG, PNG, or WebP, maximum 5 MiB and 4096x4096 pixels. Reject SVG, animated/ambiguous polyglots, MIME/extension mismatch, and decompression-bomb inputs server-side; strip metadata during re-encode.
 
-Vocabulary is limited to singular/plural values for exactly these product nouns: `domain, subdomain, archive, document, folder, role, member`. Action labels, permission names, arbitrary interface strings, and translation keys are not customizable. Missing/blank values fall back to platform defaults.
+**Vocabulary customization is removed (owner decision 2026-09-05, superseding the paragraph below).** Customer-facing nouns (`Domain, Department, Archive, Record, Folder, Role, Member`) are fixed platform constants in code (`src/lib/theme/nouns.ts`); there is no per-Domain vocabulary storage, editor, or sanitizer. The former rule, kept for history: Vocabulary was limited to singular/plural values for exactly these product nouns: `domain, subdomain, archive, document, folder, role, member`. Action labels, permission names, arbitrary interface strings, and translation keys are not customizable.
 
-Starter packs are code-owned manifests with key/version/display name plus theme, vocabulary, Subdomains, Roles, folders, Types, Templates, Tags. Install copies records. Installed pack key/version is provenance only.
+Starter packs are code-owned manifests with key/version/display name plus theme, Subdomains, Roles, folders, Types, Templates, Tags. Install copies records. Installed pack key/version is provenance only.
 
 ## 13. Search contract
 - Domain-scoped.

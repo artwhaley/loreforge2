@@ -12,12 +12,12 @@ export async function POST(request: Request) {
   try {
     const payload = await getPayload({ config })
     const { user } = await payload.auth({ headers: request.headers })
-    if (!user || (decision !== 'approved' && decision !== 'rejected') || !Number.isInteger(requestId)) return NextResponse.redirect(new URL('/platform/work?error=invalid', request.url), 303)
+    if (!user || (decision !== 'approved' && decision !== 'rejected') || !Number.isInteger(requestId)) return NextResponse.redirect(new URL('/work?error=invalid', request.url), 303)
     const context = await getActiveContext()
     const result = await decideDomainBootstrapRequest(payload, { actor: { userId: user.id, activeCharacterId: context.activeCharacter?.id ?? null }, requestId, decision: decision as 'approved' | 'rejected', note: String(formData.get('note') ?? '') })
-    return NextResponse.redirect(new URL(result.ok ? '/platform/work?decided=1' : '/platform/work?error=invalid', request.url), 303)
+    return NextResponse.redirect(new URL(result.ok ? '/work?decided=1' : '/work?error=invalid', request.url), 303)
   } catch {
-    return NextResponse.redirect(new URL('/platform/work?error=invalid', request.url), 303)
+    return NextResponse.redirect(new URL('/work?error=invalid', request.url), 303)
   }
 }
 

@@ -47,6 +47,10 @@ export const Tenants: CollectionConfig = {
       options: [
         { label: 'Heritage (traditional civic)', value: 'heritage' },
         { label: 'Modern (coastal metropolitan)', value: 'modern' },
+        { label: 'Ink (Loreforge print)', value: 'ink' },
+        { label: 'Gallery (quiet light)', value: 'gallery' },
+        { label: 'Verdant (forest civic)', value: 'verdant' },
+        { label: 'Nocturne (dramatic dark)', value: 'nocturne' },
       ],
       defaultValue: 'heritage',
       required: true,
@@ -86,8 +90,10 @@ export const Tenants: CollectionConfig = {
       options: [
         { label: 'Georgia (traditional serif)', value: 'georgia' },
         { label: 'Palatino (bookish serif)', value: 'palatino' },
+        { label: 'Newsreader (Loreforge editorial serif)', value: 'newsreader' },
         { label: 'Verdana (neutral sans-serif)', value: 'verdana' },
         { label: 'Trebuchet (friendly sans-serif)', value: 'trebuchet' },
+        { label: 'Lato (Loreforge clean sans)', value: 'lato' },
       ],
       defaultValue: 'georgia',
       required: true,
@@ -101,6 +107,8 @@ export const Tenants: CollectionConfig = {
         { label: 'Georgia (readable serif)', value: 'georgia' },
         { label: 'Trebuchet (friendly sans)', value: 'trebuchet' },
         { label: 'Tahoma (compact sans)', value: 'tahoma' },
+        { label: 'Lato (Loreforge clean sans)', value: 'lato' },
+        { label: 'Newsreader (editorial serif)', value: 'newsreader' },
       ],
       defaultValue: 'verdana',
       required: true,
@@ -122,6 +130,69 @@ export const Tenants: CollectionConfig = {
       admin: {
         description: 'Optional header banner (image).',
       },
+    },
+    // ---- Design template + layout/document/background tokens (mirrored from
+    // Domains while the legacy union is alive; see DEF-TENANT-01) ----
+    {
+      name: 'designTemplate',
+      type: 'select',
+      label: 'Design template',
+      options: [
+        { label: 'Civic (classic community)', value: 'civic' },
+        { label: 'Ledger (Loreforge print)', value: 'ledger' },
+        { label: 'Poster (bold modern)', value: 'poster' },
+      ],
+      defaultValue: 'civic',
+    },
+    {
+      name: 'contentWidth',
+      type: 'select',
+      label: 'Content width',
+      options: [
+        { label: 'Narrow (focused reading)', value: 'narrow' },
+        { label: 'Standard', value: 'standard' },
+        { label: 'Wide', value: 'wide' },
+      ],
+      defaultValue: 'standard',
+    },
+    {
+      name: 'headerLayout',
+      type: 'select',
+      label: 'Header layout',
+      options: [
+        { label: 'Centered masthead', value: 'centered' },
+        { label: 'Compact bar', value: 'left-aligned' },
+        { label: 'Banner hero', value: 'banner-forward' },
+      ],
+      defaultValue: 'centered',
+    },
+    {
+      name: 'documentStyle',
+      type: 'select',
+      label: 'Document reading style',
+      options: [
+        { label: 'Classic (serif record sheet)', value: 'classic' },
+        { label: 'Modern (clean reading)', value: 'modern' },
+      ],
+      defaultValue: 'classic',
+    },
+    {
+      name: 'backgroundTreatment',
+      type: 'select',
+      label: 'Background treatment',
+      options: [
+        { label: 'Plain color', value: 'plain' },
+        { label: 'Color washes', value: 'washes' },
+        { label: 'Soft texture (image)', value: 'soft' },
+        { label: 'Vignette (image)', value: 'vignette' },
+      ],
+      defaultValue: 'plain',
+    },
+    {
+      name: 'backgroundImage',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Background image',
     },
   ],
 }

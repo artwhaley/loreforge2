@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   const formData = await request.formData()
   const invitationId = Number(formData.get('invitationId') ?? '')
   const tenantSlug = String(formData.get('tenantSlug') ?? '').trim()
-  const fallback = tenantSlug ? `/domain/${encodeURIComponent(tenantSlug)}/manage/invitations` : '/platform/work'
+  const fallback = tenantSlug ? `/domain/${encodeURIComponent(tenantSlug)}/manage/invitations` : '/work'
   if (!Number.isInteger(invitationId)) return NextResponse.redirect(new URL(fallback, request.url), 303)
   try {
     const payload = await getPayload({ config })

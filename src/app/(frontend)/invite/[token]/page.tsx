@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { PlatformShell, platformStyles as styles } from '@/components/platform/PlatformShell'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { getLorePayload } from '@/lib/payload'
-import { invitationPurposeLabel, isInvitationPurpose, isInvitationToken } from '@/lib/invitations/types'
+import { isInvitationPurpose, isInvitationToken } from '@/lib/invitations/types'
 import { resolveInvitation } from '@/lib/invitations/service'
 
 type Props = { params: Promise<{ token: string }>; searchParams?: Promise<{ accepted?: string; error?: string }> }
@@ -23,11 +23,14 @@ export default async function InvitationResolverPage({ params, searchParams }: P
 
   if (accepted && invitation) {
     const acceptedText = invitation.purpose === 'domain_bootstrap'
-      ? 'Your bootstrap request is pending platform approval.'
+      ? 'For extra security, platform administrators must approve all new domain administrators. You’ll be notified when that process is complete and you can begin setting up your new Community domain!'
       : invitation.purpose === 'character_claim'
         ? `The Character ${invitation.character?.name ?? ''} is now connected to your account.`
         : 'Your Domain join request is pending the Domain Administrator’s approval.'
-    return <PlatformShell><section className={styles.panel}><p className={styles.eyebrow}>Invitation accepted</p><h1 className={styles.sectionTitle}>You’re all set.</h1><p className={styles.sectionLead}>{acceptedText}</p><div className={styles.emptyCard}><strong>{invitation.purposeLabel}</strong>{invitation.domain ? ` · ${invitation.domain.name}` : ''}{invitation.character ? ` · ${invitation.character.name}` : ''}</div><p style={{ marginTop: '1.6rem' }}><Link href="/" className={styles.primary}>Continue to Loreforge</Link></p></section></PlatformShell>
+    const acceptedCard = invitation.purpose === 'domain_bootstrap'
+      ? <strong>{`Community Domain ${invitation.domain?.name ?? ''}: pending platform approval.`}</strong>
+      : <span><strong>{invitation.purposeLabel}</strong>{invitation.domain ? ` · ${invitation.domain.name}` : ''}{invitation.character ? ` · ${invitation.character.name}` : ''}</span>
+    return <PlatformShell><section className={styles.panel}><h1 className={styles.sectionTitle}>You’re all set.</h1><p className={styles.sectionLead}>{acceptedText}</p><div className={styles.emptyCard}>{acceptedCard}</div><p style={{ marginTop: '1.6rem' }}><Link href="/" className={styles.primary}>Continue to Loreforge</Link></p></section></PlatformShell>
   }
 
   if (resolution.status !== 'valid' || !invitation) {
@@ -67,20 +70,17 @@ export default async function InvitationResolverPage({ params, searchParams }: P
   return (
     <PlatformShell>
       <section className={styles.panel}>
-        <p className={styles.eyebrow}>{invitation.purposeLabel}</p>
         <h1 className={styles.sectionTitle}>You’re invited to {target}.</h1>
         <p className={styles.sectionLead}>
           {invitation.purpose === 'domain_bootstrap'
-            ? 'This secure link starts a pending Domain handoff for platform approval.'
+            ? 'You’ve been invited to the administrator role of your new Loreforge Community Domain. Create a new account or sign into an existing one below to accept this invitation.'
             : invitation.purpose === 'character_claim'
               ? `This secure link is for the unclaimed Character ${invitation.character?.name ?? 'you were invited to control'}.`
               : `This secure link is for participation in ${invitation.domain?.name ?? 'this Domain'}.`}
         </p>
         <div className={styles.emptyCard}>
-          <p><strong>Purpose:</strong> {invitationPurposeLabel(invitation.purpose)}</p>
           {invitation.domain ? <p><strong>Domain:</strong> {invitation.domain.name}</p> : null}
           {invitation.character ? <p><strong>Character:</strong> {invitation.character.name}</p> : null}
-          {invitation.expiresAt ? <p><strong>Expires:</strong> {new Date(invitation.expiresAt).toLocaleString()}</p> : <p><strong>Expires:</strong> Never</p>}
         </div>
         {query?.error === 'login' ? <p className={styles.error} role="alert">Sign in before accepting this invitation.</p> : query?.error ? <p className={styles.error} role="alert">This invitation could not be accepted. It may no longer be available.</p> : null}
         {context.user ? (

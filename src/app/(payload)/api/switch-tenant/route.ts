@@ -47,9 +47,19 @@ export async function POST(request: Request) {
           sameSite: 'lax',
           path: '/',
         })
-        // Preserve the acting Character only when it is a member of the
-        // destination Domain. Managed-only selection intentionally clears it.
-        if (!memberships.docs.length) res.cookies.delete(ACTIVE_CHARACTER_COOKIE)
+        // P07X-T02: keep the acting identity whenever it is valid in the
+        // destination Domain (active member Character; platform_admin anywhere;
+        // the domain_admin of exactly that Domain). A "managed-only" selection
+        // with no usable identity still clears it.
+        if (activeCharacterId) {
+          const characterId = Number(activeCharacterId)
+          const { isIdentityValidInDomain } = await import('@/lib/characters/identitySelect')
+          const accountRow = await payload.findByID({ collection: 'users', id: user.id, depth: 0, overrideAccess: true }).catch(() => null) as { isPlatformAdmin?: unknown } | null
+          const valid = Number.isFinite(characterId)
+            ? await isIdentityValidInDomain(payload, { userId: user.id, characterId, domainId: tenant.id, userIsPlatformAdmin: Boolean(accountRow?.isPlatformAdmin) })
+            : false
+          if (!valid) res.cookies.delete(ACTIVE_CHARACTER_COOKIE)
+        }
         return res
       }
     }

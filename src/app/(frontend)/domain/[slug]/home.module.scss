@@ -53,6 +53,7 @@
   width: 100%;
   box-sizing: border-box;
   margin: 2rem auto;
+  transition: transform 200ms ease;
 }
 
 .module {
@@ -65,10 +66,13 @@
   border-top: 4px solid var(--tenant-primary);
   border-radius: 4px;
   text-decoration: none;
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease;
 
   &:hover {
     border-top-color: var(--tenant-accent);
     background: color-mix(in srgb, var(--tenant-accent) 8%, var(--tenant-surface-bg));
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
   }
 }
 
@@ -77,11 +81,6 @@
   color: var(--tenant-primary);
   font-size: 1.15rem;
   font-weight: 700;
-}
-
-.moduleHint {
-  font-size: 0.85rem;
-  color: var(--tenant-muted-text);
 }
 
 .recent {
@@ -144,4 +143,95 @@
 .empty {
   color: var(--tenant-muted-text);
   font-style: italic;
+}
+
+/* ---- Ledger template: ruled print presentation ---- */
+:global([data-template='ledger']) .welcomeTitle {
+  font-size: 1.9rem;
+}
+
+:global([data-template='ledger']) .mottoLine {
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-style: normal;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+:global([data-template='ledger']) .module {
+  border-radius: 0;
+  border: 1.5px solid color-mix(in srgb, var(--tenant-primary) 60%, transparent);
+  border-top: 1.5px solid var(--tenant-primary);
+  background: color-mix(in srgb, var(--tenant-surface-bg) 84%, transparent);
+
+  &:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--tenant-primary);
+    background: var(--tenant-surface-bg);
+  }
+}
+
+:global([data-template='ledger']) .moduleLabel {
+  font-size: 1.02rem;
+}
+
+:global([data-template='ledger']) .recent {
+  border-radius: 0;
+  border: 1.5px solid var(--tenant-primary);
+}
+
+:global([data-template='ledger']) .sectionTitle {
+  border-bottom: 1.5px solid var(--tenant-primary);
+}
+
+:global([data-template='ledger']) .docItem {
+  border-bottom: 1px solid color-mix(in srgb, var(--tenant-primary) 35%, transparent);
+}
+
+/* ---- Poster template: bold modern presentation ---- */
+:global([data-template='poster']) .welcomeTitle {
+  font-size: clamp(2.4rem, 5vw, 3.2rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+:global([data-template='poster']) .mottoLine {
+  font-style: normal;
+  font-size: 1.15rem;
+  letter-spacing: 0.01em;
+}
+
+:global([data-template='poster']) .module {
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--tenant-primary) 8%, var(--tenant-surface-bg)), var(--tenant-surface-bg));
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+
+  &:hover {
+    border-top-color: transparent;
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px color-mix(in srgb, var(--tenant-primary) 18%, rgba(0, 0, 0, 0.1));
+    background: linear-gradient(160deg, color-mix(in srgb, var(--tenant-accent) 10%, var(--tenant-surface-bg)), var(--tenant-surface-bg));
+  }
+}
+
+:global([data-template='poster']) .moduleLabel {
+  font-size: 1.2rem;
+  letter-spacing: -0.01em;
+}
+
+:global([data-template='poster']) .recent {
+  border: 0;
+  border-radius: 16px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.08);
+}
+
+:global([data-template='poster']) .sectionTitle {
+  border-bottom: 3px solid var(--tenant-accent);
+  border-radius: 3px;
+}
+
+:global([data-template='poster']) .docItem {
+  border-bottom: 1px solid color-mix(in srgb, var(--tenant-primary) 14%, transparent);
 }

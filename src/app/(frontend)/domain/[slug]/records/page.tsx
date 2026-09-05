@@ -5,6 +5,7 @@ import { getLorePayload } from '@/lib/payload'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getFoldersForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
+import { PLATFORM_NOUNS as vocab } from '@/lib/theme/nouns'
 import { loadCachedAuthorizationSession } from '@/lib/authz/sessionCache'
 import { decideInSession, resolveDocumentTarget } from '@/lib/authz/session'
 import { compileReadScope } from '@/lib/authz/readScope'
@@ -169,6 +170,7 @@ export default async function RecordsPage({ params, searchParams }: Props) {
       canManageFolders={canManageFolders}
       canActOnRecords={Boolean(user)}
       canDeleteRecords={canDeleteRecords}
+      vocabulary={{ documentSingular: vocab.document.singular, documentPlural: vocab.document.plural, folderPlural: vocab.folder.plural }}
     />
   </TenantShell>
 }

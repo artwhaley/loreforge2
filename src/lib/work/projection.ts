@@ -39,8 +39,8 @@ export async function projectPlatformWork(payload: Payload, actor: Actor): Promi
     payload.find({ collection: 'character-merge-requests', where: { status: { equals: 'pending' } }, depth: 1, limit: 500, sort: '-requestedAt', overrideAccess: true }),
   ])
   const entries: WorkEntry[] = []
-  for (const request of bootstrap.docs) entries.push({ kind: 'bootstrap', id: Number(request.id), title: `Bootstrap ${relationName(request.domain, 'Domain')}`, summary: `Requested by ${relationName(request.user, 'User')}`, href: '/platform/work', requestedAt: text(request.requestedAt), domainId: idOf(request.domain) ?? undefined })
-  for (const request of merges.docs) entries.push({ kind: 'merge', id: Number(request.id), title: `Character merge ${relationName(request.source, 'Character')}`, summary: `Target ${relationName(request.target, 'not selected')}`, href: '/platform/work', requestedAt: text(request.requestedAt) })
+  for (const request of bootstrap.docs) entries.push({ kind: 'bootstrap', id: Number(request.id), title: `Bootstrap ${relationName(request.domain, 'Domain')}`, summary: `Requested by ${relationName(request.user, 'User')}`, href: '/work', requestedAt: text(request.requestedAt), domainId: idOf(request.domain) ?? undefined })
+  for (const request of merges.docs) entries.push({ kind: 'merge', id: Number(request.id), title: `Character merge ${relationName(request.source, 'Character')}`, summary: `Target ${relationName(request.target, 'not selected')}`, href: '/work', requestedAt: text(request.requestedAt) })
   return { authorized: true, entries }
 }
 
