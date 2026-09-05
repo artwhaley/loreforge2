@@ -1,14 +1,14 @@
 import { notFound } from 'next/navigation'
 
 import { TenantShell } from '@/components/theme/TenantShell'
-import { buildFolderTree } from '@/lib/archive/folderTree'
 import { getLorePayload } from '@/lib/payload'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getFoldersForTenant, getTenantsForUser } from '@/lib/tenant/queries'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 import { loadCachedAuthorizationSession } from '@/lib/authz/sessionCache'
-import { decideInSession, folderAncestry, resolveDocumentTarget } from '@/lib/authz/session'
+import { decideInSession, resolveDocumentTarget } from '@/lib/authz/session'
 import { compileReadScope } from '@/lib/authz/readScope'
+import { projectVisibleFolders, type ProjectedFolder } from '@/lib/authz/folderProjection'
 
 import { RecordsExplorer, type ExplorerFolder } from './RecordsExplorer'
 
@@ -135,11 +135,17 @@ export default async function RecordsPage({ params, searchParams }: Props) {
     const character = typeof link.character === 'object' ? link.character : null
     if (documentId !== null && character?.name) preparedBy.set(documentId, [preparedBy.get(documentId), character.name].filter(Boolean).join(', '))
   }
-  const tree = buildFolderTree(folders)
-  const toExplorerFolder = (node: (typeof tree)[number]): ExplorerFolder => ({
-    id: Number(node.folder.id),
-    name: node.folder.name,
-    systemManaged: Boolean(node.folder.systemManaged),
+  // P07X-T04: the Folder navigator is the permission-aware projection — only
+  // Folders with readable records, explicit Folder-read/management grants, or
+  // ancestor paths appear; denied branches and hidden counts never reach the
+  // client. Counts are the server-filtered readable totals, not a client
+  // recount over hidden rows.
+  const projection = session ? await projectVisibleFolders({ payload, session, folders: folders as never }) : { tree: [] as ProjectedFolder[], folderRecordCounts: new Map<number, number>(), totalReadable: 0 }
+  const toExplorerFolder = (node: ProjectedFolder): ExplorerFolder => ({
+    id: node.id,
+    name: node.name,
+    systemManaged: node.systemManaged,
+    recordCount: node.recordCount,
     children: node.children.map(toExplorerFolder),
   })
   const initialFolderId = folderRaw && Number.isFinite(Number(folderRaw)) ? Number(folderRaw) : null
@@ -153,7 +159,8 @@ export default async function RecordsPage({ params, searchParams }: Props) {
     <RecordsExplorer
       base={base}
       tenantSlug={tenant.slug}
-      folders={tree.map(toExplorerFolder)}
+      folders={projection.tree.map(toExplorerFolder)}
+      totalRecordCount={projection.totalReadable}
       records={allDocs.map((document) => ({ id: Number(document.id), title: document.title, folderId: relationId(document.folder), documentTypeId: relationId(document.documentType), updatedAt: document.updatedAt, preparedBy: preparedBy.get(Number(document.id)) ?? null, lifecycle: document.lifecycle, ...permissions.get(Number(document.id))! }))}
       documentTypes={documentTypes.docs.map((type) => ({ id: Number(type.id), name: type.name }))}
       supersessionEdges={supersessionEdges}

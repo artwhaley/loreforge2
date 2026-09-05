@@ -33,6 +33,7 @@ import { POST as rolesRoute } from '@/app/(payload)/api/roles/route'
 import { POST as permissionRulesRoute } from '@/app/(payload)/api/permission-rules/route'
 import { POST as foldersRoute } from '@/app/(payload)/api/folders/route'
 import { POST as domainMembershipsRoute } from '@/app/(payload)/api/domain-memberships/route'
+import { ensureDomainAdminIdentity } from '@/lib/characters/provisioning'
 
 const restPost = REST_POST(config)
 const restPatch = REST_PATCH(config)
@@ -61,6 +62,13 @@ async function fixture() {
   const alpha = await makeDomain('Alpha', 'alpha', users.ownerA.id)
   const beta = await makeDomain('Beta', 'beta', users.ownerB.id)
 
+  // P07X-T02: authority lives in the acting identity. Provision the owner
+  // domain_admin Characters (T01) so the sanctioned seams can be exercised
+  // through the selector cookies, exactly like the browser flow.
+  const adminAlpha = await ensureDomainAdminIdentity(payload, alpha.id)
+  const adminBeta = await ensureDomainAdminIdentity(payload, beta.id)
+  if (!adminAlpha.characterId || !adminBeta.characterId) throw new Error('domain_admin identities must provision')
+
   const charThief = await payload.create({ collection: 'characters', data: { name: 'Thief', status: 'active', controlledBy: users.attacker.id } } as never)
   const charBeta = await payload.create({ collection: 'characters', data: { name: 'BetaResident', status: 'active', controlledBy: users.ownerB.id } } as never)
   await payload.create({ collection: 'domain-memberships', data: { domain: alpha.id, character: charThief.id, status: 'active', addedBy: users.attacker.id } } as never)
@@ -86,7 +94,7 @@ async function fixture() {
   const victimBetaRule = await payload.create({ collection: 'permission-rules', overrideAccess: true, data: { domain: beta.id, principalType: 'Character', principal: { relationTo: 'characters', value: charBeta.id }, resourceType: 'Folder', resource: { relationTo: 'folders', value: folderBeta.id }, capability: 'read', effect: 'grant', active: true, actorUser: users.ownerB.id } } as never)
   const stickyBetaTag = await payload.create({ collection: 'tags', overrideAccess: true, data: { domain: beta.id, name: 'Sticky' } } as never)
 
-  return { payload, users, alpha, beta, deptAlpha, deptBeta, charThief, charBeta, roleAlpha, roleBeta, rootAlpha, folderBeta, docAlpha, docBeta, docBeta2, victimBetaRule, stickyBetaTag }
+  return { payload, users, alpha, beta, deptAlpha, deptBeta, charThief, charBeta, roleAlpha, roleBeta, rootAlpha, folderBeta, docAlpha, docBeta, docBeta2, victimBetaRule, stickyBetaTag, adminAlphaId: adminAlpha.characterId, adminBetaId: adminBeta.characterId }
 }
 
 async function login(payload: Payload, email: string, password: string): Promise<string> {
@@ -101,22 +109,36 @@ async function login(payload: Payload, email: string, password: string): Promise
   return body.token as string
 }
 
-/** Payload's GENERATED REST endpoints (the surface collection access closes). */
-const api = (method: 'GET' | 'POST' | 'PATCH' | 'DELETE') => async (path: string, token: string | null, body?: unknown) => {
+/**
+ * Payload's GENERATED REST endpoints (the surface collection access closes).
+ * Pass an acting Character id to attach the selector cookie the Documents
+ * access boundary resolves under P07X-T02.
+ */
+const api = (method: 'GET' | 'POST' | 'PATCH' | 'DELETE') => async (path: string, token: string | null, body?: unknown, actingCharacterId?: number) => {
   const handler = { GET: restGet, POST: restPost, PATCH: restPatch, DELETE: restDelete }[method]
   const slug = path.replace(/^\/api\//, '').split('/').filter(Boolean)
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(token ? { Authorization: `JWT ${token}` } : {}) }
+  if (actingCharacterId != null) headers.Cookie = `sl-civic-active-character=${actingCharacterId}`
   return handler(new Request(`http://localhost${path}`, {
     method,
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `JWT ${token}` } : {}) },
+    headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   }), { params: Promise.resolve({ slug }) })
 }
 
-/** The CUSTOM guarded Next route handlers (sanctioned customer admin surface). */
-function formPost(handler: (request: Request) => Promise<Response>, token: string, fields: Record<string, string>) {
+/**
+ * The CUSTOM guarded Next route handlers (sanctioned customer admin surface).
+ * Pass the acting Character id to attach the selector cookies the routes
+ * resolve under P07X-T02 (active Character + selected Domain).
+ */
+function formPost(handler: (request: Request) => Promise<Response>, token: string, fields: Record<string, string>, actingCharacterId?: number) {
   const form = new FormData()
   for (const [key, value] of Object.entries(fields)) form.append(key, value)
-  return handler(new Request('http://localhost/api/x', { method: 'POST', headers: { Authorization: `JWT ${token}` }, body: form }))
+  const headers: Record<string, string> = { Authorization: `JWT ${token}` }
+  if (actingCharacterId != null) {
+    headers.Cookie = `sl-civic-active-character=${actingCharacterId}; sl-civic-active-tenant=${fields.domainSlug}`
+  }
+  return handler(new Request('http://localhost/api/x', { method: 'POST', headers, body: form }))
 }
 
 const f = await fixture()
@@ -268,7 +290,7 @@ test('P05R-T01: REST forged mutations and reads are denied; sanctioned seams kee
   assert.ok(betaGeneratedRole.status >= 400, `generated /api/roles must stay closed, got ${betaGeneratedRole.status}`)
 
   // --- sanctioned seams (custom guarded Next routes) ---
-  const ownerAssignment = await formPost(roleAssignmentsRoute, ownerAToken, { domainSlug: 'alpha', characterId: String(f.charThief.id), roleId: String(f.roleAlpha.id), action: 'add', returnTo: `/domain/alpha/manage/people/${f.charThief.id}` })
+  const ownerAssignment = await formPost(roleAssignmentsRoute, ownerAToken, { domainSlug: 'alpha', characterId: String(f.charThief.id), roleId: String(f.roleAlpha.id), action: 'add', returnTo: `/domain/alpha/manage/people/${f.charThief.id}` }, f.adminAlphaId)
   assert.equal(ownerAssignment.status, 303)
   const thiefRoles = await payload.find({ collection: 'role-assignments', where: { and: [{ character: { equals: f.charThief.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 10, overrideAccess: true })
   assert.equal(thiefRoles.docs.length, 1, 'owner role assignment through the sanctioned route must persist')
@@ -278,12 +300,12 @@ test('P05R-T01: REST forged mutations and reads are denied; sanctioned seams kee
   const betaAssignments = await payload.find({ collection: 'role-assignments', where: { and: [{ character: { equals: f.charThief.id } }, { role: { equals: f.roleBeta.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 10, overrideAccess: true })
   assert.equal(betaAssignments.docs.length, 0, 'forged cross-Domain assignment through the guarded route must not persist')
 
-  const ownerRoleCreate = await formPost(rolesRoute, ownerBToken, { domainSlug: 'beta', name: 'Vault Clerk', subdomainId: String(f.deptBeta.id), returnTo: '/domain/beta/roles' })
+  const ownerRoleCreate = await formPost(rolesRoute, ownerBToken, { domainSlug: 'beta', name: 'Vault Clerk', subdomainId: String(f.deptBeta.id), returnTo: '/domain/beta/roles' }, f.adminBetaId)
   assert.equal(ownerRoleCreate.status, 303)
   const createdRole = await payload.find({ collection: 'roles', where: { and: [{ domain: { equals: f.beta.id } }, { name: { equals: 'Vault Clerk' } }] }, depth: 0, limit: 1, overrideAccess: true })
   assert.equal(createdRole.docs.length, 1, 'owner-created Role through the guarded route must persist')
 
-  const ownerFolderRule = await formPost(permissionRulesRoute, ownerAToken, { domainSlug: 'alpha', principalType: 'Character', characterId: String(f.charThief.id), folderId: String(f.rootAlpha.id), readState: 'grant', writeState: 'deny' })
+  const ownerFolderRule = await formPost(permissionRulesRoute, ownerAToken, { domainSlug: 'alpha', principalType: 'Character', characterId: String(f.charThief.id), folderId: String(f.rootAlpha.id), readState: 'grant', writeState: 'deny' }, f.adminAlphaId)
   assert.equal(ownerFolderRule.status, 303, 'People-workspace Folder override route should redirect')
   const relationIdOf = (value: unknown): number => {
     if (value && typeof value === 'object' && 'value' in value) return Number((value as { value: unknown }).value)
@@ -303,7 +325,7 @@ test('P05R-T01: REST forged mutations and reads are denied; sanctioned seams kee
   const betaFolderRules = await rulesForFolder(f.beta.id, f.folderBeta.id, f.charThief.id)
   assert.equal(betaFolderRules.length, 0, 'forged cross-Domain Folder rule must not persist')
 
-  const ownerFolderCreate = await formPost(foldersRoute, ownerAToken, { domainSlug: 'alpha', action: 'create', name: 'New Shelf', returnTo: '/domain/alpha/manage/folders' })
+  const ownerFolderCreate = await formPost(foldersRoute, ownerAToken, { domainSlug: 'alpha', action: 'create', name: 'New Shelf', returnTo: '/domain/alpha/manage/folders' }, f.adminAlphaId)
   assert.equal(ownerFolderCreate.status, 303)
   const newFolder = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: f.alpha.id } }, { name: { equals: 'New Shelf' } }] }, depth: 0, limit: 1, overrideAccess: true })
   assert.equal(newFolder.docs.length, 1, 'owner Folder creation through the guarded route must persist')
@@ -313,7 +335,7 @@ test('P05R-T01: REST forged mutations and reads are denied; sanctioned seams kee
   const backdoor = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: f.beta.id } }, { name: { equals: 'Backdoor' } }] }, depth: 0, limit: 1, overrideAccess: true })
   assert.equal(backdoor.docs.length, 0, 'attacker Folder creation in a foreign Domain must not persist')
 
-  const ownerMembershipRemove = await formPost(domainMembershipsRoute, ownerBToken, { domainSlug: 'beta', characterId: String(f.charBeta.id), action: 'remove' })
+  const ownerMembershipRemove = await formPost(domainMembershipsRoute, ownerBToken, { domainSlug: 'beta', characterId: String(f.charBeta.id), action: 'remove' }, f.adminBetaId)
   assert.equal(ownerMembershipRemove.status, 303)
   const charBetaMembership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: f.beta.id } }, { character: { equals: f.charBeta.id } }] }, depth: 0, limit: 1, overrideAccess: true })
   assert.equal(charBetaMembership.docs[0]?.status, 'inactive', 'owner removal through the guarded route flips membership inactive')
@@ -325,8 +347,9 @@ test('P05R-T01: REST forged mutations and reads are denied; sanctioned seams kee
   const thiefBeta = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: f.beta.id } }, { character: { equals: f.charThief.id } }] }, depth: 0, limit: 1, overrideAccess: true })
   assert.equal(thiefBeta.docs.length, 0, 'attacker self-enrollment into a foreign Domain must not persist')
 
-  // Sanctioned owner edit through the generated REST surface still works.
-  const positive = await api('PATCH')(`/api/documents/${f.docAlpha.id}`, ownerAToken, { title: 'Renamed by owner' })
+  // Sanctioned owner edit through the generated REST surface still works:
+  // the owner acts through their provisioned domain_admin identity (T02).
+  const positive = await api('PATCH')(`/api/documents/${f.docAlpha.id}`, ownerAToken, { title: 'Renamed by owner' }, f.adminAlphaId)
   assert.ok(positive.status >= 200 && positive.status < 400, `owner REST update should succeed, got ${positive.status}`)
   const renamed = await payload.findByID({ collection: 'documents', id: f.docAlpha.id, depth: 0, overrideAccess: true })
   assert.equal((renamed as { title: string }).title, 'Renamed by owner')

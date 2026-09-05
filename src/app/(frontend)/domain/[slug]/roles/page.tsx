@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 
 import { type FolderTreeNode, type PermissionState, type RoleDepartment, type RoleTreeNode } from '@/components/people/PersonAccessTrees'
 import { RoleManager } from '@/components/roles/RoleManager'
+import type { TypeStateMap } from '@/components/roles/TypePermissionGrid'
 import { TenantShell } from '@/components/theme/TenantShell'
 import { buildFolderTree } from '@/lib/archive/folderTree'
 import { getLorePayload } from '@/lib/payload'
@@ -31,12 +32,14 @@ export default async function RolesPage({ params, searchParams }: Props) {
   const { tenant, role: contextRole, user, activeCharacter } = await getActiveTenant()
   if (!tenant || tenant.slug !== slug) notFound()
   const payload = await getLorePayload()
-  const [departments, roles, memberships, folders, permissionRules, domains] = await Promise.all([
+  const [departments, roles, memberships, folders, permissionRules, typeRules, types, domains] = await Promise.all([
     payload.find({ collection: 'subdomains', where: { domain: { equals: tenant.id } }, depth: 0, limit: 0, pagination: false, sort: 'name' }),
     payload.find({ collection: 'roles', where: { and: [{ domain: { equals: tenant.id } }, { active: { equals: true } }] }, depth: 0, limit: 0, pagination: false, sort: 'name' }),
     payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: tenant.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 0, pagination: false }),
     payload.find({ collection: 'folders', where: { domain: { equals: tenant.id } }, depth: 0, limit: 0, pagination: false, sort: 'name' }),
     payload.find({ collection: 'permission-rules', where: { and: [{ domain: { equals: tenant.id } }, { principalType: { equals: 'Role' } }, { resourceType: { equals: 'Folder' } }] }, depth: 0, limit: 0, pagination: false }).catch(() => ({ docs: [] })),
+    payload.find({ collection: 'permission-rules', where: { and: [{ domain: { equals: tenant.id } }, { principalType: { equals: 'Role' } }, { resourceType: { equals: 'DocumentType' } }] }, depth: 0, limit: 0, pagination: false }).catch(() => ({ docs: [] })),
+    payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: tenant.id } }, { active: { equals: true } }] }, depth: 0, limit: 0, pagination: false, sort: 'name' }),
     user ? getTenantsForUser(user.id) : Promise.resolve([]),
   ])
   const domainCharacterIds = [...new Set(memberships.docs.map((membership) => relationId(membership.character)).filter((id): id is number => id !== null))]
@@ -110,6 +113,20 @@ export default async function RolesPage({ params, searchParams }: Props) {
     current[String(folderId)] = state
     folderStatesByRole[String(roleId)] = current
   }
+  // P07X-T04: Role × Document Type capability states (the primary permission
+  // surface). Each cell is Inherited | Allow | Deny per capability.
+  const typeStatesByRole: Record<string, TypeStateMap> = {}
+  for (const rule of typeRules.docs) {
+    if (rule.active === false) continue
+    const roleId = relationId(rule.principal)
+    const typeId = relationId(rule.resource)
+    if (roleId === null || typeId === null || rule.capability == null || rule.effect == null) continue
+    const states = typeStatesByRole[String(roleId)] ?? {}
+    const typeStates = states[String(typeId)] ?? {}
+    typeStates[String(rule.capability)] = rule.effect as PermissionState
+    states[String(typeId)] = typeStates
+    typeStatesByRole[String(roleId)] = states
+  }
   const roleRecords = roles.docs.map((item) => ({ id: Number(item.id), name: item.name, departmentId: relationId(item.subdomain) ?? 0, parentRoleId: relationId(item.parentRole) }))
   const requestedRoleId = Number(query?.roleId ?? '')
   const initialRoleId = Number.isFinite(requestedRoleId) && requestedRoleId > 0 ? requestedRoleId : null
@@ -117,7 +134,7 @@ export default async function RolesPage({ params, searchParams }: Props) {
     <section>
       <p><a href={`/domain/${slug}`}>← Domain home</a></p>
       <h1>Roles</h1>
-    <RoleManager domainSlug={slug} departments={roleDepartments} roleRecords={roleRecords} holdersByRole={holdersByRole} folders={folderNodes} folderStatesByRole={folderStatesByRole} initialRoleId={initialRoleId} manageableDepartmentIds={manageableDepartmentIds} assignableRoleIds={assignableRoleIds} />
+    <RoleManager domainSlug={slug} departments={roleDepartments} roleRecords={roleRecords} holdersByRole={holdersByRole} folders={folderNodes} folderStatesByRole={folderStatesByRole} types={types.docs.map((type) => ({ id: Number(type.id), name: type.name }))} typeStatesByRole={typeStatesByRole} initialRoleId={initialRoleId} manageableDepartmentIds={manageableDepartmentIds} assignableRoleIds={assignableRoleIds} />
     </section>
   </TenantShell>
 }

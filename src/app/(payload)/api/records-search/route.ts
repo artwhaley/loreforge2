@@ -3,7 +3,7 @@ import { getPayload } from 'payload'
 
 import config from '@payload-config'
 
-import { getActiveContext } from '@/lib/tenant/activeTenant'
+import { resolveActingIdentity } from '@/lib/tenant/actingIdentity'
 import { loadAuthorizationSession } from '@/lib/authz/session'
 import { compileReadScope } from '@/lib/authz/readScope'
 
@@ -33,8 +33,8 @@ export async function GET(request: Request) {
   const domainResult = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
   const domain = domainResult.docs[0]
   if (!domain) return NextResponse.json({ results: [] }, { status: 403 })
-  const active = await getActiveContext().catch(() => null)
-  const activeCharacterId = active?.tenant?.slug === domainSlug ? active.activeCharacter?.id ?? null : null
+  const acting = await resolveActingIdentity(payload, request, user.id)
+  const activeCharacterId = acting.tenantSlug === domainSlug ? acting.characterId : null
 
   const session = await loadAuthorizationSession(payload, { userId: user.id, activeCharacterId }, domain.id)
   const scope = await compileReadScope(payload, session)

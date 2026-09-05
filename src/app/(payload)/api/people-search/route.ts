@@ -5,7 +5,7 @@ import config from '@payload-config'
 
 import { canOpenPeopleSession } from '@/lib/authz/workspaces'
 import { loadAuthorizationSession } from '@/lib/authz/session'
-import { getActiveContext } from '@/lib/tenant/activeTenant'
+import { resolveActingIdentity } from '@/lib/tenant/actingIdentity'
 
 const idOf = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null
@@ -22,8 +22,8 @@ export async function GET(request: Request) {
   const domainResult = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
   const domain = domainResult.docs[0]
   if (!domain) return NextResponse.json({ results: [] }, status403())
-  const active = await getActiveContext().catch(() => null)
-  const activeCharacterId = active?.tenant?.slug === domainSlug ? active.activeCharacter?.id : null
+  const acting = await resolveActingIdentity(payload, request, user.id)
+  const activeCharacterId = acting.tenantSlug === domainSlug ? acting.characterId : null
   // P07P-02: admission via one request-owned session (previously a serial
   // per-capability evaluator fan-out across Domain, Departments, and Folders).
   const session = await loadAuthorizationSession(payload, { userId: user.id, activeCharacterId: activeCharacterId ?? null }, domain.id)

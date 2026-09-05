@@ -4,6 +4,7 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 
 import { isAllowed } from '@/lib/authz/evaluate'
+import { resolveActingIdentity } from '@/lib/tenant/actingIdentity'
 import { recordDomainAudit } from '@/lib/domains/domainAudit'
 import { runInTransaction } from '@/lib/db/transactions'
 
@@ -18,7 +19,8 @@ export async function POST(request: Request) {
   const domains = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
   const domain = domains.docs[0]
   if (!domain) return NextResponse.redirect(new URL('/', request.url), 303)
-  const allowed = await isAllowed({ payload, actor: { userId: user.id }, domainId: domain.id, capability: 'manage_members', resource: { type: 'Domain', id: domain.id } })
+  const acting = await resolveActingIdentity(payload, request, user.id)
+  const allowed = await isAllowed({ payload, actor: { userId: user.id, activeCharacterId: acting.tenantSlug === domainSlug ? acting.characterId : null }, domainId: domain.id, capability: 'manage_members', resource: { type: 'Domain', id: domain.id } })
   if (!allowed) return NextResponse.redirect(new URL(`/domain/${domainSlug}/members`, request.url), 303)
   const character = await payload.findByID({ collection: 'characters', id: characterId, depth: 0 })
   if (!character || character.status !== 'active') return NextResponse.redirect(new URL(`/domain/${domainSlug}/members`, request.url), 303)

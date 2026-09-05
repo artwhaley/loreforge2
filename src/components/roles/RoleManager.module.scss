@@ -32,3 +32,5 @@
 .selectedPeople li { display: inline-flex; align-items: center; gap: .25rem; padding: .3rem .5rem; border-radius: 999px; color: var(--tenant-primary); background: color-mix(in srgb, var(--tenant-accent) 18%, var(--tenant-page-bg)); font-size: .75rem; }
 .selectedPeople button { border: 0; color: inherit; background: transparent; cursor: pointer; }
 .muted { color: var(--tenant-muted-text); font-size: .8rem; }
+.folderAdvanced { border: 1px solid color-mix(in srgb, var(--tenant-accent) 55%, #fff); border-radius: 12px; padding: .85rem 1rem; background: color-mix(in srgb, var(--tenant-surface-bg) 92%, #fff); display: grid; gap: .6rem; }
+.folderAdvancedSummary { color: var(--tenant-primary); font-size: .86rem; font-weight: 700; cursor: pointer; }

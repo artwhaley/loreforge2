@@ -5,7 +5,7 @@ import config from '@payload-config'
 
 import { isAllowed } from '@/lib/authz/evaluate'
 import { assertFolderPlacement } from '@/lib/archive/folderInvariants'
-import { getActiveContext } from '@/lib/tenant/activeTenant'
+import { resolveActingIdentity } from '@/lib/tenant/actingIdentity'
 import { recordDomainAudit } from '@/lib/domains/domainAudit'
 
 const idOf = (value: unknown): number | null => {
@@ -30,8 +30,8 @@ export async function POST(request: Request) {
   const domainResult = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
   const domain = domainResult.docs[0]
   if (!domain) return NextResponse.redirect(new URL(returnTo, request.url), 303)
-  const active = await getActiveContext().catch(() => ({ tenant: null, activeCharacter: null }))
-  const actor = { userId: user.id, activeCharacterId: active.tenant?.slug === domainSlug ? active.activeCharacter?.id ?? null : null }
+  const acting = await resolveActingIdentity(payload, request, user.id)
+  const actor = { userId: user.id, activeCharacterId: acting.tenantSlug === domainSlug ? acting.characterId : null }
   const domainAllowed = await isAllowed({ payload, actor, domainId: domain.id, capability: 'manage_folders', resource: { type: 'Domain', id: domain.id } })
 
   if (action === 'create') {

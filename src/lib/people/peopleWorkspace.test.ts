@@ -19,6 +19,7 @@ import config from '@/payload.config'
 
 import { POST as permissionRulesRoute } from '@/app/(payload)/api/permission-rules/route'
 import { GET as peopleSearchRoute } from '@/app/(payload)/api/people-search/route'
+import { ensureDomainAdminIdentity } from '@/lib/characters/provisioning'
 import { attachDocumentCharacterLink, attachDocumentTag, detachDocumentCharacterLink, detachDocumentTag, ensurePreparedBy, findOrCreateDomainTag } from '@/lib/documents/links'
 import { upsertPermissionRule } from '@/lib/permissions/rules'
 
@@ -45,6 +46,10 @@ async function fixture() {
   const owner = await payload.create({ collection: 'users', data: { email: 'workspace-owner@example.test', password: 'test-password-123', name: 'Workspace Owner' } } as never) as User & { id: Id }
   const controller = await payload.create({ collection: 'users', data: { email: 'quiet-vault@example.test', password: 'test-password-123', name: 'Quiet Controller' } } as never) as User & { id: Id }
   const domain = await payload.create({ collection: 'domains', data: { name: 'Alpha', slug: 'alpha-workspace', kind: 'community', ownerUser: owner.id, defaultFilingPolicy: 'direct-file' } } as never)
+  // P07X-T02: the sanctioned seams are exercised through the owner's acting
+  // identity (provisioned domain_admin Character + selector cookies).
+  const admin = await ensureDomainAdminIdentity(payload, domain.id)
+  if (!admin.characterId) throw new Error('domain_admin identity must provision')
   const department = await payload.create({ collection: 'subdomains', data: { domain: domain.id, name: 'Records', slug: 'records-workspace' } } as never)
   const role = await payload.create({ collection: 'roles', data: { domain: domain.id, subdomain: department.id, name: 'Scrivener', active: true, system: false } } as never)
   const character = await payload.create({ collection: 'characters', data: { name: 'Quill Drafter', status: 'active', controlledBy: controller.id } } as never)
@@ -58,7 +63,7 @@ async function fixture() {
   const betaDepartment = await payload.create({ collection: 'subdomains', data: { domain: beta.id, name: 'Vault', slug: 'vault-workspace' } } as never)
   const betaRole = await payload.create({ collection: 'roles', data: { domain: beta.id, subdomain: betaDepartment.id, name: 'Keeper', active: true, system: false } } as never)
   const makeDoc = (title: string, lifecycle: 'draft' | 'filed' = 'filed') => payload.create({ collection: 'documents', context: { allowUserCreate: true, actorUserId: owner.id }, data: { domain: domain.id, documentType: type.id, folder: rootFolder.id, title, body: `# ${title}\n\n`, origin: 'web-editor', sourceKind: 'web', lifecycle, publicAccess: 'inherit', createdBy: owner.id } } as never)
-  return { payload, owner, controller, domain, department, role, character, rootFolder, shelfFolder, type, beta, betaDepartment, betaRole, makeDoc }
+  return { payload, owner, controller, domain, department, role, character, rootFolder, shelfFolder, type, beta, betaDepartment, betaRole, makeDoc, adminId: admin.characterId }
 }
 
 const SLUG = 'alpha-workspace'
@@ -77,10 +82,14 @@ async function login(payload: Payload, email: string, password: string): Promise
   return body.token as string
 }
 
-function formPost(handler: (request: Request) => Promise<Response>, token: string, fields: Record<string, string>) {
+function formPost(handler: (request: Request) => Promise<Response>, token: string, fields: Record<string, string>, actingCharacterId?: number) {
   const form = new FormData()
   for (const [key, value] of Object.entries(fields)) form.append(key, value)
-  return handler(new Request('http://localhost/api/x', { method: 'POST', headers: { Authorization: `JWT ${token}` }, body: form }))
+  const headers: Record<string, string> = { Authorization: `JWT ${token}` }
+  if (actingCharacterId != null) {
+    headers.Cookie = `sl-civic-active-character=${actingCharacterId}; sl-civic-active-tenant=${fields.domainSlug}`
+  }
+  return handler(new Request('http://localhost/api/x', { method: 'POST', headers, body: form }))
 }
 
 type RuleRow = { id: Id; capability: string; effect: string }
@@ -97,7 +106,16 @@ const save = (token: string, readState: string, writeState: string) => formPost(
   folderId: String(f.shelfFolder.id),
   readState,
   writeState,
-})
+}, f.adminId)
+
+const saveType = (token: string, capabilityStates: Record<string, string>) => formPost(permissionRulesRoute, token, {
+  domainSlug: SLUG,
+  principalType: 'Role',
+  roleId: String(f.role.id),
+  resourceType: 'DocumentType',
+  typeId: String(f.type.id),
+  capabilityStates: JSON.stringify(capabilityStates),
+}, f.adminId)
 
 test('P05R-T03 A: Folder override tri-state — Inherit deletes the direct rule, Write lands as complete pairs, Roles untouched', async () => {
   const { payload } = f
@@ -143,11 +161,46 @@ test('P05R-T03 A: Folder override tri-state — Inherit deletes the direct rule,
   assert.deepEqual(await rolesSnapshot(), rolesBefore, 'no Role row may change during Folder-access edits')
 })
 
+test('P07X-T04: Role × Document Type capability grid round-trips through the sanctioned route', async () => {
+  const { payload } = f
+  const token = await login(payload, 'workspace-owner@example.test', 'test-password-123')
+  const typeRules = async () => {
+    const rows = await payload.find({ collection: 'permission-rules', where: { and: [{ domain: { equals: f.domain.id } }, { principalType: { equals: 'Role' } }, { resourceType: { equals: 'DocumentType' } }] }, depth: 0, limit: 500, overrideAccess: true })
+    return rows.docs.filter((rule) => relationId((rule as { principal: unknown }).principal) === f.role.id && relationId((rule as { resource: unknown }).resource) === f.type.id)
+      .map((rule) => `${String((rule as { capability: unknown }).capability)}:${String((rule as { effect: unknown }).effect)}`).sort()
+  }
+
+  // A full row of ordinary capabilities lands as explicit rules.
+  assert.equal((await saveType(token, { read: 'grant', create_document: 'grant', edit_document: 'grant', delete_document: 'deny', submit_document: 'grant', approve_document: 'inherit' })).status, 303)
+  let rules = await typeRules()
+  assert.deepEqual(rules, ['create_document:grant', 'delete_document:deny', 'edit_document:grant', 'read:grant', 'submit_document:grant'], 'inherit cells create no rule; grant/deny cells do')
+
+  // Re-saving with a cell returning to Inherited deletes that rule — no
+  // one-way ratchet, matching the Folder tri-state behavior.
+  assert.equal((await saveType(token, { read: 'inherit', create_document: 'inherit', edit_document: 'inherit', delete_document: 'inherit', submit_document: 'inherit', approve_document: 'grant' })).status, 303)
+  rules = await typeRules()
+  assert.deepEqual(rules, ['approve_document:grant'], 'Inherited cells delete their prior rules')
+
+  // The Type is Domain-scoped: a cross-Domain Type id is rejected by the route.
+  const betaType = await payload.create({ collection: 'document-types', data: { domain: f.beta.id, name: 'Beta Vault Record', active: true, defaultFilingPolicy: 'direct-file' } } as never)
+  const crossDomain = formPost(permissionRulesRoute, token, {
+    domainSlug: SLUG,
+    principalType: 'Role',
+    roleId: String(f.role.id),
+    resourceType: 'DocumentType',
+    typeId: String(betaType.id),
+    capabilityStates: JSON.stringify({ read: 'grant' }),
+  })
+  assert.equal((await crossDomain).status, 303)
+  rules = await typeRules()
+  assert.deepEqual(rules, ['approve_document:grant'], 'a Beta Type cannot anchor an Alpha rule')
+})
+
 test('P05R-T03 D: People search never scores or returns the controlling account email', async () => {
   const { payload } = f
   const token = await login(payload, 'workspace-owner@example.test', 'test-password-123')
   const search = async (q: string) => {
-    const res = await peopleSearchRoute(new Request(`http://localhost/api/people-search?domainSlug=${encodeURIComponent(SLUG)}&q=${encodeURIComponent(q)}`, { headers: { Authorization: `JWT ${token}` } }))
+    const res = await peopleSearchRoute(new Request(`http://localhost/api/people-search?domainSlug=${encodeURIComponent(SLUG)}&q=${encodeURIComponent(q)}`, { headers: { Authorization: `JWT ${token}`, Cookie: `sl-civic-active-character=${f.adminId}; sl-civic-active-tenant=${SLUG}` } }))
     assert.ok(res.status >= 200 && res.status < 300, `search for ${q} should succeed`)
     const text = await res.text()
     return { body: JSON.parse(text) as { results?: Array<Record<string, unknown>> }, text }

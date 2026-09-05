@@ -14,6 +14,8 @@ import { canOpenPeopleSession, folderControlsSession } from '@/lib/authz/workspa
 import { loadCachedAuthorizationSession } from '@/lib/authz/sessionCache'
 import styles from '@/components/people/PersonWorkspace.module.scss'
 
+type TypeAccessSummary = { id: number; name: string; read: { allowed: boolean; source: string }; create: { allowed: boolean; source: string }; edit: { allowed: boolean; source: string } }
+
 type Props = { params: Promise<{ slug: string; characterId: string }>; searchParams?: Promise<{ roleFilter?: string }> }
 
 const relationId = (value: unknown): number | null => {
@@ -45,7 +47,7 @@ export default async function PersonWorkspacePage({ params, searchParams }: Prop
     || await canOpenPeopleSession(session)) : false)
   if (!workspaceAllowed) notFound()
   const canManageMembers = Boolean(session && (session.authority != null || decideOne(session, 'manage_members', { type: 'Domain', id: Number(tenant.id) }).allowed))
-  const [character, membershipRows, contexts, departments, roles, assignments, folders, permissionRules, domains] = await Promise.all([
+  const [character, membershipRows, contexts, departments, roles, assignments, folders, permissionRules, types, domains] = await Promise.all([
     payload.findByID({ collection: 'characters', id: characterId, depth: 1 }).catch(() => null),
     payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: tenant.id } }, { character: { equals: characterId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 }),
     payload.find({ collection: 'domain-character-contexts', where: { and: [{ domain: { equals: tenant.id } }, { character: { equals: characterId } }] }, depth: 0, limit: 1 }),
@@ -54,6 +56,7 @@ export default async function PersonWorkspacePage({ params, searchParams }: Prop
     payload.find({ collection: 'role-assignments', where: { and: [{ character: { equals: characterId } }, { status: { equals: 'active' } }] }, depth: 1, limit: 0, pagination: false }),
     payload.find({ collection: 'folders', where: { domain: { equals: tenant.id } }, depth: 1, limit: 0, pagination: false, sort: 'name' }),
     payload.find({ collection: 'permission-rules', where: { and: [{ domain: { equals: tenant.id } }, { principalType: { equals: 'Character' } }] }, depth: 0, limit: 0, pagination: false }).catch(() => ({ docs: [] })),
+    payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: tenant.id } }, { active: { equals: true } }] }, depth: 0, limit: 0, pagination: false, sort: 'name' }),
     user ? getTenantsForUser(user.id) : Promise.resolve([]),
   ])
   if (!character || !membershipRows.docs[0]) notFound()
@@ -93,6 +96,15 @@ export default async function PersonWorkspacePage({ params, searchParams }: Prop
   // P07P-02: the SUBJECT evaluation is a separately identified session for
   // the subject's controller+Character, not an actor swap of the shared one.
   const subjectSession = controllerId == null ? null : await loadAuthorizationSession(payload, { userId: controllerId, activeCharacterId: characterId }, tenant.id).catch(() => null)
+  // P07X-T04: Type access summary — the effective two-axis decisions for each
+  // Document Type, with the source Role/direct exception or restriction.
+  const typeAccess: TypeAccessSummary[] = subjectSession ? types.docs.map((type) => {
+    const source = (decision: ReturnType<typeof decideOne>) => decision.reason.replace(/\.$/, '')
+    const read = decideOne(subjectSession, 'read', { type: 'DocumentType', id: Number(type.id) })
+    const create = decideOne(subjectSession, 'create_document', { type: 'DocumentType', id: Number(type.id) })
+    const edit = decideOne(subjectSession, 'edit_document', { type: 'DocumentType', id: Number(type.id) })
+    return { id: Number(type.id), name: type.name, read: { allowed: read.allowed, source: source(read) }, create: { allowed: create.allowed, source: source(create) }, edit: { allowed: edit.allowed, source: source(edit) } }
+  }) : []
   const explanation = (folderId: number) => {
     if (!subjectSession) return null
     const decision = resolveFolderPermissionInSession(subjectSession, folderId)
@@ -126,6 +138,10 @@ export default async function PersonWorkspacePage({ params, searchParams }: Prop
         {canManageMembers ? <form action="/api/domain-memberships" method="post" className={styles.removeForm}><input type="hidden" name="domainSlug" value={slug} /><input type="hidden" name="characterId" value={characterId} /><input type="hidden" name="action" value="remove" /><button type="submit">Remove from Domain</button></form> : null}
       </header>
       <RoleTree domainSlug={slug} characterId={characterId} departments={roleDepartments} initialMode={roleFilter} />
+      <section className={styles.typeAccess} aria-labelledby="type-access-heading">
+        <div className={styles.detailHeading}><h2 id="type-access-heading">Record Type access</h2><p className={styles.panelMeta}>Effective access for {localContext?.localDisplayName || character.name}, from Type grants and any Folder restrictions.</p></div>
+        {typeAccess.length === 0 ? <p className={styles.panelMeta}>No active Document Types in this Domain.</p> : <table className={styles.typeTable}><thead><tr><th>Document Type</th><th>Read</th><th>Create</th><th>Edit</th><th>Source</th></tr></thead><tbody>{typeAccess.map((type) => <tr key={type.id}><td className={styles.typeName}>{type.name}</td><td>{type.read.allowed ? 'Allowed' : 'Denied'}</td><td>{type.create.allowed ? 'Allowed' : 'Denied'}</td><td>{type.edit.allowed ? 'Allowed' : 'Denied'}</td><td className={styles.typeSource}>{type.read.source}</td></tr>)}</tbody></table>}
+      </section>
       <FolderTree domainSlug={slug} characterId={characterId} folders={folderNodes} />
       <section className={styles.recentWork}><h2>Recent Work</h2><p>Recent work will appear here when the activity feed is connected.</p></section>
     </section>

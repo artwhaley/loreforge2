@@ -32,6 +32,7 @@ import { POST as rolesRoute } from '@/app/(payload)/api/roles/route'
 import { POST as permissionRulesRoute } from '@/app/(payload)/api/permission-rules/route'
 import { POST as domainMembershipsRoute } from '@/app/(payload)/api/domain-memberships/route'
 import { deactivateDomainParticipation } from '@/lib/domains/deactivateDomainParticipation'
+import { ensureDomainAdminIdentity } from '@/lib/characters/provisioning'
 
 const restPost = REST_POST(config)
 
@@ -59,6 +60,11 @@ async function fixture() {
   const alpha = await makeDomain('Alpha', 'alpha')
   const beta = await makeDomain('Beta', 'beta')
 
+  // P07X-T02: the sanctioned audit seams run through the owner's acting
+  // identity (provisioned domain_admin Character + selector cookies).
+  const adminAlpha = await ensureDomainAdminIdentity(payload, alpha.id)
+  if (!adminAlpha.characterId) throw new Error('domain_admin identity must provision')
+
   const charA = await payload.create({ collection: 'characters', data: { name: 'AlphaResident', status: 'active', controlledBy: owner.id } } as never)
   const charBeta = await payload.create({ collection: 'characters', data: { name: 'BetaResident', status: 'active', controlledBy: owner.id } } as never)
 
@@ -80,7 +86,7 @@ async function fixture() {
   const ruleAlpha = await payload.create({ collection: 'permission-rules', data: { domain: alpha.id, principalType: 'Character', principal: { relationTo: 'characters', value: charA.id }, resourceType: 'Folder', resource: { relationTo: 'folders', value: folderAlpha.id }, capability: 'read', effect: 'grant', active: true, actorUser: owner.id } } as never)
   const ruleBeta = await payload.create({ collection: 'permission-rules', data: { domain: beta.id, principalType: 'Character', principal: { relationTo: 'characters', value: charBeta.id }, resourceType: 'Folder', resource: { relationTo: 'folders', value: folderBeta.id }, capability: 'read', effect: 'grant', active: true, actorUser: owner.id } } as never)
 
-  return { payload, owner, alpha, beta, charA, charBeta, membershipAlpha, membershipBeta, roleAlpha, roleBeta, folderAlpha, folderBeta, assignmentAlpha, assignmentBeta, ruleAlpha, ruleBeta, deptAlpha }
+  return { payload, owner, alpha, beta, charA, charBeta, membershipAlpha, membershipBeta, roleAlpha, roleBeta, folderAlpha, folderBeta, assignmentAlpha, assignmentBeta, ruleAlpha, ruleBeta, deptAlpha, adminAlphaId: adminAlpha.characterId }
 }
 
 const f = await fixture()
@@ -102,10 +108,14 @@ async function login(payload: Payload, email: string, password: string): Promise
   return body.token as string
 }
 
-function formPost(handler: (request: Request) => Promise<Response>, token: string, fields: Record<string, string>) {
+function formPost(handler: (request: Request) => Promise<Response>, token: string, fields: Record<string, string>, actingCharacterId?: number) {
   const form = new FormData()
   for (const [key, value] of Object.entries(fields)) form.append(key, value)
-  return handler(new Request('http://localhost/api/x', { method: 'POST', headers: { Authorization: `JWT ${token}` }, body: form }))
+  const headers: Record<string, string> = { Authorization: `JWT ${token}` }
+  if (actingCharacterId != null) {
+    headers.Cookie = `sl-civic-active-character=${actingCharacterId}; sl-civic-active-tenant=${fields.domainSlug}`
+  }
+  return handler(new Request('http://localhost/api/x', { method: 'POST', headers, body: form }))
 }
 
 test('P05R-T05: the audit collection is append-only — no ordinary read or write', async () => {
@@ -221,7 +231,7 @@ test('P05R-T05: sanctioned admin routes write durable audit events', async () =>
   const token = await login(payload, 'owner@example.test', 'test-password-123')
 
   // Role creation through the sanctioned route -> role_changed / created.
-  const roleCreate = await formPost(rolesRoute, token, { domainSlug: 'alpha', name: 'Vault Clerk', subdomainId: String(f.deptAlpha.id), returnTo: '/domain/alpha/roles' })
+  const roleCreate = await formPost(rolesRoute, token, { domainSlug: 'alpha', name: 'Vault Clerk', subdomainId: String(f.deptAlpha.id), returnTo: '/domain/alpha/roles' }, f.adminAlphaId)
   assert.equal(roleCreate.status, 303)
   const createdRole = (await payload.find({ collection: 'roles', where: { and: [{ domain: { equals: f.alpha.id } }, { name: { equals: 'Vault Clerk' } }] }, depth: 0, limit: 1, overrideAccess: true })).docs[0]
   assert.ok(createdRole, 'role must persist')
@@ -233,25 +243,25 @@ test('P05R-T05: sanctioned admin routes write durable audit events', async () =>
   // route performs a real create and audits it.)
   const preExisting = await payload.find({ collection: 'role-assignments', where: { and: [{ character: { equals: f.charA.id } }, { role: { equals: f.roleAlpha.id } }] }, depth: 0, limit: 1, overrideAccess: true })
   if (preExisting.docs[0]) await payload.delete({ collection: 'role-assignments', id: preExisting.docs[0].id, overrideAccess: true })
-  const assign = await formPost(roleAssignmentsRoute, token, { domainSlug: 'alpha', characterId: String(f.charA.id), roleId: String(f.roleAlpha.id), action: 'add', returnTo: `/domain/alpha/manage/people/${f.charA.id}` })
+  const assign = await formPost(roleAssignmentsRoute, token, { domainSlug: 'alpha', characterId: String(f.charA.id), roleId: String(f.roleAlpha.id), action: 'add', returnTo: `/domain/alpha/manage/people/${f.charA.id}` }, f.adminAlphaId)
   assert.equal(assign.status, 303)
   const assignEvents = await auditEvents({ and: [{ domain: { equals: f.alpha.id } }, { eventType: { equals: 'role_assignment_changed' } }, { action: { equals: 'assigned' } }] })
   assert.equal(assignEvents.length, 1, 'assignment is durably audited')
 
   // Folder direct access through the sanctioned route -> folder_access_changed.
-  const folderAccess = await formPost(permissionRulesRoute, token, { domainSlug: 'alpha', principalType: 'Character', characterId: String(f.charA.id), folderId: String(f.folderAlpha.id), readState: 'grant', writeState: 'inherit' })
+  const folderAccess = await formPost(permissionRulesRoute, token, { domainSlug: 'alpha', principalType: 'Character', characterId: String(f.charA.id), folderId: String(f.folderAlpha.id), readState: 'grant', writeState: 'inherit' }, f.adminAlphaId)
   assert.equal(folderAccess.status, 303)
   const accessEvents = await auditEvents({ and: [{ domain: { equals: f.alpha.id } }, { eventType: { equals: 'folder_access_changed' } }] })
   assert.equal(accessEvents.length, 1, 'Folder access change is durably audited')
 
   // Membership add through the sanctioned route -> membership_changed / added.
-  const addMember = await formPost(domainMembershipsRoute, token, { domainSlug: 'alpha', characterId: String(f.charBeta.id), action: 'add' })
+  const addMember = await formPost(domainMembershipsRoute, token, { domainSlug: 'alpha', characterId: String(f.charBeta.id), action: 'add' }, f.adminAlphaId)
   assert.equal(addMember.status, 303)
   const addEvents = await auditEvents({ and: [{ domain: { equals: f.alpha.id } }, { eventType: { equals: 'membership_changed' } }, { action: { equals: 'added' } }] })
   assert.equal(addEvents.length, 1, 'membership add is durably audited')
 
   // Membership removal through the sanctioned route -> the hook audits deactivated.
-  const removeMember = await formPost(domainMembershipsRoute, token, { domainSlug: 'alpha', characterId: String(f.charBeta.id), action: 'remove' })
+  const removeMember = await formPost(domainMembershipsRoute, token, { domainSlug: 'alpha', characterId: String(f.charBeta.id), action: 'remove' }, f.adminAlphaId)
   assert.equal(removeMember.status, 303)
   const betaInAlpha = (await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: f.alpha.id } }, { character: { equals: f.charBeta.id } }] }, depth: 0, limit: 1, overrideAccess: true })).docs[0]
   const removedEvents = await auditEvents({ and: [{ domain: { equals: f.alpha.id } }, { eventType: { equals: 'membership_changed' } }, { action: { equals: 'deactivated' } }, { targetId: { equals: String(betaInAlpha.id) } }] })

@@ -171,7 +171,7 @@ function folderMatches(node: FolderTreeNode, query: string): FolderTreeNode | nu
  * direct rules on save. Each axis is its own radiogroup; mouse and keyboard
  * both select exactly one state.
  */
-function PermissionAxis({ label, state, onChange, disabled, canGrant = true }: { label: string; state: PermissionState; onChange: (next: PermissionState) => void; disabled?: boolean; canGrant?: boolean }) {
+export function PermissionAxis({ label, state, onChange, disabled, canGrant = true }: { label: string; state: PermissionState; onChange: (next: PermissionState) => void; disabled?: boolean; canGrant?: boolean }) {
   const name = useId()
   const options: Array<{ value: PermissionState; text: string }> = [
     { value: 'inherit', text: 'Inherited' },

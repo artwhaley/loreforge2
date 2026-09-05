@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { FolderTree, RoleTree, type FolderTreeNode, type PermissionState, type RoleDepartment, type RoleTreeNode } from '@/components/people/PersonAccessTrees'
+import { TypePermissionGrid, type TypeStateMap } from './TypePermissionGrid'
 
 import styles from './RoleManager.module.scss'
 
@@ -20,6 +21,8 @@ type Props = {
   holdersByRole: Record<string, Holder[]>
   folders: FolderTreeNode[]
   folderStatesByRole: Record<string, Record<string, FolderState>>
+  types: Array<{ id: number; name: string }>
+  typeStatesByRole: Record<string, TypeStateMap>
   initialRoleId?: number | null
 }
 
@@ -33,7 +36,7 @@ function applyFolderStates(nodes: FolderTreeNode[], states: Record<string, Folde
   return nodes.map((node) => ({ ...node, ...(states[String(node.id)] ?? {}), children: applyFolderStates(node.children, states) }))
 }
 
-export function RoleManager({ domainSlug, departments, roleRecords, holdersByRole, folders, folderStatesByRole, initialRoleId, manageableDepartmentIds, assignableRoleIds }: Props) {
+export function RoleManager({ domainSlug, departments, roleRecords, holdersByRole, folders, folderStatesByRole, types, typeStatesByRole, initialRoleId, manageableDepartmentIds, assignableRoleIds }: Props) {
   const allRoles = useMemo(() => departments.flatMap((department) => flatten(department.roles)), [departments])
   const firstRoleId = initialRoleId && allRoles.some((role) => role.id === initialRoleId) ? initialRoleId : allRoles[0]?.id ?? null
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(firstRoleId)
@@ -132,8 +135,9 @@ export function RoleManager({ domainSlug, departments, roleRecords, holdersByRol
 
     {selectedRole ? <section className={styles.roleDetail} aria-labelledby="role-detail-heading">
       <section className={styles.holdersPanel}><div className={styles.detailHeading}><h2 id="role-detail-heading">People with {selectedRole.name}</h2><span>{holdersByRole[String(selectedRole.id)]?.length ?? 0} active holders</span></div>{(holdersByRole[String(selectedRole.id)]?.length ?? 0) > 0 ? <ul className={styles.holderList}>{holdersByRole[String(selectedRole.id)]!.map((holder) => <li key={holder.id} className={styles.holderChip}><a href={`/domain/${domainSlug}/manage/people/${holder.id}`}>{holder.name}</a></li>)}</ul> : <p>No active people hold this role.</p>}</section>
-      <FolderTree domainSlug={domainSlug} principalType="Role" principalId={selectedRole.id} heading="Default folder access" description="Default access for this Role." folders={applyFolderStates(folders, folderStatesByRole[String(selectedRole.id)] ?? {})} />
-    </section> : <p className={styles.muted}>Select a role to see its holders and default folder access.</p>}
+      <TypePermissionGrid domainSlug={domainSlug} principalType="Role" principalId={selectedRole.id} types={types} statesByType={typeStatesByRole[String(selectedRole.id)] ?? {}} canManage={manageableDepartmentIds.length > 0} />
+      <details className={styles.folderAdvanced}><summary className={styles.folderAdvancedSummary}>Advanced: Folder organization and access</summary><p className={styles.muted}>Folder controls organize and restrict work. They do not grant record capabilities — those live in the Record Type grid above.</p><FolderTree domainSlug={domainSlug} principalType="Role" principalId={selectedRole.id} heading="Default folder access" description="Default access for this Role." folders={applyFolderStates(folders, folderStatesByRole[String(selectedRole.id)] ?? {})} /></details>
+    </section> : <p className={styles.muted}>Select a role to see its holders and record access.</p>}
     {selectedRecord ? <span className={styles.muted} hidden>{selectedRecord.parentRoleId}</span> : null}
   </div>
 }

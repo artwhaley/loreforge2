@@ -14,6 +14,15 @@
 .recentWork h2 { margin: 0; color: var(--tenant-primary); font-family: var(--tenant-heading-font); font-size: 1.2rem; }
 .recentWork p { margin: .35rem 0 0; font-size: .85rem; }
 
+.typeAccess { margin-top: 1.25rem; display: grid; gap: .6rem; }
+.detailHeading h2 { margin: 0; color: var(--tenant-primary); font-family: var(--tenant-heading-font); font-size: 1.2rem; }
+.panelMeta { margin: .25rem 0 0; color: var(--tenant-muted-text); font-size: .78rem; }
+.typeTable { border-collapse: collapse; width: 100%; }
+.typeTable th, .typeTable td { border-bottom: 1px solid color-mix(in srgb, var(--tenant-accent) 40%, #fff); padding: .5rem .6rem; color: var(--tenant-primary); font-size: .82rem; text-align: left; }
+.typeTable th { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.typeName { font-weight: 700; white-space: nowrap; }
+.typeSource { color: var(--tenant-muted-text); font-size: .76rem; max-width: 34rem; }
+
 @media (max-width: 560px) {
   .nameLine { align-items: flex-start; flex-direction: column; gap: .2rem; }
   .characterHandle { text-align: left; }

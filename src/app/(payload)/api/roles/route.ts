@@ -7,7 +7,7 @@ import { assertCanCreateRole } from '@/lib/authz/delegation'
 import { recordDomainAudit } from '@/lib/domains/domainAudit'
 import { assertRoleHierarchy } from '@/lib/roles/invariants'
 import { runInTransaction } from '@/lib/db/transactions'
-import { getActiveContext } from '@/lib/tenant/activeTenant'
+import { resolveActingIdentity } from '@/lib/tenant/actingIdentity'
 
 const idOf = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null
@@ -27,8 +27,8 @@ export async function POST(request: Request) {
   const domains = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
   const domain = domains.docs[0]
   if (!domain) return NextResponse.redirect(new URL('/', request.url), 303)
-  const active = await getActiveContext().catch(() => ({ tenant: null, activeCharacter: null }))
-  const actor = { userId: user.id, activeCharacterId: active.tenant?.slug === domainSlug ? active.activeCharacter?.id ?? null : null }
+  const acting = await resolveActingIdentity(payload, request, user.id)
+  const actor = { userId: user.id, activeCharacterId: acting.tenantSlug === domainSlug ? acting.characterId : null }
   if (action === 'delete') {
     const roleId = Number(form.get('roleId') ?? '')
     if (!Number.isFinite(roleId)) return NextResponse.redirect(new URL(destination, request.url), 303)
