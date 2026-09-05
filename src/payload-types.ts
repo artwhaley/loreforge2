@@ -723,7 +723,13 @@ export interface Template {
   name: string;
   kind: 'document' | 'form';
   scopeFolder: number | Folder;
+  /**
+   * Retained for migration compatibility. New records route from their Document Type.
+   */
   destinationFolder: number | Folder;
+  /**
+   * Deprecated compatibility flag; customer creation cannot override a Document Type route.
+   */
   allowDestinationOverride?: boolean | null;
   availableToDescendants?: boolean | null;
   baseTemplate?: (number | null) | Template;

@@ -2,6 +2,15 @@
 
 These decisions came from the product-design conversation and supersede stale/speculative alternatives. Executors do not revisit them unless the owner explicitly changes them.
 
+## Current P07X status
+
+The P07X corrective extension is implemented through P07X-T11 on
+`phase-07x-acting-identity-document-workflows`. Its integrated acceptance and
+migration checks are the current executable proof of the acting-identity,
+Document-Type, invitation, and source-specific Work model. The owner final
+review remains a hard stop; the next product activity is the empty-Domain
+buildout exercise, not automatic Phase 8 starter-pack implementation.
+
 ## Product identity
 - LoreForge is a specialized roleplay institutional archive, **not a generic CMS**.
 - Initial marketing/content focus may be Gorean Roleplay Cities, but core code is genre-neutral.
@@ -71,7 +80,7 @@ These decisions came from the product-design conversation and supersede stale/sp
 - Provenance belongs to the Document model and is viewable as a chronological timeline, not merely an application log.
 - Normal deletion is soft delete/restore.
 - Records exposes one `New document` action leading to a full creation/editor page; it never asks for a title inline on the Records browser.
-- New-document UI includes searchable Template selection, destination Folder, editable title, required `Prepared by` Character credits, `Concerns` Character links, Tags, and either WYSIWYG content or a generated form. The active Character is automatically included in `Prepared by` and cannot be removed during creation; additional Characters may be credited.
+- New-document UI includes searchable Document Type and creation-method selection, editable title, required `Prepared by` Character credits, `Concerns` Character links, Tags, and either WYSIWYG content or a generated form. The active Character is automatically included in `Prepared by` and cannot be removed during creation; additional Characters may be credited. Ordinary creators do not choose a destination Folder.
 - Document Type owns creation methods and lifecycle routing. New Document starts by choosing an accessible Document Type and one of its creation methods (Blank / Template / Form); the destination Folder is resolved from the Type's lifecycle routing, never from an ordinary creator's choice. Legacy Template destination fields remain only as migration compatibility.
 - Visible `Prepared by` credits, `Concerns` links, and immutable provenance actors are separate semantics and may not be collapsed into one generic Character link.
 

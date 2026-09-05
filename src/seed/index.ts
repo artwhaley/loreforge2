@@ -14,6 +14,7 @@ import sharp from 'sharp'
 import config from '@/payload.config'
 import { planMembershipMigration } from '@/lib/characters/membershipMigration'
 import { recordDocumentProvenance, latestDocumentRevisionId } from '@/lib/documents/provenance'
+import { seedP07XIntegrated } from './p07xIntegrated'
 
 const TEST_USERS = [
   {
@@ -21,6 +22,7 @@ const TEST_USERS = [
     name: 'Morgan Vale',
     password: 'test-password-123',
     slVerificationState: 'unlinked' as const,
+    isPlatformAdmin: true,
   },
   {
     email: 'officer@example.test',
@@ -35,6 +37,7 @@ const TEST_CHARACTERS: Array<{
   name: string
   controlledBy?: string
   bio: string
+  kind?: 'player' | 'npc'
 }> = [
   {
     key: 'lucan',
@@ -69,6 +72,7 @@ const TEST_CHARACTERS: Array<{
   { key: 'marlen', name: 'Marlen', bio: 'Head Scribe fixture.' },
   { key: 'sera', name: 'Sera', bio: 'Junior Scribe fixture.' },
   { key: 'dorian', name: 'Dorian', bio: 'Junior Scribe fixture.' },
+  { key: 'npc-villager', name: 'NPC Villager', bio: 'Ordinary NPC fixture for integrated acceptance.', kind: 'npc' },
 ]
 
 const EDITOR_STRESS_DOC = `# City Council Meeting Notes
@@ -294,11 +298,11 @@ for (const user of TEST_USERS) {
   })
   if (existing.docs[0]) {
     usersByEmail[user.email] = existing.docs[0]
-    if (!existing.docs[0].slVerificationState) {
+    if (!existing.docs[0].slVerificationState || (user.isPlatformAdmin && existing.docs[0].isPlatformAdmin !== true)) {
       await payload.update({
         collection: 'users',
         id: existing.docs[0].id,
-        data: { slVerificationState: 'unlinked' },
+        data: { slVerificationState: 'unlinked', ...(user.isPlatformAdmin ? { isPlatformAdmin: true } : {}) },
       })
       payload.logger.info(`Initialized Second Life placeholder for ${user.email}`)
     }
@@ -350,7 +354,7 @@ for (const character of TEST_CHARACTERS) {
       bio: character.bio,
       controlledBy: character.controlledBy ? usersByEmail[character.controlledBy].id : null,
       status: 'active',
-      kind: 'player',
+      kind: character.kind ?? 'player',
     },
   })
   charactersByKey[character.key] = created
@@ -990,6 +994,13 @@ for (const page of PAGES) {
   })
   payload.logger.info(`Created page ${page.slug} for ${page.tenantSlug}`)
 }
+
+// --- P07X integrated acceptance fixtures ---
+// This is additive and idempotent. It provisions the explicit acting
+// identities, Ar workflow Types/Folders, rules, and Incident Report templates
+// used by the final corrective acceptance run.
+const p07xFixture = await seedP07XIntegrated(payload)
+payload.logger.info(`P07X integrated fixtures ready for Domain ${p07xFixture.domain}.`)
 
 // --- Provenance backfill (Phase 4) ---
 // Existing fixture records predate the event stream. Create one idempotent

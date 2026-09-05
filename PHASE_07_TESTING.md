@@ -6,6 +6,11 @@ The owner manual gate remains open for the visible Head Scribe workflow and
 the performance release-criteria sample; do not mark Phase 7 accepted from
 this document alone.
 
+The owner-directed P07X corrective extension is tracked separately. Its
+current integrated acceptance is executable with
+`npm run test:p07x-t11`; see [the P07X integrated contract](../LoreForge_P07X_Execution_Packet/02_INTEGRATED_ACCEPTANCE.md)
+and stop at P07X-GATE-FINAL for owner review.
+
 Updated September 4, 2026. Use **http://localhost:3055**, this working database,
 and the accounts below. The fixture/setup and permission defects from the
 previous guide have been repaired. **Owner acceptance is still pending.**

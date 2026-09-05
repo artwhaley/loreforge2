@@ -8,6 +8,22 @@ HTTP links, exact controls, and cleanup steps. Dedicated P7 fixtures are already
 The Phase 6 instructions below are retained separately; the Form Studio UX
 replacement discussion is paused pending the owner's direction.
 
+## P07X corrective stack — integrated check
+
+P07X-T00 through P07X-T11 are implemented on
+`phase-07x-acting-identity-document-workflows`. The automated whole-model
+check uses an isolated database and the reserved cast documented in the packet:
+
+```powershell
+npm run test:p07x-t11
+```
+
+For a fresh integrated fixture, use `npm run seed:p07x`. To inspect or apply
+the deterministic cleanup/provisioning migration against a selected local
+SQLite file, run `npm run migrate:p07x-t11 -- --dry-run` first, then use
+`--apply` only after reviewing the report. The final owner gate remains open;
+the next product activity is the empty-Domain buildout exercise.
+
 ## Start and sign in
 
 From the repository root:
@@ -66,5 +82,6 @@ instructions from earlier revisions.
 
 The guide distinguishes runnable owner checks from missing delegated fixtures
 and agent-owned forged-write, concurrency, and audit verification. GET links
-to POST-only endpoints are not permission tests. Phase 7 remains unaccepted;
-finishing the available checks does not waive its remaining requirements.
+to POST-only endpoints are not permission tests. The original Phase 7 gate and
+the P07X owner final gate remain explicit review stops; finishing available
+automated checks does not waive their remaining requirements.

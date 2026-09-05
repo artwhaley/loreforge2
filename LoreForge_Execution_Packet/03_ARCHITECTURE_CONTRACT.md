@@ -2,6 +2,16 @@
 
 This file closes implementation gaps that must not be left to a lower-context executor. It is intentionally more prescriptive than the full product spec.
 
+## Current P07X integration boundary
+
+P07X-T00 through P07X-T11 are the current corrective implementation on
+`phase-07x-acting-identity-document-workflows`. The integrated fixture and
+acceptance run are executable through `npm run test:p07x-t11`; cleanup and
+provisioning are reported by `migrate:p07x-t11` in dry-run mode and applied only
+to an explicitly selected local SQLite database. P07X-GATE-FINAL is an owner
+review stop. The next product activity is the empty-Domain buildout exercise;
+historical Phase 8 starter-pack work must not begin automatically.
+
 ## 1. Framework/runtime baseline
 Until a ticket explicitly changes it:
 - Next.js + React + TypeScript.
@@ -82,7 +92,7 @@ There is exactly one Domain selector. Its options are the union of Domains reach
 
 Selected Domain and acting Character are related but not an indivisible mode. When switching Domain invalidates the prior Character, clear the Character selection and preserve the explicitly selected Domain; never silently choose another Character. Character-scoped actions validate `(User, active Character, selected Domain)` server-side; administrative actions validate the acting identity's kind and scope (platform seam vs matching Domain-admin seam). The no-active-Character state is valid and displays `No participating Character` when appropriate.
 
-Administration is capability, not a context or mode. The customer shell has no Administration selector, Enter/Exit Administration control, or parallel Domain choice. User-level owner/admin authority is evaluated directly for the selected Domain and never grants RP identity/access. Membership editing remains separate; membership does not imply a Role, permission, ownership, or operational-admin assignment.
+Administration is capability, not a context or mode. The customer shell has no Administration selector, Enter/Exit Administration control, or parallel Domain choice. The User-level owner relation only determines which `domain_admin` identity is provisioned; customer administration requires acting as that matching identity. It never grants RP identity/access by itself. Membership editing remains separate; membership does not imply a Role, permission, ownership, or operational-admin assignment.
 
 Public Character/controller responses use a dedicated projection. A public controller value contains only the User's public display name; it never serializes User email, internal ID, SL identity fields, platform/admin flags, or account metadata.
 
@@ -150,7 +160,8 @@ Unique `(domain, character)` local context for alias/local display information w
 - Community: exactly one `ownerUser`; `ownerCharacter` null.
 - Personal: exactly one `ownerCharacter`; `ownerUser` null for ownership semantics.
 - At most one Personal Domain may exist per Character. Commercial entitlement may limit creation, but the data model does not allow duplicate Personal Domains for one Character.
-- User-level operational administrator assignments.
+- Legacy `domain-admins` assignment rows retained only for migration/reporting;
+  they are never an authority source after P07X.
 - lifecycle state;
 - theme tokens;
 - vocabulary;

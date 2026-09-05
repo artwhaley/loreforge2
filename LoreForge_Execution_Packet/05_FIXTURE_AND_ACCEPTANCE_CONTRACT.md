@@ -2,6 +2,24 @@
 
 Keep stable fixture identities/scenarios across phases. Add fields as the model grows, but do not casually rename the cast.
 
+## P07X-T11 integrated fixture (current corrective acceptance)
+
+The corrective stack adds an additive, idempotent fixture without deleting the
+historical phase fixtures. Run `npm run seed:p07x` for an isolated local
+database or let the normal seed call the same helper. The integrated acceptance
+command is `npm run test:p07x-t11`.
+
+The reserved current cast is `admin@example.test` (one `Administrator`
+`platform_admin`, one `Administrator of Ar` `domain_admin`, and ordinary
+`Lucan`), with `Tarl` as Warrior, `Marlen` as Sergeant, `Cassius` as Scribe,
+an ordinary `NPC Villager`, and an unclaimed player Character. Ar contains
+Scribes, Warriors, and Magistrates departments; Incident Report, Property Deed,
+and Trade License Document Types; Type-routed Incident workflow Folders; and
+Incident Report document/form Templates. The form fixture has a WYSIWYG-authored
+header and footer plus date, text, and textarea fields. This P07X cast is the
+source of truth for the final integrated run; older names below remain stable
+fixtures for their original phase scenarios.
+
 ## Community Domains
 
 ### `Ar` — Gorean-style primary fixture
@@ -133,4 +151,4 @@ Permission + location checked at action start. Authorized edit can save later de
 Signed-out `/` is a branded LoreForge home with embedded customer login and About/Subscriptions/Create Account links; signed-in `/` is the User dashboard. Domain primary navigation remains Home/About/Departments/Records for ordinary and administrative users. An authorized head finds Sera through the ranked People quick search, checks/unchecks Department-owned Roles in the Role tree, and manages direct Read/Write Folder overrides in a separate searchable Folder tree without navigating raw collection tables. The Department list is derived from Sera's Roles.
 
 ### GS-17 Unified document creation
-From Records, click one `New document` action and reach the full editor. Select a searchable Template/Plain Text option; the Template selects its normal destination automatically, while only Templates explicitly allowing override expose alternative authorized destinations. Enter title, additional Prepared by credits, Concerns Characters, and Tags. The active Character cannot be removed from Prepared by. Plain Text opens WYSIWYG; a form Template opens the form; both create ordinary lifecycle/provenance-bearing Documents.
+From Records, click one `New document` action and reach the full editor. Choose an accessible Document Type, then its available Blank/Template/Form method; the Type's lifecycle routing resolves the destination Folder and ordinary creators cannot override it. Enter title, additional Prepared by credits, Concerns Characters, and Tags. The active Character cannot be removed from Prepared by. Blank and document Templates open WYSIWYG; a form Template opens the form; all methods create ordinary lifecycle/provenance-bearing Documents.

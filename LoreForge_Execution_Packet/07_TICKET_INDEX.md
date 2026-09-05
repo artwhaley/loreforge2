@@ -48,10 +48,19 @@ stack live outside this packet at the repository root:
 - **P07X-GATE-FINAL** — owner end-to-end review  
   _Hard stop before any Phase 8 work; the empty-Domain buildout exercise determines the first starter pack._
 
+**P07X status:** P07X-T00 through P07X-T11 are complete on
+`phase-07x-acting-identity-document-workflows`. The integrated acceptance,
+migration, regression, and security checks are green. Work stops at
+P07X-GATE-FINAL for owner review; the empty-Domain buildout exercise is the
+next product activity and the historical Phase 8 starter-pack tickets do not
+start automatically.
+
 This index is navigation only. `01_ORCHESTRATOR.md`, each phase's `00_PHASE_ORCHESTRATOR.md`, and the ticket itself control execution.
 
 ## Global execution rule
-- The current continuation point is P05-T00 after recorded owner approval of P04-GATE and owner correction `CC-2026-09-03-03`; the original Phase 1 kickoff is historical.
+- The current continuation point is P07X-GATE-FINAL after P07X-T11 on
+  `phase-07x-acting-identity-document-workflows`; the original Phase 1 kickoff
+  and earlier phase continuation bullets are historical.
 - Every later phase requires explicit owner approval of the previous phase gate.
 - One ticket = one bounded change = one separate commit.
 - Review gates are hard stops and may not be self-approved.

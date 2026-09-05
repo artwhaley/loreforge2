@@ -48,8 +48,16 @@ Seed and migration scripts run against `DATABASE_URI`:
 
 ```bash
 PAYLOAD_PUSH=false npm run seed            # fixture Domains, Characters, Roles, Documents
+npm run seed:p07x                           # isolated P07X integrated acceptance fixtures
 npm run migrate:phase5                     # Phase 3→5 model migration (tenants → Domains)
+npm run migrate:p07x-t11 -- --dry-run      # report P07X cleanup/provisioning changes
+npm run migrate:p07x-t11 -- --apply        # apply deterministic cleanup to a local DB
 ```
+
+`seed:p07x` uses `p07x-integrated-seed.db` by default and is intentionally
+separate from the working development database. The migration command requires
+an explicit local SQLite `DATABASE_URI`; dry-run is read-only, and apply first
+checks the P07X schema before making deterministic changes.
 
 ### P05R-T14 database upgrade
 
@@ -89,8 +97,9 @@ component after a fresh clone, run `npx payload generate:importmap` once.
 ## Checks
 
 ```bash
-npm test               # unit + pure-logic suites (78 tests)
-npm run test:security  # DB-backed suites: access boundary, supersession, race, people workspace, audit/removal (>30 tests)
+npm test               # unit + pure-logic regression suite (115 tests)
+npm run test:security  # DB-backed access, supersession, race, people, audit/removal suites (32 tests)
+npm run test:p07x-t11  # integrated acting-identity, Type, routing, and invite acceptance
 npx tsc --noEmit       # typecheck
 ```
 
@@ -108,6 +117,10 @@ follow-up stack for the Phase 5 audit findings lives in
 notes and owner checks are in `execution-notes/` and
 `PHASE_05_FOLLOWUP_TESTING.md`.
 
+The acting-identity/document-workflow corrective extension is specified in
+[LoreForge_P07X_Execution_Packet](../LoreForge_P07X_Execution_Packet/README.md)
+and tracked by the P07X execution notes in `execution-notes/`.
+
 ## Status
 
 - **Phase 5** (Document supersession + Character-driven access) implemented and remediated
@@ -116,6 +129,12 @@ notes and owner checks are in `execution-notes/` and
 - **Phase 6**: prepared-by / tagging / lifecycle correctness.
 - **Phase 7**: final authorization evaluator and delegated administration (replaces the
   interim authority seams); requires the sharing decision before GATE closes.
+- **P07X corrective extension**: P07X-T00 through P07X-T11 are implemented on
+  `phase-07x-acting-identity-document-workflows`; integrated acceptance,
+  migration dry-run/apply, full regression, and security suites are green. The
+  owner end-to-end gate remains open.
+- **Next product activity**: perform the owner-requested empty-Domain buildout
+  exercise. Do not start the historical Phase 8 starter-pack tickets automatically.
 - Phase 10 tracks legacy-tenant (`DEF-TENANT-01`) and `Documents.origin` (`DEF-ORIGIN-01`)
   removal.
 

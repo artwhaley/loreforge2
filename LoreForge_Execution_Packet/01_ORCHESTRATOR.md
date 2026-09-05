@@ -27,13 +27,20 @@ This sequence is retained for historical clean-start reconstruction. The current
    - `tickets/phase-01/P01-GATE-review-gate-1.md`
 11. Stop after `P01-GATE`. Return the gate report to the owner. **Do not create a Phase 2 branch.**
 
-## Current continuation — Phase 5
+## Current continuation — P07X final gate
 
-1. Confirm the repository's `execution-notes/P04-GATE.md` is `APPROVED_BY_OWNER` and this packet contains `CC-2026-09-03-03`.
-2. Continue on `phase-05-document-supersession-and-sharing`, preserving the completed Phase 5 implementation and corrections.
-3. Read `tickets/phase-05/00_PHASE_ORCHESTRATOR.md` completely.
-4. `P05-GATE` was approved by the owner on 2026-09-04. Begin Phase 6 only through the Phase 6 orchestrator and its ordered tickets.
-5. Preserve the Phase 5 gate evidence in `execution-notes/P05-GATE.md`.
+1. Continue on `phase-07x-acting-identity-document-workflows`; P07X-T00
+   through P07X-T11 are complete and their execution notes are preserved.
+2. Run or review the integrated acceptance, migration report, packet
+   validation, regression, and security evidence before owner review.
+3. Stop at `P07X-GATE-FINAL`. Do not begin historical Phase 8 starter-pack
+   tickets automatically.
+4. The owner review exercise is to create and begin configuring a brand-new
+   empty Domain through the customer UI. Its findings determine the first
+   starter pack.
+
+The Phase 5/6 continuation instructions below are retained as historical
+reconstruction guidance; they are not the current continuation point.
 
 ## Ticket loop
 

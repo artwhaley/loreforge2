@@ -2,6 +2,11 @@
 
 Authoritative list of work deliberately deferred out of its originally adjacent phase, each with a reason, a named owning ticket/path, and the acceptance consequence it gates. Rows are added or closed only through change control or a named ticket; "later" alone is never a valid owner. The P05 remediation stack (P05R-T00/T07) seeded this register; later phases extend it.
 
+P07X-T11 is complete. The rows below remain deliberate follow-up work, not
+silent gaps in the corrective implementation. P07X-GATE-FINAL is the current
+hard stop, and the next product activity is an owner-led empty-Domain buildout
+exercise.
+
 | ID | Item | Why deferred | Owning ticket/path | Must be resolved before | Status |
 | --- | --- | --- | --- | --- | --- |
 | DEF-SHARE-01 | Share workflow and recipient model (15-question owner decision) | Owner deferral CC-2026-09-03-04: workflow not yet understood; current code is prototype residue | Decision brief `references/P07-D01-DOCUMENT-SHARING-DECISION.md`; result required by P07-GATE | P07-GATE (owner-recorded result required; Gate 7 does not require Share to work) | OPEN |
@@ -25,3 +30,4 @@ Authoritative list of work deliberately deferred out of its originally adjacent 
 | DEF-ADMIN-01 | Retire legacy `domain-admins` assignment rows as an authority source | Superseded by the exactly-one owner/admin model; rows for non-owner Users are incompatible and must be reported, not silently promoted | P07X-T01/T11 migration report | P07X-GATE-FINAL | OPEN |
 | DEF-TYPE-01 | Translate legacy Folder PermissionRules carrying record capabilities to Document-Type rules | Only deterministic fixture-covered cases translate; ambiguous mappings are reported for remediation | P07X-T03/T11 migration tooling | P07X-GATE-FINAL | OPEN |
 | DEF-TEMPLATE-01 | Remove customer Template destinationFolder / allowDestinationOverride surface | Kept as migration compatibility; customer creation routes through Document Type routing | P07X-T06 | P07X-GATE-FINAL | OPEN |
+| DEF-STARTER-01 | Define the first starter-pack scope and installable content | The corrected model must be exercised against a genuinely empty Domain before product defaults are chosen; no historical Phase 8 work starts automatically | P07X-GATE-FINAL empty-Domain buildout exercise | P08-GATE | OPEN |

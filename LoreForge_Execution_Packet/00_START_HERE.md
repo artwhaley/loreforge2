@@ -33,13 +33,21 @@ Do not begin work if it reports FAIL. The validator checks exact byte hashes for
 
 ## Current continuation instruction
 
-Phases 1–4 have been executed and owner-approved in the working repository. Confirm `execution-notes/P04-GATE.md` records `APPROVED_BY_OWNER` and that the checked-out source includes changes `CC-2026-09-02-01` and `CC-2026-09-03-02`; do not restart completed phases from the original spike.
+Phases 1–7 and the owner-directed P07X corrective extension through T11 have
+been executed on the working repository. The current branch is
+`phase-07x-acting-identity-document-workflows`, and the current stop is
+`P07X-GATE-FINAL`. Do not restart completed tickets or create a branch from an
+older phase snapshot.
 
-> **Phase 5 — Archive Relationships, Tags, Character Links, Supersedes/Share**
+P07X-GATE-FINAL is an owner review hard stop. After the integrated acceptance,
+the owner must exercise the visible acting-identity, Type-first creation,
+workflow, form, invite, and Work surfaces. The next product activity is the
+empty-Domain buildout exercise; do not begin historical Phase 8 starter-pack
+tickets automatically.
 
-Phase 5 is complete and `P05-GATE` was `APPROVED_BY_OWNER` on 2026-09-04. Continue from `phase-05-document-supersession-and-sharing`; do not restart completed tickets or create a branch from an older Phase 4 snapshot. The next phase is Phase 6, which requires its own ticket execution and review gate.
-
-The original P00/Phase 1 kickoff remains historical evidence of how the project began; it is not the current continuation point.
+The original P00/Phase 1 kickoff and earlier phase continuation instructions
+remain historical evidence of how the project began; they are not the current
+continuation point.
 
 ## Repository discipline
 
