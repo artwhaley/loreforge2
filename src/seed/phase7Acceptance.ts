@@ -55,6 +55,8 @@ export async function seedPhase7Acceptance(payload: Payload) {
     ['deedsChild', 'Filed Deeds', 'deeds', 'Scribes'], ['history', 'Historical Records', 'scribes', 'Scribes'],
     ['warriors', 'Warriors', 'root', 'Warriors'], ['first', 'First Platoon', 'warriors', 'Warriors'],
     ['second', 'Second Platoon', 'warriors', 'Warriors'], ['incidents', 'Incident Reports', 'warriors', 'Warriors'],
+    ['pendingIncidents', 'Pending Incident Reports', 'incidents', 'Warriors'], ['investigatingIncidents', 'Investigating Incident Reports', 'incidents', 'Warriors'],
+    ['closedIncidents', 'Closed Incident Reports', 'incidents', 'Warriors'],
     ['courts', 'Court Cases', 'root', 'Magistrates'],
   ]) {
     const rows = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domainId } }, { name: { equals: name } }] }, limit: 1, depth: 0 })
@@ -87,6 +89,14 @@ export async function seedPhase7Acceptance(payload: Payload) {
   // prescribes); Folder DENIES stay Folder-scoped so they narrow Type grants.
   const plainTextType = (await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: domainId } }, { name: { equals: 'Plain Text' } }, { active: { equals: true } }] }, depth: 0, limit: 1 })).docs[0]
   if (plainTextType) {
+    // P07X-T05: the Incident Report lifecycle routes through real Folders.
+    await payload.update({ collection: 'document-types', id: Number(plainTextType.id), data: {
+      defaultFolder: folders.incidents,
+      draftFolder: folders.incidents,
+      pendingReviewFolder: folders.pendingIncidents,
+      filedFolder: folders.investigatingIncidents,
+      lockedFolder: folders.closedIncidents,
+    } })
     const typeRules: Array<[string, number, Capability]> = [
       ['head', roles.head, 'read'], ['head', roles.head, 'create_document'], ['head', roles.head, 'edit_document'],
       ['clerk', roles.clerk, 'read'],
@@ -114,7 +124,7 @@ export async function seedPhase7Acceptance(payload: Payload) {
       folders.outside = folder
     }
     const types = await payload.find({ collection: 'document-types', where: { domain: { equals: domain } }, limit: 1, depth: 0 })
-    const type = types.docs[0] ?? await payload.create({ collection: 'document-types', data: { domain, name: 'Plain Text', active: true, defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit' } })
+    const type = types.docs[0] ?? await payload.create({ collection: 'document-types', data: { domain, name: 'Plain Text', active: true, defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit', defaultFolder: folder } })
     const rows = await payload.find({ collection: 'documents', where: { and: [{ domain: { equals: domain } }, { title: { equals: title } }] }, depth: 0, limit: 1 })
     documents[key] = Number((rows.docs[0] ?? await payload.create({ collection: 'documents', context: { allowSystemCreate: true }, data: { domain, documentType: type.id, folder, title, body: `# ${title}\n\nPhase 7 acceptance fixture.`, lifecycle, publicAccess: 'inherit', sourceKind: 'web', origin: 'web-editor', createdBy: key === 'outside' ? users.outside : users.owner } })).id)
   }

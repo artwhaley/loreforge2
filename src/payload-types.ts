@@ -619,7 +619,26 @@ export interface DocumentType {
   description?: string | null;
   active?: boolean | null;
   defaultFilingPolicy: 'direct-file' | 'review-required';
+  /**
+   * Fallback route Folder when a lifecycle state has no specific route.
+   */
   defaultFolder?: (number | null) | Folder;
+  /**
+   * P07X-T05 lifecycle route for Draft records.
+   */
+  draftFolder?: (number | null) | Folder;
+  /**
+   * P07X-T05 lifecycle route for Pending-Review records.
+   */
+  pendingReviewFolder?: (number | null) | Folder;
+  /**
+   * P07X-T05 lifecycle route for Filed records.
+   */
+  filedFolder?: (number | null) | Folder;
+  /**
+   * P07X-T05 lifecycle route for Locked records.
+   */
+  lockedFolder?: (number | null) | Folder;
   templateFilingPolicy: 'inherit' | 'direct-file' | 'review-required';
   updatedAt: string;
   createdAt: string;
@@ -1472,6 +1491,10 @@ export interface DocumentTypesSelect<T extends boolean = true> {
   active?: T;
   defaultFilingPolicy?: T;
   defaultFolder?: T;
+  draftFolder?: T;
+  pendingReviewFolder?: T;
+  filedFolder?: T;
+  lockedFolder?: T;
   templateFilingPolicy?: T;
   updatedAt?: T;
   createdAt?: T;
