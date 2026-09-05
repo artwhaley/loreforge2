@@ -23,6 +23,11 @@ export const Domains: CollectionConfig = {
   },
   access: {
     read: () => true,
+    // Domain creation and ownership/lifecycle changes use the explicit
+    // platform/bootstrap workflow; direct REST/Admin writes stay closed.
+    create: () => false,
+    update: () => false,
+    delete: () => false,
   },
   timestamps: true,
   fields: [

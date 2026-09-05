@@ -9,6 +9,7 @@ import { loadCachedAuthorizationSession } from '@/lib/authz/sessionCache'
 import { decideOne, type AuthzSession } from '@/lib/authz/session'
 import { getLorePayload } from '@/lib/payload'
 import { canOpenPeopleSession } from '@/lib/authz/workspaces'
+import { canManageDomainInvitations } from '@/lib/invitations/workflows'
 
 import styles from './TenantShell.module.scss'
 
@@ -47,6 +48,7 @@ export async function TenantShell({ tenant, cssVars, role, switcherTenants, acti
   const canFolders = session ? decideDomainOrAny(session, 'manage_folders') || decideDomainOrAnyFolder(session, 'manage_folders') : false
   const canTemplates = session ? decideDomainOrAny(session, 'manage_templates') : false
   const canCustomize = session ? decideDomainOrAny(session, 'manage_domain_appearance') : false
+  const canInvitations = payload && context.user ? await canManageDomainInvitations(payload, { userId: context.user.id, activeCharacterId: resolvedActiveCharacter?.id ?? null }, tenant.id) : false
 
   return (
     <div className={styles.root} style={cssVars as React.CSSProperties}>
@@ -66,9 +68,9 @@ export async function TenantShell({ tenant, cssVars, role, switcherTenants, acti
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <div className={styles.identity}><Link href={base} className={styles.domainIdentity} aria-label={`${tenant.name} Domain home`}>{mediaSrc(tenant.logo) ? <img className={styles.seal} src={mediaSrc(tenant.logo)} alt="" /> : <span className={styles.sealFallback}>{tenant.name.charAt(0)}</span>}</Link><span><span className={styles.domainName}>{tenant.name}</span><span className={styles.motto}>{tenant.motto}</span></span></div>
-          <nav className={styles.nav} aria-label={`${tenant.name} navigation`}>{PRIMARY_NAV.map((item) => <Link key={item.label} className={styles.navLink} href={item.segment ? `${base}/${item.segment}` : base}>{item.label}</Link>)}</nav>
+          <nav className={styles.nav} aria-label={`${tenant.name} navigation`}>{PRIMARY_NAV.map((item) => <Link key={item.label} className={styles.navLink} href={item.segment ? `${base}/${item.segment}` : base}>{item.label}</Link>)}<Link className={styles.navLink} href={`${base}/work`}>Work</Link></nav>
         </div>
-        {(canMembers || canRoles || canFolders || canTemplates || canCustomize) ? <nav className={styles.managementNav} aria-label={`${tenant.name} management`}>{canMembers ? <Link href={`${base}/manage/people`}>People</Link> : null}{canRoles ? <Link href={`${base}/roles`}>Roles</Link> : null}{canFolders ? <Link href={`${base}/manage/folders`}>Folders</Link> : null}{canTemplates ? <Link href={`${base}/forms`}>Templates &amp; Forms</Link> : null}{canCustomize ? <Link href={`${base}/customize`}>Customize</Link> : null}</nav> : null}
+        {(canMembers || canRoles || canFolders || canTemplates || canCustomize || canInvitations) ? <nav className={styles.managementNav} aria-label={`${tenant.name} management`}>{canMembers ? <Link href={`${base}/manage/people`}>People</Link> : null}{canRoles ? <Link href={`${base}/roles`}>Roles</Link> : null}{canFolders ? <Link href={`${base}/manage/folders`}>Folders</Link> : null}{canTemplates ? <Link href={`${base}/forms`}>Templates &amp; Forms</Link> : null}{canInvitations ? <Link href={`${base}/manage/invitations`}>Invitations</Link> : null}{canCustomize ? <Link href={`${base}/customize`}>Customize</Link> : null}</nav> : null}
         <div className={styles.rule} />
         {mediaSrc(tenant.banner) ? <div className={styles.bannerWrap}><img className={styles.banner} src={mediaSrc(tenant.banner)} alt="" /></div> : null}
       </header>

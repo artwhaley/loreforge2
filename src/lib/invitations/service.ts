@@ -49,6 +49,8 @@ export type InvitationResolution = {
 
 export type InvitationConsumeResult = InvitationResolution & { consumed: boolean }
 
+export type ConsumeInvitationOptions = { expectedPurpose?: InvitationPurpose; transactionID?: number | string | null }
+
 export type IssueInvitationInput = {
   purpose: InvitationPurpose
   domainId: number | string
@@ -198,25 +200,30 @@ export async function resolveInvitation(payload: Payload, token: string, options
  * Consume inside a BEGIN IMMEDIATE transaction. SQLite serializes competing
  * writers, so a one-use link can have exactly one successful increment.
  */
-export async function consumeInvitation(payload: Payload, token: string, options: { expectedPurpose?: InvitationPurpose } = {}): Promise<InvitationConsumeResult> {
+async function consumeInvitationInTransaction(payload: Payload, token: string, options: ConsumeInvitationOptions, transactionID: number | string): Promise<InvitationConsumeResult> {
+  const row = await findByToken(payload, token, transactionID)
+  if (!row) return { status: 'invalid', invitation: null, consumed: false }
+  const resolved = await resolveRow(payload, row, options.expectedPurpose, transactionID)
+  if (resolved.status !== 'valid') return { ...resolved, consumed: false }
+  const useCount = Number(row.useCount ?? 0)
+  const now = new Date().toISOString()
+  const updated = await payload.update({
+    collection: 'invitations',
+    id: row.id,
+    overrideAccess: true,
+    req: { transactionID },
+    depth: 1,
+    data: { useCount: useCount + 1, lastUsedAt: now } as never,
+  }) as unknown as InvitationRow
+  return { status: 'valid', invitation: toSafeInvitation(updated), consumed: true }
+}
+
+export async function consumeInvitation(payload: Payload, token: string, options: ConsumeInvitationOptions = {}): Promise<InvitationConsumeResult> {
   if (!isInvitationToken(token)) return { status: 'invalid', invitation: null, consumed: false }
   try {
+    if (options.transactionID != null) return await consumeInvitationInTransaction(payload, token, options, options.transactionID)
     return await runInTransaction(payload, async (transactionID) => {
-      const row = await findByToken(payload, token, transactionID)
-      if (!row) return { status: 'invalid' as const, invitation: null, consumed: false }
-      const resolved = await resolveRow(payload, row, options.expectedPurpose, transactionID)
-      if (resolved.status !== 'valid') return { ...resolved, consumed: false }
-      const useCount = Number(row.useCount ?? 0)
-      const now = new Date().toISOString()
-      const updated = await payload.update({
-        collection: 'invitations',
-        id: row.id,
-        overrideAccess: true,
-        req: { transactionID },
-        depth: 1,
-        data: { useCount: useCount + 1, lastUsedAt: now } as never,
-      }) as unknown as InvitationRow
-      return { status: 'valid' as const, invitation: toSafeInvitation(updated), consumed: true }
+      return consumeInvitationInTransaction(payload, token, options, transactionID)
     })
   } catch (error) {
     // A lock/transaction race must fail closed and must not expose database

@@ -34,13 +34,15 @@ export const Characters: CollectionConfig = {
       assertCharacterKindFields({ kind, controlledBy, administrativeDomain })
       const controllerId = relationId(controlledBy)
       const domainId = relationId(administrativeDomain)
+      const transactionID = typeof req.transactionID === 'number' || typeof req.transactionID === 'string' ? req.transactionID : undefined
+      const txReq = transactionID == null ? undefined : { transactionID }
 
       if (kind === 'domain_admin') {
         if (controllerId == null) throw new Error('A domain_admin Character must be controlled by the Domain owner User.')
         if (domainId == null) throw new Error('A domain_admin Character must identify exactly one administrativeDomain.')
         const [domain, existing] = await Promise.all([
-          req.payload.findByID({ collection: 'domains', id: domainId, depth: 0, overrideAccess: true }).catch(() => null) as Promise<Record<string, unknown> | null>,
-          req.payload.find({ collection: 'characters', where: { and: [{ kind: { equals: 'domain_admin' } }, { administrativeDomain: { equals: domainId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true }),
+          req.payload.findByID({ collection: 'domains', id: domainId, depth: 0, overrideAccess: true, req: txReq }).catch(() => null) as Promise<Record<string, unknown> | null>,
+          req.payload.find({ collection: 'characters', where: { and: [{ kind: { equals: 'domain_admin' } }, { administrativeDomain: { equals: domainId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true, req: txReq }),
         ])
         if (!domain) throw new Error('The administrativeDomain does not exist.')
         if (String((domain as { kind?: unknown }).kind ?? 'community') !== 'community') throw new Error('A domain_admin Character must administer a Community Domain.')
@@ -53,9 +55,9 @@ export const Characters: CollectionConfig = {
       if (kind === 'platform_admin') {
         if (controllerId == null) throw new Error('A platform_admin Character must be controlled by a User.')
         if (domainId != null) throw new Error('A platform_admin Character cannot have an administrativeDomain.')
-        const user = await req.payload.findByID({ collection: 'users', id: controllerId, depth: 0, overrideAccess: true }).catch(() => null) as { isPlatformAdmin?: unknown } | null
+        const user = await req.payload.findByID({ collection: 'users', id: controllerId, depth: 0, overrideAccess: true, req: txReq }).catch(() => null) as { isPlatformAdmin?: unknown } | null
         if (!user?.isPlatformAdmin) throw new Error('Only a platform-admin-eligible User may control a platform_admin Character.')
-        const existing = await req.payload.find({ collection: 'characters', where: { and: [{ kind: { equals: 'platform_admin' } }, { controlledBy: { equals: controllerId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true })
+        const existing = await req.payload.find({ collection: 'characters', where: { and: [{ kind: { equals: 'platform_admin' } }, { controlledBy: { equals: controllerId } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true, req: txReq })
         const conflict = existing.docs[0]
         if (conflict && String(conflict.id) !== String(previous?.id)) throw new Error('A platform-admin-eligible User may have exactly one active platform_admin Character.')
       }
@@ -65,7 +67,7 @@ export const Characters: CollectionConfig = {
       // refuse to demote an active admin Character into ordinary RP semantics
       // while it still holds the scope that only exists for admin kinds.
       if (isAdminKind(kind) && operation === 'update') {
-        const memberships = await req.payload.find({ collection: 'domain-memberships', where: { character: { equals: previous?.id } }, depth: 0, limit: 1, overrideAccess: true })
+        const memberships = await req.payload.find({ collection: 'domain-memberships', where: { character: { equals: previous?.id } }, depth: 0, limit: 1, overrideAccess: true, req: txReq })
         if (memberships.docs.length > 0) throw new Error('Administrative Characters cannot receive DomainMemberships.')
       }
 

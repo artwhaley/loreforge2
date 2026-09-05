@@ -86,6 +86,8 @@ export interface Config {
     'document-types': DocumentType;
     templates: Template;
     invitations: Invitation;
+    'domain-bootstrap-requests': DomainBootstrapRequest;
+    'domain-join-requests': DomainJoinRequest;
     'document-provenance-events': DocumentProvenanceEvent;
     'domain-audit-events': DomainAuditEvent;
     tenants: Tenant;
@@ -122,6 +124,8 @@ export interface Config {
     'document-types': DocumentTypesSelect<false> | DocumentTypesSelect<true>;
     templates: TemplatesSelect<false> | TemplatesSelect<true>;
     invitations: InvitationsSelect<false> | InvitationsSelect<true>;
+    'domain-bootstrap-requests': DomainBootstrapRequestsSelect<false> | DomainBootstrapRequestsSelect<true>;
+    'domain-join-requests': DomainJoinRequestsSelect<false> | DomainJoinRequestsSelect<true>;
     'document-provenance-events': DocumentProvenanceEventsSelect<false> | DocumentProvenanceEventsSelect<true>;
     'domain-audit-events': DomainAuditEventsSelect<false> | DomainAuditEventsSelect<true>;
     tenants: TenantsSelect<false> | TenantsSelect<true>;
@@ -773,6 +777,44 @@ export interface Invitation {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "domain-bootstrap-requests".
+ */
+export interface DomainBootstrapRequest {
+  id: number;
+  domain: number | Domain;
+  user: number | User;
+  invitation: number | Invitation;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  requestedAt: string;
+  decidedAt?: string | null;
+  decidedBy?: (number | null) | User;
+  decidingCharacter?: (number | null) | Character;
+  decisionNote?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "domain-join-requests".
+ */
+export interface DomainJoinRequest {
+  id: number;
+  domain: number | Domain;
+  user: number | User;
+  invitation: number | Invitation;
+  character?: (number | null) | Character;
+  requestedName?: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  requestedAt: string;
+  decidedAt?: string | null;
+  decidedBy?: (number | null) | User;
+  decidingCharacter?: (number | null) | Character;
+  decisionNote?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "document-provenance-events".
  */
 export interface DocumentProvenanceEvent {
@@ -1159,6 +1201,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'invitations';
         value: number | Invitation;
+      } | null)
+    | ({
+        relationTo: 'domain-bootstrap-requests';
+        value: number | DomainBootstrapRequest;
+      } | null)
+    | ({
+        relationTo: 'domain-join-requests';
+        value: number | DomainJoinRequest;
       } | null)
     | ({
         relationTo: 'document-provenance-events';
@@ -1580,6 +1630,42 @@ export interface InvitationsSelect<T extends boolean = true> {
   maxUses?: T;
   useCount?: T;
   lastUsedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "domain-bootstrap-requests_select".
+ */
+export interface DomainBootstrapRequestsSelect<T extends boolean = true> {
+  domain?: T;
+  user?: T;
+  invitation?: T;
+  status?: T;
+  requestedAt?: T;
+  decidedAt?: T;
+  decidedBy?: T;
+  decidingCharacter?: T;
+  decisionNote?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "domain-join-requests_select".
+ */
+export interface DomainJoinRequestsSelect<T extends boolean = true> {
+  domain?: T;
+  user?: T;
+  invitation?: T;
+  character?: T;
+  requestedName?: T;
+  status?: T;
+  requestedAt?: T;
+  decidedAt?: T;
+  decidedBy?: T;
+  decidingCharacter?: T;
+  decisionNote?: T;
   updatedAt?: T;
   createdAt?: T;
 }

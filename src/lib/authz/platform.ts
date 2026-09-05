@@ -23,14 +23,15 @@ const idOf = (value: unknown): number | null => {
 
 export type PlatformDecision = { allowed: true } | { allowed: false; reason: string }
 
-export async function authorizePlatformOperation(payload: Payload, actor: PlatformActor): Promise<PlatformDecision> {
+export async function authorizePlatformOperation(payload: Payload, actor: PlatformActor, options: { transactionID?: number | string | null } = {}): Promise<PlatformDecision> {
   if (actor.activeCharacterId == null || actor.activeCharacterId === '') {
     return { allowed: false, reason: 'Acting as the Platform Administrator identity is required for platform operations.' }
   }
+  const req = options.transactionID == null ? undefined : { transactionID: options.transactionID }
   const userId = Number(actor.userId)
   const [user, character] = await Promise.all([
-    payload.findByID({ collection: 'users', id: userId, depth: 0, overrideAccess: true }).catch(() => null),
-    payload.findByID({ collection: 'characters', id: actor.activeCharacterId as number | string, depth: 0, overrideAccess: true }).catch(() => null),
+    payload.findByID({ collection: 'users', id: userId, depth: 0, overrideAccess: true, req }).catch(() => null),
+    payload.findByID({ collection: 'characters', id: actor.activeCharacterId as number | string, depth: 0, overrideAccess: true, req }).catch(() => null),
   ])
   if (!user || !user.isPlatformAdmin) return { allowed: false, reason: 'Platform-admin eligibility is required.' }
   const row = character as { status?: string; kind?: string; controlledBy?: unknown } | null
@@ -41,8 +42,8 @@ export async function authorizePlatformOperation(payload: Payload, actor: Platfo
   return { allowed: true }
 }
 
-export async function requirePlatformOperation(payload: Payload, actor: PlatformActor): Promise<PlatformDecision> {
-  const decision = await authorizePlatformOperation(payload, actor)
+export async function requirePlatformOperation(payload: Payload, actor: PlatformActor, options: { transactionID?: number | string | null } = {}): Promise<PlatformDecision> {
+  const decision = await authorizePlatformOperation(payload, actor, options)
   if (!decision.allowed) throw new Error(decision.reason)
   return decision
 }

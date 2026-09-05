@@ -74,6 +74,47 @@ try {
   db.exec('CREATE INDEX IF NOT EXISTS invitations_issued_by_character_idx ON invitations (issued_by_character_id)')
   db.exec('CREATE INDEX IF NOT EXISTS invitations_expires_at_idx ON invitations (expires_at)')
   db.exec('CREATE INDEX IF NOT EXISTS invitations_revoked_at_idx ON invitations (revoked_at)')
+
+  // P07X-T09 request truth for the two approval-based invitation flows.
+  db.exec(`CREATE TABLE IF NOT EXISTS domain_bootstrap_requests (
+    id integer PRIMARY KEY NOT NULL,
+    domain_id integer NOT NULL,
+    user_id integer NOT NULL,
+    invitation_id integer NOT NULL,
+    status text DEFAULT 'pending' NOT NULL,
+    requested_at text NOT NULL,
+    decided_at text,
+    decided_by_id integer,
+    deciding_character_id integer,
+    decision_note text,
+    updated_at text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+    created_at text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL
+  )`)
+  db.exec(`CREATE TABLE IF NOT EXISTS domain_join_requests (
+    id integer PRIMARY KEY NOT NULL,
+    domain_id integer NOT NULL,
+    user_id integer NOT NULL,
+    invitation_id integer NOT NULL,
+    character_id integer,
+    requested_name text,
+    status text DEFAULT 'pending' NOT NULL,
+    requested_at text NOT NULL,
+    decided_at text,
+    decided_by_id integer,
+    deciding_character_id integer,
+    decision_note text,
+    updated_at text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+    created_at text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL
+  )`)
+  db.exec('CREATE INDEX IF NOT EXISTS domain_bootstrap_requests_domain_idx ON domain_bootstrap_requests (domain_id)')
+  db.exec('CREATE INDEX IF NOT EXISTS domain_bootstrap_requests_user_idx ON domain_bootstrap_requests (user_id)')
+  db.exec('CREATE INDEX IF NOT EXISTS domain_bootstrap_requests_invitation_idx ON domain_bootstrap_requests (invitation_id)')
+  db.exec('CREATE INDEX IF NOT EXISTS domain_bootstrap_requests_status_idx ON domain_bootstrap_requests (status)')
+  db.exec('CREATE INDEX IF NOT EXISTS domain_join_requests_domain_idx ON domain_join_requests (domain_id)')
+  db.exec('CREATE INDEX IF NOT EXISTS domain_join_requests_user_idx ON domain_join_requests (user_id)')
+  db.exec('CREATE INDEX IF NOT EXISTS domain_join_requests_invitation_idx ON domain_join_requests (invitation_id)')
+  db.exec('CREATE INDEX IF NOT EXISTS domain_join_requests_character_idx ON domain_join_requests (character_id)')
+  db.exec('CREATE INDEX IF NOT EXISTS domain_join_requests_status_idx ON domain_join_requests (status)')
   db.exec('COMMIT')
 } catch (error) {
   db.exec('ROLLBACK')
