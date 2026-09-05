@@ -1,3 +1,5 @@
+import type { Payload } from 'payload'
+
 import type { Lifecycle } from './lifecycle'
 import { resolveLifecycleRouteFolder } from './typeRouting'
 
@@ -78,3 +80,76 @@ export function initialRouteFolder(
 }
 
 export { relationId as creationRelationId }
+
+export type PreparedDocumentCreation = {
+  typeId: number
+  method: CreationMethod
+  lifecycle: Lifecycle
+  folderId: number
+  typeRow: Record<string, unknown>
+}
+
+type PrepareArgs = {
+  payload: Payload
+  actor: { userId: number | string; activeCharacterId?: number | string | null }
+  domainId: number | string
+  documentTypeId: number | string
+  method: CreationMethod
+  templateId?: number | string | null
+  /** Desired initial lifecycle; callers that already resolved policy pass it. Defaults to draft. */
+  lifecycle?: Lifecycle
+}
+
+/**
+ * P08-GATE-02 canonical creation plan: one Type-first authorization primitive
+ * used by every customer creation path (editor + form submission).
+ *
+ * 1. load/validate active Type in this Domain
+ * 2. validate method against allowBlank/allowTemplate/allowForm (+ child kind)
+ * 3. validate Template/Form belongs to that Type
+ * 4. load one AuthzSession; require create_document on the Type
+ * 5. resolve initial Folder solely through Type lifecycle routing/root fallback
+ * 6. apply Folder/Subdomain/Domain deny narrowing on the resolved Folder
+ * 7. return trusted plan. No caller-supplied Folder ever participates.
+ */
+export async function prepareDocumentCreation(args: PrepareArgs): Promise<PreparedDocumentCreation> {
+  const { payload, actor, domainId, documentTypeId, method, templateId, lifecycle } = args
+  const domain = Number(domainId)
+  const typeId = Number(documentTypeId)
+  if (!Number.isInteger(domain) || !Number.isInteger(typeId) || typeId <= 0) throw new Error('type')
+  if (!['blank', 'template', 'form'].includes(method)) throw new Error('method')
+  const typeRow = await payload.findByID({ collection: 'document-types', id: typeId, depth: 0, overrideAccess: true }).catch(() => null) as unknown as Record<string, unknown> | null
+  const typeDomain = typeRow ? relationId((typeRow as { domain?: unknown }).domain) : null
+  if (!typeRow || typeDomain !== domain || (typeRow as { active?: unknown }).active === false) throw new Error('type')
+  // Method allow-flag (child-kind validation happens against the template row below).
+  if (method === 'blank') {
+    if (!isTrue((typeRow as { allowBlank?: unknown }).allowBlank, true)) throw new Error('method')
+  } else if (method === 'template') {
+    if (!isTrue((typeRow as { allowTemplate?: unknown }).allowTemplate)) throw new Error('method')
+  } else {
+    if (!isTrue((typeRow as { allowForm?: unknown }).allowForm)) throw new Error('method')
+  }
+  if (method !== 'blank') {
+    const tid = templateId == null ? NaN : Number(templateId)
+    if (!Number.isInteger(tid) || tid <= 0) throw new Error('template')
+    const template = await payload.findByID({ collection: 'templates', id: tid, depth: 0, overrideAccess: true }).catch(() => null) as unknown as Record<string, unknown> | null
+    const templateTypeId = template ? relationId((template as { documentType?: unknown }).documentType) : null
+    const templateKind = template ? String((template as { kind?: unknown }).kind ?? 'document') : ''
+    const templateActive = template ? (template as { active?: unknown }).active !== false : false
+    const expectedKind = method === 'form' ? 'form' : 'document'
+    if (!template || !templateActive || templateTypeId !== typeId || templateKind !== expectedKind) throw new Error('template-type')
+  }
+  const { loadAuthorizationSession, decideOne, folderNarrowingDeny } = await import('@/lib/authz/session')
+  const session = await loadAuthorizationSession(payload, actor, domain)
+  const decision = decideOne(session, 'create_document', { type: 'DocumentType', id: typeId })
+  if (!decision.allowed) throw new Error('authorization')
+  const initialLifecycle: Lifecycle = lifecycle ?? 'draft'
+  let folderId = resolveLifecycleRouteFolder(typeRow, initialLifecycle, null)
+  if (folderId == null) {
+    const roots = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domain } }, { systemManaged: { equals: true } }, { parent: { equals: null } }] }, depth: 0, limit: 1, overrideAccess: true })
+    folderId = roots.docs[0] ? Number((roots.docs[0] as { id: number | string }).id) : null
+  }
+  if (folderId == null) throw new Error('folder')
+  if (folderNarrowingDeny(session, 'create_document', folderId)) throw new Error('folder-narrowed')
+  return { typeId, method, lifecycle: initialLifecycle, folderId, typeRow }
+}

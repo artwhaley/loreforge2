@@ -1,9 +1,11 @@
 import type { CollectionConfig } from 'payload'
 
-/** User-level operational authority; distinct from Character roles and membership. */
+/** Legacy/migration evidence only; never an authority source (P08-GATE-04).
+ * Domain authority exists only through the domain_admin Character. */
 export const DomainAdmins: CollectionConfig = {
   slug: 'domain-admins',
   admin: { useAsTitle: 'user', defaultColumns: ['domain', 'user', 'status', 'updatedAt'] },
+  access: { read: () => false, create: () => false, update: () => false, delete: () => false },
   timestamps: true,
   indexes: [{ unique: true, fields: ['domain', 'user'] }],
   fields: [

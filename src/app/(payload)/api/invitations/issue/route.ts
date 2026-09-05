@@ -34,9 +34,14 @@ export async function POST(request: Request) {
         ? await issueCharacterInvitation(payload, { actor, domainId, characterId: Number(formData.get('characterId') ?? ''), expiresAt })
         : await issueDomainJoinInvitation(payload, { actor, domainId, expiresAt, maxUses })
     if (!result.ok) return failure(request, fallback)
+    // P08-GATE-05: never place the raw token in the URL. Legacy route callers
+    // get a non-secret confirmation; the once-displayed link is served by the
+    // Server Action issuance panel instead.
     const destination = new URL(fallback, request.url)
-    destination.searchParams.set('issued', result.token)
-    return NextResponse.redirect(destination, 303)
+    destination.searchParams.set('created', '1')
+    const response = NextResponse.redirect(destination, 303)
+    response.headers.set('Cache-Control', 'no-store')
+    return response
   } catch {
     return failure(request, fallback)
   }

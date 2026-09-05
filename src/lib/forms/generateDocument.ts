@@ -2,7 +2,6 @@ import type { Payload } from 'payload'
 
 import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
-import { initialRouteFolder } from '@/lib/documents/creation'
 import { composeTemplate, renderTemplateTokens } from '@/lib/templates/compose'
 import { displayAnswersForRender, type DisplayAnswers } from './layout'
 import { runInTransaction } from '@/lib/documents/relationships'
@@ -179,35 +178,14 @@ export async function generateDocumentFromSubmission(args: {
   if (neutral && typeRecord.allowForm !== true) throw new Error('The selected Document Type does not allow Form creation.')
   const typeDomain = typeof typeRecord.domain === 'object' && typeRecord.domain !== null && 'id' in typeRecord.domain ? Number((typeRecord.domain as { id: number | string }).id) : Number(typeRecord.domain)
   if (!Number.isFinite(typeDomain) || typeDomain !== Number(tenant.id)) throw new Error('The selected Document Type must belong to this Domain.')
-  const lifecyclePolicy = neutral ? (form as NeutralTemplateMetadata).lifecyclePolicy : undefined
+  if (!neutral) throw new Error('Legacy form metadata is no longer a customer creation path.')
+  const lifecyclePolicy = (form as NeutralTemplateMetadata).lifecyclePolicy
   const lifecycle = lifecyclePolicy === 'review-required' ? 'pending_review' : 'filed'
-  // Neutral Form creation is Type-first: legacy Template destinationFolder is
-  // deliberately ignored, and the Type owns the initial lifecycle route.
-  let folder: number | null = neutral ? initialRouteFolder(typeRecord, lifecycle, null) : null
-  if (!neutral) {
-    const configuredFolder = form.folder
-    if (configuredFolder) {
-      const found = await payload.find({
-        collection: 'folders',
-        where: { and: [{ or: [{ domain: { equals: tenant.id } }, { tenant: { equals: tenant.id } }] }, { id: { equals: configuredFolder } }] },
-        depth: 0,
-        limit: 1,
-      })
-      if (found.docs[0]) folder = Number(configuredFolder)
-    }
-  }
-  if (folder === null) {
-    const roots = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: tenant.id } }, { systemManaged: { equals: true } }, { parent: { equals: null } }] }, depth: 0, limit: 1 })
-    folder = roots.docs[0]?.id ?? null
-  }
-  if (!neutral) {
-    // The legacy `tenant` column belongs to the retired tenants collection and
-    // is only ever written when a real legacy tenant id exists (see archive.ts).
-    // A Domain id must NOT be written there — tenants has no such row and the
-    // FK insert fails. Modern documents are scoped by `domain` alone.
-    const created = await payload.create({ collection: 'documents', context: actorCharacterId == null ? { allowUserCreate: true, actorUserId: user.id } : { preparedByCharacterId: actorCharacterId, actorUserId: user.id }, data: { domain: tenant.id, folder, title, body, origin: 'form', sourceKind: 'form', documentType, lifecycle: 'draft', publicAccess: 'inherit', createdBy: user.id }, depth: 0 })
-    return { id: Number(created.id), title, body }
-  }
+  // P08-GATE-02: canonical Type-first plan — Type grant + Folder-deny narrowing
+  // enforced identically to /records/new. Caller Folder never participates.
+  const { prepareDocumentCreation } = await import('@/lib/documents/creation')
+  const plan = await prepareDocumentCreation({ payload, actor: { userId: user.id, activeCharacterId: actorCharacterId ?? null }, domainId: tenant.id, documentTypeId: documentType, method: 'form', templateId: Number(form.id), lifecycle })
+  const folder: number | null = plan.folderId
   const created = await runInTransaction(payload, async (transactionID) => {
     const req = { transactionID }
     // `domain` scopes the record; the legacy tenants collection has no row for

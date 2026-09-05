@@ -41,7 +41,10 @@ export async function savePageAction(input: {
     return { ok: false }
   }
 
-  if (!await isAllowed({ payload, actor: { userId: user.id }, domainId: tenant.id, capability: 'manage_domain_appearance', resource: { type: 'Domain', id: tenant.id } })) return { ok: false }
+  const { getActiveContext } = await import('@/lib/tenant/activeTenant')
+  const active = await getActiveContext()
+  const actorCharacterId = active.tenant?.slug === tenantSlug && active.activeCharacter ? Number(active.activeCharacter.id) : null
+  if (!await isAllowed({ payload, actor: { userId: user.id, activeCharacterId: actorCharacterId }, domainId: tenant.id, capability: 'manage_domain_appearance', resource: { type: 'Domain', id: tenant.id } })) return { ok: false }
 
   const existing = await payload.find({
     collection: 'pages',

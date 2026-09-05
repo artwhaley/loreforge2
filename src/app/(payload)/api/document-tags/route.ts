@@ -4,6 +4,7 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import { documentMutationErrorCode } from '@/lib/documents/errorCodes'
 import { attachDocumentTag, detachDocumentTag, findOrCreateDomainTag } from '@/lib/documents/links'
+import { resolveActingIdentity } from '@/lib/tenant/actingIdentity'
 
 export async function POST(request: Request) {
   const payload = await getPayload({ config })
@@ -18,7 +19,8 @@ export async function POST(request: Request) {
   const domain = domainResult.docs[0]
   if (!domain) return NextResponse.redirect(new URL(destination, request.url), 303)
   try {
-    const actor = { userId: user.id }
+    const acting = await resolveActingIdentity(payload, request, user.id)
+    const actor = { userId: user.id, characterId: acting.tenantSlug === domainSlug ? acting.characterId : null }
     if (action === 'remove') {
       const tagId = Number(form.get('tagId') ?? '')
       if (Number.isFinite(tagId)) await detachDocumentTag({ payload, domainId: domain.id, documentId, tagId, actor })

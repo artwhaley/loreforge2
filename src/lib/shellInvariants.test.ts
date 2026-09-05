@@ -114,12 +114,15 @@ test('dead route handlers and retired-concept residue are absent', () => {
   }
 })
 
-test('customer document view: Share is a disabled placeholder and Copy/Move/transfer is absent', () => {
+test('customer document view: Share/Send placeholders are removed and Copy/Move/transfer is absent', () => {
   const page = read(path.join(SRC, 'app/(frontend)/domain/[slug]/documents/[id]/page.tsx'))
-  // Share is visibly deferred: disabled control citing the owner decision.
-  assert.ok(page.includes('Share — planned'), 'Share control is a placeholder')
-  assert.ok(page.includes('aria-disabled="true"'), 'Share control is disabled')
-  assert.ok(page.includes('CC-2026-09-03-04'), 'Share placeholder cites the deferral decision')
+  // P08-GATE-06: removed features are removed from customer UI — no disabled
+  // placeholders, no ticket IDs, no deferral language.
+  assert.ok(!page.includes('Share — planned'), 'no Share placeholder')
+  assert.ok(!page.includes('CC-2026-09-03-04'), 'no ticket ID in customer UI')
+  assert.ok(!/not implemented yet|planned/i.test(page), 'no placeholder copy')
+  const explorer = read(path.join(SRC, 'app/(frontend)/domain/[slug]/records/RecordsExplorer.tsx'))
+  assert.ok(!explorer.includes('not implemented yet'), 'no Send placeholder')
   // The only mutation affordances on the record view are supersede/delete.
   assert.ok(!/document-copies|document-moves|>Copy<|>Move<|transfer/i.test(page), 'no Copy/Move/transfer control')
 })

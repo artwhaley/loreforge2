@@ -25,12 +25,12 @@ async function resolveDomainAction(tenantSlug: string): Promise<DomainActionCont
   const domain = domains.docs[0]
   if (!domain) return null
 
+  // P08-GATE-01: take the active Character from the selected context as-is.
+  // The authorization session decides whether it is the matching domain_admin,
+  // a valid member, or unauthorized. Never second-guess the four-kind model
+  // with a legacy membership test (domain_admin intentionally has none).
   const active = await getActiveContext()
-  let actorCharacterId: number | null = null
-  if (active.tenant?.slug === tenantSlug && active.activeCharacter) {
-    const membership = await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domain.id } }, { character: { equals: active.activeCharacter.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
-    if (membership.docs[0]) actorCharacterId = Number(active.activeCharacter.id)
-  }
+  const actorCharacterId = active.tenant?.slug === tenantSlug && active.activeCharacter ? Number(active.activeCharacter.id) : null
   return { payload, userId: Number(user.id), domain: { id: Number(domain.id), slug: domain.slug }, actorCharacterId }
 }
 
@@ -73,13 +73,17 @@ export async function softDeleteDocumentAction(formData: FormData): Promise<void
   const result = await ctx.payload.find({ collection: 'documents', where: domainAndIdWhere(ctx.domain.id, documentId), depth: 0, limit: 1 })
   const document = result.docs[0]
   if (!document) redirect(`/domain/${tenantSlug}/records`)
-  // P05R-T08: soft-delete is NOT a Character-scoped action. Acting through a
-  // Character must never bypass the interim boundary, so every delete requires
-  // the same authority as restore (which has always enforced this check): only
-  // the Domain Owner or an operational Domain Admin may delete a record.
-  try { const { requirePermission } = await import('@/lib/authz/evaluate'); await requirePermission({ payload: ctx.payload, actor: { userId: ctx.userId, activeCharacterId: ctx.actorCharacterId }, domainId: ctx.domain.id, capability: 'delete_document', resource: { type: 'Document', id: document.id } }) } catch { redirect(`/domain/${tenantSlug}/records?error=forbidden`) }
-  await ctx.payload.update({ collection: 'documents', id: document.id, data: { softDeletedAt: new Date().toISOString(), softDeletedBy: ctx.userId }, depth: 0 })
-  await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.domain.id, documentId: document.id, eventType: 'soft_deleted', actorUserId: ctx.userId, actorCharacterId: ctx.actorCharacterId, context: { soft: true }, revisionId: await latestDocumentRevisionId(ctx.payload, document.id) })
+  const { runInTransaction } = await import('@/lib/documents/relationships')
+  try {
+    await runInTransaction(ctx.payload, async (transactionID) => {
+      const req = { transactionID }
+      const fresh = await ctx.payload.find({ collection: 'documents', where: domainAndIdWhere(ctx.domain.id, document.id), depth: 0, limit: 1, req })
+      if (!fresh.docs[0] || fresh.docs[0].softDeletedAt) throw new Error('not-found')
+      try { const { requirePermission } = await import('@/lib/authz/evaluate'); await requirePermission({ payload: ctx.payload, actor: { userId: ctx.userId, activeCharacterId: ctx.actorCharacterId }, domainId: ctx.domain.id, capability: 'delete_document', resource: { type: 'Document', id: document.id }, transactionID }) } catch { throw new Error('forbidden') }
+      await ctx.payload.update({ collection: 'documents', id: document.id, data: { softDeletedAt: new Date().toISOString(), softDeletedBy: ctx.userId }, depth: 0, req })
+      await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.domain.id, documentId: document.id, eventType: 'soft_deleted', actorUserId: ctx.userId, actorCharacterId: ctx.actorCharacterId, context: { soft: true }, revisionId: await latestDocumentRevisionId(ctx.payload, document.id, transactionID), transactionID })
+    })
+  } catch { redirect(`/domain/${tenantSlug}/records?error=forbidden`) }
   redirect(`/domain/${tenantSlug}/records`)
 }
 
@@ -90,11 +94,17 @@ export async function restoreSoftDeletedDocumentAction(formData: FormData): Prom
   const destination = reviewPath(tenantSlug, documentId)
   const ctx = await resolveDomainAction(tenantSlug)
   if (!ctx || !documentId) redirect('/')
-  try { const { requirePermission } = await import('@/lib/authz/evaluate'); await requirePermission({ payload: ctx.payload, actor: { userId: ctx.userId, activeCharacterId: ctx.actorCharacterId }, domainId: ctx.domain.id, capability: 'restore_document', resource: { type: 'Document', id: documentId } }) } catch { redirect(destination + '?error=forbidden') }
-  const result = await ctx.payload.find({ collection: 'documents', where: domainAndIdWhere(ctx.domain.id, documentId), depth: 0, limit: 1 })
-  const document = result.docs[0]
-  if (!document) redirect(destination + '?error=not-found')
-  await ctx.payload.update({ collection: 'documents', id: document.id, data: { softDeletedAt: null, softDeletedBy: null }, depth: 0 })
-  await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.domain.id, documentId: document.id, eventType: 'restored', actorUserId: ctx.userId, actorCharacterId: ctx.actorCharacterId, context: { soft: true }, revisionId: await latestDocumentRevisionId(ctx.payload, document.id) })
+  const { runInTransaction: runRestoreTx } = await import('@/lib/documents/relationships')
+  try {
+    await runRestoreTx(ctx.payload, async (transactionID) => {
+      const req = { transactionID }
+      try { const { requirePermission } = await import('@/lib/authz/evaluate'); await requirePermission({ payload: ctx.payload, actor: { userId: ctx.userId, activeCharacterId: ctx.actorCharacterId }, domainId: ctx.domain.id, capability: 'restore_document', resource: { type: 'Document', id: documentId }, transactionID }) } catch { throw new Error('forbidden') }
+      const result = await ctx.payload.find({ collection: 'documents', where: domainAndIdWhere(ctx.domain.id, documentId), depth: 0, limit: 1, req })
+      const document = result.docs[0]
+      if (!document) throw new Error('not-found')
+      await ctx.payload.update({ collection: 'documents', id: document.id, data: { softDeletedAt: null, softDeletedBy: null }, depth: 0, req })
+      await recordDocumentProvenance({ payload: ctx.payload, domainId: ctx.domain.id, documentId: document.id, eventType: 'restored', actorUserId: ctx.userId, actorCharacterId: ctx.actorCharacterId, context: { soft: true }, revisionId: await latestDocumentRevisionId(ctx.payload, document.id, transactionID), transactionID })
+    })
+  } catch { redirect(destination + '?error=forbidden') }
   redirect(destination)
 }

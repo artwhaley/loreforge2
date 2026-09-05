@@ -43,36 +43,41 @@ const CAPABILITY: Record<WorkflowOperation, 'submit_document' | 'file_document' 
  */
 export async function transitionDocument(args: WorkflowActor & { operation: WorkflowOperation; note?: string | null }) {
   const transition = TRANSITIONS[args.operation]
-  const result = await args.payload.find({ collection: 'documents', where: domainAndIdWhere(args.domainId, args.documentId), depth: 0, limit: 1 })
-  const document = result.docs[0]
-  if (!document) throw new Error('Document not found.')
-  if (typeof (args.payload as unknown as { findByID?: unknown }).findByID === 'function') {
-    await requirePermission({ payload: args.payload, actor: { userId: args.userId, activeCharacterId: args.actorCharacterId }, domainId: args.domainId, capability: CAPABILITY[args.operation], resource: { type: 'Document', id: document.id } })
-  }
-  if (document.lifecycle !== transition.from) throw new Error(`This record is ${document.lifecycle}; it cannot be ${args.operation}.`)
-  assertLifecycleTransition(document.lifecycle, transition.to)
-  const typeId = relationId((document as { documentType?: unknown }).documentType)
-  const typeRecord = typeId == null ? null : await args.payload.findByID({ collection: 'document-types', id: typeId, depth: 0 }).catch(() => null) as Record<string, unknown> | null
-  const priorFolderId = relationId((document as { folder?: unknown }).folder)
-  const routedFolderId = resolveLifecycleRouteFolder(typeRecord, transition.to, priorFolderId)
-  const folderChanged = routedFolderId != null && priorFolderId != null && routedFolderId !== priorFolderId
-  const data: Record<string, unknown> = { lifecycle: transition.to }
-  if (folderChanged) data.folder = routedFolderId
-  await args.payload.update({ collection: 'documents', id: document.id, data, depth: 0, context: { authorizationChecked: true } })
-  await recordDocumentProvenance({
-    payload: args.payload,
-    domainId: args.domainId,
-    documentId: document.id,
-    eventType: transition.event,
-    actorUserId: args.userId,
-    actorCharacterId: args.actorCharacterId,
-    context: {
-      from: transition.from,
-      to: transition.to,
-      ...(folderChanged ? { priorFolderId, routedFolderId, reason: 'lifecycle-route' } : {}),
-      ...(args.note ? { note: args.note } : {}),
-    },
-    revisionId: await latestDocumentRevisionId(args.payload, document.id),
+  const { runInTransaction } = await import('@/lib/documents/relationships')
+  return runInTransaction(args.payload, async (transactionID) => {
+    const req = { transactionID }
+    // Re-read authoritative state inside the transaction; authorize against
+    // the same state we mutate (P08-GATE-03).
+    const result = await args.payload.find({ collection: 'documents', where: domainAndIdWhere(args.domainId, args.documentId), depth: 0, limit: 1, req })
+    const document = result.docs[0]
+    if (!document) throw new Error('Document not found.')
+    await requirePermission({ payload: args.payload, actor: { userId: args.userId, activeCharacterId: args.actorCharacterId }, domainId: args.domainId, capability: CAPABILITY[args.operation], resource: { type: 'Document', id: document.id }, transactionID })
+    if (document.lifecycle !== transition.from) throw new Error(`This record is ${document.lifecycle}; it cannot be ${args.operation}.`)
+    assertLifecycleTransition(document.lifecycle, transition.to)
+    const typeId = relationId((document as { documentType?: unknown }).documentType)
+    const typeRecord = typeId == null ? null : await args.payload.findByID({ collection: 'document-types', id: typeId, depth: 0, req }).catch(() => null) as Record<string, unknown> | null
+    const priorFolderId = relationId((document as { folder?: unknown }).folder)
+    const routedFolderId = resolveLifecycleRouteFolder(typeRecord, transition.to, priorFolderId)
+    const folderChanged = routedFolderId != null && priorFolderId != null && routedFolderId !== priorFolderId
+    const data: Record<string, unknown> = { lifecycle: transition.to }
+    if (folderChanged) data.folder = routedFolderId
+    await args.payload.update({ collection: 'documents', id: document.id, data, depth: 0, req })
+    await recordDocumentProvenance({
+      payload: args.payload,
+      domainId: args.domainId,
+      documentId: document.id,
+      eventType: transition.event,
+      actorUserId: args.userId,
+      actorCharacterId: args.actorCharacterId,
+      context: {
+        from: transition.from,
+        to: transition.to,
+        ...(folderChanged ? { priorFolderId, routedFolderId, reason: 'lifecycle-route' } : {}),
+        ...(args.note ? { note: args.note } : {}),
+      },
+      revisionId: await latestDocumentRevisionId(args.payload, document.id, transactionID),
+      transactionID,
+    })
+    return { ...document, lifecycle: transition.to, ...(folderChanged ? { folder: routedFolderId } : {}) }
   })
-  return { ...document, lifecycle: transition.to, ...(folderChanged ? { folder: routedFolderId } : {}) }
 }

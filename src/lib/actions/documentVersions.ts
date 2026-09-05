@@ -35,6 +35,9 @@ export async function restoreDocumentVersionAction(formData: FormData): Promise<
   const { user } = await payload.auth({ headers: hdrs })
   if (!user) redirect(destination + '?error=unauthorized')
 
+  const { getActiveContext } = await import('@/lib/tenant/activeTenant')
+  const active = await getActiveContext()
+  const actorCharacterId = active.tenant?.slug === tenantSlug && active.activeCharacter ? Number(active.activeCharacter.id) : null
   const domainResult = await payload.find({
     collection: 'domains',
     where: { slug: { equals: tenantSlug } },
@@ -51,15 +54,23 @@ export async function restoreDocumentVersionAction(formData: FormData): Promise<
     })
     const current = currentResult.docs[0]
     if (!current) redirect(destination + '?error=not-found')
-    try { await requirePermission({ payload, actor: { userId: user.id }, domainId: domain.id, capability: 'restore_document', resource: { type: 'Document', id: current.id } }) } catch { redirect(destination + '?error=forbidden') }
+    try { await requirePermission({ payload, actor: { userId: user.id, activeCharacterId: actorCharacterId }, domainId: domain.id, capability: 'restore_document', resource: { type: 'Document', id: current.id } }) } catch { redirect(destination + '?error=forbidden') }
     if (!canEditDocumentBody(current.lifecycle)) redirect(destination + '?error=current-read-only')
 
     const version = await payload.findVersionByID({ collection: 'documents', id: versionId, depth: 0, disableErrors: true })
     if (!version || String(version.parent) !== String(current.id)) redirect(destination + '?error=wrong-document')
     if (!canEditDocumentBody(version.version.lifecycle)) redirect(destination + '?error=version-read-only')
 
-    await payload.restoreVersion({ collection: 'documents', id: versionId, depth: 0, context: { authorizationChecked: true } })
-    await recordDocumentProvenance({ payload, domainId: domain.id, documentId: current.id, eventType: 'restored', actorUserId: user.id, context: { restoredVersionId: versionId }, revisionId: await latestDocumentRevisionId(payload, current.id) })
+    const { runInTransaction } = await import('@/lib/documents/relationships')
+    try {
+      await runInTransaction(payload, async (transactionID) => {
+        const req = { transactionID }
+        const fresh = await payload.find({ collection: 'documents', where: domainAndIdWhere(domain.id, documentId), depth: 0, limit: 1, req })
+        if (!fresh.docs[0]) throw new Error('not-found')
+        await payload.restoreVersion({ collection: 'documents', id: versionId, depth: 0, req } as never)
+        await recordDocumentProvenance({ payload, domainId: domain.id, documentId: current.id, eventType: 'restored', actorUserId: user.id, actorCharacterId, context: { restoredVersionId: versionId }, revisionId: await latestDocumentRevisionId(payload, current.id, transactionID), transactionID })
+      })
+    } catch { redirect(destination + '?error=failed') }
     redirect(destination)
   }
 

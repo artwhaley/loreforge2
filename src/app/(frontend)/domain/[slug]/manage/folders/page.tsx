@@ -50,6 +50,7 @@ export default async function ManageFoldersPage({ params }: Props) {
     <section>
       <p><a href={`/domain/${slug}`}>← Domain home</a></p>
       <h1>Folders</h1>
+      <p>Folders organize records and can restrict access. Document Types grant record capabilities.</p>
       <FolderManager domainSlug={slug} folders={buildFolderTree(folders.docs).map(toNode)} canManageRoot={domainAllowed} />
     </section>
   </TenantShell>

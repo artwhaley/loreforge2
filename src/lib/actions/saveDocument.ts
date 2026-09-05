@@ -42,15 +42,22 @@ export async function saveDocumentAction(input: {
   })
   const domain = domains.docs[0]
   if (domain) {
-    const existing = await payload.find({ collection: 'documents', where: domainAndIdWhere(domain.id, documentId), depth: 0, limit: 1 })
-    if (existing.docs.length === 0) return { ok: false }
     const active = await getActiveContext()
-    if (!await isAllowed({ payload, actor: { userId: user.id, activeCharacterId: active.tenant?.slug === tenantSlug ? active.activeCharacter?.id : null }, domainId: domain.id, capability: 'edit_document', resource: { type: 'Document', id: documentId } })) return { ok: false }
-    if (!canEditDocumentBody(existing.docs[0].lifecycle)) return { ok: false }
-    await payload.update({ collection: 'documents', id: documentId, data: { title, body: canonicalizeMarkdown(body) }, depth: 0 })
-    const activeContext = await getActiveContext()
-    const actorCharacter = activeContext.tenant?.slug === tenantSlug ? activeContext.activeCharacter : null
-    await recordDocumentProvenance({ payload, domainId: domain.id, documentId, eventType: 'edited', actorUserId: user.id, actorCharacterId: actorCharacter?.id, context: { fields: ['title', 'body'] }, revisionId: await latestDocumentRevisionId(payload, documentId) })
+    const actorCharacterId = active.tenant?.slug === tenantSlug ? active.activeCharacter?.id ?? null : null
+    const { runInTransaction } = await import('@/lib/documents/relationships')
+    try {
+      await runInTransaction(payload, async (transactionID) => {
+        const req = { transactionID }
+        const existing = await payload.find({ collection: 'documents', where: domainAndIdWhere(domain.id, documentId), depth: 0, limit: 1, req })
+        if (existing.docs.length === 0) throw new Error('not-found')
+        if (!await isAllowed({ payload, actor: { userId: user.id, activeCharacterId: actorCharacterId }, domainId: domain.id, capability: 'edit_document', resource: { type: 'Document', id: documentId }, transactionID })) throw new Error('forbidden')
+        if (!canEditDocumentBody(existing.docs[0].lifecycle)) throw new Error('read-only')
+        await payload.update({ collection: 'documents', id: documentId, data: { title, body: canonicalizeMarkdown(body) }, depth: 0, req })
+        await recordDocumentProvenance({ payload, domainId: domain.id, documentId, eventType: 'edited', actorUserId: user.id, actorCharacterId, context: { fields: ['title', 'body'] }, revisionId: await latestDocumentRevisionId(payload, documentId, transactionID), transactionID })
+      })
+    } catch {
+      return { ok: false }
+    }
     payload.logger.info(`Saved document ${documentId}`)
     return { ok: true }
   }

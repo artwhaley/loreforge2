@@ -1,6 +1,7 @@
 'use client'
 
 import { autoTitleTemplate, headingText } from '@/lib/forms/layout'
+import { renderMarkdown } from '@/lib/markdown/render'
 import type { LoreForgeFormField } from '@/lib/forms/schema'
 
 import styles from './FormStudio.module.scss'
@@ -42,14 +43,14 @@ export function RecordPreview({ name, fields, recordNameKey, baseTemplateName, h
       </p>
       <div className={styles.recordCard}>
         <h2 className={styles.recordTitle}>{title}</h2>
-        {headerMarkdown?.trim() ? <pre style={{ whiteSpace: 'pre-wrap', margin: '0 0 1.1rem' }}>{headerMarkdown.trim()}</pre> : null}
+        {headerMarkdown?.trim() ? <div style={{ margin: '0 0 1.1rem' }} dangerouslySetInnerHTML={{ __html: renderMarkdown(headerMarkdown.trim()) }} /> : null}
         {fields.map((field, index) => (
           <section className={styles.recordSection} key={field.key}>
             <h3 className={styles.recordHeading}>{headingText(field.label || `Question ${index + 1}`)}</h3>
             <p className={styles.recordValue}>{sampleAnswer(field)}</p>
           </section>
         ))}
-        {footerMarkdown?.trim() ? <pre style={{ whiteSpace: 'pre-wrap', margin: '1.1rem 0 0' }}>{footerMarkdown.trim()}</pre> : null}
+        {footerMarkdown?.trim() ? <div style={{ margin: '1.1rem 0 0' }} dangerouslySetInnerHTML={{ __html: renderMarkdown(footerMarkdown.trim()) }} /> : null}
       </div>
     </div>
   )

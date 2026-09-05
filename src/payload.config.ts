@@ -156,6 +156,10 @@ export default buildConfig({
     },
   },
   collections: [Users, Characters, CharacterClaimRequests, CharacterMergeRequests, DomainCharacterContexts, DomainMemberships, Domains, DomainAdmins, Subdomains, Roles, RoleAssignments, PermissionRules, DocumentCharacterLinks, Tags, DocumentTags, DocumentRelationships, DocumentTypes, Templates, Invitations, DomainBootstrapRequests, DomainJoinRequests, DocumentProvenanceEvents, DomainAuditEvents, Tenants, Memberships, Documents, Folders, Pages, Media],
+  // Security (pre-Phase-8 audit S1): the product uses REST and guarded custom
+  // routes only. The generated GraphQL endpoint is another unauthenticated-
+  // introspection/mutation surface to audit for no benefit; keep it off.
+  graphQL: { disable: true },
   plugins: [formBuilder],
   editor: lexicalEditor(),
   db: sqliteAdapter({

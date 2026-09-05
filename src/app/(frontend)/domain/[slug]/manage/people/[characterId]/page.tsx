@@ -42,9 +42,10 @@ export default async function PersonWorkspacePage({ params, searchParams }: Prop
   // permissions use a separate explicitly identified session (never swapping
   // the actor identity in the shared one).
   const session = user ? await loadCachedAuthorizationSession(payload, Number(user.id), activeCharacter?.id ?? null, tenant.id) : null
-  const workspaceAllowed = contextRole === 'admin' || (session ? (session.authority != null
+  // P08-GATE-01: admission from the decision engine only; contextRole is presentation.
+  const workspaceAllowed = session ? (session.authority != null
     || ['manage_members', 'manage_roles', 'manage_access'].some((capability) => decideOne(session, capability as never, { type: 'Domain', id: session.domainId }).allowed)
-    || await canOpenPeopleSession(session)) : false)
+    || await canOpenPeopleSession(session)) : false
   if (!workspaceAllowed) notFound()
   const canManageMembers = Boolean(session && (session.authority != null || decideOne(session, 'manage_members', { type: 'Domain', id: Number(tenant.id) }).allowed))
   const [character, membershipRows, contexts, departments, roles, assignments, folders, permissionRules, types, domains] = await Promise.all([

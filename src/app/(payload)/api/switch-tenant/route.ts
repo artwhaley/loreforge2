@@ -37,10 +37,12 @@ export async function POST(request: Request) {
         depth: 0,
         limit: 1,
       }) : { docs: [] }
-      const admins = await payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: tenant.id } }, { user: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
+      // P08-GATE-04: legacy domain-admins rows are never authority. Owner and
+      // platform eligibility may aid navigation to the Domain, but admin chrome
+      // and every mutation still require the acting Character (see getActiveContext).
       const ownerId = typeof tenant.ownerUser === 'object' ? tenant.ownerUser?.id : tenant.ownerUser
-      const isAdmin = Boolean(user.isPlatformAdmin) || String(ownerId) === String(user.id) || admins.docs.length > 0
-      if (memberships.docs.length > 0 || isAdmin) {
+      const navigable = Boolean(user.isPlatformAdmin) || String(ownerId) === String(user.id)
+      if (memberships.docs.length > 0 || navigable) {
         const res = NextResponse.redirect(new URL(`/domain/${slug}`, request.url), 303)
         res.cookies.set(ACTIVE_TENANT_COOKIE, slug, {
           httpOnly: true,

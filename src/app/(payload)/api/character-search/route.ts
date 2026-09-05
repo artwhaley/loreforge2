@@ -22,9 +22,11 @@ export async function GET(request: Request) {
   const domainResult = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
   const domain = domainResult.docs[0]
   if (!domain) return NextResponse.json({ results: [] })
-  const ownerId = idOf(domain.ownerUser)
-  const adminRows = await payload.find({ collection: 'domain-admins', where: { and: [{ domain: { equals: domain.id } }, { user: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1 })
-  if (ownerId !== Number(user.id) && adminRows.docs.length === 0) {
+  // P08-GATE-04: legacy domain-admins rows are never authority.
+  const { resolveActingIdentity } = await import('@/lib/tenant/actingIdentity')
+  const acting = await resolveActingIdentity(payload, request, user.id)
+  const actorCharacterId = acting.tenantSlug === domainSlug ? acting.characterId : null
+  if (actorCharacterId == null) {
     const controlled = await payload.find({ collection: 'characters', where: { and: [{ controlledBy: { equals: user.id } }, { status: { equals: 'active' } }] }, depth: 0, limit: 200, overrideAccess: true })
     const memberships = controlled.docs.length
       ? await payload.find({ collection: 'domain-memberships', where: { and: [{ domain: { equals: domain.id } }, { character: { in: controlled.docs.map((character) => character.id) } }, { status: { equals: 'active' } }] }, depth: 0, limit: 1, overrideAccess: true })

@@ -4,6 +4,7 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import { documentMutationErrorCode } from '@/lib/documents/errorCodes'
 import { attachDocumentCharacterLink, detachDocumentCharacterLink } from '@/lib/documents/links'
+import { resolveActingIdentity } from '@/lib/tenant/actingIdentity'
 
 export async function POST(request: Request) {
   const payload = await getPayload({ config })
@@ -20,7 +21,8 @@ export async function POST(request: Request) {
   const domain = domainResult.docs[0]
   if (!domain) return NextResponse.redirect(new URL(destination, request.url), 303)
   try {
-    const actor = { userId: user.id }
+    const acting = await resolveActingIdentity(payload, request, user.id)
+    const actor = { userId: user.id, characterId: acting.tenantSlug === domainSlug ? acting.characterId : null }
     if (action === 'remove') await detachDocumentCharacterLink({ payload, domainId: domain.id, documentId, characterId, kind, actor })
     else await attachDocumentCharacterLink({ payload, domainId: domain.id, documentId, characterId, kind, relationshipLabel: String(form.get('relationshipLabel') ?? ''), actor })
   } catch (error) {

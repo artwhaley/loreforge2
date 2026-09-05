@@ -55,6 +55,14 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
   const docTarget = session ? resolveDocumentTarget(session, { id: Number(doc.id), folderId: relationId(doc.folder), subdomainId: relationId((doc as unknown as { subdomain?: unknown }).subdomain) }) : null
   if (!session || !docTarget || !decideInSession(session, 'read', docTarget).allowed) notFound()
   const canEdit = canEditDocumentBody(doc.lifecycle) && decideInSession(session, 'edit_document', docTarget).allowed
+  // P08-GATE-01: affordances come from the decision engine, never role === 'admin'.
+  const canSubmit = decideInSession(session, 'submit_document', docTarget).allowed
+  const canFile = decideInSession(session, 'file_document', docTarget).allowed
+  const canApprove = decideInSession(session, 'approve_document', docTarget).allowed
+  const canLock = decideInSession(session, 'lock_document', docTarget).allowed
+  const canUnlock = decideInSession(session, 'unlock_document', docTarget).allowed
+  const canDeleteDoc = decideInSession(session, 'delete_document', docTarget).allowed
+  const canSupersede = decideInSession(session, 'edit_document', docTarget).allowed
   const [characterLinks, tagLinks, relationshipLinks] = await Promise.all([
     getDocumentCharacterLinks(payload, doc.id),
     getDocumentTags(payload, doc.id),
@@ -110,7 +118,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
         <div className={styles.actions} aria-label="Document controls">
           {canEdit && !isSuperseded ? <a className={styles.action} href={`${base}/edit`}>Edit</a> : null}
           <a className={styles.action} href={`${base}/history`}>History</a>
-          {doc.lifecycle === 'draft' ? (
+          {doc.lifecycle === 'draft' && canSubmit ? (
             <form action={documentWorkflowAction}>
               <input type="hidden" name="tenantSlug" value={tenant.slug} />
               <input type="hidden" name="documentId" value={doc.id} />
@@ -118,7 +126,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
               <button type="submit" className={styles.action}>Submit for review</button>
             </form>
           ) : null}
-          {role === 'admin' && doc.lifecycle === 'draft' ? (
+          {canFile && doc.lifecycle === 'draft' ? (
             <form action={documentWorkflowAction}>
               <input type="hidden" name="tenantSlug" value={tenant.slug} />
               <input type="hidden" name="documentId" value={doc.id} />
@@ -126,7 +134,15 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
               <button type="submit" className={styles.action}>File now</button>
             </form>
           ) : null}
-          {role === 'admin' && doc.lifecycle === 'filed' && !isSuperseded ? (
+          {doc.lifecycle === 'pending_review' && canApprove ? (
+            <form action={documentWorkflowAction}>
+              <input type="hidden" name="tenantSlug" value={tenant.slug} />
+              <input type="hidden" name="documentId" value={doc.id} />
+              <input type="hidden" name="operation" value="approve" />
+              <button type="submit" className={styles.action}>Approve</button>
+            </form>
+          ) : null}
+          {canLock && doc.lifecycle === 'filed' && !isSuperseded ? (
             <form action={documentWorkflowAction}>
               <input type="hidden" name="tenantSlug" value={tenant.slug} />
               <input type="hidden" name="documentId" value={doc.id} />
@@ -134,7 +150,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
               <button type="submit" className={styles.action}>Lock</button>
             </form>
           ) : null}
-          {role === 'admin' && doc.lifecycle === 'locked' && !isSuperseded ? (
+          {canUnlock && doc.lifecycle === 'locked' && !isSuperseded ? (
             <form action={documentWorkflowAction}>
               <input type="hidden" name="tenantSlug" value={tenant.slug} />
               <input type="hidden" name="documentId" value={doc.id} />
@@ -191,23 +207,13 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
         </DocumentPaper>
 
         <div className={styles.bottomActions}>
-          {/* P05R-T08: supersede resolves to the interim admin boundary server-side, so the
-              affordance is admin-gated here too (matching Share and RecordsExplorer). */}
-          {role === 'admin' && !isSuperseded && canSupersedeDocument(doc.lifecycle) ? (
+          {canSupersede && !isSuperseded && canSupersedeDocument(doc.lifecycle) ? (
             <a className={styles.action} href={`/domain/${tenant.slug}/records/new?supersedes=${doc.id}`}>
               Create superseding document
             </a>
           ) : null}
 
-          {role === 'admin' ? (
-            <span className={styles.shareForm} title="Document sharing is deferred by owner decision CC-2026-09-03-04.">
-              <strong>Share record</strong>
-              <button type="button" disabled className={styles.action} aria-disabled="true">Share — planned</button>
-            </span>
-          ) : null}
-
-          {/* P05R-T08: soft-delete is admin-only (server-enforced); render the control only for admins. */}
-          {role === 'admin' ? (
+          {canDeleteDoc ? (
             <form action={softDeleteDocumentAction} className={styles.deleteForm}>
               <input type="hidden" name="tenantSlug" value={tenant.slug} />
               <input type="hidden" name="documentId" value={doc.id} />

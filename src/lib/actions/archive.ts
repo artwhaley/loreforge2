@@ -28,7 +28,7 @@ type MemberTenant = {
   tenant: Domain | Tenant
   basePath: string
   legacyTenantId?: number
-  /** Domain Owner or legacy Domain Admin row (interim UI compatibility). */
+  /** Domain Owner for navigation/entry; never authority (P08-GATE-01/04). */
   isManager: boolean
   /** Exactly the Domain's one owner User (P07X-T02 no-Character create seam). */
   isOwnerUser: boolean
@@ -120,12 +120,7 @@ async function getMemberTenant(tenantSlug: string): Promise<MemberTenant | null>
   const domain = domains.docs[0]
   if (domain) {
     const ownerId = typeof domain.ownerUser === 'object' ? domain.ownerUser?.id : domain.ownerUser
-    const domainAdmins = await payload.find({
-      collection: 'domain-admins',
-      where: { and: [{ domain: { equals: domain.id } }, { user: { equals: user.id } }, { status: { equals: 'active' } }] },
-      depth: 0,
-      limit: 1,
-    })
+    // P08-GATE-04: legacy domain-admins rows are never authority or entry.
     const controlledCharacters = await payload.find({
       collection: 'characters',
       where: { and: [{ controlledBy: { equals: user.id } }, { status: { equals: 'active' } }] },
@@ -141,7 +136,7 @@ async function getMemberTenant(tenantSlug: string): Promise<MemberTenant | null>
           limit: 1,
         })
       : { docs: [] }
-    const isManager = Number(ownerId) === Number(user.id) || domainAdmins.docs.length > 0
+    const isManager = Number(ownerId) === Number(user.id)
     const isOwnerUser = Number(ownerId) === Number(user.id)
     if (!isManager && member.docs.length === 0) return null
 
@@ -192,51 +187,8 @@ function recordsPath(ctx: Pick<MemberTenant, 'basePath'>) {
   return `${ctx.basePath}/records`
 }
 
-/** Create a new archive document from an inline form, then open its editor. */
-export async function createDocumentAction(formData: FormData): Promise<void> {
-  const tenantSlug = String(formData.get('tenantSlug') ?? '')
-  const title = String(formData.get('title') ?? '').trim()
-  const ctx = await getMemberTenant(tenantSlug)
-  if (!ctx || !title) redirect(`/domain/${tenantSlug}/records`)
-
-  const { payload, user, tenant } = ctx
-  const activeContext = await getActiveContext()
-  const activeCharacterId = activeContext.tenant?.slug === tenantSlug ? activeContext.activeCharacter?.id : undefined
-  // P07X-T02: acting identity is authoritative. Members and the provisioned
-  // Domain-admin identity create through a Character; only the Domain's one
-  // owner User may begin a no-Character create (compat seam until T06).
-  const administrativeActor = activeCharacterId != null && await characterIsAdministrative(payload, activeCharacterId)
-  if (!activeCharacterId && !ctx.isOwnerUser) redirect(`/domain/${tenantSlug}/records?error=character`)
-  const documentType = await plainTextTypeId(payload, tenant.id)
-  if (!documentType) redirect(`/domain/${tenantSlug}/records/new?error=type`)
-  const folder = await tenantFolderId(payload, tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
-
-  const created = await payload.create({
-    collection: 'documents',
-    context: activeCharacterId && !administrativeActor ? { preparedByCharacterId: activeCharacterId, actorUserId: user.id } : { allowUserCreate: true, actorUserId: user.id },
-    data: {
-      domain: tenant.id,
-      ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}),
-      title,
-      // Placeholder so the required body is non-empty; the editor opens on it.
-      body: `# ${title}\n\n`,
-      origin: 'web-editor',
-      sourceKind: 'web',
-      documentType,
-      lifecycle: 'draft',
-      publicAccess: 'inherit',
-      createdBy: user.id,
-      folder,
-    },
-  })
-  await recordDocumentProvenance({ payload, domainId: tenant.id, documentId: created.id, eventType: 'created', actorUserId: user.id, actorCharacterId: activeCharacterId, revisionId: await latestDocumentRevisionId(payload, created.id) })
-  // P05R-T04 J: the acting Character's non-removable Prepared-by credit is
-  // applied AFTER the create commits — an afterChange hook cannot write on
-  // this adapter while the create's own transaction is open (P05R-T02 B).
-  // Administrative identities never receive RP Prepared-by credits (P07X).
-  if (activeCharacterId && !administrativeActor) await ensurePreparedBy({ payload, domainId: tenant.id, documentId: created.id, characterId: activeCharacterId, actor: { userId: user.id, characterId: activeCharacterId } })
-  redirect(`${ctx.basePath}/documents/${created.id}/edit`)
-}
+/** P08-GATE-02: legacy inline create removed — no live callers. All customer
+ * creation goes through createDocumentFromEditorAction (Type-first primitive). */
 
 /** Full-page customer document entry. An acting Character is optional; when
  * selected it is automatically recorded as the required Prepared by credit. */
@@ -409,6 +361,19 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
     folder = routeFor(lifecycle) ?? folder
     folderRecord = await ctx.payload.findByID({ collection: 'folders', id: folder, depth: 0 }).catch(() => null)
   }
+  // P08-GATE-02: canonical Type-first plan + Folder-deny narrowing. No
+  // caller-supplied Folder participates; a deny on the routed Folder, its
+  // ancestors, its Department, or the Domain rejects the create.
+  try {
+    const { prepareDocumentCreation } = await import('@/lib/documents/creation')
+    const plan = await prepareDocumentCreation({ payload: ctx.payload, actor, domainId: ctx.tenant.id, documentTypeId: Number(selectedType.id), method, templateId: selectedTemplate ? Number((selectedTemplate as { id: number | string }).id) : null, lifecycle })
+    folder = plan.folderId
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    if (message === 'template-type') return { error: 'template-type', values }
+    if (message === 'method' || message === 'template') return { error: 'method', values }
+    return { error: 'authorization', values }
+  }
   // P05R-T02 A: every application create is ONE atomic operation — create the
   // successor, relate it, lock the predecessor, and record provenance on both
   // records inside one DB transaction, so any failure after the preflights
@@ -466,23 +431,8 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   redirect(`${ctx.basePath}/documents/${created.id}/edit`)
 }
 
-/** Create a subfolder under the current folder (or the archive root). */
-export async function createFolderAction(formData: FormData): Promise<void> {
-  const tenantSlug = String(formData.get('tenantSlug') ?? '')
-  const name = String(formData.get('name') ?? '').trim()
-  const ctx = await getMemberTenant(tenantSlug)
-  if (!ctx || !name) redirect(`/domain/${tenantSlug}/records`)
-
-  const { payload, tenant } = ctx
-  const parent = await tenantFolderId(payload, tenant.id, ctx.legacyTenantId, String(formData.get('parentId') ?? ''))
-
-  await payload.create({
-    collection: 'folders',
-    draft: false,
-    data: { domain: tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), name, parent, filingPolicy: 'inherit', publicAccess: 'inherit' },
-  })
-  revalidatePath(recordsPath(ctx))
-}
+/** P08-GATE-04: legacy unguarded create removed — no live callers. Folder
+ * creation goes through /api/folders (acting-identity + manage_folders). */
 
 /**
  * Legacy action name retained for old forms. It delegates to the reversible
@@ -511,7 +461,16 @@ export async function importMarkdownAction(formData: FormData): Promise<void> {
   if (!activeCharacterId && !ctx.isOwnerUser) redirect(`${ctx.basePath}/records?error=character`)
   const documentType = await plainTextTypeId(payload, tenant.id)
   if (!documentType) redirect(`/domain/${tenantSlug}/records?error=type`)
-  const folder = await tenantFolderId(payload, tenant.id, ctx.legacyTenantId, String(formData.get('folderId') ?? ''))
+  // P08-GATE-02: Type-first routing; caller Folder is ignored. Folder-deny
+  // narrowing enforced through the canonical primitive.
+  const { prepareDocumentCreation } = await import('@/lib/documents/creation')
+  let folder: number
+  try {
+    const plan = await prepareDocumentCreation({ payload, actor: { userId: user.id, activeCharacterId }, domainId: tenant.id, documentTypeId: documentType, method: 'blank', lifecycle: 'draft' })
+    folder = plan.folderId
+  } catch {
+    redirect(`${ctx.basePath}/records?error=authorization`)
+  }
 
   const created = await runInTransaction(payload, async (transactionID) => {
     const req = { transactionID }
@@ -549,12 +508,18 @@ export async function deleteFolderAction(
   _prev: FolderActionState | null,
   formData: FormData,
 ): Promise<FolderActionState> {
+  // P08-GATE-04: one Folder authorization rule. Same guard as /api/folders:
+  // acting identity + manage_folders on the Domain or the Folder itself.
   const tenantSlug = String(formData.get('tenantSlug') ?? '')
   const folderId = Number(formData.get('folderId'))
   const ctx = await getMemberTenant(tenantSlug)
   if (!ctx || !folderId) return { ok: false, message: 'Not authorized.' }
 
-  const { payload, tenant } = ctx
+  const { payload, tenant, user } = ctx
+  const { getActiveContext } = await import('@/lib/tenant/activeTenant')
+  const { isAllowed } = await import('@/lib/authz/evaluate')
+  const active = await getActiveContext()
+  const actor = { userId: user.id, activeCharacterId: active.tenant?.slug === tenantSlug && active.activeCharacter ? active.activeCharacter.id : null }
   const folder = await payload.find({
     collection: 'folders',
     where: { and: [{ or: [{ domain: { equals: tenant.id } }, { tenant: { equals: ctx.legacyTenantId ?? tenant.id } }] }, { id: { equals: folderId } }] },
@@ -563,6 +528,8 @@ export async function deleteFolderAction(
   })
   if (!folder.docs[0]) return { ok: false, message: 'Folder not found.' }
   if (folder.docs[0].systemManaged) return { ok: false, message: 'The Domain root is system-managed and cannot be deleted.' }
+  const domainAllowed = await isAllowed({ payload, actor, domainId: tenant.id, capability: 'manage_folders', resource: { type: 'Domain', id: tenant.id } })
+  if (!domainAllowed && !await isAllowed({ payload, actor, domainId: tenant.id, capability: 'manage_folders', resource: { type: 'Folder', id: folderId } })) return { ok: false, message: 'Not authorized.' }
 
   const childFolders = await payload.count({
     collection: 'folders',

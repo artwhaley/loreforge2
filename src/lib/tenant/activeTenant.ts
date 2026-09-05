@@ -68,19 +68,11 @@ export async function getActiveContext(): Promise<ActiveContext> {
     return { tenant: null, role: null, user: contextUser, activeCharacter, characters }
   }
 
-  // P07X-T02: authority is identity-driven. The selected Domain may still be
-  // reached by a User-level manager before identities are provisioned (UI
-  // compatibility), but every privileged action is re-authorized server-side
-  // against the acting Character.
+  // P08-GATE-01: role is identity-derived only. User-level ownership,
+  // platform eligibility, and legacy domain-admins rows are never authority
+  // here; they may aid navigation elsewhere but must not produce admin chrome.
+  // Do not silently substitute another Character when the current one is invalid.
   const { isIdentityValidInDomain } = await import('@/lib/characters/identitySelect')
-  const domainAdmins = await payload.find({
-    collection: 'domain-admins',
-    where: { and: [{ domain: { equals: tenant.id } }, { user: { equals: user.id } }, { status: { equals: 'active' } }] },
-    depth: 0,
-    limit: 1,
-  })
-  const ownerUserId = Number(tenant.ownerUser && typeof tenant.ownerUser === 'object' ? tenant.ownerUser.id : tenant.ownerUser)
-  const isUserLevelManager = Boolean(user.isPlatformAdmin) || ownerUserId === Number(user.id) || domainAdmins.docs.length > 0
   const userIsPlatformAdmin = Boolean(user.isPlatformAdmin)
   const eligibleActiveCharacter = activeCharacter && await isIdentityValidInDomain(payload, { userId: user.id, characterId: activeCharacter.id, domainId: tenant.id, userIsPlatformAdmin }) ? activeCharacter : null
 
@@ -89,7 +81,7 @@ export async function getActiveContext(): Promise<ActiveContext> {
   const identityIsDomainAdmin = actingKind === 'domain_admin' && actingAdministrativeDomain === Number(tenant.id)
   // Platform identity is NOT a Domain administrator role; platform tools are a
   // separate surface gated by the platform seam.
-  const role: 'admin' | 'member' | null = identityIsDomainAdmin || (actingKind !== 'platform_admin' && isUserLevelManager) ? 'admin' : eligibleActiveCharacter ? 'member' : isUserLevelManager ? 'admin' : null
+  const role: 'admin' | 'member' | null = identityIsDomainAdmin ? 'admin' : eligibleActiveCharacter ? 'member' : null
 
   if (role === null) return { tenant: null, role: null, user: contextUser, activeCharacter: null, characters }
 

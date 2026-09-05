@@ -22,7 +22,7 @@ const ALLOWED: ReadonlySet<string> = new Set(['text', 'textarea', 'date', 'time'
 export default async function FillFormPage({ params }: Props) {
   const { slug, formId: formIdRaw } = await params
   const formId = Number(formIdRaw)
-  const { tenant, role, user } = await getActiveTenant()
+  const { tenant, role, user, activeCharacter } = await getActiveTenant()
 
   if (!tenant || tenant.slug !== slug || !formId) {
     notFound()
@@ -32,6 +32,13 @@ export default async function FillFormPage({ params }: Props) {
   if (!form) {
     notFound()
   }
+  // P08-GATE-06: gate the Form surface on create_document for its Type.
+  // An unauthorized user must not see a Form they cannot submit.
+  const { getLorePayload } = await import('@/lib/payload')
+  const { isAllowed } = await import('@/lib/authz/evaluate')
+  const payload = await getLorePayload()
+  const formTypeId = typeof form.documentType === 'object' && form.documentType !== null ? Number(form.documentType.id) : Number(form.documentType)
+  if (!user || !Number.isFinite(formTypeId) || !await isAllowed({ payload, actor: { userId: user.id, activeCharacterId: activeCharacter?.id ?? null }, domainId: tenant.id, capability: 'create_document', resource: { type: 'DocumentType', id: formTypeId } })) notFound()
 
   const base = `/domain/${tenant.slug}`
   const myTenants = user ? await getTenantsForUser(user.id) : []
