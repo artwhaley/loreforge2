@@ -37,6 +37,28 @@ try {
   db.exec('CREATE INDEX IF NOT EXISTS document_types_filed_folder_idx ON document_types (filed_folder_id)')
   db.exec('CREATE INDEX IF NOT EXISTS document_types_locked_folder_idx ON document_types (locked_folder_id)')
 
+  // P07X-T03 adds DocumentType to PermissionRule's polymorphic resource
+  // relation. Older databases already have this relation table for the other
+  // resource collections, so add only the new nullable target column.
+  const permissionRuleRelColumns = new Set((db.prepare('PRAGMA table_info(permission_rules_rels)').all() as Array<{ name: string }>).map((row) => row.name))
+  if (!permissionRuleRelColumns.has('document_types_id')) db.exec('ALTER TABLE permission_rules_rels ADD COLUMN document_types_id integer')
+  db.exec('CREATE INDEX IF NOT EXISTS permission_rules_rels_document_types_id_idx ON permission_rules_rels (document_types_id)')
+
+  // P07X-T07: Form Studio's fixed Markdown chrome is nullable so existing
+  // Templates and Forms retain their prior output when the fields are empty.
+  const templateColumns = new Set((db.prepare('PRAGMA table_info(templates)').all() as Array<{ name: string }>).map((row) => row.name))
+  if (!templateColumns.has('header_markdown')) db.exec('ALTER TABLE templates ADD COLUMN header_markdown text')
+  if (!templateColumns.has('footer_markdown')) db.exec('ALTER TABLE templates ADD COLUMN footer_markdown text')
+
+  // Payload tracks lock relations for every collection. These three columns
+  // are the T08/T09 additions and must exist before the access-closed request
+  // collections can be queried with Payload's generated relation projection.
+  const lockedRelationColumns = new Set((db.prepare('PRAGMA table_info(payload_locked_documents_rels)').all() as Array<{ name: string }>).map((row) => row.name))
+  for (const name of ['invitations_id', 'domain_bootstrap_requests_id', 'domain_join_requests_id']) {
+    if (!lockedRelationColumns.has(name)) db.exec(`ALTER TABLE payload_locked_documents_rels ADD COLUMN ${name} integer`)
+    db.exec(`CREATE INDEX IF NOT EXISTS payload_locked_documents_rels_${name}_idx ON payload_locked_documents_rels (${name})`)
+  }
+
   // P07X-T08: one access-closed invitation table shared by bootstrap,
   // character-claim, and general Domain links. Raw token material is never a
   // column; token_hash stores only the SHA-256 digest.

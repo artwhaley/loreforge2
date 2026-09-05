@@ -4,7 +4,6 @@ import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { getPayload } from 'payload'
 
-import config from '@/payload.config'
 import { permissionRuleKey } from '@/collections/PermissionRules'
 import { ensureDomainAdminIdentity, ensurePlatformAdminIdentity } from '@/lib/characters/provisioning'
 import { CAPABILITIES, isRecordCapability, type Capability, type PrincipalType, type ResourceType } from '@/lib/permissions/capabilities'
@@ -30,6 +29,9 @@ const requiredColumns: Record<string, string[]> = {
   invitations: ['purpose', 'domain_id', 'character_id', 'token_hash', 'issued_by_user_id', 'issued_by_character_id', 'expires_at', 'revoked_at', 'max_uses', 'use_count', 'last_used_at'],
   domain_bootstrap_requests: ['domain_id', 'user_id', 'invitation_id', 'status', 'requested_at'],
   domain_join_requests: ['domain_id', 'user_id', 'invitation_id', 'character_id', 'requested_name', 'status', 'requested_at'],
+  permission_rules_rels: ['document_types_id'],
+  templates: ['header_markdown', 'footer_markdown'],
+  payload_locked_documents_rels: ['invitations_id', 'domain_bootstrap_requests_id', 'domain_join_requests_id'],
 }
 
 function inspectSchema(db: DatabaseSync) {
@@ -92,9 +94,13 @@ async function run() {
     return
   }
 
-  // A dry run is read-only at both the SQLite and Payload layers, even if the
-  // caller inherited PAYLOAD_PUSH=true from another local command.
-  if (dryRun) process.env.PAYLOAD_PUSH = 'false'
+  // This command owns the explicit schema step above. Never let Payload's
+  // development push replay those DDL statements (or collide with the indexes
+  // the idempotent raw migration just created); dry-run is read-only as well.
+  process.env.PAYLOAD_PUSH = 'false'
+  // Import the config only after setting the environment flag; the config's
+  // adapter reads PAYLOAD_PUSH while it is constructed.
+  const { default: config } = await import('@/payload.config')
   const payload = await getPayload({ config })
   const changes: Array<Record<string, unknown>> = []
   const warnings: string[] = []
