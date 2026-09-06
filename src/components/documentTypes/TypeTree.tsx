@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import type { TreeApi } from 'react-arborist'
 
 import type { TypeTreeData, TypeTreeLeaf, TypeTreeNode, TemplateSelection } from '@/lib/documents/typeTree'
-import { createTypeAction, deleteTypeAction, moveTypeAction, setActiveTypeAction, updateTypeAction } from '@/lib/actions/documentTypes'
+import { deleteTypeAction, moveTypeAction, setActiveTypeAction, updateTypeAction } from '@/lib/actions/documentTypes'
 import { createTypeFolderAction, deleteTypeFolderAction, moveTypeFolderAction, renameTypeFolderAction } from '@/lib/actions/typeFolders'
 
 import styles from './TypeTree.module.scss'
@@ -62,19 +62,21 @@ export function TypeTree({
   canManage,
   selectedTypeId,
   onSelectType,
+  onCreateNew,
 }: {
   domainSlug: string
   data: TypeTreeData
   canManage: boolean
   selectedTypeId: number | null
   onSelectType: (id: number | null) => void
+  onCreateNew?: () => void
 }) {
   const router = useRouter()
   const [query, setQuery] = useState('')
   const [menu, setMenu] = useState<Menu | null>(null)
   const [popover, setPopover] = useState<Popover | null>(null)
   const [target, setTarget] = useState<TypeTreeNode | null>(null)
-  const [dialog, setDialog] = useState<'create-type' | 'create-folder' | 'delete-folder' | 'move-folder' | 'delete-type' | null>(null)
+  const [dialog, setDialog] = useState<'create-folder' | 'delete-folder' | 'move-folder' | 'delete-type' | null>(null)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [, startTransition] = useTransition()
@@ -175,7 +177,7 @@ export function TypeTree({
     void run(() => renameTypeFolderAction({ domainSlug, typeFolderId: id, name: name.trim() }))
   }
 
-  const openDialog = (next: 'create-type' | 'create-folder' | 'delete-folder' | 'move-folder' | 'delete-type') => {
+  const openDialog = (next: 'create-folder' | 'delete-folder' | 'move-folder' | 'delete-type') => {
     setTarget(menu?.node ?? null)
     setDialog(next)
     setMenu(null)
@@ -204,7 +206,7 @@ export function TypeTree({
   return <div className={styles.page} onClick={() => { setMenu(null); setPopover(null) }}>
     <div className={styles.toolbar}>
       <div><h2>Document Types</h2><p title="Document Types are the first-order item; Templates and Forms hang off them. Drag types between folders; right-click for actions.">Organized by Department. Templates and Forms hang off each Type.</p></div>
-      {canManage ? <button type="button" className={styles.button} title="Create a new Document Type in the current Department" onClick={() => { setTarget(null); setDialog('create-type') }}>Create new</button> : null}
+      {canManage ? <button type="button" className={styles.button} title="Create a new Document Type — the inspector opens beneath the list to configure it" onClick={() => onCreateNew?.()}>Create new</button> : null}
     </div>
     {notice ? <p className={styles.notice} role="alert">{notice}</p> : null}
     <div className={styles.search}><span aria-hidden="true">⌕</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search Document Types" aria-label="Search Document Types" title="Type to filter the tree to matching nodes" /></div>
@@ -253,24 +255,6 @@ export function TypeTree({
       {menuNode?.kind === 'unassigned' ? <button type="button" disabled title="Unassigned collects Types whose Department was archived or removed. Restore the Department on the Departments page to return them.">Restore the Department to return these Types</button> : null}
     </div> : null}
 
-    {dialog === 'create-type' ? <section className={styles.dialog}><div className={styles.dialogHeader}><h3>New Document Type</h3><button type="button" className={styles.close} onClick={() => setDialog(null)} aria-label="Close">×</button></div>
-      <form onSubmit={async (event) => {
-        event.preventDefault()
-        const form = event.currentTarget
-        const name = String(new FormData(form).get('name') ?? '').trim()
-        const departmentId = Number(new FormData(form).get('departmentId') ?? '') || null
-        const result = await createTypeAction({ domainSlug, name, departmentId, templateSelection: 'blank' })
-        if (result.ok && result.typeId) { onSelectType(result.typeId); setDialog(null); void run(() => Promise.resolve({ ok: true })) }
-        else setNotice('That Type could not be created.')
-      }}>
-        <label>Name <input name="name" required autoFocus placeholder="e.g. Deed of Transfer" /></label>
-        <label>Department <select name="departmentId" defaultValue={''}>
-          <option value="">— No department —</option>
-          {data.departments.filter((department) => !department.archived).map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
-        </select></label>
-        <div className={styles.actions}><button className={styles.primary} type="submit">Create Type</button><button className={styles.secondary} type="button" onClick={() => setDialog(null)}>Cancel</button></div>
-      </form>
-    </section> : null}
     {dialog === 'create-folder' ? <section className={styles.dialog}><div className={styles.dialogHeader}><h3>New subfolder</h3><button type="button" className={styles.close} onClick={() => setDialog(null)} aria-label="Close">×</button></div>
       <form onSubmit={async (event) => {
         event.preventDefault()

@@ -66,3 +66,62 @@
 .badge { display: inline-flex; align-items: center; gap: .3rem; border-radius: 999px; padding: .12rem .55rem; font-size: .72rem; font-weight: 700; }
 .badgeActive { color: #2f6b2f; background: color-mix(in srgb, #2f6b2f 16%, #fff); }
 .badgeInactive { color: #6b6b6b; background: color-mix(in srgb, #6b6b6b 16%, #fff); }
+
+/* ---- P08X-T04 inspector ---- */
+.inspectorForm { display: grid; gap: 1rem; }
+.inspectorSection { display: grid; gap: .55rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 12px; padding: .9rem 1rem; background: var(--tenant-page-bg); }
+.inspectorSection h3 { margin: 0; color: var(--tenant-primary); font-family: var(--tenant-heading-font); font-size: 1.02rem; }
+.inspectorSection > p { margin: 0; color: var(--tenant-muted-text); font-size: .78rem; }
+.field { display: grid; gap: .3rem; }
+.field > label { color: var(--tenant-primary); font-size: .78rem; font-weight: 700; }
+.field > input[type='text'], .field > textarea, .field > select { min-height: 2.25rem; padding: .45rem .55rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 7px; background: var(--tenant-page-bg); color: var(--tenant-primary); font: inherit; }
+.field > textarea { min-height: 3.4rem; resize: vertical; }
+.checkRow { display: flex; align-items: center; gap: .45rem; color: var(--tenant-primary); font-size: .8rem; }
+.checkRow input { accent-color: var(--tenant-accent); }
+.checkRow small { color: var(--tenant-muted-text); font-weight: 400; }
+.identityHeader { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.identityHeader h3 { margin: 0; }
+.segmented { display: inline-flex; gap: .3rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 9px; padding: .25rem; background: var(--tenant-page-bg); }
+.segment { border: 0; border-radius: 7px; padding: .4rem .65rem; color: var(--tenant-primary); background: transparent; font: inherit; font-size: .76rem; cursor: pointer; }
+.segment:hover { background: color-mix(in srgb, var(--tenant-accent) 14%, var(--tenant-page-bg)); }
+.segmentActive, .segmentActive:hover { background: var(--tenant-primary); color: var(--tenant-text-on-primary); }
+.templateLinkRow { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; font-size: .8rem; color: var(--tenant-muted-text); }
+.templateLinkRow a { color: var(--tenant-accent); text-decoration: underline; text-underline-offset: 2px; }
+.templateLinkRow button { border: 1px solid color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 7px; padding: .3rem .6rem; color: var(--tenant-primary); background: transparent; font: inherit; font-size: .76rem; cursor: pointer; }
+
+/* lifecycle table */
+.lifecycleTable { display: grid; gap: .5rem; }
+.stageRow { display: grid; grid-template-columns: minmax(9rem, 1.1fr) repeat(4, minmax(0, 1fr)); gap: .6rem; align-items: start; border: 1px solid color-mix(in srgb, var(--tenant-accent) 45%, #fff); border-radius: 10px; padding: .55rem .7rem; background: var(--tenant-surface-bg); }
+.stageRowDisabled { opacity: .5; }
+.stageHead { display: flex; flex-direction: column; gap: .3rem; }
+.stageTitle { color: var(--tenant-primary); font-weight: 700; font-size: .82rem; }
+.stageDesc { color: var(--tenant-muted-text); font-size: .7rem; }
+.stageCell { display: grid; gap: .3rem; min-width: 0; }
+.stageCell > span { color: var(--tenant-muted-text); font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.folderButton { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px dashed color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 7px; padding: .38rem .55rem; color: var(--tenant-primary); background: transparent; font: inherit; font-size: .76rem; text-align: left; cursor: pointer; }
+.folderButton:hover { border-style: solid; background: color-mix(in srgb, var(--tenant-accent) 12%, var(--tenant-page-bg)); }
+.folderButtonEmpty { color: var(--tenant-muted-text); font-style: italic; }
+
+/* role-list editors */
+.roleEditor { display: grid; gap: .25rem; }
+.roleChips { display: flex; flex-wrap: wrap; gap: .25rem; align-items: center; min-height: 1.7rem; }
+.roleChip { border: 1px solid color-mix(in srgb, var(--tenant-accent) 60%, #fff); border-radius: 999px; padding: .08rem .5rem; color: var(--tenant-primary); background: color-mix(in srgb, var(--tenant-accent) 14%, var(--tenant-page-bg)); font-size: .68rem; display: inline-flex; align-items: center; gap: .3rem; }
+.roleChip button { border: 0; background: transparent; color: var(--tenant-muted-text); cursor: pointer; font-size: .8rem; line-height: 1; padding: 0; }
+.roleChip button:hover { color: #8f2d21; }
+.addRole { border: 1px dashed color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 999px; padding: .08rem .55rem; color: var(--tenant-primary); background: transparent; font: inherit; font-size: .68rem; cursor: pointer; }
+.addRole:hover { border-style: solid; background: color-mix(in srgb, var(--tenant-accent) 12%, var(--tenant-page-bg)); }
+.rolePopover { position: fixed; z-index: 40; display: grid; gap: .25rem; width: 230px; max-height: 260px; overflow-y: auto; padding: .5rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 80%, #fff); border-radius: 10px; background: var(--tenant-surface-bg); box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+.rolePopover label { display: flex; align-items: center; gap: .45rem; border-radius: 6px; padding: .3rem .45rem; color: var(--tenant-primary); font-size: .76rem; cursor: pointer; }
+.rolePopover label:hover { background: color-mix(in srgb, var(--tenant-accent) 14%, var(--tenant-page-bg)); }
+.rolePopover input { accent-color: var(--tenant-accent); }
+.roleInactive { opacity: .55; }
+
+/* folder picker popup */
+.overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(20, 17, 12, .35); }
+.popup { display: grid; gap: .7rem; width: min(480px, calc(100vw - 2rem)); padding: 1rem 1.1rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 80%, #fff); border-radius: 14px; background: var(--tenant-surface-bg); box-shadow: 0 14px 40px rgba(0,0,0,.25); }
+.popup h3 { margin: 0; color: var(--tenant-primary); font-family: var(--tenant-heading-font); font-size: 1.05rem; }
+.popupTree { border: 1px solid color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 10px; padding: .4rem; background: var(--tenant-page-bg); }
+.popupNote { margin: 0; color: var(--tenant-muted-text); font-size: .72rem; }
+.popupActions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.saveBar { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; border-top: 1px solid color-mix(in srgb, var(--tenant-accent) 40%, #fff); padding-top: .8rem; }
+.saveBar .spacer { flex: 1; }

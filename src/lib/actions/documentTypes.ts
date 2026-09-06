@@ -7,7 +7,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { isAllowed } from '@/lib/authz/evaluate'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
-import { ensureLifecycleStageRows } from '@/lib/documents/lifecycleStages'
+import { applyLifecycleStageConfig, ensureLifecycleStageRows, lifecycleStageRowsForType, stageFolderId, type LifecycleStageConfigInput } from '@/lib/documents/lifecycleStages'
 
 const relationId = (value: unknown): number | null => value && typeof value === 'object' && 'id' in value
   ? Number((value as { id: number | string }).id)
@@ -36,7 +36,9 @@ async function requireTypeManagement(ctx: ActionContext): Promise<boolean> {
   return isAllowed({ payload: ctx.payload, actor: { userId: ctx.userId, activeCharacterId: ctx.actorCharacterId }, domainId: ctx.domain.id, capability: 'manage_types_tags', resource: { type: 'Domain', id: ctx.domain.id } })
 }
 
-export type TypeTreeActionResult = { ok: boolean; error?: string; typeId?: number }
+export type TypeTreeActionResult = { ok: boolean; error?: string; typeId?: number; templateId?: number }
+
+export type { LifecycleStageConfigInput }
 
 const TEMPLATE_SELECTIONS = ['blank', 'markdown', 'form'] as const
 export type TemplateSelection = (typeof TEMPLATE_SELECTIONS)[number]
@@ -46,7 +48,7 @@ function deriveAllowFlags(selection: TemplateSelection): { allowBlank: boolean; 
   return { allowBlank: selection === 'blank', allowTemplate: selection === 'markdown', allowForm: selection === 'form' }
 }
 
-/** Create a Document Type with the default stage configuration (T02 seeds). */
+/** Create a Document Type with the default stage configuration (T02 seeds, T04 inspector config). */
 export async function createTypeAction(input: {
   domainSlug: string
   name: string
@@ -55,6 +57,7 @@ export async function createTypeAction(input: {
   departmentId?: number | null
   typeFolderId?: number | null
   templateSelection?: TemplateSelection
+  lifecycleStages?: LifecycleStageConfigInput[]
 }): Promise<TypeTreeActionResult> {
   const ctx = await resolveDomainAction(input.domainSlug)
   const name = String(input.name ?? '').trim()
@@ -80,11 +83,14 @@ export async function createTypeAction(input: {
       },
     })
     await ensureLifecycleStageRows(ctx.payload, created.id)
+    if (input.lifecycleStages && input.lifecycleStages.length > 0) {
+      await applyLifecycleStageConfig(ctx.payload, { documentTypeId: created.id, domainId: ctx.domain.id, stages: input.lifecycleStages })
+    }
     revalidatePath(`/domain/${ctx.domain.slug}/document-types`)
     return { ok: true, typeId: Number(created.id) }
   } catch (error) {
     ctx.payload.logger.error(error)
-    return { ok: false, error: 'failed' }
+    return { ok: false, error: error instanceof Error && /enabled|Folder|role|stage/i.test(error.message) ? error.message : 'failed' }
   }
 }
 
@@ -97,6 +103,7 @@ export async function updateTypeAction(input: {
   departmentId?: number | null
   typeFolderId?: number | null
   templateSelection?: TemplateSelection
+  lifecycleStages?: LifecycleStageConfigInput[]
 }): Promise<TypeTreeActionResult> {
   const ctx = await resolveDomainAction(input.domainSlug)
   const typeId = Number(input.typeId)
@@ -122,11 +129,14 @@ export async function updateTypeAction(input: {
   }
   try {
     await ctx.payload.update({ collection: 'document-types', id: typeId, overrideAccess: true, data: data as never })
+    if (input.lifecycleStages !== undefined) {
+      await applyLifecycleStageConfig(ctx.payload, { documentTypeId: typeId, domainId: ctx.domain.id, stages: input.lifecycleStages })
+    }
     revalidatePath(`/domain/${ctx.domain.slug}/document-types`)
     return { ok: true, typeId }
   } catch (error) {
     ctx.payload.logger.error(error)
-    return { ok: false, error: 'failed' }
+    return { ok: false, error: error instanceof Error && /enabled|Folder|role|stage/i.test(error.message) ? error.message : 'failed' }
   }
 }
 
@@ -166,6 +176,71 @@ export async function setActiveTypeAction(input: { domainSlug: string; typeId: n
   } catch (error) {
     ctx.payload.logger.error(error)
     return { ok: false, error: 'failed' }
+  }
+}
+
+/** Resolve the scope/destination Folders for a scaffolded Type template. */
+async function resolveTemplatePlacement(payload: Awaited<ReturnType<typeof getPayload>>, typeId: number, domainId: number): Promise<{ scopeFolder: number; destinationFolder: number }> {
+  const stages = await lifecycleStageRowsForType(payload, typeId)
+  const fromStages = [stages.draft, stages.submitted, stages.filed].map(stageFolderId).find((id): id is number => id != null)
+  if (fromStages) return { scopeFolder: fromStages, destinationFolder: fromStages }
+  const type = await payload.findByID({ collection: 'document-types', id: typeId, depth: 0, overrideAccess: true }).catch(() => null) as { draftFolder?: unknown; defaultFolder?: unknown } | null
+  const fromType = relationId(type?.draftFolder) ?? relationId(type?.defaultFolder)
+  if (fromType) return { scopeFolder: fromType, destinationFolder: fromType }
+  const roots = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domainId } }, { systemManaged: { equals: true } }, { parent: { equals: null } }] }, depth: 0, limit: 1, overrideAccess: true })
+  const rootId = roots.docs[0] ? Number((roots.docs[0] as { id: number | string }).id) : null
+  if (!rootId) throw new Error('No Folder is available for the template — assign a stage Folder first.')
+  return { scopeFolder: rootId, destinationFolder: rootId }
+}
+
+/**
+ * P08X-T04: scaffold the single default child template of the chosen kind for
+ * a Type (Markdown body template, or a minimal Form with one content field).
+ * Refused when an active child of that kind already exists. The author edits
+ * it in the template/Form editors from here.
+ */
+export async function scaffoldTypeTemplateAction(input: { domainSlug: string; typeId: number | string; kind: 'markdown' | 'form' }): Promise<TypeTreeActionResult> {
+  const ctx = await resolveDomainAction(input.domainSlug)
+  const typeId = Number(input.typeId)
+  if (!ctx || !Number.isInteger(typeId) || typeId <= 0) return { ok: false, error: 'invalid' }
+  if (!await requireTypeManagement(ctx)) return { ok: false, error: 'unauthorized' }
+  const kind = input.kind === 'form' ? 'form' : 'document'
+  try {
+    const type = await ctx.payload.findByID({ collection: 'document-types', id: typeId, depth: 0, overrideAccess: true }).catch(() => null)
+    if (!type || relationId((type as { domain?: unknown }).domain) !== Number(ctx.domain.id)) return { ok: false, error: 'not-found' }
+    const existing = await ctx.payload.find({ collection: 'templates', where: { and: [{ domain: { equals: ctx.domain.id } }, { documentType: { equals: typeId } }, { kind: { equals: kind } }, { active: { equals: true } }] }, depth: 0, limit: 1, overrideAccess: true })
+    if (existing.docs[0]) return { ok: false, error: 'exists', templateId: Number(existing.docs[0].id) }
+    const typeName = String((type as { name?: unknown }).name ?? 'Untitled')
+    const placement = await resolveTemplatePlacement(ctx.payload, typeId, ctx.domain.id)
+    const name = `${typeName} ${input.kind === 'form' ? 'Form' : 'Template'}`
+    const created = await ctx.payload.create({
+      collection: 'templates',
+      overrideAccess: true,
+      data: {
+        domain: ctx.domain.id,
+        documentType: typeId,
+        name,
+        kind,
+        scopeFolder: placement.scopeFolder,
+        destinationFolder: placement.destinationFolder,
+        allowDestinationOverride: false,
+        availableToDescendants: true,
+        baseTemplate: null,
+        titleTemplate: typeName,
+        bodyTemplate: `# ${typeName}\n\n{{content}}`,
+        headerMarkdown: '',
+        footerMarkdown: '',
+        formSchema: kind === 'form' ? { version: 1, fields: [{ key: 'content', type: 'textarea', label: 'Content', required: true }] } : null,
+        lifecyclePolicy: 'inherit',
+        active: true,
+        version: 1,
+      } as never,
+    })
+    revalidatePath(`/domain/${ctx.domain.slug}/document-types`)
+    return { ok: true, typeId, templateId: Number(created.id) }
+  } catch (error) {
+    ctx.payload.logger.error(error)
+    return { ok: false, error: error instanceof Error && /Folder|stage|token|required/i.test(error.message) ? error.message : 'failed' }
   }
 }
 

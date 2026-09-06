@@ -64,6 +64,78 @@ export async function ensureLifecycleStageRows(payload: Payload, documentTypeId:
   }
 }
 
+export type LifecycleStageConfigInput = {
+  stage: Lifecycle
+  enabled?: boolean
+  allowOnCreation?: boolean
+  folderId?: number | null
+  privateDraftsAllowed?: boolean
+  readRoleIds?: number[]
+  writeRoleIds?: number[]
+  editOthersRoleIds?: number[]
+  manageRoleIds?: number[]
+}
+
+/**
+ * P08X-T04: apply the inspector's lifecycle table to one Document Type,
+ * upserting rows and validating same-Domain Folders and role lists. Returns
+ * readable errors instead of relying on collection-hook rejects. A missing
+ * field in a config entry leaves the stored value untouched (so a caller that
+ * only moves a Folder doesn't clobber the role lists); the inspector itself
+ * always sends the full row state.
+ */
+export async function applyLifecycleStageConfig(payload: Payload, args: { documentTypeId: number | string; domainId: number | string; stages: LifecycleStageConfigInput[] }): Promise<void> {
+  const typeId = Number(args.documentTypeId)
+  const domainId = Number(args.domainId)
+  if (!Number.isInteger(typeId) || typeId <= 0) throw new Error('A Document Type id is required.')
+  if (!Array.isArray(args.stages) || args.stages.length === 0) throw new Error('At least one lifecycle stage must be configured.')
+  for (const config of args.stages) {
+    if (!LIFECYCLE_STAGES.includes(config.stage)) throw new Error('Unknown lifecycle stage.')
+  }
+  if (args.stages.filter((config) => config.enabled !== false).length === 0) throw new Error('At least one lifecycle stage must be enabled — a Document Type needs somewhere for its records to live.')
+  const folderIds = [...new Set(args.stages.map((config) => config.folderId).filter((id): id is number => id != null))]
+  if (folderIds.length > 0) {
+    const folderRows = await payload.find({ collection: 'folders', where: { and: [{ id: { in: folderIds } }, { domain: { equals: domainId } }] }, depth: 0, limit: folderIds.length, overrideAccess: true })
+    if (folderRows.docs.length !== folderIds.length) throw new Error('Every lifecycle stage Folder must belong to the same Domain as the Document Type.')
+  }
+  const roleIds = [...new Set(args.stages.flatMap((config) => [
+    ...(config.readRoleIds ?? []),
+    ...(config.writeRoleIds ?? []),
+    ...(config.editOthersRoleIds ?? []),
+    ...(config.manageRoleIds ?? []),
+  ]))]
+  if (roleIds.length > 0) {
+    const roleRows = await payload.find({ collection: 'roles', where: { and: [{ id: { in: roleIds } }, { domain: { equals: domainId } }] }, depth: 0, limit: roleIds.length, overrideAccess: true })
+    if (roleRows.docs.length !== roleIds.length) throw new Error('Every lifecycle stage role must belong to the same Domain as the Document Type.')
+  }
+  for (const config of args.stages) {
+    const existing = await payload.find({
+      collection: 'lifecycle-stages',
+      where: { and: [{ documentType: { equals: typeId } }, { stage: { equals: config.stage } }] },
+      depth: 0,
+      limit: 1,
+      overrideAccess: true,
+    })
+    const data: Record<string, unknown> = {
+      documentType: typeId,
+      stage: config.stage,
+      enabled: config.enabled ?? true,
+      allowOnCreation: config.allowOnCreation ?? false,
+    }
+    if (config.privateDraftsAllowed !== undefined) data.privateDraftsAllowed = Boolean(config.privateDraftsAllowed)
+    if (config.folderId !== undefined) data.folder = config.folderId ? Number(config.folderId) : null
+    if (config.readRoleIds !== undefined) data.readRoles = config.readRoleIds.map(Number)
+    if (config.writeRoleIds !== undefined) data.writeRoles = config.writeRoleIds.map(Number)
+    if (config.editOthersRoleIds !== undefined) data.editOthersRoles = config.editOthersRoleIds.map(Number)
+    if (config.manageRoleIds !== undefined) data.manageRoles = config.manageRoleIds.map(Number)
+    if (existing.docs[0]) {
+      await payload.update({ collection: 'lifecycle-stages', id: existing.docs[0].id, overrideAccess: true, data: data as never })
+    } else {
+      await payload.create({ collection: 'lifecycle-stages', overrideAccess: true, data: data as never })
+    }
+  }
+}
+
 /** Load all stage rows for one Document Type, keyed by stage. */
 export async function lifecycleStageRowsForType(payload: Payload, documentTypeId: number | string): Promise<Record<Lifecycle, LifecycleStageRowShape | null>> {
   const typeId = Number(documentTypeId)

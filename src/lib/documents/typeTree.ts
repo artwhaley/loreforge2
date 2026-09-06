@@ -1,5 +1,8 @@
 import type { Payload } from 'payload'
 
+import type { Lifecycle } from './lifecycle'
+import type { LifecycleStageRowShape } from './lifecycleStages'
+
 const relationId = (value: unknown): number | null => value && typeof value === 'object' && 'id' in value
   ? Number((value as { id: number | string }).id)
   : value === null || value === undefined || value === '' ? null : Number(value)
@@ -17,6 +20,8 @@ export type TypeTreeLeaf = {
   templateId: number | null
   templateName: string | null
   templateKind: 'document' | 'form' | null
+  /** Active constructed child per kind — never the selected one only (T04 inspector). */
+  constructedTemplates: { markdown: { id: number; name: string } | null; form: { id: number; name: string } | null }
 }
 
 /**
@@ -98,6 +103,7 @@ export async function resolveTypeTree(payload: Payload, domainId: number | strin
     const id = Number(raw.id)
     const selection = String(raw.templateSelection ?? 'blank') as TemplateSelection
     const template = selection === 'blank' ? null : templatesByType.get(id)?.[selection === 'markdown' ? 'document' : 'form'] ?? null
+    const constructed = templatesByType.get(id) ?? { document: null, form: null }
     return {
       id,
       name: String(raw.name ?? ''),
@@ -109,6 +115,10 @@ export async function resolveTypeTree(payload: Payload, domainId: number | strin
       templateId: template ? Number(template.id) : null,
       templateName: template ? String(template.name ?? '') : null,
       templateKind: template ? (String(template.kind ?? 'document') === 'form' ? 'form' : 'document') : null,
+      constructedTemplates: {
+        markdown: constructed.document ? { id: Number(constructed.document.id), name: String(constructed.document.name ?? '') } : null,
+        form: constructed.form ? { id: Number(constructed.form.id), name: String(constructed.form.name ?? '') } : null,
+      },
     }
   })
 
@@ -186,4 +196,52 @@ export async function resolveTypeTree(payload: Payload, domainId: number | strin
       .map((row) => ({ id: Number(row.id), name: String((row as { name?: unknown }).name ?? ''), archived: true }))],
     types: leaves,
   }
+}
+
+export type InspectorRole = { id: number; name: string; active: boolean }
+export type InspectorFolderNode = { id: number; name: string; children: InspectorFolderNode[] }
+
+/**
+ * P08X-T04 inspector data: every Domain role (for the four role-list editors),
+ * the Folder tree (for the compressed stage-folder picker popup), and every
+ * lifecycle-stages row grouped by Document Type. All read through the
+ * access-closed override path, like the tree resolver.
+ */
+export async function resolveInspectorData(payload: Payload, domainId: number | string, typeIds: number[]): Promise<{
+  roles: InspectorRole[]
+  folders: InspectorFolderNode[]
+  stagesByType: Record<number, Record<Lifecycle, LifecycleStageRowShape | null>>
+}> {
+  const domain = Number(domainId)
+  const [roleRows, folderRows, stageRows] = await Promise.all([
+    payload.find({ collection: 'roles', where: { domain: { equals: domain } }, depth: 0, limit: 500, sort: 'name', overrideAccess: true }),
+    payload.find({ collection: 'folders', where: { domain: { equals: domain } }, depth: 0, limit: 0, pagination: false, sort: 'name', overrideAccess: true }),
+    typeIds.length > 0
+      ? payload.find({ collection: 'lifecycle-stages', where: { documentType: { in: typeIds } }, depth: 0, limit: typeIds.length * 6, overrideAccess: true })
+      : Promise.resolve({ docs: [] as unknown[] }),
+  ])
+  const roles: InspectorRole[] = roleRows.docs.map((row) => ({
+    id: Number(row.id),
+    name: String((row as { name?: unknown }).name ?? ''),
+    active: (row as { active?: unknown }).active !== false,
+  }))
+  // Build the Folder tree from the flat rows (parent ids are stored flat).
+  const rawFolders = folderRows.docs.map((row) => ({ id: Number(row.id), name: String((row as { name?: unknown }).name ?? ''), parentId: relationId((row as { parent?: unknown }).parent) }))
+  const rawById = new Map(rawFolders.map((folder) => [folder.id, folder]))
+  const folderById = new Map<number, InspectorFolderNode>()
+  for (const folder of rawFolders) folderById.set(folder.id, { id: folder.id, name: folder.name, children: [] })
+  const roots: InspectorFolderNode[] = []
+  for (const folder of rawFolders) {
+    if (folder.parentId != null && rawById.has(folder.parentId)) folderById.get(folder.parentId)!.children.push(folderById.get(folder.id)!)
+    else roots.push(folderById.get(folder.id)!)
+  }
+  const stagesByType: Record<number, Record<Lifecycle, LifecycleStageRowShape | null>> = {}
+  for (const typeId of typeIds) stagesByType[typeId] = { draft: null, submitted: null, filed: null, deprecated: null }
+  for (const row of stageRows.docs as unknown as LifecycleStageRowShape[]) {
+    const typeId = relationId(row.documentType)
+    const stage = String(row.stage ?? '')
+    if (typeId == null || !(stage in (stagesByType[typeId] ?? {}))) continue
+    stagesByType[typeId][stage as Lifecycle] = row
+  }
+  return { roles, folders: roots, stagesByType }
 }
