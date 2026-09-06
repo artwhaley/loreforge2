@@ -345,18 +345,18 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   // Type rather than by a caller-supplied Folder.
   const domainPolicy = (domainRecord.defaultFilingPolicy ?? 'direct-file') as Exclude<FilingPolicy, 'inherit'>
   const policyWithoutFolder = resolveFilingPolicy({ template: (selectedTemplate?.lifecyclePolicy ?? 'inherit') as FilingPolicy, documentType: selectedType.defaultFilingPolicy, domain: domainPolicy })
-  const initialLifecycle: 'draft' | 'pending_review' | 'filed' = method === 'blank'
+  const initialLifecycle: 'draft' | 'submitted' | 'filed' = method === 'blank'
     ? 'draft'
-    : policyWithoutFolder === 'review-required' ? 'pending_review' : 'filed'
-  const routeFor = (lifecycle: 'draft' | 'pending_review' | 'filed') => initialRouteFolder(selectedType, lifecycle, null)
+    : policyWithoutFolder === 'review-required' ? 'submitted' : 'filed'
+  const routeFor = (lifecycle: 'draft' | 'submitted' | 'filed') => initialRouteFolder(selectedType, lifecycle, null)
   let folder = routeFor(initialLifecycle) ?? await tenantFolderId(ctx.payload, ctx.tenant.id, ctx.legacyTenantId, null)
   let folderRecord = await ctx.payload.findByID({ collection: 'folders', id: folder, depth: 0 }).catch(() => null)
   const policy = method === 'blank'
     ? 'direct-file'
     : resolveFilingPolicy({ template: (selectedTemplate?.lifecyclePolicy ?? 'inherit') as FilingPolicy, folder: (folderRecord?.filingPolicy ?? 'inherit') as FilingPolicy, documentType: selectedType.defaultFilingPolicy, domain: domainPolicy })
-  const lifecycle: 'draft' | 'pending_review' | 'filed' = method === 'blank'
+  const lifecycle: 'draft' | 'submitted' | 'filed' = method === 'blank'
     ? 'draft'
-    : policy === 'review-required' ? 'pending_review' : 'filed'
+    : policy === 'review-required' ? 'submitted' : 'filed'
   if (lifecycle !== initialLifecycle) {
     folder = routeFor(lifecycle) ?? folder
     folderRecord = await ctx.payload.findByID({ collection: 'folders', id: folder, depth: 0 }).catch(() => null)

@@ -7,7 +7,7 @@ import type { Payload } from 'payload'
 // and the kebab spellings were pruned (stored-row check: zero rows used them).
 export const PROVENANCE_EVENT_TYPES = [
   'created', 'edited', 'submitted', 'withdrawn', 'approved', 'rejected',
-  'filed', 'locked', 'unlocked', 'soft_deleted', 'restored',
+  'deprecated', 'filed', 'locked', 'unlocked', 'soft_deleted', 'restored',
   'shared', 'share_revoked',
   'relationship_added', 'relationship_removed', 'superseded',
   'tag_changed', 'character_link_changed',
@@ -73,6 +73,7 @@ export function describeProvenanceEvent(eventType: ProvenanceEventType, context?
     case 'filed': return 'filed the record'
     case 'approved': return 'approved the record'
     case 'rejected': return context?.note ? `returned the record to Draft: ${String(context.note)}` : 'returned the record to Draft'
+    case 'deprecated': return context?.note ? `deprecated the record: ${String(context.note)}` : 'deprecated the record'
     case 'locked': return 'locked the record'
     case 'unlocked': return 'unlocked the record'
     case 'soft_deleted': return 'soft-deleted the record'

@@ -34,7 +34,10 @@ export const DocumentRelationships: CollectionConfig = {
     { name: 'target', type: 'relationship', relationTo: 'documents', required: true, index: true },
     { name: 'kind', type: 'select', required: true, options: [{ label: 'Supersedes', value: 'supersedes' }] },
     { name: 'lockApplied', type: 'checkbox', defaultValue: false, admin: { readOnly: true } },
-    { name: 'priorLifecycle', type: 'select', options: [{ label: 'Filed', value: 'filed' }, { label: 'Locked', value: 'locked' }], admin: { readOnly: true } },
+    // P08X-T02: the predecessor's locked flag BEFORE the supersede applied its
+    // preservation lock. Removal restores this exact value; the lifecycle
+    // stage is never part of the lock bookkeeping anymore.
+    { name: 'priorLocked', type: 'checkbox', defaultValue: false, admin: { readOnly: true } },
     { name: 'actorUser', type: 'relationship', relationTo: 'users', required: true, admin: { readOnly: true } },
     { name: 'actorCharacter', type: 'relationship', relationTo: 'characters', admin: { readOnly: true } },
   ],

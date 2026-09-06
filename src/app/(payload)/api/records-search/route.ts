@@ -99,7 +99,7 @@ export async function GET(request: Request) {
   // Search is correctness-complete: do not silently stop at the old first
   // 100/500 rows. The explorer may window or paginate the projected response,
   // but the server predicate itself is applied before any client filtering.
-  const documentSelect = { id: true, domain: true, folder: true, documentType: true, title: true, updatedAt: true, lifecycle: true } as const
+  const documentSelect = { id: true, domain: true, folder: true, documentType: true, title: true, updatedAt: true, lifecycle: true, locked: true } as const
   const documents = await payload.find({ collection: 'documents', where: where as never, select: documentSelect, depth: 0, limit: 0, pagination: false, sort: '-updatedAt', overrideAccess: true })
   const matchingDocuments = [...documents.docs]
   const allDocuments = new Map<number, typeof documents.docs[number]>(documents.docs.map((document) => [Number(document.id), document]))
@@ -246,6 +246,7 @@ export async function GET(request: Request) {
       updatedAt: document.updatedAt,
       preparedBy: preparedBy.get(Number(document.id)) ?? null,
       lifecycle: document.lifecycle,
+      locked: Boolean(document.locked),
     })),
     supersessionEdges: supersessionEdges.filter((edge) => selectedIds.has(edge.newerId) && selectedIds.has(edge.olderId)),
     nextCursor,

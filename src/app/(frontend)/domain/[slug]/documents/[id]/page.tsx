@@ -54,7 +54,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
   const session = user ? await loadCachedAuthorizationSession(payload, Number(user.id), activeCharacter?.id ?? null, tenant.id) : null
   const docTarget = session ? resolveDocumentTarget(session, { id: Number(doc.id), folderId: relationId(doc.folder), subdomainId: relationId((doc as unknown as { subdomain?: unknown }).subdomain) }) : null
   if (!session || !docTarget || !decideInSession(session, 'read', docTarget).allowed) notFound()
-  const canEdit = canEditDocumentBody(doc.lifecycle) && decideInSession(session, 'edit_document', docTarget).allowed
+  const canEdit = canEditDocumentBody(doc.lifecycle, Boolean((doc as unknown as { locked?: unknown }).locked)) && decideInSession(session, 'edit_document', docTarget).allowed
   // P08-GATE-01: affordances come from the decision engine, never role === 'admin'.
   const canSubmit = decideInSession(session, 'submit_document', docTarget).allowed
   const canFile = decideInSession(session, 'file_document', docTarget).allowed
@@ -134,7 +134,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
               <button type="submit" className={styles.action}>File now</button>
             </form>
           ) : null}
-          {doc.lifecycle === 'pending_review' && canApprove ? (
+          {doc.lifecycle === 'submitted' && canApprove ? (
             <form action={documentWorkflowAction}>
               <input type="hidden" name="tenantSlug" value={tenant.slug} />
               <input type="hidden" name="documentId" value={doc.id} />
@@ -142,7 +142,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
               <button type="submit" className={styles.action}>Approve</button>
             </form>
           ) : null}
-          {canLock && doc.lifecycle === 'filed' && !isSuperseded ? (
+          {canLock && !(doc as unknown as { locked?: unknown }).locked && !isSuperseded ? (
             <form action={documentWorkflowAction}>
               <input type="hidden" name="tenantSlug" value={tenant.slug} />
               <input type="hidden" name="documentId" value={doc.id} />
@@ -150,7 +150,7 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
               <button type="submit" className={styles.action}>Lock</button>
             </form>
           ) : null}
-          {canUnlock && doc.lifecycle === 'locked' && !isSuperseded ? (
+          {canUnlock && Boolean((doc as unknown as { locked?: unknown }).locked) && !isSuperseded ? (
             <form action={documentWorkflowAction}>
               <input type="hidden" name="tenantSlug" value={tenant.slug} />
               <input type="hidden" name="documentId" value={doc.id} />

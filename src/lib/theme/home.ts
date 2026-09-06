@@ -112,7 +112,7 @@ export async function loadDomainHome(tenant: Tenant, user: Pick<User, 'id'>, act
 
   const describeAction = (eventType: string): string => {
 
-    const labels: Record<string, string> = { created: 'created', edited: 'edited', submitted: 'submitted', withdrawn: 'withdrew', approved: 'approved', rejected: 'rejected', filed: 'filed', locked: 'locked', unlocked: 'unlocked', soft_deleted: 'deleted', restored: 'restored', superseded: 'was superseded', relationship_added: 'updated links', relationship_removed: 'corrected links', tag_changed: 'updated tags', character_link_changed: 'updated credits', imported: 'imported', exported: 'exported', sl_transfer: 'transferred' }
+    const labels: Record<string, string> = { created: 'created', edited: 'edited', submitted: 'submitted', withdrawn: 'withdrew', approved: 'approved', rejected: 'rejected', deprecated: 'deprecated', filed: 'filed', locked: 'locked', unlocked: 'unlocked', soft_deleted: 'deleted', restored: 'restored', superseded: 'was superseded', relationship_added: 'updated links', relationship_removed: 'corrected links', tag_changed: 'updated tags', character_link_changed: 'updated credits', imported: 'imported', exported: 'exported', sl_transfer: 'transferred' }
 
     return labels[eventType] ?? 'updated'
 

@@ -16,7 +16,8 @@ export default async function ReviewQueuePage({ params, searchParams }: Props) {
   const { tenant, role, user } = await getActiveTenant()
   if (!tenant || tenant.slug !== slug || !user || role !== 'admin') notFound()
   const payload = await getLorePayload()
-  const pending = await payload.find({ collection: 'documents', where: { and: [{ domain: { equals: tenant.id } }, { lifecycle: { equals: 'pending_review' } }, { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] }] }, depth: 1, limit: 200, sort: '-updatedAt' })
+  // P08X-T02: the review queue lists Submitted records.
+  const pending = await payload.find({ collection: 'documents', where: { and: [{ domain: { equals: tenant.id } }, { lifecycle: { equals: 'submitted' } }, { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] }] }, depth: 1, limit: 200, sort: '-updatedAt' })
   const switcherTenants = await getTenantsForUser(user.id)
   return (
     <TenantShell tenant={tenant} cssVars={themeTokensToCssVars(resolveThemeTokens(tenant))} role={role} switcherTenants={switcherTenants}>

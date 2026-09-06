@@ -7,7 +7,7 @@ import { describeProvenanceEvent, provenanceTimelineSort, recordDocumentProvenan
 test('provenance writer appends actor, context, and event type for lifecycle actions', async () => {
   const writes: any[] = []
   const payload = { create: async (args: any) => { writes.push(args); return { id: writes.length } } } as any
-  const events: ProvenanceEventType[] = ['created', 'edited', 'filed', 'locked', 'unlocked']
+  const events: ProvenanceEventType[] = ['created', 'edited', 'filed', 'locked', 'unlocked', 'deprecated']
   for (const eventType of events) {
     await recordDocumentProvenance({ payload, domainId: 4, documentId: 9, eventType, actorUserId: 2, actorCharacterId: 7, context: { before: 'draft', after: eventType } })
   }

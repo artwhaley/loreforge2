@@ -25,6 +25,7 @@ test('pre-P07X Types keep blank creation as the compatibility default', () => {
 test('initial route folder delegates to lifecycle routing and falls back safely', () => {
   const type = { defaultFolder: 10, draftFolder: 11, filedFolder: 12 }
   assert.equal(initialRouteFolder(type, 'draft', null), 11)
-  assert.equal(initialRouteFolder(type, 'pending_review', null), 10)
+  // P08X-T02: submitted routes through the legacy pendingReviewFolder field.
+  assert.equal(initialRouteFolder(type, 'submitted', null), 10)
   assert.equal(initialRouteFolder(null, 'draft', 99), 99)
 })

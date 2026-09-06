@@ -51,7 +51,7 @@ export async function canAccessDocument(args: {
   // document through a Folder grant alone.
   const target = resolveDocumentTarget(session, { id: Number(documentId), folderId: relationId(current.folder), subdomainId: relationId(current.subdomain), documentTypeId: relationId(current.documentType) })
   const decision = decideInSession(session, capability === 'update' ? 'edit_document' : 'read', target)
-  return decision.allowed && (capability !== 'update' || lifecycleEditable(current.lifecycle))
+  return decision.allowed && (capability !== 'update' || lifecycleEditable(current.lifecycle, current.locked))
 }
 
 /**
@@ -149,6 +149,7 @@ export async function readableVersionParentQuery(args: {
   return { parent: { in: visible } }
 }
 
-function lifecycleEditable(lifecycle: unknown): boolean {
-  return canEditDocumentBody(String(lifecycle ?? 'draft') as Lifecycle)
+function lifecycleEditable(lifecycle: unknown, locked: unknown): boolean {
+  // P08X-T02: editable iff unlocked AND Draft or Filed.
+  return canEditDocumentBody(String(lifecycle ?? 'draft') as Lifecycle, Boolean(locked))
 }

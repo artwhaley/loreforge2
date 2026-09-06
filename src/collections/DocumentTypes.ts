@@ -29,6 +29,20 @@ export const DocumentTypes: CollectionConfig = {
       if (Boolean(data?.active ?? originalDoc?.active ?? true) && allowBlank !== true && allowTemplate !== true && allowForm !== true) {
         throw new Error('An active Document Type must enable at least one creation method.')
       }
+      // P08X-T02: the Type's Department and manual type-folder must belong to
+      // this Type's Domain (the type tree is Domain-scoped navigation).
+      if (domainId) {
+        const departmentId = relationId(data?.department ?? originalDoc?.department)
+        if (departmentId != null) {
+          const department = await req.payload.findByID({ collection: 'subdomains', id: departmentId, depth: 0, overrideAccess: true }).catch(() => null) as { domain?: unknown } | null
+          if (!department || relationId(department.domain) !== Number(domainId)) throw new Error('A Document Type Department must belong to the same Domain as the Type.')
+        }
+        const typeFolderId = relationId(data?.typeFolder ?? originalDoc?.typeFolder)
+        if (typeFolderId != null) {
+          const typeFolder = await req.payload.findByID({ collection: 'type-folders', id: typeFolderId, depth: 0, overrideAccess: true }).catch(() => null) as { domain?: unknown } | null
+          if (!typeFolder || relationId(typeFolder.domain) !== Number(domainId)) throw new Error('A Document Type folder must belong to the same Domain as the Type.')
+        }
+      }
       // P07X-T05: every configured lifecycle route Folder must belong to this
       // Type's Domain. Multiple states may share one Folder; a foreign Folder
       // must never be routable from this Type.
@@ -52,6 +66,24 @@ export const DocumentTypes: CollectionConfig = {
     { name: 'name', type: 'text', required: true },
     { name: 'description', type: 'textarea' },
     { name: 'active', type: 'checkbox', defaultValue: true },
+    // P08X-T02: the type tree placement — which Department root the Type hangs
+    // under, and the optional manual navigation folder within it. Unassigned is
+    // only ever derived (archived/null Department), never chosen.
+    { name: 'department', type: 'relationship', relationTo: 'subdomains', label: 'Department', index: true, admin: { description: 'P08X-T02: Department root for this Document Type in the type tree.' } },
+    { name: 'typeFolder', type: 'relationship', relationTo: 'type-folders', label: 'Type folder', index: true, admin: { description: 'P08X-T02: manual navigation-only folder inside the Document Type tree.' } },
+    {
+      name: 'templateSelection',
+      type: 'select',
+      required: true,
+      defaultValue: 'blank',
+      label: 'Template selection',
+      admin: { description: 'P08X-T02: the single stored selection. The current template is derived (Blank → none, otherwise the Type\'s active child of that kind). Constructed templates of other kinds are never destroyed by switching.' },
+      options: [
+        { label: 'Blank Document', value: 'blank' },
+        { label: 'Markdown Template', value: 'markdown' },
+        { label: 'Form Template', value: 'form' },
+      ],
+    },
     { name: 'allowBlank', type: 'checkbox', defaultValue: true, label: 'Allow blank documents' },
     { name: 'allowTemplate', type: 'checkbox', defaultValue: false, label: 'Allow document Templates' },
     { name: 'allowForm', type: 'checkbox', defaultValue: false, label: 'Allow Forms' },

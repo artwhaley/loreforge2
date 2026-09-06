@@ -52,7 +52,7 @@ test('T11 integrated fixture separates identities, Types, roles, and workflow ro
   assert.match(rendered.body, /A broken window was documented/)
   assert.match(rendered.body, /Filed through the Ar civic archive\./)
 
-  const pending = await payload.create({ collection: 'documents', overrideAccess: true, context: { allowSystemCreate: true }, data: { domain: fixture.domain, documentType: fixture.types.incident, folder: fixture.folders.pendingIncident, title: 'T11 Pending Incident', body: '# T11\n', lifecycle: 'pending_review', publicAccess: 'inherit', sourceKind: 'web', origin: 'web-editor', createdBy: fixture.users.tarl } } as never)
+  const pending = await payload.create({ collection: 'documents', overrideAccess: true, context: { allowSystemCreate: true }, data: { domain: fixture.domain, documentType: fixture.types.incident, folder: fixture.folders.pendingIncident, title: 'T11 Pending Incident', body: '# T11\n', lifecycle: 'submitted', publicAccess: 'inherit', sourceKind: 'web', origin: 'web-editor', createdBy: fixture.users.tarl } } as never)
   const work = await projectDomainWork(payload, actor(fixture.users.marlen, fixture.characters.marlen), fixture.domain, { domainSlug: 'ar' })
   assert.ok(work.entries.some((entry) => entry.kind === 'document' && entry.id === Number(pending.id)))
   await transitionDocument({ payload, userId: fixture.users.marlen, domainId: fixture.domain, documentId: pending.id, actorCharacterId: fixture.characters.marlen, operation: 'approve' })
@@ -61,8 +61,11 @@ test('T11 integrated fixture separates identities, Types, roles, and workflow ro
   assert.equal(relationNumber(filed.folder), fixture.folders.investigatingIncident)
   await transitionDocument({ payload, userId: fixture.users.marlen, domainId: fixture.domain, documentId: pending.id, actorCharacterId: fixture.characters.marlen, operation: 'lock' })
   const locked = await payload.findByID({ collection: 'documents', id: pending.id, depth: 0, overrideAccess: true })
-  assert.equal(locked.lifecycle, 'locked')
-  assert.equal(relationNumber(locked.folder), fixture.folders.closedIncident)
+  // P08X-T02: locking is a boolean toggle — the record stays Filed in its
+  // Filed folder, now not-editable.
+  assert.equal(locked.lifecycle, 'filed')
+  assert.equal(locked.locked, true)
+  assert.equal(relationNumber(locked.folder), fixture.folders.investigatingIncident)
 })
 
 test('T11 integrated bootstrap and Character invite path provisions exactly one Domain admin', async () => {

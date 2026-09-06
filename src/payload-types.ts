@@ -84,6 +84,8 @@ export interface Config {
     'document-tags': DocumentTag;
     'document-relationships': DocumentRelationship;
     'document-types': DocumentType;
+    'type-folders': TypeFolder;
+    'lifecycle-stages': LifecycleStage;
     templates: Template;
     invitations: Invitation;
     'domain-bootstrap-requests': DomainBootstrapRequest;
@@ -122,6 +124,8 @@ export interface Config {
     'document-tags': DocumentTagsSelect<false> | DocumentTagsSelect<true>;
     'document-relationships': DocumentRelationshipsSelect<false> | DocumentRelationshipsSelect<true>;
     'document-types': DocumentTypesSelect<false> | DocumentTypesSelect<true>;
+    'type-folders': TypeFoldersSelect<false> | TypeFoldersSelect<true>;
+    'lifecycle-stages': LifecycleStagesSelect<false> | LifecycleStagesSelect<true>;
     templates: TemplatesSelect<false> | TemplatesSelect<true>;
     invitations: InvitationsSelect<false> | InvitationsSelect<true>;
     'domain-bootstrap-requests': DomainBootstrapRequestsSelect<false> | DomainBootstrapRequestsSelect<true>;
@@ -615,7 +619,15 @@ export interface Document {
   body: string;
   origin: 'web-editor' | 'markdown-import' | 'form';
   sourceKind: 'web' | 'markdown-import' | 'form' | 'correspondence' | 'second-life';
-  lifecycle: 'draft' | 'pending_review' | 'filed' | 'locked';
+  lifecycle: 'draft' | 'submitted' | 'filed' | 'deprecated';
+  /**
+   * P08X-T02: exactly one meaning — not editable. Live records can be locked (e.g. a court ruling in effect); superseded records are locked as part of preservation. Never a lifecycle stage.
+   */
+  locked?: boolean | null;
+  /**
+   * P08X-T02: when true, a Draft-stage record is visible only to its creator Character. Enforcement lands in P08X-T06.
+   */
+  privateDraft?: boolean | null;
   publicAccess: 'inherit' | 'private' | 'public';
   softDeletedAt?: string | null;
   softDeletedBy?: (number | null) | User;
@@ -636,6 +648,18 @@ export interface DocumentType {
   name: string;
   description?: string | null;
   active?: boolean | null;
+  /**
+   * P08X-T02: Department root for this Document Type in the type tree.
+   */
+  department?: (number | null) | Subdomain;
+  /**
+   * P08X-T02: manual navigation-only folder inside the Document Type tree.
+   */
+  typeFolder?: (number | null) | TypeFolder;
+  /**
+   * P08X-T02: the single stored selection. The current template is derived (Blank → none, otherwise the Type's active child of that kind). Constructed templates of other kinds are never destroyed by switching.
+   */
+  templateSelection: 'blank' | 'markdown' | 'form';
   allowBlank?: boolean | null;
   allowTemplate?: boolean | null;
   allowForm?: boolean | null;
@@ -661,6 +685,29 @@ export interface DocumentType {
    */
   lockedFolder?: (number | null) | Folder;
   templateFilingPolicy: 'inherit' | 'direct-file' | 'review-required';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "type-folders".
+ */
+export interface TypeFolder {
+  id: number;
+  domain: number | Domain;
+  /**
+   * Which Department root this navigation folder hangs under.
+   */
+  department?: (number | null) | Subdomain;
+  name: string;
+  /**
+   * Optional nesting inside another navigation folder.
+   */
+  parent?: (number | null) | TypeFolder;
+  /**
+   * System-created folders (e.g. Unassigned scaffolding) are protected from deletion.
+   */
+  systemManaged?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -718,9 +765,52 @@ export interface DocumentRelationship {
   target: number | Document;
   kind: 'supersedes';
   lockApplied?: boolean | null;
-  priorLifecycle?: ('filed' | 'locked') | null;
+  priorLocked?: boolean | null;
   actorUser: number | User;
   actorCharacter?: (number | null) | Character;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lifecycle-stages".
+ */
+export interface LifecycleStage {
+  id: number;
+  documentType: number | DocumentType;
+  stage: 'draft' | 'submitted' | 'filed' | 'deprecated';
+  /**
+   * When unchecked the stage is not part of the Type’s lifecycle and the rest of the row is inert.
+   */
+  enabled?: boolean | null;
+  /**
+   * Lets the create-document screen start a record in this stage (subject to the actor’s stage permissions).
+   */
+  allowOnCreation?: boolean | null;
+  /**
+   * Documents in this stage live in this Folder; stage transitions relocate records here.
+   */
+  folder?: (number | null) | Folder;
+  /**
+   * Draft row only: when enabled, creators choose private or public draft. Private drafts are visible only to the creating Character.
+   */
+  privateDraftsAllowed?: boolean | null;
+  /**
+   * Roles that may view documents at this stage.
+   */
+  readRoles?: (number | Role)[] | null;
+  /**
+   * Roles that may create documents at this stage and edit their own at this stage.
+   */
+  writeRoles?: (number | Role)[] | null;
+  /**
+   * Roles that may edit other people’s documents at this stage directly.
+   */
+  editOthersRoles?: (number | Role)[] | null;
+  /**
+   * Roles that may change a document’s lifecycle stage into this one (which moves it to this stage’s folder).
+   */
+  manageRoles?: (number | Role)[] | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -848,6 +938,7 @@ export interface DocumentProvenanceEvent {
     | 'withdrawn'
     | 'approved'
     | 'rejected'
+    | 'deprecated'
     | 'filed'
     | 'locked'
     | 'unlocked'
@@ -1211,6 +1302,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'document-types';
         value: number | DocumentType;
+      } | null)
+    | ({
+        relationTo: 'type-folders';
+        value: number | TypeFolder;
+      } | null)
+    | ({
+        relationTo: 'lifecycle-stages';
+        value: number | LifecycleStage;
       } | null)
     | ({
         relationTo: 'templates';
@@ -1585,7 +1684,7 @@ export interface DocumentRelationshipsSelect<T extends boolean = true> {
   target?: T;
   kind?: T;
   lockApplied?: T;
-  priorLifecycle?: T;
+  priorLocked?: T;
   actorUser?: T;
   actorCharacter?: T;
   updatedAt?: T;
@@ -1600,6 +1699,9 @@ export interface DocumentTypesSelect<T extends boolean = true> {
   name?: T;
   description?: T;
   active?: T;
+  department?: T;
+  typeFolder?: T;
+  templateSelection?: T;
   allowBlank?: T;
   allowTemplate?: T;
   allowForm?: T;
@@ -1610,6 +1712,37 @@ export interface DocumentTypesSelect<T extends boolean = true> {
   filedFolder?: T;
   lockedFolder?: T;
   templateFilingPolicy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "type-folders_select".
+ */
+export interface TypeFoldersSelect<T extends boolean = true> {
+  domain?: T;
+  department?: T;
+  name?: T;
+  parent?: T;
+  systemManaged?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lifecycle-stages_select".
+ */
+export interface LifecycleStagesSelect<T extends boolean = true> {
+  documentType?: T;
+  stage?: T;
+  enabled?: T;
+  allowOnCreation?: T;
+  folder?: T;
+  privateDraftsAllowed?: T;
+  readRoles?: T;
+  writeRoles?: T;
+  editOthersRoles?: T;
+  manageRoles?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1778,6 +1911,8 @@ export interface DocumentsSelect<T extends boolean = true> {
   origin?: T;
   sourceKind?: T;
   lifecycle?: T;
+  locked?: T;
+  privateDraft?: T;
   publicAccess?: T;
   softDeletedAt?: T;
   softDeletedBy?: T;

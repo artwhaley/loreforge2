@@ -64,13 +64,14 @@ export async function projectDomainWork(payload: Payload, actor: Actor, domainId
   // Pending Work is a projection of canonical Documents. Every row is filtered
   // through the normal approve_document evaluator, so an ordinary Character
   // sees only Types it may approve; a domain_admin sees all of its Domain.
-  const pending = await payload.find({ collection: 'documents', where: { and: [{ domain: { equals: domainIdNumber } }, { lifecycle: { equals: 'pending_review' } }, { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] }] }, depth: 1, limit: 500, sort: '-updatedAt', overrideAccess: true })
+  // P08X-T02: the review queue projects Submitted records.
+  const pending = await payload.find({ collection: 'documents', where: { and: [{ domain: { equals: domainIdNumber } }, { lifecycle: { equals: 'submitted' } }, { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] }] }, depth: 1, limit: 500, sort: '-updatedAt', overrideAccess: true })
   for (const document of pending.docs) {
     const allowed = await isAllowed({ payload, actor, domainId: domainIdNumber, capability: 'approve_document', resource: { type: 'Document', id: document.id } })
     if (!allowed) continue
     const folderName = document.folder && typeof document.folder === 'object' ? text(document.folder.name) : ''
     const domainSlug = options.domainSlug ?? text((document.domain as { slug?: unknown })?.slug, '')
-    entries.push({ kind: 'document', id: Number(document.id), title: document.title, summary: 'Pending review', href: `/domain/${domainSlug}/documents/${document.id}`, requestedAt: text(document.updatedAt), domainId: domainIdNumber, folderName })
+    entries.push({ kind: 'document', id: Number(document.id), title: document.title, summary: 'Submitted', href: `/domain/${domainSlug}/documents/${document.id}`, requestedAt: text(document.updatedAt), domainId: domainIdNumber, folderName })
   }
   entries.sort((left, right) => String(right.requestedAt ?? '').localeCompare(String(left.requestedAt ?? '')))
   return { authorized: true, domainAdmin, entries }

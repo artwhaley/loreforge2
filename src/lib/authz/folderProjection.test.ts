@@ -42,7 +42,7 @@ async function childFolder(domainId: number, parentId: number, name: string): Pr
 
 async function documentType(domainId: number, name: string): Promise<number> {
   const existing = await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: domainId } }, { name: { equals: name } }] }, depth: 0, limit: 1, overrideAccess: true })
-  const type = existing.docs[0] ?? await payload.create({ collection: 'document-types', overrideAccess: true, data: { domain: domainId, name, active: true, defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit' } })
+  const type = existing.docs[0] ?? await payload.create({ collection: 'document-types', overrideAccess: true, data: { domain: domainId, name, active: true, templateSelection: 'blank', defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit' } })
   return Number(type.id)
 }
 

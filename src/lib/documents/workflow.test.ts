@@ -20,23 +20,33 @@ test('workflow transitions append the corresponding provenance event', async () 
   const cases: Array<[WorkflowOperation, string, string]> = [
     ['submit', 'draft', 'submitted'],
     ['file', 'draft', 'filed'],
-    ['approve', 'pending_review', 'approved'],
-    ['reject', 'pending_review', 'rejected'],
-    ['lock', 'filed', 'locked'],
-    ['unlock', 'locked', 'unlocked'],
+    ['approve', 'submitted', 'approved'],
+    ['reject', 'submitted', 'rejected'],
   ]
   for (const [operation, from, eventType] of cases) {
     const { payload, updates, events } = fakePayload(from)
     await transitionDocument({ payload, userId: 2, domainId: 4, documentId: 12, operation, note: operation === 'reject' ? 'Needs a seal' : null })
-    assert.equal(updates[0].data.lifecycle, operation === 'submit' ? 'pending_review' : operation === 'file' || operation === 'approve' || operation === 'unlock' ? 'filed' : operation === 'reject' ? 'draft' : 'locked')
+    const to = operation === 'submit' ? 'submitted' : operation === 'file' || operation === 'approve' ? 'filed' : 'draft'
+    assert.equal(updates[0].data.lifecycle, to)
     assert.equal(events[0].data.eventType, eventType)
     if (operation === 'reject') assert.equal(events[0].data.context.note, 'Needs a seal')
   }
 })
 
+test('lock and unlock toggle the locked boolean without moving stages', async () => {
+  for (const [operation, expectedLocked, eventType] of [['lock', true, 'locked'], ['unlock', false, 'unlocked']] as Array<[WorkflowOperation, boolean, string]>) {
+    const { payload, updates, events } = fakePayload('filed')
+    await transitionDocument({ payload, userId: 2, domainId: 4, documentId: 12, operation })
+    assert.equal(updates[0].data.locked, expectedLocked)
+    assert.equal(updates[0].data.lifecycle, undefined, 'lock/unlock never writes a lifecycle value')
+    assert.equal(events[0].data.eventType, eventType)
+    assert.equal(events[0].data.context.reason, 'manual')
+  }
+})
+
 test('failed lifecycle mutation does not append a misleading event', async () => {
   const { payload, events } = fakePayload('filed', true)
-  await assert.rejects(() => transitionDocument({ payload, userId: 2, domainId: 4, documentId: 12, operation: 'lock' }))
+  await assert.rejects(() => transitionDocument({ payload, userId: 2, domainId: 4, documentId: 12, operation: 'file' }))
   assert.equal(events.length, 0)
 })
 
@@ -47,11 +57,25 @@ test('direct lifecycle mutation requires interim supervisor authority', async ()
     find: async () => ({ docs: [] }),
   }
   await assert.rejects(() => beforeChange({
-    data: { domain: 4, folder: 1, lifecycle: 'locked' },
-    originalDoc: { domain: 4, folder: 1, lifecycle: 'filed' },
+    data: { domain: 4, folder: 1, lifecycle: 'filed' },
+    originalDoc: { domain: 4, folder: 1, lifecycle: 'draft' },
     operation: 'update',
     req: { payload, user: { id: 11 }, context: {} },
   }), /An authorized acting identity or Role is required/)
+})
+
+test('a direct locked-flag toggle requires lock/unlock authority', async () => {
+  const beforeChange = Documents.hooks?.beforeChange?.[0] as any
+  const payload = {
+    findByID: async () => ({ id: 4, ownerUser: 10 }),
+    find: async () => ({ docs: [] }),
+  }
+  await assert.rejects(() => beforeChange({
+    data: { domain: 4, folder: 1, locked: true },
+    originalDoc: { domain: 4, folder: 1, lifecycle: 'filed', locked: false },
+    operation: 'update',
+    req: { payload, user: { id: 11 }, context: {} },
+  }), /authorized acting identity or Role is required to lock or unlock/)
 })
 
 test('direct Document reads fail closed for guessed revision callers', async () => {

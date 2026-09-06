@@ -97,24 +97,36 @@ export const Documents: CollectionConfig = {
         const to = String(data?.lifecycle ?? originalDoc?.lifecycle ?? 'draft') as Lifecycle
         if (operation === 'update') {
           const supersedesLock = (req.context as Record<string, unknown> | undefined)?.supersedesLock === true
+          // P08X-T02: the locked boolean is the only thing supersession may
+          // touch — it must never move a Document between lifecycle stages.
           if (supersedesLock) {
-            // P05R-T02: supersedesLock is not a general lifecycle bypass. Only
-            // Filed records may be locked by supersession; an already-Locked
-            // predecessor may stay Locked without a bogus transition; Draft /
-            // Pending-Review records must never jump to Locked through it.
-            if (to !== 'locked') throw new Error('A superseded Document can only transition to Locked.')
-            if (from !== 'filed' && from !== 'locked') throw new Error('Only Filed or already-Locked Documents may be locked by supersession.')
-          } else {
+            if (data?.locked !== true && originalDoc?.locked !== true) throw new Error('A superseded Document can only receive the preservation lock.')
+            if (data?.lifecycle !== undefined && data.lifecycle !== originalDoc?.lifecycle) throw new Error('Supersession never moves a Document between lifecycle stages.')
+          } else if (data?.locked !== undefined && Boolean(data.locked) !== Boolean(originalDoc?.locked)) {
+            // P08X-T02: lock/unlock is an ordinary boolean toggle (never a
+            // stage move) requiring the frozen lock_document/unlock_document
+            // capability. Deprecate/Restore stage moves never touch this flag.
+            if (req.user?.id && domainId) {
+              const decision = await evaluatePermission({ payload: req.payload, actor: { userId: req.user.id, activeCharacterId: requestActiveCharacterId(req) }, domainId, capability: data?.locked === true ? 'lock_document' : 'unlock_document', resource: { type: 'Document', id: originalDoc?.id ?? 0 } })
+              if (!decision.allowed) throw new Error('An authorized acting identity or Role is required to lock or unlock this Document.')
+            }
+          } else if (from !== to) {
             assertLifecycleTransition(from, to)
+            // Defense in depth behind access.update for stage moves with a
+            // frozen capability. Submit (into Submitted) is author-allowed;
+            // Deprecate has no frozen capability and is authorized through the
+            // stage-manage merge (P08X-T06) at the workflow seam.
+            const capabilityFor = to === 'filed' ? (from === 'submitted' ? 'approve_document' : 'file_document') : to === 'draft' ? 'edit_document' : null
+            if (capabilityFor && req.user?.id && domainId) {
+              // P07X-T02: the transition decision evaluates the acting identity
+              // (carried by the selector cookie), never ambient User authority.
+              const decision = await evaluatePermission({ payload: req.payload, actor: { userId: req.user.id, activeCharacterId: requestActiveCharacterId(req) }, domainId, capability: capabilityFor, resource: { type: 'Document', id: originalDoc?.id ?? 0 } })
+              if (!decision.allowed) throw new Error('An authorized acting identity or Role is required for this lifecycle transition.')
+            }
           }
-          const isPrivilegedTransition = from !== to && to !== 'pending_review'
-          if (isPrivilegedTransition && !supersedesLock && req.user?.id && domainId) {
-            // P07X-T02: the transition decision evaluates the acting identity
-            // (carried by the selector cookie), never ambient User authority.
-            const decision = await evaluatePermission({ payload: req.payload, actor: { userId: req.user.id, activeCharacterId: requestActiveCharacterId(req) }, domainId, capability: to === 'locked' ? 'lock_document' : to === 'filed' ? (from === 'pending_review' ? 'approve_document' : 'file_document') : to === 'draft' ? 'edit_document' : 'unlock_document', resource: { type: 'Document', id: originalDoc?.id ?? 0 } })
-            if (!decision.allowed) throw new Error('An authorized acting identity or Role is required for this lifecycle transition.')
-          }
-          if (data?.body !== undefined && data.body !== originalDoc?.body && !canEditDocumentBody(from)) throw new Error('This Document is not editable in its current lifecycle state.')
+          // P08X-T02: editable iff unlocked AND Draft or Filed.
+          const locked = Boolean(data?.locked ?? originalDoc?.locked)
+          if (data?.body !== undefined && data.body !== originalDoc?.body && !canEditDocumentBody(from, locked)) throw new Error('This Document is not editable in its current lifecycle state.')
         }
         const context = req.context as Record<string, unknown> | undefined
         // Every normal application-created Document must carry an explicit
@@ -241,12 +253,31 @@ export const Documents: CollectionConfig = {
       type: 'select',
       required: true,
       defaultValue: 'draft',
+      // P08X-T02: exactly Draft / Submitted / Filed / Deprecated. `locked` is
+      // the separate boolean below, not a stage.
       options: [
         { label: 'Draft', value: 'draft' },
-        { label: 'Pending Review', value: 'pending_review' },
+        { label: 'Submitted', value: 'submitted' },
         { label: 'Filed', value: 'filed' },
-        { label: 'Locked', value: 'locked' },
+        { label: 'Deprecated', value: 'deprecated' },
       ],
+    },
+    {
+      name: 'locked',
+      type: 'checkbox',
+      defaultValue: false,
+      index: true,
+      admin: {
+        description: 'P08X-T02: exactly one meaning — not editable. Live records can be locked (e.g. a court ruling in effect); superseded records are locked as part of preservation. Never a lifecycle stage.',
+      },
+    },
+    {
+      name: 'privateDraft',
+      type: 'checkbox',
+      defaultValue: true,
+      admin: {
+        description: 'P08X-T02: when true, a Draft-stage record is visible only to its creator Character. Enforcement lands in P08X-T06.',
+      },
     },
     { name: 'publicAccess', type: 'select', required: true, defaultValue: 'inherit', options: [{ label: 'Inherit', value: 'inherit' }, { label: 'Private', value: 'private' }, { label: 'Public', value: 'public' }] },
     { name: 'softDeletedAt', type: 'date', admin: { readOnly: true } },

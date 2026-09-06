@@ -113,7 +113,7 @@ export async function seedPhase7Acceptance(payload: Payload) {
   }
   const documents: Record<string, number> = {}
   for (const [key, title, folderKey, lifecycle] of [
-    ['deed', 'P7 Working Deed', 'deeds', 'filed'], ['old', 'P7 Superseded Deed', 'deeds', 'locked'],
+    ['deed', 'P7 Working Deed', 'deeds', 'filed'], ['old', 'P7 Superseded Deed', 'deeds', 'filed'],
     ['current', 'P7 Current Deed', 'deeds', 'filed'], ['history', 'P7 History Record', 'history', 'filed'],
     ['first', 'P7 First Platoon Plan', 'first', 'filed'], ['second', 'P7 Second Platoon Plan', 'second', 'filed'],
     ['incident', 'P7 Incident Report', 'incidents', 'filed'], ['court', 'P7 Court Record', 'courts', 'filed'],
@@ -127,11 +127,17 @@ export async function seedPhase7Acceptance(payload: Payload) {
       folders.outside = folder
     }
     const types = await payload.find({ collection: 'document-types', where: { domain: { equals: domain } }, limit: 1, depth: 0 })
-    const type = types.docs[0] ?? await payload.create({ collection: 'document-types', data: { domain, name: 'Plain Text', active: true, allowBlank: true, allowTemplate: true, allowForm: true, defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit', defaultFolder: folder } })
+    const type = types.docs[0] ?? await payload.create({ collection: 'document-types', data: { domain, name: 'Plain Text', active: true, templateSelection: 'blank', allowBlank: true, allowTemplate: true, allowForm: true, defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit', defaultFolder: folder } })
     const rows = await payload.find({ collection: 'documents', where: { and: [{ domain: { equals: domain } }, { title: { equals: title } }] }, depth: 0, limit: 1 })
     documents[key] = Number((rows.docs[0] ?? await payload.create({ collection: 'documents', context: { allowSystemCreate: true }, data: { domain, documentType: type.id, folder, title, body: `# ${title}\n\nPhase 7 acceptance fixture.`, lifecycle, publicAccess: 'inherit', sourceKind: 'web', origin: 'web-editor', createdBy: key === 'outside' ? users.outside : users.owner } })).id)
   }
-  if (!(await payload.find({ collection: 'document-relationships', where: { source: { equals: documents.current } }, depth: 0, limit: 1 })).docs.length) await payload.create({ collection: 'document-relationships', data: { domain: domainId, source: documents.current, target: documents.old, kind: 'supersedes', lockApplied: true, priorLifecycle: 'filed', actorUser: users.owner, actorCharacter: characters.owner } })
+  if (!(await payload.find({ collection: 'document-relationships', where: { source: { equals: documents.current } }, depth: 0, limit: 1 })).docs.length) {
+    // P08X-T02: supersession preserves the stage and applies the preservation
+    // lock as a boolean; the edge records priorLocked for correction.
+    await payload.create({ collection: 'document-relationships', data: { domain: domainId, source: documents.current, target: documents.old, kind: 'supersedes', lockApplied: true, priorLocked: false, actorUser: users.owner, actorCharacter: characters.owner } })
+  }
+  // The superseded fixture deed is preserved: Filed in its folder, locked.
+  await payload.update({ collection: 'documents', id: documents.old, data: { locked: true } })
   for (const key of ['claimTarget', 'raceTarget']) {
     const name = key === 'claimTarget' ? 'P7 Unclaimed Applicant' : 'P7 Concurrent Claim Target'
     const rows = await payload.find({ collection: 'characters', where: { name: { equals: name } }, depth: 0, limit: 1 })

@@ -4,7 +4,7 @@ import { PROVENANCE_EVENT_TYPES, type ProvenanceEventType } from '@/lib/document
 
 const EVENT_LABELS: Record<ProvenanceEventType, string> = {
   created: 'Created', edited: 'Edited', submitted: 'Submitted for review', withdrawn: 'Withdrawn',
-  approved: 'Approved', rejected: 'Rejected', filed: 'Filed', locked: 'Locked', unlocked: 'Unlocked',
+  approved: 'Approved', rejected: 'Rejected', deprecated: 'Deprecated', filed: 'Filed', locked: 'Locked', unlocked: 'Unlocked',
   soft_deleted: 'Soft-deleted', restored: 'Restored', shared: 'Shared', share_revoked: 'Share revoked',
   relationship_added: 'Relationship added', relationship_removed: 'Relationship removed', superseded: 'Superseded',
   tag_changed: 'Tag changed', character_link_changed: 'Character link changed',

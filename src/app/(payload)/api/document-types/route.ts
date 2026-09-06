@@ -41,14 +41,21 @@ export async function POST(request: Request) {
   if (!name || !policiesValid) return NextResponse.redirect(new URL(`${destination}?error=invalid`, request.url), 303)
 
   const checked = (key: string) => form.get(key) === 'on'
-  const data = {
+  // P08X-T02: the inspector drives the legacy allow* flags from the single
+  // templateSelection so creation keeps working unchanged; the legacy form
+  // posts allow* directly and keeps working too.
+  const rawSelection = String(form.get('templateSelection') ?? '').trim()
+  const templateSelection = (['blank', 'markdown', 'form'] as const).includes(rawSelection as never) ? rawSelection as 'blank' | 'markdown' | 'form' : null
+  const data: Record<string, unknown> = {
     domain: domain.id,
     name,
     description,
     active: checked('active'),
-    allowBlank: checked('allowBlank'),
-    allowTemplate: checked('allowTemplate'),
-    allowForm: checked('allowForm'),
+    ...(templateSelection
+      ? { templateSelection, allowBlank: templateSelection === 'blank', allowTemplate: templateSelection === 'markdown', allowForm: templateSelection === 'form' }
+      : { allowBlank: checked('allowBlank'), allowTemplate: checked('allowTemplate'), allowForm: checked('allowForm') }),
+    department: idOf(form.get('department')),
+    typeFolder: idOf(form.get('typeFolder')),
     defaultFilingPolicy,
     templateFilingPolicy,
     defaultFolder: idOf(form.get('defaultFolder')),

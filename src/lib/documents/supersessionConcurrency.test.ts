@@ -27,7 +27,7 @@ test('P05R-T15: independently started supersedes attempts produce one complete w
   const second = await getPayload({ config })
   const owner = await first.create({ collection: 'users', data: { email: 'race-owner@example.test', password: 'test-password-123', name: 'Race owner' } } as never)
   const domain = await first.create({ collection: 'domains', data: { name: 'Race Domain', slug: 'race-domain', kind: 'community', ownerUser: owner.id, defaultFilingPolicy: 'direct-file' } } as never)
-  const type = await first.create({ collection: 'document-types', data: { domain: domain.id, name: 'Race Text', active: true, defaultFilingPolicy: 'direct-file' } } as never)
+  const type = await first.create({ collection: 'document-types', data: { domain: domain.id, name: 'Race Text', active: true, templateSelection: 'blank', defaultFilingPolicy: 'direct-file' } } as never)
   const folder = await first.create({ collection: 'folders', data: { domain: domain.id, name: 'Domain Root', parent: null, systemManaged: true, filingPolicy: 'inherit', publicAccess: 'inherit' } } as never)
   const makeDoc = (title: string) => first.create({ collection: 'documents', context: { allowSystemCreate: true }, data: { domain: domain.id, documentType: type.id, folder: folder.id, title, body: `# ${title}\n\n`, origin: 'web-editor', sourceKind: 'web', lifecycle: 'filed', publicAccess: 'inherit', createdBy: owner.id } } as never)
   const winner = await makeDoc('Concurrent winner')
@@ -65,8 +65,11 @@ test('P05R-T15: independently started supersedes attempts produce one complete w
   assert.equal(edges.length, 1, 'one supersession edge remains')
   assert.equal(Number(edges[0].target_id), Number(target.id))
   assert.ok([Number(winner.id), Number(loser.id)].includes(Number(edges[0].source_id)))
-  const predecessor = verifier.prepare('SELECT lifecycle FROM documents WHERE id=?').get(target.id) as { lifecycle: string }
-  assert.equal(predecessor.lifecycle, 'locked', 'the predecessor has the single legitimate lock transition')
+  const predecessor = verifier.prepare('SELECT lifecycle, locked FROM documents WHERE id=?').get(target.id) as { lifecycle: string; locked: number }
+  // P08X-T02: supersession preserves the stage and applies the preservation
+  // lock as a boolean — the predecessor stays Filed, now not-editable.
+  assert.equal(predecessor.lifecycle, 'filed', 'the predecessor keeps its stage under supersession')
+  assert.equal(predecessor.locked, 1, 'the predecessor receives the preservation lock')
   const loserId = Number(edges[0].source_id) === Number(winner.id) ? loser.id : winner.id
   const losingDoc = verifier.prepare('SELECT lifecycle FROM documents WHERE id=?').get(loserId) as { lifecycle: string }
   assert.equal(losingDoc.lifecycle, 'filed', 'losing successor remains Filed')

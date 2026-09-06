@@ -12,12 +12,17 @@ const relationId = (value: unknown): number | null => value && typeof value === 
   ? Number((value as { id: number | string }).id)
   : value === null || value === undefined || value === '' ? null : Number(value)
 
-/** The Document Type route field that owns each lifecycle state (P07X-T05). */
+/**
+ * The Document Type route field that owns each lifecycle state (P07X-T05,
+ * P08X-T02 vocabulary). `submitted` maps the legacy pendingReviewFolder field
+ * and `deprecated` maps the legacy lockedFolder field; the legacy fields stay
+ * physically in place as fallback compatibility until a later cleanup stack.
+ */
 export const LIFECYCLE_ROUTE_FIELDS: Record<Lifecycle, keyof RoutingFolderShape> = {
   draft: 'draftFolder',
-  pending_review: 'pendingReviewFolder',
+  submitted: 'pendingReviewFolder',
   filed: 'filedFolder',
-  locked: 'lockedFolder',
+  deprecated: 'lockedFolder',
 }
 
 /**

@@ -57,7 +57,7 @@ export default async function EditDocumentPage({ params }: Props) {
       }]
     })
   const tokens = resolveThemeTokens(tenant)
-  const editable = canEditDocumentBody(doc.lifecycle)
+  const editable = canEditDocumentBody(doc.lifecycle, Boolean((doc as unknown as { locked?: unknown }).locked))
 
   return (
     <TenantShell
@@ -68,7 +68,7 @@ export default async function EditDocumentPage({ params }: Props) {
     >
       <section>
         <p><a href={`/domain/${tenant.slug}/records`}>Records</a> / <a href={`/domain/${tenant.slug}/documents/${doc.id}`}>{doc.title}</a> / Edit</p>
-        {!editable ? <p role="status">This record is <strong>{doc.lifecycle.replace('_', ' ')}</strong> and is read-only. A Domain administrator can return it to an editable state.</p> : null}
+        {!editable ? <p role="status">This record is <strong>{Boolean((doc as unknown as { locked?: unknown }).locked) ? 'locked' : doc.lifecycle.replace('_', ' ')}</strong> and is read-only. A Domain administrator can unlock or return it to an editable stage.</p> : null}
         <DocumentEditor
           entityId={doc.id}
           entityType="document"

@@ -125,6 +125,7 @@ async function ensureDocumentType(payload: Payload, args: { domainId: Id; name: 
     name: args.name,
     description: args.description,
     active: true,
+    templateSelection: 'blank',
     allowBlank: args.allowBlank,
     allowTemplate: args.allowTemplate,
     allowForm: args.allowForm,

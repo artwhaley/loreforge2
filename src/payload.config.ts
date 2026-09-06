@@ -9,6 +9,8 @@ import sharp from 'sharp'
 
 import { Documents } from './collections/Documents'
 import { DocumentTypes } from './collections/DocumentTypes'
+import { TypeFolders } from './collections/TypeFolders'
+import { LifecycleStages } from './collections/LifecycleStages'
 import { DocumentProvenanceEvents } from './collections/DocumentProvenanceEvents'
 import { DomainAuditEvents } from './collections/DomainAuditEvents'
 import { Characters } from './collections/Characters'
@@ -155,7 +157,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Characters, CharacterClaimRequests, CharacterMergeRequests, DomainCharacterContexts, DomainMemberships, Domains, DomainAdmins, Subdomains, Roles, RoleAssignments, PermissionRules, DocumentCharacterLinks, Tags, DocumentTags, DocumentRelationships, DocumentTypes, Templates, Invitations, DomainBootstrapRequests, DomainJoinRequests, DocumentProvenanceEvents, DomainAuditEvents, Tenants, Memberships, Documents, Folders, Pages, Media],
+  collections: [Users, Characters, CharacterClaimRequests, CharacterMergeRequests, DomainCharacterContexts, DomainMemberships, Domains, DomainAdmins, Subdomains, Roles, RoleAssignments, PermissionRules, DocumentCharacterLinks, Tags, DocumentTags, DocumentRelationships, DocumentTypes, TypeFolders, LifecycleStages, Templates, Invitations, DomainBootstrapRequests, DomainJoinRequests, DocumentProvenanceEvents, DomainAuditEvents, Tenants, Memberships, Documents, Folders, Pages, Media],
   // Security (pre-Phase-8 audit S1): the product uses REST and guarded custom
   // routes only. The generated GraphQL endpoint is another unauthenticated-
   // introspection/mutation surface to audit for no benefit; keep it off.

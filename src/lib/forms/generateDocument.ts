@@ -180,7 +180,8 @@ export async function generateDocumentFromSubmission(args: {
   if (!Number.isFinite(typeDomain) || typeDomain !== Number(tenant.id)) throw new Error('The selected Document Type must belong to this Domain.')
   if (!neutral) throw new Error('Legacy form metadata is no longer a customer creation path.')
   const lifecyclePolicy = (form as NeutralTemplateMetadata).lifecyclePolicy
-  const lifecycle = lifecyclePolicy === 'review-required' ? 'pending_review' : 'filed'
+  // P08X-T02: review-required generation starts records in Submitted.
+  const lifecycle = lifecyclePolicy === 'review-required' ? 'submitted' : 'filed'
   // P08-GATE-02: canonical Type-first plan — Type grant + Folder-deny narrowing
   // enforced identically to /records/new. Caller Folder never participates.
   const { prepareDocumentCreation } = await import('@/lib/documents/creation')

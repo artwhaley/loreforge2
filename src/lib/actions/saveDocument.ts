@@ -51,7 +51,7 @@ export async function saveDocumentAction(input: {
         const existing = await payload.find({ collection: 'documents', where: domainAndIdWhere(domain.id, documentId), depth: 0, limit: 1, req })
         if (existing.docs.length === 0) throw new Error('not-found')
         if (!await isAllowed({ payload, actor: { userId: user.id, activeCharacterId: actorCharacterId }, domainId: domain.id, capability: 'edit_document', resource: { type: 'Document', id: documentId }, transactionID })) throw new Error('forbidden')
-        if (!canEditDocumentBody(existing.docs[0].lifecycle)) throw new Error('read-only')
+        if (!canEditDocumentBody(existing.docs[0].lifecycle, Boolean((existing.docs[0] as { locked?: unknown }).locked))) throw new Error('read-only')
         await payload.update({ collection: 'documents', id: documentId, data: { title, body: canonicalizeMarkdown(body) }, depth: 0, req })
         await recordDocumentProvenance({ payload, domainId: domain.id, documentId, eventType: 'edited', actorUserId: user.id, actorCharacterId, context: { fields: ['title', 'body'] }, revisionId: await latestDocumentRevisionId(payload, documentId, transactionID), transactionID })
       })

@@ -55,11 +55,11 @@ export async function restoreDocumentVersionAction(formData: FormData): Promise<
     const current = currentResult.docs[0]
     if (!current) redirect(destination + '?error=not-found')
     try { await requirePermission({ payload, actor: { userId: user.id, activeCharacterId: actorCharacterId }, domainId: domain.id, capability: 'restore_document', resource: { type: 'Document', id: current.id } }) } catch { redirect(destination + '?error=forbidden') }
-    if (!canEditDocumentBody(current.lifecycle)) redirect(destination + '?error=current-read-only')
+    if (!canEditDocumentBody(current.lifecycle, Boolean((current as { locked?: unknown }).locked))) redirect(destination + '?error=current-read-only')
 
     const version = await payload.findVersionByID({ collection: 'documents', id: versionId, depth: 0, disableErrors: true })
     if (!version || String(version.parent) !== String(current.id)) redirect(destination + '?error=wrong-document')
-    if (!canEditDocumentBody(version.version.lifecycle)) redirect(destination + '?error=version-read-only')
+    if (!canEditDocumentBody(version.version.lifecycle, Boolean((version.version as { locked?: unknown }).locked))) redirect(destination + '?error=version-read-only')
 
     const { runInTransaction } = await import('@/lib/documents/relationships')
     try {

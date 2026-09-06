@@ -53,9 +53,9 @@ export default async function DocumentHistoryPage({ params, searchParams }: Prop
     : null
   const selectedBelongs = selected && String(selected.parent) === String(document.id) ? selected : null
   const preview = selectedBelongs?.version
-  const currentEditable = canEditDocumentBody(document.lifecycle)
+  const currentEditable = canEditDocumentBody(document.lifecycle, Boolean((document as unknown as { locked?: unknown }).locked))
   const isDeleted = Boolean(document.softDeletedAt)
-  const previewEditable = preview?.lifecycle ? canEditDocumentBody(preview.lifecycle) : false
+  const previewEditable = preview?.lifecycle ? canEditDocumentBody(preview.lifecycle, Boolean((preview as unknown as { locked?: unknown }).locked)) : false
   const tenants = await getTenantsForUser(user.id)
   const tokens = resolveThemeTokens(tenant)
   const base = `/domain/${tenant.slug}/documents/${document.id}`

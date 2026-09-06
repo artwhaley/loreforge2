@@ -55,7 +55,7 @@ export default async function RecordsPage({ params, searchParams }: Props) {
         { id: { in: scope.grantDocumentIds.size ? [...scope.grantDocumentIds] : [-1] } },
       ] },
     ] : []),
-  ] }, select: { id: true, domain: true, folder: true, documentType: true, title: true, updatedAt: true, lifecycle: true }, depth: 0, limit: 50, sort: '-updatedAt', overrideAccess: true })
+  ] }, select: { id: true, domain: true, folder: true, documentType: true, title: true, updatedAt: true, lifecycle: true, locked: true }, depth: 0, limit: 50, sort: '-updatedAt', overrideAccess: true })
   const permissions = new Map<number, { read: boolean; canEdit: boolean; canSupersede: boolean; canDelete: boolean }>()
   const visibleDocs: typeof documentsResult.docs = []
   if (session) {
@@ -105,7 +105,7 @@ export default async function RecordsPage({ params, searchParams }: Props) {
     frontier = []
     for (let offset = 0; offset < linkedIds.length; offset += 400) {
       const batch = linkedIds.slice(offset, offset + 400)
-      const result = await payload.find({ collection: 'documents', where: { and: [{ domain: { equals: tenant.id } }, { id: { in: batch } }, { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] }] }, select: { id: true, domain: true, folder: true, documentType: true, title: true, updatedAt: true, lifecycle: true }, depth: 0, limit: 0, pagination: false, overrideAccess: true })
+      const result = await payload.find({ collection: 'documents', where: { and: [{ domain: { equals: tenant.id } }, { id: { in: batch } }, { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] }] }, select: { id: true, domain: true, folder: true, documentType: true, title: true, updatedAt: true, lifecycle: true, locked: true }, depth: 0, limit: 0, pagination: false, overrideAccess: true })
       for (const document of result.docs) {
         const documentId = Number(document.id)
         if (allDocIds.has(documentId)) continue
@@ -162,7 +162,7 @@ export default async function RecordsPage({ params, searchParams }: Props) {
       tenantSlug={tenant.slug}
       folders={projection.tree.map(toExplorerFolder)}
       totalRecordCount={projection.totalReadable}
-      records={allDocs.map((document) => ({ id: Number(document.id), title: document.title, folderId: relationId(document.folder), documentTypeId: relationId(document.documentType), updatedAt: document.updatedAt, preparedBy: preparedBy.get(Number(document.id)) ?? null, lifecycle: document.lifecycle, ...permissions.get(Number(document.id))! }))}
+      records={allDocs.map((document) => ({ id: Number(document.id), title: document.title, folderId: relationId(document.folder), documentTypeId: relationId(document.documentType), updatedAt: document.updatedAt, preparedBy: preparedBy.get(Number(document.id)) ?? null, lifecycle: document.lifecycle, locked: Boolean(document.locked), ...permissions.get(Number(document.id))! }))}
       documentTypes={documentTypes.docs.map((type) => ({ id: Number(type.id), name: type.name }))}
       supersessionEdges={supersessionEdges}
       initialFolderId={initialFolderId}

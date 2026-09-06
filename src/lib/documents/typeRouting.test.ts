@@ -40,13 +40,13 @@ const adminId = admin.characterId
 // Sequential only: concurrent payload.create calls share one SQLite connection
 // and deadlock with SQLITE_BUSY.
 const rootId = await folder(alphaId, 'Domain Root')
-const pendingId = await folder(alphaId, 'Pending Incident Reports', rootId)
+const submittedId = await folder(alphaId, 'Submitted Incident Reports', rootId)
 const investigatingId = await folder(alphaId, 'Investigating Incident Reports', rootId)
 const closedId = await folder(alphaId, 'Closed Incident Reports', rootId)
 
 async function routedType(): Promise<number> {
   const existing = await payload.find({ collection: 'document-types', where: { and: [{ domain: { equals: alphaId } }, { name: { equals: 'Incident Report' } }] }, depth: 0, limit: 1, overrideAccess: true })
-  const row = existing.docs[0] ?? await payload.create({ collection: 'document-types', overrideAccess: true, data: { domain: alphaId, name: 'Incident Report', active: true, defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit', defaultFolder: rootId, draftFolder: rootId, pendingReviewFolder: pendingId, filedFolder: investigatingId, lockedFolder: closedId } })
+  const row = existing.docs[0] ?? await payload.create({ collection: 'document-types', overrideAccess: true, data: { domain: alphaId, name: 'Incident Report', active: true, templateSelection: 'blank', defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit', defaultFolder: rootId, draftFolder: rootId, pendingReviewFolder: submittedId, filedFolder: investigatingId, lockedFolder: closedId } })
   return Number(row.id)
 }
 const typeId = await routedType()
@@ -59,7 +59,7 @@ async function draftDoc(title: string, startFolderId = rootId): Promise<number> 
 
 const stateOf = async (documentId: number) => {
   const row = await payload.findByID({ collection: 'documents', id: documentId, depth: 0, overrideAccess: true })
-  return { lifecycle: String((row as { lifecycle?: unknown }).lifecycle), folderId: idOf((row as { folder?: unknown }).folder) }
+  return { lifecycle: String((row as { lifecycle?: unknown }).lifecycle), folderId: idOf((row as { folder?: unknown }).folder), locked: Boolean((row as { locked?: unknown }).locked) }
 }
 
 const actor = (characterId: number | null) => ({ userId: ownerId, activeCharacterId: characterId })
@@ -67,15 +67,15 @@ const actor = (characterId: number | null) => ({ userId: ownerId, activeCharacte
 test('T05 transitions route the record through the Type lifecycle Folders atomically', async () => {
   const docId = await draftDoc('T05 Route Me')
   const submitted = await transitionDocument({ payload, userId: ownerId, domainId: alphaId, documentId: docId, actorCharacterId: adminId, operation: 'submit' })
-  assert.equal(submitted.lifecycle, 'pending_review')
-  assert.equal(idOf((submitted as { folder?: unknown }).folder), pendingId)
-  assert.deepEqual(await stateOf(docId), { lifecycle: 'pending_review', folderId: pendingId })
+  assert.equal(submitted.lifecycle, 'submitted')
+  assert.equal(idOf((submitted as { folder?: unknown }).folder), submittedId)
+  assert.deepEqual(await stateOf(docId), { lifecycle: 'submitted', folderId: submittedId, locked: false })
   await transitionDocument({ payload, userId: ownerId, domainId: alphaId, documentId: docId, actorCharacterId: adminId, operation: 'approve' })
-  assert.deepEqual(await stateOf(docId), { lifecycle: 'filed', folderId: investigatingId })
+  assert.deepEqual(await stateOf(docId), { lifecycle: 'filed', folderId: investigatingId, locked: false })
   // Provenance records prior/routed Folder and the reason.
   const events = await payload.find({ collection: 'document-provenance-events', where: { and: [{ document: { equals: docId } }, { eventType: { equals: 'approved' } }] }, depth: 0, limit: 1, overrideAccess: true })
   const event = events.docs[0] as { context?: { priorFolderId?: number; routedFolderId?: number; reason?: string } }
-  assert.equal(event.context?.priorFolderId, pendingId)
+  assert.equal(event.context?.priorFolderId, submittedId)
   assert.equal(event.context?.routedFolderId, investigatingId)
   assert.equal(event.context?.reason, 'lifecycle-route')
 })
@@ -86,43 +86,44 @@ test('T05 failed authorization changes neither lifecycle nor Folder', async () =
     () => transitionDocument({ payload, userId: ownerId, domainId: alphaId, documentId: docId, actorCharacterId: null, operation: 'submit' }),
     /Resource not found|required|Denied/,
   )
-  assert.deepEqual(await stateOf(docId), { lifecycle: 'draft', folderId: rootId })
+  assert.deepEqual(await stateOf(docId), { lifecycle: 'draft', folderId: rootId, locked: false })
 })
 
 test('T05 reject returns the record to the Draft route', async () => {
   const docId = await draftDoc('T05 Reject Me')
   await transitionDocument({ payload, userId: ownerId, domainId: alphaId, documentId: docId, actorCharacterId: adminId, operation: 'submit' })
-  assert.equal((await stateOf(docId)).folderId, pendingId)
+  assert.equal((await stateOf(docId)).folderId, submittedId)
   await transitionDocument({ payload, userId: ownerId, domainId: alphaId, documentId: docId, actorCharacterId: adminId, operation: 'reject', note: 'Needs a seal' })
-  assert.deepEqual(await stateOf(docId), { lifecycle: 'draft', folderId: rootId })
+  assert.deepEqual(await stateOf(docId), { lifecycle: 'draft', folderId: rootId, locked: false })
 })
 
-test('T05 unlock returns the record to the Filed route', async () => {
+test('T05 lock/unlock toggle the locked boolean without moving stage or Folder', async () => {
   const docId = await draftDoc('T05 Unlock Me')
   await transitionDocument({ payload, userId: ownerId, domainId: alphaId, documentId: docId, actorCharacterId: adminId, operation: 'file' })
-  assert.equal((await stateOf(docId)).folderId, investigatingId)
+  assert.deepEqual(await stateOf(docId), { lifecycle: 'filed', folderId: investigatingId, locked: false })
   await transitionDocument({ payload, userId: ownerId, domainId: alphaId, documentId: docId, actorCharacterId: adminId, operation: 'lock' })
-  assert.deepEqual(await stateOf(docId), { lifecycle: 'locked', folderId: closedId })
+  // P08X-T02: locking never moves the stage — the record stays Filed in its
+  // Filed folder, now not-editable.
+  assert.deepEqual(await stateOf(docId), { lifecycle: 'filed', folderId: investigatingId, locked: true })
   await transitionDocument({ payload, userId: ownerId, domainId: alphaId, documentId: docId, actorCharacterId: adminId, operation: 'unlock' })
-  assert.deepEqual(await stateOf(docId), { lifecycle: 'filed', folderId: investigatingId })
+  assert.deepEqual(await stateOf(docId), { lifecycle: 'filed', folderId: investigatingId, locked: false })
 })
 
 test('T05 multiple lifecycle states may share one route Folder', async () => {
-  const shared = await payload.create({ collection: 'document-types', overrideAccess: true, data: { domain: alphaId, name: 'Shared Route Type', active: true, defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit', defaultFolder: rootId, draftFolder: rootId, pendingReviewFolder: rootId, filedFolder: rootId, lockedFolder: rootId } })
+  const shared = await payload.create({ collection: 'document-types', overrideAccess: true, data: { domain: alphaId, name: 'Shared Route Type', active: true, templateSelection: 'blank', defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit', defaultFolder: rootId, draftFolder: rootId, pendingReviewFolder: rootId, filedFolder: rootId, lockedFolder: rootId } })
   const docId = await draftDoc('T05 Shared Route')
   await payload.update({ collection: 'documents', id: docId, overrideAccess: true, data: { documentType: Number(shared.id) } })
   await transitionDocument({ payload, userId: ownerId, domainId: alphaId, documentId: docId, actorCharacterId: adminId, operation: 'submit' })
   await transitionDocument({ payload, userId: ownerId, domainId: alphaId, documentId: docId, actorCharacterId: adminId, operation: 'approve' })
-  await transitionDocument({ payload, userId: ownerId, domainId: alphaId, documentId: docId, actorCharacterId: adminId, operation: 'lock' })
   // Filed and Locked both route to the same Folder — no relocation.
-  assert.deepEqual(await stateOf(docId), { lifecycle: 'locked', folderId: rootId })
+  assert.deepEqual(await stateOf(docId), { lifecycle: 'filed', folderId: rootId, locked: false })
 })
 
 test('T05 a routing Folder from another Domain is rejected', async () => {
   const betaId = await communityDomain('p07x-t05-beta', ownerId)
   const betaRoot = await folder(betaId, 'Beta Root')
   await assert.rejects(
-    () => payload.create({ collection: 'document-types', overrideAccess: true, data: { domain: alphaId, name: 'Cross Domain Type', active: true, defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit', defaultFolder: betaRoot } }),
+    () => payload.create({ collection: 'document-types', overrideAccess: true, data: { domain: alphaId, name: 'Cross Domain Type', active: true, templateSelection: 'blank', defaultFilingPolicy: 'direct-file', templateFilingPolicy: 'inherit', defaultFolder: betaRoot } }),
     /routing Folder must belong to the same Domain/,
   )
 })
@@ -132,14 +133,14 @@ test('T05 ordinary callers can never supply a workflow destination', async () =>
   const foreignFolder = idOf((await payload.find({ collection: 'folders', where: { domain: { equals: (await communityDomain('p07x-t05-gamma', ownerId)) } }, depth: 0, limit: 1, overrideAccess: true })).docs[0]?.id)
   // Planting a caller-chosen destination is ignored: the routed Folder wins.
   const result = await transitionDocument({ payload, userId: ownerId, domainId: alphaId, documentId: docId, actorCharacterId: adminId, operation: 'submit', ...(foreignFolder ? { folder: foreignFolder, destination: foreignFolder } : {}) } as never)
-  assert.equal(idOf((result as { folder?: unknown }).folder), pendingId)
+  assert.equal(idOf((result as { folder?: unknown }).folder), submittedId)
   assert.notEqual(idOf((result as { folder?: unknown }).folder), foreignFolder)
 })
 
 test('T05 routing helper: state Folder wins, defaultFolder is the fallback, current keeps legacy records', () => {
   const type = { defaultFolder: 10, draftFolder: 11, pendingReviewFolder: 12, filedFolder: 13, lockedFolder: 14 }
-  assert.equal(resolveLifecycleRouteFolder(type, 'pending_review', 1), 12)
-  assert.equal(resolveLifecycleRouteFolder(type, 'locked', 1), 14)
+  assert.equal(resolveLifecycleRouteFolder(type, 'submitted', 1), 12)
+  assert.equal(resolveLifecycleRouteFolder(type, 'deprecated', 1), 14)
   const noState = { defaultFolder: 10 }
   assert.equal(resolveLifecycleRouteFolder(noState, 'filed', 1), 10)
   assert.equal(resolveLifecycleRouteFolder(null, 'filed', 5), 5)
