@@ -43,7 +43,9 @@ export async function TenantShell({ tenant, role, switcherTenants, activeCharact
   const canMembers = session ? await canOpenPeopleSession(session) : false
   const canRoles = session ? decideDomainOrAny(session, 'manage_roles') || decideDomainOrAnySubdomain(session, 'manage_roles') : false
   const canFolders = session ? decideDomainOrAny(session, 'manage_folders') || decideDomainOrAnyFolder(session, 'manage_folders') : false
-  const canTemplates = session ? decideDomainOrAny(session, 'manage_templates') : false
+  const canDepartments = session ? decideDomainOrAny(session, 'manage_subdomain') : false
+  // P08X-T01: Document Types is the management entry; visible to type managers OR template managers.
+  const canDocumentTypes = session ? (decideDomainOrAny(session, 'manage_types_tags') || decideDomainOrAny(session, 'manage_templates')) : false
   const canCustomize = session ? decideDomainOrAny(session, 'manage_domain_appearance') : false
   const canInvitations = payload && context.user ? await canManageDomainInvitations(payload, { userId: context.user.id, activeCharacterId: resolvedActiveCharacter?.id ?? null }, tenant.id) : false
 
@@ -59,13 +61,14 @@ export async function TenantShell({ tenant, role, switcherTenants, activeCharact
       </div>
       }
       management={
-        (canMembers || canRoles || canFolders || canTemplates || canCustomize || canInvitations) ? (
+        (canMembers || canRoles || canFolders || canDepartments || canDocumentTypes || canCustomize || canInvitations) ? (
           <nav className={styles.managementNav} aria-label={`${tenant.name} management`}>
             {canMembers ? <Link href={`${base}/manage/people`}>People</Link> : null}
             {role === 'admin' ? <Link href={`${base}/members`}>{vocab.member.plural}</Link> : null}
             {canRoles ? <Link href={`${base}/roles`}>{vocab.role.plural}</Link> : null}
             {canFolders ? <Link href={`${base}/manage/folders`}>{vocab.folder.plural}</Link> : null}
-            {canTemplates ? <Link href={`${base}/forms`}>Templates &amp; Forms</Link> : null}
+            {canDepartments ? <Link href={`${base}/manage/departments`}>{vocab.subdomain.plural}</Link> : null}
+            {canDocumentTypes ? <Link href={`${base}/document-types`} title="Manage Document Types and their Templates and Forms">Document Types</Link> : null}
             {canInvitations ? <Link href={`${base}/manage/invitations`}>Invitations</Link> : null}
             {canCustomize ? <Link href={`${base}/customize`}>Customize</Link> : null}
           </nav>

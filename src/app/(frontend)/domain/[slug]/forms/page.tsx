@@ -44,10 +44,10 @@ export default async function FormsPage({ params }: Props) {
           Build and fill structured forms that generate ordinary archive records.
         </p>
 
-        <nav aria-label="Templates and Forms" style={{ display: 'flex', gap: '.75rem', marginBottom: '1rem' }}>
-          <Link href={`${base}/forms`} aria-current="page">Forms</Link>
-          <Link href={`${base}/templates`}>Templates</Link>
-          <Link href={`${base}/document-types`}>Document Types</Link>
+        <nav aria-label="Document Types" style={{ display: 'flex', gap: '.75rem', marginBottom: '1rem' }}>
+          <Link href={`${base}/document-types`} title="Document Types are the first-order item; Templates and Forms hang off them">Document Types</Link>
+          <Link href={`${base}/templates`} title="Standalone Markdown templates">Templates</Link>
+          <Link href={`${base}/forms`} aria-current="page" title="Standalone form templates">Forms</Link>
         </nav>
 
         {forms.length === 0 ? (

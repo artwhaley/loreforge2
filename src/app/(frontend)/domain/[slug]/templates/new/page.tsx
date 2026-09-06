@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 
-import { FormStudio } from '@/components/forms/FormStudio'
 import { TenantShell } from '@/components/theme/TenantShell'
+import { DocumentTemplateForm } from '@/components/templates/DocumentTemplateForm'
 import { getLorePayload } from '@/lib/payload'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getFoldersForTenant, getTenantsForUser } from '@/lib/tenant/queries'
@@ -11,7 +11,7 @@ import { buildFolderTree, flattenFolderTree } from '@/lib/archive/folderTree'
 
 export const dynamic = 'force-dynamic'
 
-export default async function NewFormPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function NewDocumentTemplatePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const { tenant, role, user, activeCharacter } = await getActiveTenant()
   if (!tenant || tenant.slug !== slug || !user) notFound()
@@ -25,6 +25,6 @@ export default async function NewFormPage({ params }: { params: Promise<{ slug: 
   ])
   const flatFolders = flattenFolderTree(buildFolderTree(folders))
   return <TenantShell tenant={tenant} cssVars={themeTokensToCssVars(resolveThemeTokens(tenant))} role={role} switcherTenants={domains} activeCharacter={activeCharacter}>
-    <section style={{ maxWidth: 1100, margin: '0 auto' }}><p><a href={`/domain/${slug}/document-types`} title="Back to Document Types">Document Types</a> / New form</p><h1>New form</h1><p>Build a form that produces an ordinary archive document.</p><FormStudio mode="create" domainSlug={slug} folders={flatFolders.map(({ folder }) => ({ id: Number(folder.id), name: folder.name, parentId: typeof folder.parent === 'object' && folder.parent ? Number(folder.parent.id) : folder.parent == null ? null : Number(folder.parent) }))} types={types.docs.map((type) => ({ id: Number(type.id), name: type.name }))} baseTemplates={baseTemplates.docs.map((template) => ({ id: Number(template.id), name: template.name, scopeFolderId: Number(typeof template.scopeFolder === 'object' ? template.scopeFolder.id : template.scopeFolder), availableToDescendants: Boolean(template.availableToDescendants) }))} /></section>
+    <section style={{ maxWidth: 1100, margin: '0 auto' }}><p><a href={`/domain/${slug}/document-types`} title="Back to Document Types">Document Types</a> / New template</p><h1>New document template</h1><p>Write the starting Markdown for records of one Document Type.</p><DocumentTemplateForm mode="create" domainSlug={slug} folders={flatFolders.map(({ folder }) => ({ id: Number(folder.id), name: folder.name }))} types={types.docs.map((type) => ({ id: Number(type.id), name: type.name }))} baseTemplates={baseTemplates.docs.map((template) => ({ id: Number(template.id), name: template.name }))} /></section>
   </TenantShell>
 }

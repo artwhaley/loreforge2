@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 
 import config from '@/payload.config'
+import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 import { assertFormSchema, type LoreForgeFormSchema } from '@/lib/forms/schema'
 import { autoBodyTemplate, autoTitleTemplate } from '@/lib/forms/layout'
 import { isAllowed } from '@/lib/authz/evaluate'
@@ -171,6 +172,102 @@ export async function updateFormTemplateAction(_previous: TemplateActionState, f
   }
   revalidateForms(domainSlug)
   redirect(`/domain/${domainSlug}/forms`)
+}
+
+function readDocumentPlacement(formData: FormData) {
+  const scopeFolder = Number(formData.get('scopeFolderId') ?? '')
+  const documentType = Number(formData.get('documentTypeId') ?? '')
+  const baseTemplateId = Number(formData.get('baseTemplateId') ?? '')
+  return { scopeFolder, destinationFolder: 0, documentType, baseTemplateId }
+}
+
+function readDocumentContent(formData: FormData) {
+  const name = String(formData.get('name') ?? '').trim()
+  const titleTemplate = String(formData.get('titleTemplate') ?? '').trim()
+  const bodyTemplate = canonicalizeMarkdown(String(formData.get('bodyTemplate') ?? '')).trim()
+  return { name, titleTemplate, bodyTemplate }
+}
+
+/**
+ * Document Template create seam: the author supplies a plain-text title
+ * template and Markdown body directly ({{content}} is the only supported
+ * token). Availability, base composition, and Type routing reuse the same
+ * placement checks as Form Studio.
+ */
+export async function createDocumentTemplateAction(_previous: TemplateActionState, formData: FormData): Promise<TemplateActionState> {
+  const domainSlug = String(formData.get('domainSlug') ?? '')
+  const ctx = await managerContext(domainSlug)
+  if (ctx.error || !ctx.domain || !ctx.user) return { error: ctx.error ?? 'Not authorized.' }
+  const { name, titleTemplate, bodyTemplate } = readDocumentContent(formData)
+  if (!name) return { error: 'Give the template a name.' }
+  if (!titleTemplate) return { error: 'Give the template a title.' }
+  if (!bodyTemplate) return { error: 'Write the template body in Markdown.' }
+  try {
+    const placement = await assertPlacement(ctx, readDocumentPlacement(formData))
+    await ctx.payload.create({
+      collection: 'templates',
+      overrideAccess: true,
+      data: {
+        domain: ctx.domain.id,
+        documentType: placement.documentType,
+        name,
+        kind: 'document',
+        scopeFolder: placement.scopeFolder,
+        destinationFolder: placement.destinationFolder,
+        ...(placement.baseTemplateId ? { baseTemplate: placement.baseTemplateId } : {}),
+        allowDestinationOverride: false,
+        availableToDescendants: true,
+        titleTemplate,
+        bodyTemplate,
+        formSchema: null,
+        lifecyclePolicy: 'inherit',
+        active: true,
+        version: 1,
+      } as never,
+    })
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'The template could not be saved.' }
+  }
+  revalidateForms(domainSlug)
+  redirect(`/domain/${domainSlug}/templates`)
+}
+
+/** Document Template edit seam: saves the next version and re-activates. */
+export async function updateDocumentTemplateAction(_previous: TemplateActionState, formData: FormData): Promise<TemplateActionState> {
+  const domainSlug = String(formData.get('domainSlug') ?? '')
+  const templateId = Number(formData.get('templateId') ?? '')
+  const ctx = await managerContext(domainSlug)
+  if (ctx.error || !ctx.domain || !ctx.user) return { error: ctx.error ?? 'Not authorized.' }
+  const found = await ctx.payload.find({ collection: 'templates', where: { and: [{ id: { equals: templateId } }, { domain: { equals: ctx.domain.id } }, { kind: { equals: 'document' } }] }, depth: 0, limit: 1, overrideAccess: true })
+  const existing = found.docs[0]
+  if (!existing) return { error: 'Template not found.' }
+  const { name, titleTemplate, bodyTemplate } = readDocumentContent(formData)
+  if (!name) return { error: 'Give the template a name.' }
+  if (!titleTemplate) return { error: 'Give the template a title.' }
+  if (!bodyTemplate) return { error: 'Write the template body in Markdown.' }
+  try {
+    const placement = await assertPlacement(ctx, readDocumentPlacement(formData))
+    await ctx.payload.update({
+      collection: 'templates',
+      id: templateId,
+      overrideAccess: true,
+      data: {
+        name,
+        documentType: placement.documentType,
+        scopeFolder: placement.scopeFolder,
+        destinationFolder: placement.destinationFolder,
+        ...(placement.baseTemplateId ? { baseTemplate: placement.baseTemplateId } : { baseTemplate: null }),
+        titleTemplate,
+        bodyTemplate,
+        active: true,
+        version: Number(existing.version ?? 1) + 1,
+      } as never,
+    })
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'The template could not be saved.' }
+  }
+  revalidateForms(domainSlug)
+  redirect(`/domain/${domainSlug}/templates`)
 }
 
 export async function deactivateTemplateAction(formData: FormData): Promise<void> {
