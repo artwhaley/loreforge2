@@ -3,6 +3,7 @@ import { getPayload } from 'payload'
 
 import config from '@payload-config'
 import { isAllowed } from '@/lib/authz/evaluate'
+import { slugifyDepartmentName } from '@/lib/domains/subdomainInvariants'
 import { resolveActingIdentity } from '@/lib/tenant/actingIdentity'
 
 const ERROR_CODES = new Set(['unauthorized', 'invalid', 'duplicate', 'failed'])
@@ -29,9 +30,17 @@ export async function POST(request: Request) {
       const id = Number(form.get('departmentId'))
       const department = await payload.findByID({ collection: 'subdomains', id, depth: 0 })
       if (String(typeof department.domain === 'object' ? department.domain.id : department.domain) === String(domain.id)) await payload.update({ collection: 'subdomains', id, data: { publicListing: false } })
+    } else if (action === 'restore') {
+      // P08X-T03: archiving a Department is never one-way — restoring returns
+      // its Types from the Unassigned root to a normal root again.
+      const id = Number(form.get('departmentId'))
+      const department = await payload.findByID({ collection: 'subdomains', id, depth: 0 })
+      if (String(typeof department.domain === 'object' ? department.domain.id : department.domain) === String(domain.id)) await payload.update({ collection: 'subdomains', id, data: { publicListing: true } })
     } else {
-      const name = String(form.get('name') ?? '').trim(); const slug = String(form.get('slug') ?? '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-')
-      if (name && slug) await payload.create({ collection: 'subdomains', data: { domain: domain.id, name, slug, description: String(form.get('description') ?? '').trim() || undefined, sortOrder: Number(form.get('sortOrder') ?? 0), publicListing: true } })
+      const name = String(form.get('name') ?? '').trim()
+      const slug = slugifyDepartmentName(name)
+      if (!name || !slug) return NextResponse.redirect(new URL(deptDestination(domainSlug, 'invalid'), request.url), 303)
+      await payload.create({ collection: 'subdomains', data: { domain: domain.id, name, slug, publicListing: true } })
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : ''

@@ -1,0 +1,68 @@
+/* P08X-T03: the Document Type tree borrows the FolderManager visual language
+   directly (node rows, chevrons, guides, context menu, search, height cap) —
+   informed by it, not extracted from it. No shared abstraction. */
+.page { display: grid; gap: 1rem; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.toolbar h2 { margin: 0; color: var(--tenant-primary); font-family: var(--tenant-heading-font); font-size: 1.2rem; }
+.toolbar p { margin: .25rem 0 0; color: var(--tenant-muted-text); font-size: .8rem; }
+.button { border: 1px solid var(--tenant-primary); border-radius: 7px; padding: .45rem .7rem; color: var(--tenant-text-on-primary); background: var(--tenant-primary); font: inherit; font-size: .78rem; cursor: pointer; }
+.search { display: flex; gap: .45rem; align-items: center; padding: .5rem .7rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 9px; background: var(--tenant-page-bg); }
+.search span { color: var(--tenant-muted-text); }
+.search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--tenant-primary); font: inherit; font-size: .88rem; }
+.treeBox { border: 1px solid color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 12px; padding: .55rem; background: var(--tenant-page-bg); }
+.node { display: flex; align-items: center; gap: .35rem; height: 100%; padding-right: .5rem; border-radius: 7px; border-bottom: 1px solid color-mix(in srgb, var(--tenant-accent) 26%, var(--tenant-page-bg)); color: var(--tenant-primary); cursor: default; user-select: none; }
+.node:hover { background: color-mix(in srgb, var(--tenant-accent) 14%, var(--tenant-page-bg)); }
+.nodeSelected, .nodeSelected:hover { background: color-mix(in srgb, var(--tenant-accent) 28%, var(--tenant-page-bg)); }
+.nodeFocused { outline: 2px solid var(--tenant-accent); outline-offset: -2px; }
+.nodeDragging { opacity: .45; }
+.nodeDropTarget { background: color-mix(in srgb, var(--tenant-accent) 38%, var(--tenant-page-bg)); box-shadow: inset 0 0 0 2px var(--tenant-accent); }
+.guide { align-self: stretch; flex: none; border-left: 1px solid color-mix(in srgb, var(--tenant-accent) 32%, var(--tenant-page-bg)); }
+.chevron { display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; flex: none; border: 0; border-radius: 5px; color: var(--tenant-primary); background: transparent; font: inherit; font-size: 1.05rem; cursor: pointer; }
+.chevron:hover { background: color-mix(in srgb, var(--tenant-accent) 24%, var(--tenant-page-bg)); }
+.chevronSpacer { width: 1.35rem; flex: none; }
+.renameInput { min-height: 1.9rem; padding: .2rem .45rem; border: 1px solid var(--tenant-accent); border-radius: 6px; background: var(--tenant-page-bg); color: var(--tenant-primary); font: inherit; font-size: .88rem; }
+.typeIcon { display: inline-flex; align-items: center; justify-content: center; width: 1.15rem; flex: none; color: var(--tenant-accent); font-size: .9rem; }
+.folderIcon { display: inline-flex; align-items: center; justify-content: center; width: 1.15rem; flex: none; }
+.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .88rem; }
+.nameInactive { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .88rem; opacity: .55; color: var(--tenant-muted-text); }
+.inactiveSuffix { color: var(--tenant-muted-text); font-style: italic; font-size: .78rem; }
+.rootTag { color: var(--tenant-muted-text); font-size: .7rem; }
+.lineCard { display: flex; align-items: center; gap: .45rem; min-width: 0; flex: 1; }
+.kindChip { flex: none; border: 1px solid color-mix(in srgb, var(--tenant-accent) 55%, #fff); border-radius: 999px; padding: .1rem .5rem; color: var(--tenant-primary); background: color-mix(in srgb, var(--tenant-accent) 16%, var(--tenant-page-bg)); font: inherit; font-size: .68rem; cursor: pointer; }
+.kindChip:hover { background: color-mix(in srgb, var(--tenant-accent) 30%, var(--tenant-page-bg)); }
+.templateLink { flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 13rem; color: var(--tenant-accent); font-size: .76rem; text-decoration: underline; text-underline-offset: 2px; }
+.templateEmpty { flex: none; color: var(--tenant-muted-text); font-size: .76rem; }
+.popover { position: fixed; z-index: 30; display: grid; min-width: 150px; gap: .2rem; padding: .35rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 80%, #fff); border-radius: 9px; background: var(--tenant-surface-bg); box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+.popover button { border: 0; border-radius: 6px; padding: .45rem .6rem; color: var(--tenant-primary); background: transparent; text-align: left; font: inherit; font-size: .78rem; cursor: pointer; }
+.popover button:hover, .popover button:focus-visible { background: color-mix(in srgb, var(--tenant-accent) 20%, var(--tenant-page-bg)); outline: 0; }
+.popover button[aria-pressed='true'] { background: color-mix(in srgb, var(--tenant-accent) 32%, var(--tenant-page-bg)); font-weight: 700; }
+.contextMenu { position: fixed; z-index: 20; display: grid; min-width: 190px; gap: .2rem; padding: .35rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 80%, #fff); border-radius: 9px; background: var(--tenant-surface-bg); box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+.contextMenu button { border: 0; border-radius: 6px; padding: .5rem .62rem; color: var(--tenant-primary); background: transparent; text-align: left; font: inherit; font-size: .8rem; cursor: pointer; }
+.contextMenu button:hover, .contextMenu button:focus-visible { background: color-mix(in srgb, var(--tenant-accent) 20%, var(--tenant-page-bg)); outline: 0; }
+.contextMenu button:disabled { color: var(--tenant-muted-text); cursor: default; }
+.contextDanger { color: #8f2d21 !important; }
+.dialog { display: grid; gap: .75rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 14px; padding: 1.1rem 1.2rem; background: color-mix(in srgb, var(--tenant-surface-bg) 94%, #fff); box-shadow: 0 8px 24px rgba(27,24,18,.06); }
+.dialog h3 { margin: 0; color: var(--tenant-primary); font-family: var(--tenant-heading-font); font-size: 1.15rem; }
+.dialogHeader { display: flex; justify-content: space-between; align-items: center; gap: .7rem; }
+.close { border: 0; color: var(--tenant-muted-text); background: transparent; font-size: 1.2rem; cursor: pointer; }
+.dialog form { display: grid; gap: .7rem; }
+.dialog label { display: grid; gap: .25rem; color: var(--tenant-primary); font-size: .78rem; font-weight: 700; }
+.dialog input, .dialog select { min-height: 2.25rem; padding: .45rem .55rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 7px; background: var(--tenant-page-bg); color: var(--tenant-primary); font: inherit; }
+.actions { display: flex; gap: .5rem; }
+.primary, .secondary, .danger { border: 1px solid var(--tenant-primary); border-radius: 7px; padding: .45rem .7rem; font: inherit; font-size: .78rem; cursor: pointer; }
+.primary { color: var(--tenant-text-on-primary); background: var(--tenant-primary); }
+.secondary { color: var(--tenant-primary); background: transparent; }
+.danger { border-color: #8f2d21; color: #8f2d21; background: transparent; }
+.empty { margin: 0; padding: 1rem; color: var(--tenant-muted-text); font-size: .82rem; text-align: center; }
+.sortBar { display: flex; align-items: center; gap: .45rem; }
+.sortLabel { color: var(--tenant-muted-text); font-size: .78rem; }
+.sortButton, .sortActive { border: 1px solid color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 7px; padding: .35rem .6rem; background: transparent; color: var(--tenant-primary); font: inherit; font-size: .78rem; cursor: pointer; }
+.sortButton:hover { background: color-mix(in srgb, var(--tenant-accent) 14%, var(--tenant-page-bg)); }
+.sortActive { background: var(--tenant-primary); border-color: var(--tenant-primary); color: var(--tenant-text-on-primary); }
+.notice { margin: 0; padding: .6rem .8rem; border: 1px solid #b7791f; border-radius: 9px; background: color-mix(in srgb, #b7791f 12%, var(--tenant-surface-bg)); color: #7a4f10; font-size: .8rem; }
+.inspector { display: grid; gap: .6rem; border: 1px solid color-mix(in srgb, var(--tenant-accent) 72%, #fff); border-radius: 12px; padding: .9rem 1rem; background: var(--tenant-page-bg); }
+.inspector h3 { margin: 0; color: var(--tenant-primary); font-family: var(--tenant-heading-font); font-size: 1.05rem; }
+.inspector p { margin: 0; color: var(--tenant-muted-text); font-size: .8rem; }
+.badge { display: inline-flex; align-items: center; gap: .3rem; border-radius: 999px; padding: .12rem .55rem; font-size: .72rem; font-weight: 700; }
+.badgeActive { color: #2f6b2f; background: color-mix(in srgb, #2f6b2f 16%, #fff); }
+.badgeInactive { color: #6b6b6b; background: color-mix(in srgb, #6b6b6b 16%, #fff); }
