@@ -8,6 +8,7 @@ import config from '@/payload.config'
 import { isAllowed } from '@/lib/authz/evaluate'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { applyLifecycleStageConfig, ensureLifecycleStageRows, lifecycleStageRowsForType, stageFolderId, type LifecycleStageConfigInput } from '@/lib/documents/lifecycleStages'
+import { duplicateDocumentType } from '@/lib/documents/typeDuplicate'
 
 const relationId = (value: unknown): number | null => value && typeof value === 'object' && 'id' in value
   ? Number((value as { id: number | string }).id)
@@ -241,6 +242,23 @@ export async function scaffoldTypeTemplateAction(input: { domainSlug: string; ty
   } catch (error) {
     ctx.payload.logger.error(error)
     return { ok: false, error: error instanceof Error && /Folder|stage|token|required/i.test(error.message) ? error.message : 'failed' }
+  }
+}
+
+/** P08X-T05: duplicate a Type with independent deep copies of its templates and stage rows. */
+export async function duplicateTypeAction(input: { domainSlug: string; typeId: number | string }): Promise<TypeTreeActionResult> {
+  const ctx = await resolveDomainAction(input.domainSlug)
+  const typeId = Number(input.typeId)
+  if (!ctx || !Number.isInteger(typeId) || typeId <= 0) return { ok: false, error: 'invalid' }
+  if (!await requireTypeManagement(ctx)) return { ok: false, error: 'unauthorized' }
+  try {
+    const result = await duplicateDocumentType(ctx.payload, { typeId, domainId: ctx.domain.id })
+    if (!result.ok) return result
+    revalidatePath(`/domain/${ctx.domain.slug}/document-types`)
+    return { ok: true, typeId: result.typeId }
+  } catch (error) {
+    ctx.payload.logger.error(error)
+    return { ok: false, error: 'failed' }
   }
 }
 

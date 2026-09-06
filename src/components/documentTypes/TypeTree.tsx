@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import type { TreeApi } from 'react-arborist'
 
 import type { TypeTreeData, TypeTreeLeaf, TypeTreeNode, TemplateSelection } from '@/lib/documents/typeTree'
-import { deleteTypeAction, moveTypeAction, setActiveTypeAction, updateTypeAction } from '@/lib/actions/documentTypes'
+import { deleteTypeAction, duplicateTypeAction, moveTypeAction, setActiveTypeAction, updateTypeAction } from '@/lib/actions/documentTypes'
 import { createTypeFolderAction, deleteTypeFolderAction, moveTypeFolderAction, renameTypeFolderAction } from '@/lib/actions/typeFolders'
 
 import styles from './TypeTree.module.scss'
@@ -243,6 +243,7 @@ export function TypeTree({
         {menuLeaf.active
           ? <button type="button" title="Inactive Types stay editable but render greyed out with an (inactive) suffix" onClick={() => { setMenu(null); void run(() => setActiveTypeAction({ domainSlug, typeId: menuLeaf.id, active: false })) }}>Set inactive</button>
           : <button type="button" title="Make this Type available for new documents again" onClick={() => { setMenu(null); void run(() => setActiveTypeAction({ domainSlug, typeId: menuLeaf.id, active: true })) }}>Set active</button>}
+        <button type="button" title="Copy this Type with its own independent copies of its templates and lifecycle configuration — the copy keeps active/inactive and gets a (copyN) name" onClick={() => { setMenu(null); void run(() => duplicateTypeAction({ domainSlug, typeId: menuLeaf.id })) }}>Duplicate</button>
         <button type="button" className={styles.contextDanger} title="Deleting is refused while the Type still has documents — deactivate instead" onClick={deleteTargetType}>Delete…</button>
       </> : null}
       {menuNode?.kind === 'folder' ? <>

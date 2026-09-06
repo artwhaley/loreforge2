@@ -57,6 +57,7 @@ export function DocumentTypesBrowser({ domainSlug, data, canManage, roles, folde
       stages={creating || !selectedLeaf ? null : (stagesByType[selectedLeaf.id] ?? null)}
       defaultDepartmentId={selectedLeaf?.departmentId ?? null}
       onCreated={(typeId) => { setCreating(false); setSelectedTypeId(typeId) }}
+      onDuplicate={(typeId) => { setSelectedTypeId(typeId) }}
       onCancel={creating ? () => setCreating(false) : undefined}
     /> : null}
   </div>

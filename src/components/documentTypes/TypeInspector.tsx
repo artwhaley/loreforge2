@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo, useState, useTransition } from 'react'
 
-import { createTypeAction, updateTypeAction, scaffoldTypeTemplateAction, type LifecycleStageConfigInput } from '@/lib/actions/documentTypes'
+import { createTypeAction, duplicateTypeAction, updateTypeAction, scaffoldTypeTemplateAction, type LifecycleStageConfigInput } from '@/lib/actions/documentTypes'
 import { LIFECYCLE_STAGES, LIFECYCLE_STAGE_LABELS, stageFolderId, stageRoleIds, type LifecycleStageRowShape } from '@/lib/documents/lifecycleStages'
 import type { Lifecycle } from '@/lib/documents/lifecycle'
 import type { InspectorFolderNode, InspectorRole, TypeTreeLeaf, TemplateSelection } from '@/lib/documents/typeTree'
@@ -85,7 +85,7 @@ function folderNameOf(folders: InspectorFolderNode[], id: number | null): string
   return walk(folders)
 }
 
-export function TypeInspector({ domainSlug, mode, leaf, departments, typeFolders, roles, folders, stages, defaultDepartmentId, onCreated, onCancel }: {
+export function TypeInspector({ domainSlug, mode, leaf, departments, typeFolders, roles, folders, stages, defaultDepartmentId, onCreated, onDuplicate, onCancel }: {
   domainSlug: string
   mode: 'create' | 'edit'
   leaf: TypeTreeLeaf | null
@@ -96,9 +96,11 @@ export function TypeInspector({ domainSlug, mode, leaf, departments, typeFolders
   stages: Record<Lifecycle, LifecycleStageRowShape | null> | null
   defaultDepartmentId: number | null
   onCreated: (typeId: number) => void
+  onDuplicate?: (typeId: number) => void
   onCancel?: () => void
 }) {
   const router = useRouter()
+
   const isEdit = mode === 'edit'
   const [name, setName] = useState(leaf?.name ?? '')
   const [description, setDescription] = useState(leaf?.description ?? '')
@@ -168,6 +170,19 @@ export function TypeInspector({ domainSlug, mode, leaf, departments, typeFolders
   const scaffold = async (kind: 'markdown' | 'form') => {
     if (!leaf) return
     await run(() => scaffoldTypeTemplateAction({ domainSlug, typeId: leaf.id, kind }))
+  }
+
+  const duplicate = async () => {
+    if (!leaf || busy) return
+    setBusy(true)
+    setNotice(null)
+    try {
+      const result = await duplicateTypeAction({ domainSlug, typeId: leaf.id })
+      if (result.ok && result.typeId) { onDuplicate?.(result.typeId); startTransition(() => router.refresh()) }
+      else setNotice(result.error ?? 'That Type could not be duplicated.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   const constructed = leaf?.constructedTemplates ?? { markdown: null, form: null }
@@ -309,6 +324,7 @@ export function TypeInspector({ domainSlug, mode, leaf, departments, typeFolders
     {notice ? <p className={styles.notice} role="alert">{notice}</p> : null}
     <div className={styles.saveBar}>
       <button type="button" className={styles.primary} disabled={busy} title="Save this Document Type and its lifecycle configuration." onClick={() => void save()}>{isEdit ? 'Save Type' : 'Create Type'}</button>
+      {isEdit ? <button type="button" className={styles.secondary} disabled={busy} title="Copy this Type with its own independent copies of its templates and lifecycle configuration — the copy gets a (copyN) name and selects it here." onClick={() => void duplicate()}>Duplicate Type</button> : null}
       {isEdit ? <span className={styles.popupNote}>Changes apply to the Type immediately — new documents and transitions use them.</span> : null}
       <span className={styles.spacer} />
       {onCancel ? <button type="button" className={styles.secondary} disabled={busy} onClick={onCancel}>Cancel</button> : null}
