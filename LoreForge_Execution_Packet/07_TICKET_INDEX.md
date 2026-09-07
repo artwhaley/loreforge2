@@ -55,6 +55,35 @@ P07X-GATE-FINAL for owner review; the empty-Domain buildout exercise is the
 next product activity and the historical Phase 8 starter-pack tickets do not
 start automatically.
 
+## P08X — Document Types as the First-Order Authoring Surface
+
+Owner-directed corrective stack from the hand-authored empty-Domain buildout
+exercise (the P07X-GATE-FINAL continuation). Document Types are the first-order
+management item; Templates and Forms become subordinate. Spec and stack live at
+the repository root: `LoreForge_P08X_Execution_Packet/`
+(`00_CORRECTIVE_SPEC.md`, `01_EXECUTION_STACK.md`, `02_INTEGRATED_ACCEPTANCE.md`).
+
+- Branch: `phase-07x-acting-identity-document-workflows` (current)
+- **P08X-T01** — rename and reorient management navigation to Document Types  
+  _"Templates & Forms" becomes "Document Types" landing on the main Document Types page; sub-navs and breadcrumbs reoriented._
+- **P08X-T02** — schema foundation: type tree, template selection, lifecycle stages  
+  _`type-folders` collection, Document Type department/typeFolder/templateType/template, `lifecycle-stages` collection, draft|submitted|filed|deprecated vocabulary migration._
+- **P08X-T03** — Document Type folder-tree surface  
+  _Arborist tree list with auto-populated Department roots, Unassigned (when populated), manual subfolders, drag/drop, right-click actions, line cards, template selector/links, capped height._
+- **P08X-T04** — inspector panel  
+  _Create/edit surface beneath the list: Name/Description/Active, template selector + edit links, lifecycle table with stage enable/allow-on-creation/folder popup/role lists/private drafts, hovertext everywhere._
+- **P08X-T05** — duplicate semantics and template preservation  
+  _Duplicates deep-copy constructed templates with "(copy)" as independent rows; switching template kind never destroys a constructed template._
+- **P08X-T06** — lifecycle-stage authorization and private drafts  
+  _Stage role lists (read/write/edit-others/manage) refine record authorization; private drafts are creator-only._
+- **P08X-T07** — lifecycle-aware creation and transitions  
+  _Creation phase dropdown defaulting to the latest permitted stage; stage-driven transitions with folder relocation and the new vocabulary._
+- **P08X-GATE** — owner end-to-end review  
+  _Hard stop; the hand-authored empty-Domain Document Types exercise determines the next tickets and eventually the starter pack._
+
+**P08X status:** specified and awaiting owner review ticket-by-ticket. Each
+ticket is executed, committed, and reviewed one at a time.
+
 This index is navigation only. `01_ORCHESTRATOR.md`, each phase's `00_PHASE_ORCHESTRATOR.md`, and the ticket itself control execution.
 
 ## Global execution rule

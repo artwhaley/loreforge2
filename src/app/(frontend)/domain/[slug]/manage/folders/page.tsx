@@ -7,8 +7,6 @@ import { getLorePayload } from '@/lib/payload'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getTenantsForUser } from '@/lib/tenant/queries'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
-import type { PermissionDecision } from '@/lib/authz/evaluate'
-import { resolveFolderPermissionInSession } from '@/lib/authz/folderAccess'
 import { decideInSession, folderAncestry } from '@/lib/authz/session'
 import { loadCachedAuthorizationSession } from '@/lib/authz/sessionCache'
 
@@ -33,16 +31,13 @@ export default async function ManageFoldersPage({ params }: Props) {
   ])
   const toNode = (node: ReturnType<typeof buildFolderTree>[number]): AdminFolderNode => {
     const folderId = Number(node.folder.id)
-    const effective = resolveFolderPermissionInSession(session, folderId)
-    const source = (decision: PermissionDecision) => decision.matchedRule ? `${decision.matchedRule.principalType} rule` : decision.reason.replace(/\.$/, '')
     const ancestry = folderAncestry(session, folderId)
     return {
       canManage: decideInSession(session, 'manage_folders', { type: 'Folder', id: folderId, folderChain: ancestry.chain, subdomainId: ancestry.subdomainId }).allowed,
       id: folderId,
       name: node.folder.name,
+      createdAt: String(node.folder.createdAt ?? ''),
       systemManaged: Boolean(node.folder.systemManaged),
-      effectiveRead: { allowed: effective.read.allowed, source: source(effective.read) },
-      effectiveWrite: { allowed: effective.write.allowed, source: source(effective.write) },
       children: node.children.map(toNode),
     }
   }
@@ -50,7 +45,6 @@ export default async function ManageFoldersPage({ params }: Props) {
     <section>
       <p><a href={`/domain/${slug}`}>← Domain home</a></p>
       <h1>Folders</h1>
-      <p>Folders organize records and can restrict access. Document Types grant record capabilities.</p>
       <FolderManager domainSlug={slug} folders={buildFolderTree(folders.docs).map(toNode)} canManageRoot={domainAllowed} />
     </section>
   </TenantShell>

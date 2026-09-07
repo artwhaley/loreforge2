@@ -681,7 +681,7 @@ export interface DocumentType {
    */
   draftFolder?: (number | null) | Folder;
   /**
-   * P07X-T05 lifecycle route for Pending-Review records.
+   * P07X-T05 legacy lifecycle route for Submitted records — fallback compatibility only; stage configuration supersedes it.
    */
   pendingReviewFolder?: (number | null) | Folder;
   /**
