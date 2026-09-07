@@ -1,0 +1,79 @@
+/* ---------------------------------------------------------------------------
+   Ledger shell (P08D-T07): an editorial archive spread. One persistent side
+   rail owns identity + navigation; the main column is a typeset page. All
+   rail vocabulary (width, density, masthead, rules) comes from the resolved
+   Ledger config via data-* attributes — Ledger's own words, not Civic's.
+   Paper texture comes from the --ledger-paper-texture token (Design media).
+--------------------------------------------------------------------------- */
+
+/* ---- Base ---- */
+.root { min-height: 100vh; position: relative; background-color: var(--tenant-page-bg); color: var(--tenant-primary); font-family: var(--tenant-body-font); isolation: isolate; background-image: var(--ledger-paper-texture); background-size: cover; background-attachment: fixed; }
+.root * { box-sizing: border-box; }
+.root a, .root button, .root input, .root select, .root summary { touch-action: manipulation; }
+.root :focus-visible { outline: 2px solid var(--tenant-accent); outline-offset: 4px; }
+.root img { max-width: 100%; }
+.root h1, .root h2, .root h3 { overflow-wrap: anywhere; }
+.bgOverlay { position: absolute; inset: 0; background: var(--tenant-background-overlay); pointer-events: none; z-index: -1; }
+
+/* ---- Spread: rail + typeset column ---- */
+.grid { width: min(1200px, calc(100% - 3rem)); max-width: 100%; margin: auto; display: grid; grid-template-columns: var(--ledger-rail-cols, minmax(175px, 22%)) minmax(0, 1fr); grid-template-rows: 1fr auto; min-height: calc(100vh - 65px); border-left: 1px solid var(--tenant-surface-border); border-right: 1px solid var(--tenant-surface-border); }
+
+.rail { grid-column: 1; grid-row: 1 / 3; border-right: var(--ledger-rail-border, 1px) solid var(--tenant-primary); padding: 2rem 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+.identity { display: flex; flex-direction: column; align-items: flex-start; gap: .5rem; color: inherit; text-decoration: none; min-width: 0; }
+.identityText { min-width: 0; }
+.domainName { display: block; font: 500 1.75rem/1.12 var(--tenant-heading-font); overflow-wrap: anywhere; }
+.motto { display: block; margin-top: .4rem; font-size: .72rem; line-height: 1.6; max-width: 26ch; color: var(--tenant-muted-text); }
+.seal, .sealFallback { flex: 0 0 40px; width: 40px; height: 40px; object-fit: contain; }
+.sealFallback { display: grid; place-items: center; border: 1px solid currentColor; font: 1.6rem var(--tenant-heading-font); }
+.mastheadImage { line-height: 0; }
+.mastheadImage img { width: 100%; height: 140px; object-fit: cover; }
+
+.nav { display: flex; flex-direction: column; counter-reset: index; border-top: 3px double var(--tenant-primary); padding-top: 1rem; }
+.navLink { display: flex; gap: .8rem; padding: .85rem 0; font-size: .78rem; color: inherit; text-decoration: none; border-bottom: 1px solid var(--tenant-surface-border); }
+.navLink::before { counter-increment: index; content: '0' counter(index); font-size: .65rem; opacity: .6; }
+.navLink:hover { text-decoration: underline; text-underline-offset: .3em; }
+
+.managementNav { display: flex; flex-direction: column; gap: .5rem; padding-top: 1rem; margin-top: auto; border-top: 1px solid var(--tenant-surface-border); font-size: .67rem; }
+.managementNav a { color: var(--tenant-primary); text-decoration: none; }
+.managementNav a:hover { text-decoration: underline; }
+
+.main { grid-column: 2; grid-row: 1; padding: 2.5rem 3rem 4rem; min-width: 0; container: domain / inline-size; }
+.footer { grid-column: 2; grid-row: 2; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 1.5rem 3rem; border-top: 1px solid var(--tenant-primary); font-size: .7rem; }
+.footer a { color: inherit; text-underline-offset: .2em; }
+
+/* ---- Rail vocabulary (Ledger config → CSS) ---- */
+.root[data-rail='narrow'] { --ledger-rail-cols: minmax(150px, 17%); }
+.root[data-rail='standard'] { --ledger-rail-cols: minmax(175px, 22%); }
+.root[data-rail='wide'] { --ledger-rail-cols: minmax(220px, 28%); }
+.root[data-density='airy'] .rail { padding: 2.25rem 1.75rem; gap: 1.75rem; }
+.root[data-density='airy'] .navLink { padding: 1.1rem 0; }
+.root[data-density='compact'] .rail { padding: 1.5rem 1.1rem; gap: .9rem; }
+.root[data-density='compact'] .navLink { padding: .55rem 0; font-size: .72rem; }
+.root[data-rules='hairline'] { --ledger-rail-border: 1px; }
+.root[data-rules='hairline'] .navLink, .root[data-rules='hairline'] .managementNav { border-color: color-mix(in srgb, var(--tenant-primary) 25%, transparent); }
+.root[data-rules='standard'] { --ledger-rail-border: 1px; }
+.root[data-rules='heavy'] { --ledger-rail-border: 4px; }
+.root[data-masthead='compact'] .domainName { font-size: 1.2rem; }
+.root[data-masthead='compact'] .seal, .root[data-masthead='compact'] .sealFallback { width: 30px; height: 30px; flex-basis: 30px; font-size: 1.2rem; }
+.root[data-masthead='folio'] .identity { padding-top: 2.5rem; border-top: 6px solid var(--tenant-primary); }
+.root[data-masthead='folio'] .domainName { font-size: 2.1rem; }
+
+/* ---- Studio framing (real themed frame, tightened main column) ---- */
+.root:has([data-theme-studio]) > .grid > .main { padding: 1.5rem; }
+.root:has([data-theme-studio]) > .grid { grid-template-columns: 180px minmax(0, 1fr); }
+
+/* ---- Responsive: the rail collapses to a top index, still Ledger-owned ---- */
+@media (max-width: 900px) {
+  .grid { width: 100%; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto; }
+  .rail { grid-column: 1; grid-row: auto; border-right: 0; border-bottom: 3px double var(--tenant-primary); padding: 1.5rem 1.25rem 0; }
+  .identity { flex-direction: row; align-items: center; padding-bottom: 1rem; }
+  .motto { display: none; }
+  .nav { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 0; padding-top: 0; }
+  .navLink { padding: .7rem .4rem; font-size: .75rem; }
+  .navLink::before { display: none; }
+  .managementNav { flex-direction: row; flex-wrap: wrap; gap: .4rem 1rem; padding: .75rem 0; margin-top: 0; }
+  .main, .footer { grid-column: 1; }
+  .main { padding: 2rem 1.25rem; }
+  .footer { padding: 1.25rem; }
+}
+@media (prefers-reduced-motion: reduce) { .root *, .root *::before, .root *::after { scroll-behavior: auto !important; transition: none !important; } }

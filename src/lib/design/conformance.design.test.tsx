@@ -73,11 +73,11 @@ describe('P08D-T00 shell conformance', () => {
 })
 
 describe('P08D-T00 records conformance', () => {
-  // What each Design currently omits from the Records contract. Civic is the
-  // mature baseline; Ledger/Poster close these gaps to earn first-class status.
+  // What each Design currently omits from the Records contract. Civic and
+  // Ledger (T07) carry the full capability set; Poster closes the gaps later.
   const RECORDS_GAPS: Record<string, readonly RecordsCapability[]> = {
     civic: [],
-    ledger: ['searchSubfolders', 'typeFilter', 'import', 'editRecord', 'supersedeRecord', 'deleteRecord', 'createFolder', 'renameFolder', 'deleteFolder', 'supersessionRepresentation'],
+    ledger: [],
     poster: ['searchSubfolders', 'typeFilter', 'import', 'supersedeRecord', 'deleteRecord', 'createFolder', 'renameFolder', 'deleteFolder', 'supersessionRepresentation'],
   }
 
@@ -98,11 +98,11 @@ describe('P08D-T00 records conformance', () => {
 })
 
 describe('P08D-T00 document conformance', () => {
-  // Civic (T06) badges lifecycle state and renders raw source + predecessor
-  // links; Ledger/Poster close their remaining gaps to earn first-class status.
+  // Civic (T06) and Ledger (T07) both badge lifecycle state and render raw
+  // source + predecessor links; Poster closes its gaps later.
   const DOCUMENT_GAPS: Record<string, readonly DocumentCapability[]> = {
     civic: [],
-    ledger: ['bodySource', 'lifecycleRepresentation', 'predecessorLink'],
+    ledger: [],
     poster: ['bodySource', 'lifecycleRepresentation', 'predecessorLink'],
   }
 
@@ -144,17 +144,25 @@ describe('P08D-T00 document conformance', () => {
     expect(statusTextOf(LOCKED_DOCUMENT_MODEL)).toMatch(/locked/i)
   })
 
-  it('tripwire: ledger and poster do not badge lifecycle states yet (T07/T08 close this)', () => {
-    for (const [key, Design] of ALL_DESIGNS) {
-      if (key === 'civic') continue
-      const { container } = render(
-        <Design.pages.document {...DRAFT_DOCUMENT_MODEL} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} />,
-      )
-      const text = container.textContent?.toLowerCase().replace(/\s+/g, ' ')
-      expect(text).not.toMatch(/\bdraft\b/)
-      expect(text).not.toMatch(/\bfiled\b/)
-      expect(text).not.toMatch(/\blocked\b/)
+  it('ledger badges lifecycle state on the docket (T07 first-class)', () => {
+    const statusTextOf = (model: typeof DRAFT_DOCUMENT_MODEL) => {
+      const { container } = render(<ledger.pages.document {...model} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} />)
+      const badge = container.querySelector('[role="status"]')
+      return badge?.textContent ?? ''
     }
+    expect(statusTextOf(DRAFT_DOCUMENT_MODEL)).toMatch(/draft/i)
+    expect(statusTextOf(FILED_DOCUMENT_MODEL)).toMatch(/filed/i)
+    expect(statusTextOf(LOCKED_DOCUMENT_MODEL)).toMatch(/locked/i)
+  })
+
+  it('tripwire: poster does not badge lifecycle states yet (T08 closes this)', () => {
+    const { container } = render(
+      <poster.pages.document {...DRAFT_DOCUMENT_MODEL} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} />,
+    )
+    const text = container.textContent?.toLowerCase().replace(/\s+/g, ' ')
+    expect(text).not.toMatch(/\bdraft\b/)
+    expect(text).not.toMatch(/\bfiled\b/)
+    expect(text).not.toMatch(/\blocked\b/)
   })
 })
 

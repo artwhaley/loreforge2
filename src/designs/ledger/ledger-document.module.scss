@@ -9,4 +9,21 @@
 .rail h2 { font: 700 .7rem var(--tenant-body-font); letter-spacing: .12em; text-transform: uppercase; margin: 0 0 .5rem; }
 .rail ul { margin: 0; padding-left: 1.1rem; }
 .notice { grid-column: 1 / -1; border: 2px solid var(--tenant-accent); padding: 1rem 1.25rem; font-size: 1.05rem; }
-@media (max-width: 700px) { .ledgerDoc { display: block; } .ledgerDoc .head { display: block; } .body { margin-top: 1.5rem; } }
+.statusBadge { grid-column: 1 / -1; display: flex; justify-content: flex-end; margin-bottom: .5rem; }
+.statusBadge span { font: 600 .68rem/1 var(--tenant-body-font); letter-spacing: .14em; text-transform: uppercase; color: var(--tenant-primary); border: 1px solid var(--tenant-surface-border); padding: .4rem .8rem; background: var(--tenant-surface-bg); }
+.statusBadge[data-state='superseded'] span, .statusBadge[data-state='locked'] span { background: var(--tenant-primary); color: var(--tenant-text-on-primary); }
+.source { grid-column: 2; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; background: var(--tenant-surface-bg); border: 1px solid var(--tenant-surface-border); padding: 1rem; margin: 0; }
+.supersedesLine { grid-column: 2; margin: 1.5rem 0 0; color: var(--tenant-muted-text); }
+.supersedesLine a { color: var(--tenant-primary); }
+/* Register vs docket: register stays the ruled typeset sheet; docket gains a
+   stronger first-line and column rule (Ledger's own reading treatments). */
+.ledgerDoc[data-treatment='docket'] .title { font-size: clamp(2.2rem, 5cqi, 3.6rem); }
+.ledgerDoc[data-treatment='docket'] .head { border-bottom: 4px double var(--tenant-primary); }
+.ledgerDoc[data-treatment='docket'] .body { column-count: 2; column-gap: 3rem; }
+.ledgerDoc[data-treatment='docket'] .body p:first-child { font-size: 1.15em; }
+@media (max-width: 700px) {
+  .ledgerDoc { display: block; }
+  .ledgerDoc .head { display: block; }
+  .body, .source, .supersedesLine { margin-top: 1.5rem; }
+  .ledgerDoc[data-treatment='docket'] .body { column-count: 1; }
+}

@@ -4,14 +4,38 @@ import type { DocumentPageModel } from '@/lib/page-models/document'
 
 import styles from './ledger-document.module.scss'
 
+/** Ledger's own treatment label for the sheet (register vs docket). The legacy
+ *  documentStyle prop is the T06/T07-era projection; Ledger maps it back to its
+ *  own vocabulary so no shared axis name leaks into Ledger's DOM. */
+function ledgerTreatment(documentStyle: string): 'register' | 'docket' {
+  return documentStyle === 'modern' ? 'docket' : 'register'
+}
+
+/** Official status word for the docket (Ledger's own presentation). */
+function ledgerStatus(model: DocumentPageModel): string {
+  if (model.isSuperseded) return 'Superseded'
+  if (model.locked) return 'Locked'
+  switch (model.lifecycle) {
+    case 'draft': return 'Draft'
+    case 'submitted': return 'Submitted'
+    case 'filed': return 'Filed'
+    case 'deprecated': return 'Deprecated'
+    default: return 'Filed'
+  }
+}
+
 /** Ledger document: typeset page with a marginalia rail for credits/tags/concerns. */
 export function LedgerDocument(model: DocumentPageModel & DesignVariantProps & DocumentDesignViewProps) {
   const { workflowAction, deleteAction } = model
-  // P08D-T02: the whole permitted action surface comes from the shared helper.
   const actions = getDocumentActions(model, { workflow: Boolean(workflowAction), delete: Boolean(deleteAction) })
+  const treatment = ledgerTreatment(model.documentStyle)
+  const status = ledgerStatus(model)
   return (
-    <article className={styles.ledgerDoc}>
+    <article className={styles.ledgerDoc} data-treatment={treatment}>
       {model.statusMessage ? <p className={styles.notice} role="alert">{model.statusMessage.text}</p> : null}
+      <div className={styles.statusBadge} role="status" data-state={model.isSuperseded ? 'superseded' : model.locked ? 'locked' : model.lifecycle}>
+        <span>{status}</span>
+      </div>
       <header className={styles.head}>
         <div>
           <h1 className={styles.title}>{model.title}</h1>
@@ -42,7 +66,8 @@ export function LedgerDocument(model: DocumentPageModel & DesignVariantProps & D
         {model.tags.length > 0 ? <section><h2>Tags</h2><ul>{model.tags.map((tag) => <li key={tag}>{tag}</li>)}</ul></section> : null}
         {model.supersession.supersededBy ? <section><h2>Superseded by</h2><p><a href={`${model.baseUrl}/documents/${model.supersession.supersededBy.id}`}>{model.supersession.supersededBy.title}</a></p></section> : null}
       </aside>
-      <div className={styles.body} dangerouslySetInnerHTML={{ __html: model.bodyHtml }} />
+      {model.bodySource !== null ? <pre className={styles.source}>{model.bodySource}</pre> : <div className={styles.body} dangerouslySetInnerHTML={{ __html: model.bodyHtml }} />}
+      {model.supersession.supersedes ? <p className={styles.supersedesLine}>Supersedes <a href={`${model.baseUrl}/documents/${model.supersession.supersedes.id}`}>{model.supersession.supersedes.title}</a>.</p> : null}
     </article>
   )
 }
