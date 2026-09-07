@@ -9,6 +9,9 @@ import type { Domain } from '@/payload-types'
 import { isAllowed } from '@/lib/authz/evaluate'
 import { resolveActingIdentity } from '@/lib/tenant/actingIdentity'
 import { isValidThemeInput, type ThemeInput } from '@/lib/theme/input'
+import { resolveDesign } from '@/lib/design/registry'
+import { buildV2Envelope } from '@/lib/design/v2'
+import type { LegacyDomainAppearance } from '@/lib/design/contracts'
 
 /**
  * Persist tenant theme settings. Verifies the session user is an admin of
@@ -44,27 +47,29 @@ export async function saveThemeAction(input: {
   // Owner decision 2026-09-05: vocabulary customization is removed; platform
   // nouns are code constants (src/lib/theme/nouns.ts) and the vocabulary
   // column is dropped by the P08 corrective migration.
-  // Design-registry seam (spec §21 Step 2): dual-write the structured JSON
-  // config alongside the legacy scalars. The resolver prefers valid JSON and
-  // falls back to scalars, so both representations always agree after a save.
-  const designConfig = {
-    schemaVersion: 1,
-    designKey: theme.designTemplate,
-    common: {
-      primaryColor: theme.primaryColor,
-      secondaryColor: theme.secondaryColor,
-      accentColor: theme.accentColor,
-      backgroundColor: theme.backgroundColor,
-      headingFontKey: theme.headingFontKey,
-      bodyFontKey: theme.bodyFontKey,
-      contentWidth: theme.contentWidth,
-    },
-    options: {
-      headerLayout: theme.headerLayout,
-      documentStyle: theme.documentStyle,
-    },
-    design: {},
+  // P08D-T04: the V2 banked envelope is the single persisted authority even
+  // from this transitional legacy studio. The ThemeInput scalars adapt into
+  // the active Design's own config vocabulary through fromLegacy, are
+  // validated, and are banked; the legacy scalars below are the explicitly
+  // historical dual-write (G), never read authority.
+  const design = resolveDesign(theme.designTemplate)
+  const legacyAppearance: LegacyDomainAppearance = {
+    designTemplate: theme.designTemplate,
+    headerLayout: theme.headerLayout,
+    documentStyle: theme.documentStyle,
+    primaryColor: theme.primaryColor,
+    secondaryColor: theme.secondaryColor,
+    accentColor: theme.accentColor,
+    backgroundColor: theme.backgroundColor,
+    headingFontKey: theme.headingFontKey,
+    bodyFontKey: theme.bodyFontKey,
+    contentWidth: theme.contentWidth,
+    backgroundTreatment: theme.backgroundTreatment,
   }
+  const adapted = design.config.fromLegacy?.(legacyAppearance) ?? design.config.defaults
+  const validated = design.config.validate(adapted)
+  const bank = { version: design.config.version, config: validated.ok ? validated.value : design.config.defaults }
+  const designConfig = buildV2Envelope(design.key, { [design.key]: bank })
   await payload.update({
     collection: 'domains',
     id: tenant.id,

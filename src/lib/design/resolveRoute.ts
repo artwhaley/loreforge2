@@ -1,10 +1,9 @@
 import type { Character, Domain, Tenant, User } from '@/payload-types'
 
 import type { DesignDefinition } from './types'
-import { resolveDesign } from './registry'
-import { pickDesignKey, resolveDocumentStyle, resolveHeaderLayout } from './config'
+import type { LegacyDomainAppearance } from './contracts'
+import { resolveDomainDesign } from './resolveDomainDesign'
 import { buildDomainShellModel } from '@/lib/shell/buildDomainShellModel'
-import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 
 export type DomainRouteShell = {
   design: DesignDefinition
@@ -15,9 +14,10 @@ export type DomainRouteShell = {
 }
 
 /**
- * Shared route resolution: authorized shell model + selected Design + variant
- * axes + theme CSS vars. Every designable domain route funnels through this so
- * the route/data layer never assumes a specific records table/card DOM.
+ * Shared route resolution (P08D-T04-C): the CANONICAL resolveDomainDesign is
+ * the single source of the active Design + config + theme. The legacy
+ * headerLayout/documentStyle props are DERIVED projections of the resolved
+ * config (G8) — no live path reads the scalar fields as authority anymore.
  */
 export async function resolveDomainRouteShell(input: {
   tenant: Domain | Tenant
@@ -26,10 +26,13 @@ export async function resolveDomainRouteShell(input: {
   activeCharacter: Character | null
 }): Promise<DomainRouteShell> {
   const { tenant, role, user, activeCharacter } = input
-  const design = resolveDesign(pickDesignKey((tenant as unknown as { designTemplate?: unknown }).designTemplate))
+  const resolved = resolveDomainDesign(tenant as unknown as LegacyDomainAppearance)
   const shell = await buildDomainShellModel({ tenant, role, userId: user ? Number(user.id) : null, activeCharacter })
-  const headerLayout = resolveHeaderLayout(design, tenant as unknown as Record<string, unknown>)
-  const documentStyle = resolveDocumentStyle(design, tenant as unknown as Record<string, unknown>)
-  const cssVars = themeTokensToCssVars(resolveThemeTokens(tenant as unknown as Parameters<typeof resolveThemeTokens>[0]))
-  return { design, shell, headerLayout, documentStyle, cssVars }
+  return {
+    design: resolved.design,
+    shell,
+    headerLayout: resolved.variant.headerLayout,
+    documentStyle: resolved.variant.documentStyle,
+    cssVars: resolved.cssVars,
+  }
 }

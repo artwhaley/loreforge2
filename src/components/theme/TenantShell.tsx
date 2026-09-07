@@ -2,9 +2,8 @@ import type { Character, Tenant } from '@/payload-types'
 
 import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { buildDomainShellModel } from '@/lib/shell/buildDomainShellModel'
-import { resolveDesign } from '@/lib/design/registry'
-import { pickDesignKey, resolveDocumentStyle, resolveHeaderLayout } from '@/lib/design/config'
-import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
+import { resolveDomainDesign } from '@/lib/design/resolveDomainDesign'
+import type { LegacyDomainAppearance } from '@/lib/design/contracts'
 
 type Props = {
   tenant: Tenant
@@ -33,13 +32,12 @@ export async function TenantShell({ tenant, role, switcherTenants, activeCharact
     switcherTenants: switcherTenants ?? null,
     switcherCharacters: switcherCharacters ?? null,
   })
-  const design = resolveDesign(pickDesignKey((tenant as unknown as { designTemplate?: unknown }).designTemplate))
-  const headerLayout = resolveHeaderLayout(design, tenant as unknown as Record<string, unknown>)
-  const documentStyle = resolveDocumentStyle(design, tenant as unknown as Record<string, unknown>)
-  const tokens = themeTokensToCssVars(resolveThemeTokens(tenant))
-  const Shell = design.Shell
+  // P08D-T04-C: management/authoring surfaces resolve the SAME canonical
+  // Design + config + theme as the public routes — one authority everywhere.
+  const resolved = resolveDomainDesign(tenant as unknown as LegacyDomainAppearance)
+  const Shell = resolved.design.Shell
   return (
-    <Shell model={shell} theme={{ tokens, headerLayout, documentStyle }}>
+    <Shell model={shell} theme={{ tokens: resolved.cssVars, headerLayout: resolved.variant.headerLayout, documentStyle: resolved.variant.documentStyle }}>
       {children}
     </Shell>
   )
