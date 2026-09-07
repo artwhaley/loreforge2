@@ -98,10 +98,10 @@ describe('P08D-T00 records conformance', () => {
 })
 
 describe('P08D-T00 document conformance', () => {
-  // bodySource/predecessorLink are Civic-only today; no Design badges the
-  // lifecycle state yet (covered by the tripwire test below).
+  // Civic (T06) badges lifecycle state and renders raw source + predecessor
+  // links; Ledger/Poster close their remaining gaps to earn first-class status.
   const DOCUMENT_GAPS: Record<string, readonly DocumentCapability[]> = {
-    civic: ['lifecycleRepresentation'],
+    civic: [],
     ledger: ['bodySource', 'lifecycleRepresentation', 'predecessorLink'],
     poster: ['bodySource', 'lifecycleRepresentation', 'predecessorLink'],
   }
@@ -133,10 +133,20 @@ describe('P08D-T00 document conformance', () => {
     assertDocumentCapabilities(container, STATUS_DOCUMENT_MODEL, { omit: DOCUMENT_GAPS[_key], workflowAction: stubAction, deleteAction: stubAction })
   })
 
-  it('documents the expected-future lifecycle label: no Design badges lifecycle states yet', () => {
-    // Tripwire: once T06/T07 add an explicit lifecycle badge, this fails and
-    // 'lifecycleRepresentation' must be promoted out of DOCUMENT_GAPS.
+  it('civic badges lifecycle state on the record sheet (T06 first-class)', () => {
+    const statusTextOf = (model: typeof DRAFT_DOCUMENT_MODEL) => {
+      const { container } = render(<civic.pages.document {...model} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} />)
+      const badge = container.querySelector('[role="status"]')
+      return badge?.textContent ?? ''
+    }
+    expect(statusTextOf(DRAFT_DOCUMENT_MODEL)).toMatch(/draft/i)
+    expect(statusTextOf(FILED_DOCUMENT_MODEL)).toMatch(/filed/i)
+    expect(statusTextOf(LOCKED_DOCUMENT_MODEL)).toMatch(/locked/i)
+  })
+
+  it('tripwire: ledger and poster do not badge lifecycle states yet (T07/T08 close this)', () => {
     for (const [key, Design] of ALL_DESIGNS) {
+      if (key === 'civic') continue
       const { container } = render(
         <Design.pages.document {...DRAFT_DOCUMENT_MODEL} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} />,
       )

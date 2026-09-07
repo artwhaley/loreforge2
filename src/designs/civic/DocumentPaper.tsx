@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import styles from '@/app/(frontend)/domain/[slug]/documents/[id]/document.module.scss'
+import styles from './document.module.scss'
 
+/** Civic-owned record sheet: the official paper surface for one Document. */
 export function DocumentPaper({ title, meta, html, source, before, children }: {
   title: string; meta: ReactNode; html: string; source?: string; before?: ReactNode; children?: ReactNode
 }) {

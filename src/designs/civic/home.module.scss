@@ -1,3 +1,6 @@
+/* Civic-owned home composition (P08D-T06): the classic portal landing —
+   welcome, ordinal quick links, recent records. Ledger and Poster compose the
+   same model in their own design stylesheets (src/designs/ledger, poster). */
 .home { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(230px, .65fr); gap: 3rem 4rem; color: var(--tenant-primary); }
 .welcome { min-width: 0; padding: 1rem 0; }
 .title { font-family: var(--tenant-heading-font); font-size: clamp(2.8rem, 5cqi, 4.8rem); line-height: 1.04; font-weight: 500; margin: 0 0 1.2rem; overflow-wrap: anywhere; text-wrap: balance; }
@@ -22,8 +25,6 @@
 .activity { color: var(--tenant-muted-text); font-size: .75rem; line-height: 1.6; }
 .empty { padding: 2rem 0; color: var(--tenant-muted-text); }
 
-/* Civic-owned home composition. Ledger and Poster compose the same model in
-   their own design stylesheets (src/designs/ledger, src/designs/poster). */
 @container domain (max-width: 760px) {
   .home { grid-template-columns: 1fr; gap: 2rem; }
   .records { grid-template-columns: 1fr 1fr; }

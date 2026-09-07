@@ -1,13 +1,24 @@
 import type { DesignVariantProps, DocumentDesignViewProps } from '@/lib/design/types'
-import { DocumentPaper } from '@/components/theme/DocumentPaper'
 import { getDocumentActions } from '@/lib/documents/presentation/actions'
 import type { DocumentPageModel } from '@/lib/page-models/document'
 
-// T06 owns moving this stylesheet into the Civic design folder; T02 only
-// separates the action semantics from the markup.
-import styles from '@/app/(frontend)/domain/[slug]/documents/[id]/document.module.scss'
+import { DocumentPaper } from './DocumentPaper'
+import styles from './document.module.scss'
 
-/** Civic document reading preserves the current record-sheet composition exactly. */
+/** Official status label for the record sheet (Civic's own vocabulary). */
+function lifecycleBadgeLabel(model: DocumentPageModel): string {
+  if (model.isSuperseded) return 'Superseded'
+  if (model.locked) return 'Locked'
+  switch (model.lifecycle) {
+    case 'draft': return 'Draft'
+    case 'submitted': return 'Submitted'
+    case 'filed': return 'Filed'
+    case 'deprecated': return 'Deprecated'
+    default: return 'Filed'
+  }
+}
+
+/** Civic document reading: an official sheet on a surface. */
 export function CivicDocument(model: DocumentPageModel & DesignVariantProps & DocumentDesignViewProps) {
   const { workflowAction, deleteAction } = model
   const base = `${model.baseUrl}/documents/${model.recordId}`
@@ -17,9 +28,13 @@ export function CivicDocument(model: DocumentPageModel & DesignVariantProps & Do
   const primaryActions = actions.filter((action) => action.operation !== 'supersede' && action.operation !== 'delete')
   const bottomActions = actions.filter((action) => action.operation === 'supersede' || action.operation === 'delete')
   const labelFor = (operation: string, fallback: string) => operation === 'supersede' ? 'Create superseding document' : fallback
+  const badgeLabel = lifecycleBadgeLabel(model)
   return (
     <>
       {model.statusMessage ? <p className={styles.errorNotice} role="alert">{model.statusMessage.text}</p> : null}
+      <div className={styles.lifecycleBadge} role="status" data-state={model.isSuperseded ? 'superseded' : model.locked ? 'locked' : model.lifecycle}>
+        <span>{badgeLabel}</span>
+      </div>
       <article className={styles.record} data-style={model.documentStyle}>
         <div className={styles.actions} aria-label="Document controls">
           {primaryActions.map((action) => action.href ? (

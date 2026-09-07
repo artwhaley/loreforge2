@@ -1,0 +1,64 @@
+/* ---------------------------------------------------------------------------
+   Civic shell (P08D-T06): the classic institutional portal composition.
+   Civic owns this DOM and SCSS — no shared [data-template] styling, no route
+   stylesheets. The root carries data-header with Civic's own vocabulary
+   ('centered' | 'compact' | 'banner'), driven by the resolved Civic config
+   via the --civic-header token. All colors/fonts stay on the --tenant-* bridge
+   so the Domain stays themeable.
+--------------------------------------------------------------------------- */
+
+/* ---- Base frame ---- */
+.root { min-height: 100vh; position: relative; background-color: var(--tenant-page-bg); color: var(--tenant-primary); font-family: var(--tenant-body-font); isolation: isolate; }
+.root * { box-sizing: border-box; }
+.root a, .root button, .root input, .root select, .root summary { touch-action: manipulation; }
+.root :focus-visible { outline: 2px solid var(--tenant-primary); outline-offset: 4px; }
+.root img { max-width: 100%; }
+.root h1, .root h2, .root h3 { overflow-wrap: anywhere; }
+.bgOverlay { position: absolute; inset: 0; background: var(--tenant-background-overlay); pointer-events: none; z-index: -1; }
+
+.domainGrid { width: var(--civic-width, min(1200px, calc(100% - 3rem))); max-width: 100%; margin: auto; display: grid; grid-template-columns: minmax(0, 1fr); min-height: calc(100vh - 65px); grid-template-rows: auto 1fr auto; }
+.header { min-width: 0; border-bottom: 3px solid var(--tenant-primary); }
+.headerInner { padding: 2rem 2.5rem 0; background: var(--tenant-primary); color: var(--tenant-text-on-primary); }
+.identity { display: flex; gap: 1rem; align-items: center; color: inherit; text-decoration: none; min-width: 0; }
+.identityText { min-width: 0; }
+.domainName { display: block; font: 500 1.75rem/1.12 var(--tenant-heading-font); overflow-wrap: anywhere; }
+.motto { display: block; margin-top: .5rem; font-size: .75rem; line-height: 1.6; max-width: 48ch; }
+.seal, .sealFallback { flex: 0 0 48px; width: 48px; height: 48px; object-fit: contain; }
+.sealFallback { display: grid; place-items: center; border: 1px solid currentColor; font: 2rem var(--tenant-heading-font); }
+.nav { display: flex; gap: 0; flex-wrap: wrap; margin-top: 1.8rem; }
+.navLink { display: block; color: inherit; text-decoration: none; padding: .9rem 1.2rem; border-top: 1px solid color-mix(in srgb, currentColor 35%, transparent); font-size: .8rem; }
+.navLink:hover { background: color-mix(in srgb, currentColor 12%, transparent); text-decoration: underline; text-underline-offset: .4em; }
+.managementNav { display: flex; gap: .6rem 1.3rem; flex-wrap: wrap; padding: .8rem 2.5rem; font-size: .7rem; line-height: 1.6; background: var(--tenant-surface-bg); border-bottom: 1px solid var(--tenant-surface-border); }
+.managementNav a { color: var(--tenant-primary); text-decoration: none; }
+.managementNav a:hover { text-decoration: underline; }
+.main { min-width: 0; padding: 3rem 2.5rem 4rem; container: domain / inline-size; }
+.footer { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 1.5rem 2.5rem; border-top: 1px solid var(--tenant-primary); font-size: .7rem; }
+.footer a { color: inherit; text-underline-offset: .2em; }
+.bannerWrap { line-height: 0; }
+.banner { width: 100%; height: 160px; object-fit: cover; }
+
+/* ---- Civic header choices (config vocabulary: centered | compact | banner) ---- */
+.root[data-header='centered'] .identity { justify-content: center; text-align: center; flex-direction: column; }
+.root[data-header='centered'] .nav { justify-content: center; }
+.root[data-header='compact'] .headerInner { padding-top: 1.2rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap; }
+.root[data-header='compact'] .nav { margin-top: 0; }
+.root[data-header='compact'] .identity { padding-bottom: 1rem; }
+.root[data-header='banner'] .headerInner { padding-top: 4rem; }
+.root[data-header='banner'] .domainName { font-size: 3rem; }
+.root[data-header='banner'] .banner { height: 300px; }
+
+/* ---- Studio framing: the customize page renders in the REAL themed frame so
+   saved changes are visible immediately, including shell width. Only the main
+   padding is tightened so the controls/preview layout has room. ---- */
+.root:has([data-theme-studio]) > .domainGrid > .main { padding: 1.5rem; }
+
+/* ---- Responsive ---- */
+@media (max-width: 900px) {
+  .domainGrid { width: 100%; }
+  .main { padding: 2rem 1.25rem; }
+  .headerInner { padding: 1.5rem 1.25rem 0; }
+  .managementNav { padding: .75rem 1.25rem; }
+  .navLink { padding: .8rem; }
+  .footer { padding: 1.25rem; }
+}
+@media (prefers-reduced-motion: reduce) { .root *, .root *::before, .root *::after { scroll-behavior: auto !important; transition: none !important; } }

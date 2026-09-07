@@ -1,7 +1,7 @@
 import type { DesignDefinition } from '@/lib/design/types'
 import type { CivicConfigV1 } from '@/lib/design/contracts'
 import { HEADER_LAYOUTS, DOCUMENT_STYLES, THEME_PRESETS } from '@/lib/theme/fonts'
-import { SharedAboutView, SharedDepartmentView, SharedDepartmentsView, SharedLoreView } from '../shared/thin'
+import { CivicAboutView, CivicDepartmentView, CivicDepartmentsView, CivicLoreView } from './thin'
 import { CivicShell } from './CivicShell'
 import { CivicHome } from './CivicHome'
 import { CivicRecords } from './CivicRecords'
@@ -13,7 +13,7 @@ const heritage = THEME_PRESETS.heritage
 
 export const civic: DesignDefinition<CivicConfigV1> = {
   key: 'civic',
-  status: 'compatibility',
+  status: 'first-class',
   name: 'Civic',
   description: 'A classic institutional portal: composed masthead, clear directory, structured record grid.',
   preview: { thumbnail: '/designs/civic.svg' },
@@ -31,10 +31,10 @@ export const civic: DesignDefinition<CivicConfigV1> = {
     home: CivicHome,
     records: CivicRecords,
     document: CivicDocument,
-    departments: SharedDepartmentsView,
-    department: SharedDepartmentView,
-    about: SharedAboutView,
-    lore: SharedLoreView,
+    departments: CivicDepartmentsView,
+    department: CivicDepartmentView,
+    about: CivicAboutView,
+    lore: CivicLoreView,
   },
   legacyTheme: {
     defaults: { primary: heritage.primary, secondary: heritage.secondary, accent: heritage.accent, background: heritage.background, headingFontKey: heritage.headingFontKey, bodyFontKey: heritage.bodyFontKey, contentWidth: 'standard' },

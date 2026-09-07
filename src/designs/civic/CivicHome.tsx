@@ -1,7 +1,7 @@
 import type { HomePageModel } from '@/lib/page-models/home'
 import type { DesignVariantProps } from '@/lib/design/types'
 
-import styles from '@/components/theme/DomainHome.module.scss'
+import styles from './home.module.scss'
 
 /** Civic home preserves the current universal composition exactly. */
 export function CivicHome({ baseUrl, domain, welcome, destinations, recentRecords }: HomePageModel & DesignVariantProps) {

@@ -1,6 +1,8 @@
 /* ---------------------------------------------------------------------------
-   DomainFrame — the three template compositions.
-   The root carries [data-template='civic'|'ledger'|'poster'] x
+   DomainFrame — transitional shared frame (P08D-T06: Civic now owns its own
+   shell in src/designs/civic/CivicShell.module.scss; this file serves the
+   remaining ledger/poster frame until T07/T08 isolate them).
+   The root carries [data-template='ledger'|'poster'] x
    [data-header='centered'|'left-aligned'|'banner-forward']; all colors and
    fonts come from theme CSS variables so every template stays themeable.
    Access decisions and operating context stay in TenantShell (server).
