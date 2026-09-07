@@ -1,20 +1,14 @@
 import type { DesignVariantProps, DocumentDesignViewProps } from '@/lib/design/types'
+import { getDocumentActions } from '@/lib/documents/presentation/actions'
 import type { DocumentPageModel } from '@/lib/page-models/document'
 
 import styles from './ledger-document.module.scss'
 
 /** Ledger document: typeset page with a marginalia rail for credits/tags/concerns. */
 export function LedgerDocument(model: DocumentPageModel & DesignVariantProps & DocumentDesignViewProps) {
-  const { capabilities: can } = model
   const { workflowAction, deleteAction } = model
-  const workflow = (operation: string, label: string) => workflowAction ? (
-    <form action={workflowAction}>
-      <input type="hidden" name="tenantSlug" value={model.domainSlug} />
-      <input type="hidden" name="documentId" value={model.recordId} />
-      <input type="hidden" name="operation" value={operation} />
-      <button type="submit">{label}</button>
-    </form>
-  ) : null
+  // P08D-T02: the whole permitted action surface comes from the shared helper.
+  const actions = getDocumentActions(model, { workflow: Boolean(workflowAction), delete: Boolean(deleteAction) })
   return (
     <article className={styles.ledgerDoc}>
       {model.statusMessage ? <p className={styles.notice} role="alert">{model.statusMessage.text}</p> : null}
@@ -22,23 +16,22 @@ export function LedgerDocument(model: DocumentPageModel & DesignVariantProps & D
         <div>
           <h1 className={styles.title}>{model.title}</h1>
           <div className={styles.actions}>
-            {can.edit && !model.isSuperseded && model.routes.editUrl ? <a href={model.routes.editUrl}>Edit</a> : null}
-            {model.routes.historyUrl ? <a href={model.routes.historyUrl}>History</a> : null}
-            {can.supersede && !model.isSuperseded && model.routes.supersedeUrl ? <a href={model.routes.supersedeUrl}>Supersede</a> : null}
-            {model.lifecycle === 'draft' && can.submit ? workflow('submit', 'Submit for review') : null}
-            {can.file && model.lifecycle === 'draft' ? workflow('file', 'File now') : null}
-            {model.lifecycle === 'submitted' && can.approve ? workflow('approve', 'Approve') : null}
-            {model.lifecycle === 'filed' && can.deprecate ? workflow('deprecate', 'Deprecate') : null}
-            {model.lifecycle === 'deprecated' && can.restore ? workflow('restore', 'Restore') : null}
-            {can.lock && !model.locked && !model.isSuperseded ? workflow('lock', 'Lock') : null}
-            {can.unlock && model.locked && !model.isSuperseded ? workflow('unlock', 'Unlock') : null}
-            {can.delete && deleteAction ? (
-              <form action={deleteAction}>
+            {actions.map((action) => action.href ? (
+              <a key={action.operation} href={action.href}>{action.label}</a>
+            ) : action.operation === 'delete' ? (
+              <form key={action.operation} action={deleteAction ?? undefined}>
                 <input type="hidden" name="tenantSlug" value={model.domainSlug} />
                 <input type="hidden" name="documentId" value={model.recordId} />
-                <button type="submit">Delete</button>
+                <button type="submit">{action.label}</button>
               </form>
-            ) : null}
+            ) : (
+              <form key={action.operation} action={workflowAction ?? undefined}>
+                <input type="hidden" name="tenantSlug" value={model.domainSlug} />
+                <input type="hidden" name="documentId" value={model.recordId} />
+                <input type="hidden" name="operation" value={action.operation} />
+                <button type="submit">{action.label}</button>
+              </form>
+            ))}
           </div>
         </div>
         <div className={styles.meta}>{model.meta.map((entry) => <span key={entry.label}>{entry.label}: {entry.value}</span>)}</div>

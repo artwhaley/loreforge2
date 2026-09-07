@@ -56,3 +56,23 @@ describe('P08D-T01 records presentation ownership', () => {
     expect(page, 'route has no route-local records styles').not.toContain('styles.')
   })
 })
+
+describe('P08D-T02 document presentation ownership', () => {
+  it('the shared Document action helper is pure: no client directive, no app imports', () => {
+    const helper = read(path.join(SRC, 'lib/documents/presentation/actions.ts'))
+    expect(helper, 'helper must stay a pure server-safe module').not.toContain("'use client'")
+    expect(helper, 'helper imports no route tree').not.toContain('@/app/')
+    expect(helper, 'helper imports no client action context').not.toContain('useRecordActions')
+    expect(helper, 'helper imports no workspace').not.toContain('workspace/')
+  })
+
+  it('Document views take the action bridge as props — never client action context', () => {
+    for (const file of ['src/designs/civic/CivicDocument.tsx', 'src/designs/ledger/LedgerDocument.tsx', 'src/designs/poster/PosterDocument.tsx']) {
+      const content = read(path.join(SRC, file.replace(/^src\//, '')))
+      const relative = file
+      expect(content, `${relative} must not consume the client action context hook`).not.toContain('useRecordActions')
+      expect(content, `${relative} receives the bridge via DocumentDesignViewProps`).toContain('workflowAction')
+      expect(content, `${relative} consumes the shared action descriptor helper`).toContain('getDocumentActions')
+    }
+  })
+})
