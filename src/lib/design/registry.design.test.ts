@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { DESIGN_KEYS, DESIGN_METADATA, DESIGNS, resolveDesign } from '@/lib/design/registry'
@@ -44,10 +46,34 @@ describe('design registry', () => {
   it('the pure catalog matches the registry and the status contract', () => {
     expect(DESIGN_CATALOG.map((entry) => entry.key)).toEqual(DESIGN_KEYS)
     expect(DESIGN_METADATA.map((entry) => entry.status)).toEqual(DESIGN_CATALOG.map((entry) => entry.status))
-    // During the transition Civic/Ledger remain compatibility until T06/T07;
-    // Poster is compatibility for the whole milestone.
-    expect(FIRST_CLASS_DESIGNS).toEqual([])
+    // T06/T07: Civic and Ledger are first-class; Poster stays compatibility.
+    expect(FIRST_CLASS_DESIGNS).toEqual(['civic', 'ledger'])
+    expect(DESIGNS.civic.status).toBe('first-class')
+    expect(DESIGNS.ledger.status).toBe('first-class')
     expect(DESIGNS.poster.status).toBe('compatibility')
+  })
+
+  it('T09-B first-class contract: every registered first-class Design is complete and self-validating', () => {
+    for (const key of FIRST_CLASS_DESIGNS) {
+      const design = DESIGNS[key]
+      const label = `${key} (first-class)`
+      // Positive config version and defaults that validate.
+      expect(design.config.version, `${label}: positive config version`).toBeGreaterThan(0)
+      const defaultsResult = design.config.validate(design.config.defaults)
+      expect(defaultsResult.ok, `${label}: defaults validate`).toBe(true)
+      // Migration is callable and round-trips its own version.
+      expect(typeof design.config.migrate, `${label}: migrate callable`).toBe('function')
+      expect(design.config.migrate(design.config.version, design.config.defaults).ok, `${label}: migrate own version`).toBe(true)
+      // Studio editor, Shell, and every page surface exist.
+      expect(typeof design.studio.Editor, `${label}: Studio Editor`).toBe('function')
+      expect(typeof design.Shell, `${label}: Shell`).toBe('function')
+      for (const page of ['home', 'records', 'document', 'departments', 'department', 'about', 'lore'] as const) {
+        expect(typeof design.pages[page], `${label}.pages.${page}`).toBe('function')
+      }
+      // Thumbnail file actually exists under public/designs/.
+      const thumbPath = path.join(process.cwd(), 'public', design.preview.thumbnail.replace(/^\//, ''))
+      expect(readFileSync(thumbPath, 'utf8').length, `${label}: thumbnail exists`).toBeGreaterThan(0)
+    }
   })
 
   it('Civic and Ledger speak different config vocabularies — no shared HEADER_LAYOUTS validator', () => {

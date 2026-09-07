@@ -116,10 +116,7 @@ describe('design catalog purity', () => {
     expect(catalog).not.toMatch(/\.tsx/)
   })
 
-  it('catalog status flips to first-class only when isolation passes (T06/T07 tripwire)', () => {
-    // Tripwire: Civic/Ledger become 'first-class' when T06/T07 pass; Poster
-    // stays 'compatibility' for the whole milestone. This expectation fails
-    // loudly until the catalog is updated in the isolation tickets.
-    expect(DESIGN_CATALOG.map((entry) => entry.status)).toEqual(['compatibility', 'compatibility', 'compatibility'])
+  it('catalog status: Civic and Ledger are first-class after T06/T07; Poster stays compatibility', () => {
+    expect(DESIGN_CATALOG.map((entry) => entry.status)).toEqual(['first-class', 'first-class', 'compatibility'])
   })
 })

@@ -7,6 +7,10 @@ const designSeamMessage =
   'Designs consume Page Models; they do not discover protected Domain data (spec §33 Guardrail 2).'
 const builderSeamMessage =
   'Client workspace modules must not import server-only Page Model builders (spec §33).'
+const isolationSeamMessage =
+  'First-class Designs (P08D-T09) are isolated presentation layers: no route tree, no theme presentation, no other Design, no legacy shared presentation (LegacyShellFrame/Legacy*Views).'
+const legacyPresentationMessage =
+  'Legacy shared frame/thin views (P08D-T08) are Poster-compatibility only; first-class Designs own their Shell and thin pages.'
 
 export default defineConfig([
   ...nextVitals,
@@ -28,6 +32,7 @@ export default defineConfig([
           patterns: [
             { group: ['@/lib/authz/*'], message: designSeamMessage },
             { group: ['@/collections/*'], message: designSeamMessage },
+            { group: ['@/designs/*'], message: isolationSeamMessage },
             {
               group: [
                 '@/lib/shell/*',
@@ -38,6 +43,26 @@ export default defineConfig([
               ],
               message: builderSeamMessage,
             },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // First-class directories only (T09-A): Civic and Ledger may not touch the
+    // legacy shared frame/thin presentation. T10/new Design registration adds
+    // its folder to this set when it earns first-class status.
+    files: ['src/designs/civic/**/*.ts', 'src/designs/civic/**/*.tsx', 'src/designs/ledger/**/*.ts', 'src/designs/ledger/**/*.tsx'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [{ name: '@/components/theme/LegacyShell.module.scss', message: legacyPresentationMessage }],
+          patterns: [
+            { group: ['../shared/legacy-*', '../shared/legacy-*/**'], message: legacyPresentationMessage },
+            { group: ['@/app/**'], message: isolationSeamMessage },
+            { group: ['@/components/theme/*'], message: isolationSeamMessage },
+            { group: ['@/components/theme/**'], message: isolationSeamMessage },
           ],
         },
       ],

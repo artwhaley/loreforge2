@@ -57,6 +57,46 @@ describe('P08D-T01 records presentation ownership', () => {
   })
 })
 
+describe('P08D-T09 first-class isolation scan', () => {
+  const FIRST_CLASS_DIRS = ['civic', 'ledger']
+  const FORBIDDEN = [
+    '@/app/',
+    '@/components/theme/',
+    '@/payload.config',
+    '@/collections/',
+    '@/lib/authz/',
+    '@/designs/civic',
+    '@/designs/ledger',
+    '@/designs/poster',
+    '../shared/legacy-frame',
+    '../shared/legacy-thin',
+  ]
+
+  it('first-class Design production files import none of the forbidden modules', () => {
+    for (const dir of FIRST_CLASS_DIRS) {
+      for (const file of walk(path.join(SRC, 'designs', dir))) {
+        if (file.includes('.design.test.')) continue
+        const content = read(file)
+        const relative = rel(file)
+        for (const forbidden of FORBIDDEN) {
+          expect(content, `${relative} must not import ${forbidden}`).not.toContain(forbidden)
+        }
+      }
+    }
+  })
+
+  it('first-class Designs never reference legacy shared frame/thin modules even relative', () => {
+    for (const dir of FIRST_CLASS_DIRS) {
+      for (const file of walk(path.join(SRC, 'designs', dir))) {
+        if (file.includes('.design.test.')) continue
+        const relative = rel(file)
+        expect(read(file), `${relative} must not use the legacy shared frame`).not.toMatch(/shared\/legacy-frame/)
+        expect(read(file), `${relative} must not use legacy thin views`).not.toMatch(/shared\/legacy-thin/)
+      }
+    }
+  })
+})
+
 describe('P08D-T02 document presentation ownership', () => {
   it('the shared Document action helper is pure: no client directive, no app imports', () => {
     const helper = read(path.join(SRC, 'lib/documents/presentation/actions.ts'))

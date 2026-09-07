@@ -16,14 +16,14 @@ export type DesignCatalogEntry = {
 export const DESIGN_CATALOG: readonly DesignCatalogEntry[] = [
   {
     key: 'civic',
-    status: 'compatibility',
+    status: 'first-class',
     name: 'Civic',
     description: 'A classic institutional portal: composed masthead, clear directory, structured record grid.',
     thumbnail: '/designs/civic.svg',
   },
   {
     key: 'ledger',
-    status: 'compatibility',
+    status: 'first-class',
     name: 'Ledger',
     description: 'An editorial archive: persistent side index, generous reading column, ruled register.',
     thumbnail: '/designs/ledger.svg',
@@ -40,8 +40,9 @@ export const DESIGN_CATALOG: readonly DesignCatalogEntry[] = [
 export const DESIGN_CATALOG_KEYS: readonly DesignKey[] = DESIGN_CATALOG.map((entry) => entry.key)
 
 /**
- * Civic/Ledger stay `compatibility` until their isolation tickets pass
- * (T06/T07); Poster remains compatibility throughout the milestone. T06/T07
- * flip their entries to `first-class`.
+ * First-class Designs (T06/T07): Civic and Ledger are completely isolated
+ * presentation layers passing the full shared conformance contract. Poster
+ * remains compatibility throughout the milestone. A Design earns its place
+ * here by passing the T09 first-class registry contract — never by fiat.
  */
 export const FIRST_CLASS_DESIGNS: readonly DesignKey[] = DESIGN_CATALOG.filter((entry) => entry.status === 'first-class').map((entry) => entry.key)
