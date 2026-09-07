@@ -1,14 +1,13 @@
-import { useRecordActions } from '@/components/functional/records/recordActions'
-import type { DesignVariantProps } from '@/lib/design/types'
+import type { DesignVariantProps, DocumentDesignViewProps } from '@/lib/design/types'
 import { DocumentPaper } from '@/components/theme/DocumentPaper'
 import type { DocumentPageModel } from '@/lib/page-models/document'
 
 import styles from '@/app/(frontend)/domain/[slug]/documents/[id]/document.module.scss'
 
 /** Civic document reading preserves the current record-sheet composition exactly. */
-export function CivicDocument(model: DocumentPageModel & DesignVariantProps) {
+export function CivicDocument(model: DocumentPageModel & DesignVariantProps & DocumentDesignViewProps) {
   const { capabilities: can } = model
-  const { workflowAction, deleteAction } = useRecordActions()
+  const { workflowAction, deleteAction } = model
   const base = `${model.baseUrl}/documents/${model.recordId}`
   const workflow = (operation: string) => (
     <form action={workflowAction ?? undefined}>

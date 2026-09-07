@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { resolveDomainRouteShell } from '@/lib/design/resolveRoute'
 import { buildDocumentPageModel } from '@/lib/document/buildDocumentPageModel'
-import { RecordActionsProvider } from '@/components/functional/records/recordActions'
 import { documentWorkflowAction, softDeleteDocumentAction } from '@/lib/actions/documentWorkflow'
 
 type Props = {
@@ -29,9 +28,13 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
   const Document = route.design.pages.document
   return (
     <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }}>
-      <RecordActionsProvider workflowAction={documentWorkflowAction} deleteAction={softDeleteDocumentAction}>
-        <Document {...document} headerLayout={route.headerLayout} documentStyle={route.documentStyle} />
-      </RecordActionsProvider>
+      <Document
+        {...document}
+        workflowAction={documentWorkflowAction}
+        deleteAction={softDeleteDocumentAction}
+        headerLayout={route.headerLayout}
+        documentStyle={route.documentStyle}
+      />
     </Shell>
   )
 }

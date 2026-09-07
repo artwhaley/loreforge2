@@ -131,7 +131,7 @@ test('customer document view: Share/Send placeholders are removed and Copy/Move/
   assert.ok(!page.includes('Share — planned'), 'no Share placeholder')
   assert.ok(!page.includes('CC-2026-09-03-04'), 'no ticket ID in customer UI')
   assert.ok(!/not implemented yet|planned/i.test(page), 'no placeholder copy')
-  const explorer = read(path.join(SRC, 'app/(frontend)/domain/[slug]/records/RecordsExplorer.tsx'))
+  const explorer = read(path.join(SRC, 'designs/civic/ExplorerBody.tsx'))
   assert.ok(!explorer.includes('not implemented yet'), 'no Send placeholder')
   // The only mutation affordances on the record view are supersede/delete.
   assert.ok(!/document-copies|document-moves|>Copy<|>Move<|transfer/i.test(page), 'no Copy/Move/transfer control')

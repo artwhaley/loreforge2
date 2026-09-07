@@ -1,13 +1,12 @@
-import { useRecordActions } from '@/components/functional/records/recordActions'
-import type { DesignVariantProps } from '@/lib/design/types'
+import type { DesignVariantProps, DocumentDesignViewProps } from '@/lib/design/types'
 import type { DocumentPageModel } from '@/lib/page-models/document'
 
 import styles from './poster-document.module.scss'
 
 /** Poster document: oversized opening, off-grid body, stacked footnotes. */
-export function PosterDocument(model: DocumentPageModel & DesignVariantProps) {
+export function PosterDocument(model: DocumentPageModel & DesignVariantProps & DocumentDesignViewProps) {
   const { capabilities: can } = model
-  const { workflowAction, deleteAction } = useRecordActions()
+  const { workflowAction, deleteAction } = model
   const workflow = (operation: string, label: string) => workflowAction ? (
     <form action={workflowAction}>
       <input type="hidden" name="tenantSlug" value={model.domainSlug} />

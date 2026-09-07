@@ -29,6 +29,17 @@ try {
   const columns = new Set((db.prepare('PRAGMA table_info(domains)').all() as Array<{ name: string }>).map((row) => row.name))
   if (columns.size === 0) throw new Error('domains table missing — run against an initialized database.')
   if (!columns.has('design_config')) db.exec('ALTER TABLE domains ADD COLUMN design_config TEXT')
+
+  // Payload versions drift: the documents collection gained locked /
+  // privateDraft / creatorCharacter, so the _documents_v versions table needs
+  // its matching version_* columns on databases created before the P08X
+  // schema. Fresh PUSH=true databases already have them; ALTER is a no-op there.
+  const versionColumns = new Set((db.prepare('PRAGMA table_info(_documents_v)').all() as Array<{ name: string }>).map((row) => row.name))
+  if (versionColumns.size > 0) {
+    if (!versionColumns.has('version_locked')) db.exec('ALTER TABLE _documents_v ADD COLUMN version_locked integer DEFAULT false')
+    if (!versionColumns.has('version_private_draft')) db.exec('ALTER TABLE _documents_v ADD COLUMN version_private_draft integer DEFAULT true')
+    if (!versionColumns.has('version_creator_character_id')) db.exec('ALTER TABLE _documents_v ADD COLUMN version_creator_character_id integer')
+  }
   const rows = db.prepare(
     'SELECT id, slug, design_template, header_layout, document_style, primary_color, secondary_color, accent_color, background_color, heading_font_key, body_font_key, content_width, design_config FROM domains',
   ).all() as Array<Record<string, unknown>>

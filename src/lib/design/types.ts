@@ -53,7 +53,7 @@ export type DesignDefinition<TDesignConfig = unknown> = {
   pages: {
     home: ComponentType<HomePageModel & DesignVariantProps>
     records: ComponentType<RecordsDesignViewProps>
-    document: ComponentType<DocumentPageModel & DesignVariantProps>
+    document: ComponentType<DocumentDesignViewProps & DesignVariantProps>
     departments: ComponentType<DepartmentsPageModel & DesignVariantProps>
     department: ComponentType<DepartmentPageModel & DesignVariantProps>
     about: ComponentType<AboutPageModel & DesignVariantProps>
@@ -97,6 +97,17 @@ export type DesignShellProps = {
  * client component that consumes the shared workspace behavior over the model.
  */
 export type RecordsDesignViewProps = RecordsPageModel
+
+/**
+ * Document reading views stay server-renderable (spec §14.3): the route
+ * passes its real server-action bridge as props, and Theme Studio's live
+ * client preview passes inert stubs. A client-context hook cannot serve the
+ * server-rendered path, so the actions cross as serializable props.
+ */
+export type DocumentDesignViewProps = DocumentPageModel & {
+  workflowAction?: ((formData: FormData) => void | Promise<void>) | null
+  deleteAction?: ((formData: FormData) => void | Promise<void>) | null
+}
 
 export function isDesignKey(value: unknown): value is DesignKey {
   return value === 'civic' || value === 'ledger' || value === 'poster'

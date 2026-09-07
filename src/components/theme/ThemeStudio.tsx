@@ -16,7 +16,6 @@ import {
 import { contrastWarnings } from '@/lib/theme/color'
 import { DESIGN_METADATA, resolveDesign } from '@/lib/design/registry'
 import { DOCUMENT_PREVIEW_MODEL, HOME_PREVIEW_MODEL, SHELL_PREVIEW_MODEL } from '@/lib/design/fixtures'
-import { RecordActionsProvider } from '@/components/functional/records/recordActions'
 
 import { PreviewViewport } from './PreviewViewport'
 import styles from './ThemeStudio.module.scss'
@@ -496,13 +495,11 @@ export function ThemeStudio({
           </div>
         </div>
         <PreviewViewport mobile={mobile}>
-          <RecordActionsProvider workflowAction={previewNoop} deleteAction={previewNoop}>
-            <Shell model={previewShell} theme={{ tokens: themeTokensToCssVars(tokens), headerLayout: theme.headerLayout, documentStyle: theme.documentStyle }}>
-              {surface === 'home'
-                ? <HomeView {...previewHome} headerLayout={theme.headerLayout} documentStyle={theme.documentStyle} />
-                : <DocumentView {...DOCUMENT_PREVIEW_MODEL} headerLayout={theme.headerLayout} documentStyle={theme.documentStyle} />}
-            </Shell>
-          </RecordActionsProvider>
+          <Shell model={previewShell} theme={{ tokens: themeTokensToCssVars(tokens), headerLayout: theme.headerLayout, documentStyle: theme.documentStyle }}>
+            {surface === 'home'
+              ? <HomeView {...previewHome} headerLayout={theme.headerLayout} documentStyle={theme.documentStyle} />
+              : <DocumentView {...DOCUMENT_PREVIEW_MODEL} workflowAction={previewNoop} deleteAction={previewNoop} headerLayout={theme.headerLayout} documentStyle={theme.documentStyle} />}
+          </Shell>
         </PreviewViewport>
       </div>
     </div>

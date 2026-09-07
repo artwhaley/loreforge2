@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { RecordActionsProvider } from '@/components/functional/records/recordActions'
 import { DOCUMENT_PREVIEW_MODEL } from '@/lib/design/fixtures'
 import { civic } from '@/designs/civic'
 import { ledger } from '@/designs/ledger'
@@ -13,6 +12,8 @@ const stubAction = async () => {}
 /**
  * Document conformance: every Design renders the canonical body, lifecycle
  * cues, credits/tags, and the permitted actions from the same safe model.
+ * The action bridge arrives as props (server views are not client-context
+ * consumers), mirroring the route and Theme Studio.
  */
 describe.each([
   ['civic', civic.pages.document],
@@ -21,9 +22,7 @@ describe.each([
 ] as const)('%s document', (_key, Document) => {
   it('renders the canonical body, credits, and permitted actions', () => {
     const { container } = render(
-      <RecordActionsProvider workflowAction={stubAction} deleteAction={stubAction}>
-        <Document {...DOCUMENT_PREVIEW_MODEL} {...variant} />
-      </RecordActionsProvider>,
+      <Document {...DOCUMENT_PREVIEW_MODEL} {...variant} workflowAction={stubAction} deleteAction={stubAction} />,
     )
     expect(screen.getByText('Incident Report 2026-014')).toBeTruthy()
     expect(container.textContent).toContain('Elias Vane')
@@ -40,9 +39,7 @@ describe.each([
 
   it('renders tags and the status message when supplied', () => {
     const { container } = render(
-      <RecordActionsProvider workflowAction={stubAction} deleteAction={stubAction}>
-        <Document {...DOCUMENT_PREVIEW_MODEL} {...variant} statusMessage={{ code: 'x', text: 'Retry your change.' }} />
-      </RecordActionsProvider>,
+      <Document {...DOCUMENT_PREVIEW_MODEL} {...variant} workflowAction={stubAction} deleteAction={stubAction} statusMessage={{ code: 'x', text: 'Retry your change.' }} />,
     )
     expect(container.textContent).toContain('incident')
     expect(screen.getByText('Retry your change.')).toBeTruthy()
