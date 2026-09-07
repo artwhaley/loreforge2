@@ -64,7 +64,7 @@ export type LegacyDesignTheme = {
  * status. `TConfig` is the Design's own config type; the registry erases it
  * at the dispatch boundary (localized type erasure — routes never see `any`).
  */
-export type DesignDefinition<TConfig extends object = Record<string, never>> = {
+export type DesignDefinition<TConfig extends object = object> = {
   key: DesignKey
   status: DesignStatus
   name: string

@@ -50,6 +50,10 @@ export function legacyVariantProjection(design: DesignDefinition, config: unknow
       return { headerLayout: 'centered', documentStyle: documentStyle === 'docket' ? 'modern' : 'classic' }
     case 'poster':
       return { headerLayout: 'centered', documentStyle: documentStyle === 'brief' ? 'modern' : 'classic' }
+    default:
+      // Total by construction: a Design with no legacy projection (e.g. a
+      // test-only foreign Design) still previews on the neutral posture.
+      return { headerLayout: 'centered', documentStyle: 'classic' }
   }
 }
 

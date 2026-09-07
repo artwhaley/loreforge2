@@ -1,0 +1,238 @@
+.studio {
+  display: grid;
+  grid-template-columns: minmax(20rem, 26rem) 1fr;
+  gap: 1.25rem;
+  align-items: start;
+  padding: 1.25rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1c2430;
+}
+
+.helpText {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: #5b6b7c;
+}
+
+.controls {
+  display: grid;
+  gap: 1rem;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #d9dfe6;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.groupTitle {
+  margin: 0 0 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #33404f;
+}
+
+.templateGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+}
+
+.templateCard {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 0.7rem;
+  text-align: left;
+  padding: 0.55rem;
+  border-radius: 8px;
+  border: 2px solid #d9dfe6;
+  background: #fff;
+  cursor: pointer;
+}
+
+.templateCard:hover {
+  border-color: #9fb0c4;
+}
+
+.templateCardActive {
+  border-color: #243145;
+  background: #eef2f7;
+}
+
+.templateThumb {
+  grid-row: 1 / span 2;
+  width: 6.5rem;
+  height: 4rem;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #d5d9df;
+  background: #f4f6f9;
+}
+
+.templateName {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1c2430;
+}
+
+.dirtyBadge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8a5a00;
+  background: #fdf0d5;
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+}
+
+.templateDesc {
+  font-size: 0.76rem;
+  color: #5b6b7c;
+  line-height: 1.35;
+}
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.label {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: #33404f;
+}
+
+.logoRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.logoPreview {
+  width: 3rem;
+  height: 3rem;
+  object-fit: cover;
+  border-radius: 999px;
+  border: 1px solid #d5d9df;
+  background: #f4f6f9;
+}
+
+.saveRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: #fff;
+  border: 1px solid #d9dfe6;
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+}
+
+.status {
+  font-size: 0.8rem;
+  color: #5b6b7c;
+}
+
+.saveButtons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.saveButton,
+.resetButton {
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+}
+
+.saveButton {
+  background: #243145;
+  color: #fff;
+  border: 1px solid #243145;
+}
+
+.saveButton:hover {
+  background: #33404f;
+}
+
+.resetButton {
+  background: #fff;
+  color: #33404f;
+  border: 1px solid #c2ccd8;
+}
+
+.resetButton:hover {
+  border-color: #9fb0c4;
+}
+
+.saveButton:disabled,
+.resetButton:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.preview {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.previewHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.previewTools {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.previewTools button {
+  border: 1px solid #c2ccd8;
+  background: #fff;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #33404f;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+}
+
+.previewTools button[aria-pressed='true'] {
+  background: #243145;
+  border-color: #243145;
+  color: #fff;
+}
+
+@media (max-width: 1080px) {
+  .studio {
+    grid-template-columns: 1fr;
+  }
+
+  .preview {
+    position: static;
+  }
+}

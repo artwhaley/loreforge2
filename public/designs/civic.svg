@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200" role="img" aria-label="Civic design thumbnail">
+  <rect width="320" height="200" fill="#F3EFE6"/>
+  <rect x="0" y="0" width="320" height="6" fill="#243145"/>
+  <circle cx="24" cy="40" r="10" fill="#B9975B"/>
+  <rect x="42" y="34" width="96" height="5" rx="2" fill="#243145"/>
+  <rect x="42" y="44" width="60" height="3" rx="1.5" fill="#8A6A3C"/>
+  <g>
+    <rect x="196" y="34" width="34" height="4" rx="2" fill="#8A6A3C"/>
+    <rect x="236" y="34" width="34" height="4" rx="2" fill="#8A6A3C"/>
+    <rect x="276" y="34" width="28" height="4" rx="2" fill="#8A6A3C"/>
+  </g>
+  <rect x="0" y="60" width="320" height="3" fill="#D8CDB4"/>
+  <rect x="20" y="78" width="130" height="10" rx="2" fill="#243145"/>
+  <rect x="20" y="94" width="200" height="5" rx="2.5" fill="#8A6A3C"/>
+  <rect x="20" y="104" width="170" height="5" rx="2.5" fill="#8A6A3C"/>
+  <g>
+    <rect x="20" y="126" width="86" height="52" rx="3" fill="#FFFFFF" stroke="#C9BDA0"/>
+    <rect x="32" y="138" width="60" height="5" rx="2.5" fill="#243145"/>
+    <rect x="32" y="148" width="46" height="4" rx="2" fill="#8A6A3C"/>
+    <rect x="32" y="158" width="56" height="4" rx="2" fill="#8A6A3C"/>
+    <rect x="117" y="126" width="86" height="52" rx="3" fill="#FFFFFF" stroke="#C9BDA0"/>
+    <rect x="129" y="138" width="60" height="5" rx="2.5" fill="#243145"/>
+    <rect x="129" y="148" width="46" height="4" rx="2" fill="#8A6A3C"/>
+    <rect x="129" y="158" width="56" height="4" rx="2" fill="#8A6A3C"/>
+    <rect x="214" y="126" width="86" height="52" rx="3" fill="#FFFFFF" stroke="#C9BDA0"/>
+    <rect x="226" y="138" width="60" height="5" rx="2.5" fill="#243145"/>
+    <rect x="226" y="148" width="46" height="4" rx="2" fill="#8A6A3C"/>
+    <rect x="226" y="158" width="56" height="4" rx="2" fill="#8A6A3C"/>
+  </g>
+  <rect x="0" y="188" width="320" height="12" fill="#243145"/>
+</svg>
