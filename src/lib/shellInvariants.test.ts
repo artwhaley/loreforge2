@@ -3,6 +3,8 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 import test from 'node:test'
 
+import { PRIMARY_NAV_SEGMENTS } from './navigation/primaryNav'
+
 /**
  * P05R-T07 static regression module (DEF-SHELL-01 owner).
  *
@@ -57,13 +59,12 @@ test('Design shells expose exactly one Domain selector and the frozen primary na
   const arrayOpen = shellBuilder.indexOf('[', shellBuilder.indexOf('=', primaryAnchor))
   const arrayClose = shellBuilder.indexOf(']', arrayOpen)
   const navSegments = [...shellBuilder.slice(arrayOpen, arrayClose).matchAll(/segment: '([^']*)'/g)].map((m) => m[1])
-  assert.deepEqual(navSegments, ['', 'about', 'lore', 'departments', 'records'], 'primary nav route order frozen')
+  assert.deepEqual(navSegments, [...PRIMARY_NAV_SEGMENTS], 'primary nav route order frozen')
   assert.ok(shellBuilder.includes('vocab.subdomain.plural'), 'Departments uses the fixed platform noun')
   assert.ok(shellBuilder.includes('vocab.folder.plural'), 'Folders uses the fixed platform noun')
-  // The legacy frame keeps the same frozen constant for compatibility.
-  const frame = read(path.join(SRC, 'components/theme/DomainFrame.tsx'))
-  const frameSegments = [...frame.matchAll(/segment: '([^']*)'/g)].map((m) => m[1])
-  assert.deepEqual(frameSegments, ['', 'about', 'lore', 'departments', 'records'], 'legacy frame nav matches the frozen order')
+  // The semantic constant module keeps the same frozen order (P08D-T08: the
+  // dead DomainFrame was removed and its nav constant moved here).
+  assert.deepEqual([...PRIMARY_NAV_SEGMENTS], ['', 'about', 'lore', 'departments', 'records'], 'semantic nav constant matches the frozen order')
 })
 
 test('no customer page imports creep back into the /tenant legacy tree', () => {

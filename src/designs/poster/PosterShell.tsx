@@ -1,7 +1,7 @@
 import type { DesignShellProps } from '@/lib/design/types'
-import { ShellFrame } from '../shared/frame'
+import { LegacyShellFrame } from '../shared/legacy-frame'
 
-/** Poster shell: cultural-publication composition around the same safe model. */
+/** Poster shell (compatibility): cultural-publication composition on the legacy shared frame. */
 export function PosterShell({ model, theme, children }: DesignShellProps) {
-  return <ShellFrame design="poster" model={model} cssVars={theme.tokens} headerLayout={theme.headerLayout}>{children}</ShellFrame>
+  return <LegacyShellFrame design="poster" model={model} cssVars={theme.tokens} headerLayout={theme.headerLayout}>{children}</LegacyShellFrame>
 }

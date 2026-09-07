@@ -1,6 +1,6 @@
 import type { DesignDefinition } from '@/lib/design/types'
 import type { LedgerConfigV1 } from '@/lib/design/contracts'
-import { HEADER_LAYOUTS, DOCUMENT_STYLES, THEME_PRESETS } from '@/lib/theme/fonts'
+import { THEME_PRESETS } from '@/lib/theme/fonts'
 import { LedgerAboutView, LedgerDepartmentView, LedgerDepartmentsView, LedgerLoreView } from './thin'
 import { LedgerShell } from './LedgerShell'
 import { LedgerHome } from './LedgerHome'
@@ -38,15 +38,17 @@ export const ledger: DesignDefinition<LedgerConfigV1> = {
   },
   legacyTheme: {
     defaults: { primary: ink.primary, secondary: ink.secondary, accent: ink.accent, background: ink.background, headingFontKey: ink.headingFontKey, bodyFontKey: ink.bodyFontKey, contentWidth: 'standard' },
+    // Transitional legacy axis labels are inlined here so this first-class
+    // Design never imports the legacy constants module (P08D-T08).
     headerLayouts: [
-      { key: 'centered', label: HEADER_LAYOUTS.centered.label },
-      { key: 'left-aligned', label: HEADER_LAYOUTS['left-aligned'].label },
-      { key: 'banner-forward', label: HEADER_LAYOUTS['banner-forward'].label },
+      { key: 'centered', label: 'Centered masthead' },
+      { key: 'left-aligned', label: 'Compact bar' },
+      { key: 'banner-forward', label: 'Banner hero' },
     ],
     defaultHeaderLayout: 'centered',
     documentStyles: [
-      { key: 'classic', label: DOCUMENT_STYLES.classic.label },
-      { key: 'modern', label: DOCUMENT_STYLES.modern.label },
+      { key: 'classic', label: 'Classic (serif record sheet)' },
+      { key: 'modern', label: 'Modern (clean reading)' },
     ],
     defaultDocumentStyle: 'classic',
     controls: [],

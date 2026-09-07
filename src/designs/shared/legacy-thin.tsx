@@ -1,14 +1,15 @@
 import type { AboutPageModel, LorePageModel } from '@/lib/page-models/info'
 import type { DepartmentPageModel, DepartmentsPageModel } from '@/lib/page-models/departments'
 
-import styles from './thin.module.scss'
+import styles from './legacy-thin.module.scss'
 
 /**
- * Shared thin-page views. About/Departments/Department/Lore carry almost no
- * behavior, so one data-pure composition serves every Design until a Design
- * earns its own art-directed variant. Models stay semantic; no layout leaks.
+ * LEGACY thin-page views (P08D-T08). Pre-isolation shared presentation for
+ * About/Departments/Department/Lore. Only the Poster compatibility Design
+ * still uses these — first-class Designs own their thin pages and must NOT
+ * import this module.
  */
-export function SharedDepartmentsView(model: DepartmentsPageModel) {
+export function LegacyDepartmentsView(model: DepartmentsPageModel) {
   return (
     <section className={styles.thin}>
       <h1 className={styles.title}>{model.vocabulary.subdomainPlural}</h1>
@@ -27,7 +28,7 @@ export function SharedDepartmentsView(model: DepartmentsPageModel) {
   )
 }
 
-export function SharedDepartmentView(model: DepartmentPageModel) {
+export function LegacyDepartmentView(model: DepartmentPageModel) {
   return (
     <div className={styles.thin}>
       <p className={styles.crumb}><a href={`${model.baseUrl}/departments`}>{model.vocabulary.subdomainPlural}</a> / {model.name}</p>
@@ -44,7 +45,7 @@ export function SharedDepartmentView(model: DepartmentPageModel) {
   )
 }
 
-export function SharedAboutView(model: AboutPageModel) {
+export function LegacyAboutView(model: AboutPageModel) {
   return (
     <article className={styles.thin}>
       {model.editHref ? <p className={styles.manage}><a href={model.editHref}>Edit</a></p> : null}
@@ -53,7 +54,7 @@ export function SharedAboutView(model: AboutPageModel) {
   )
 }
 
-export function SharedLoreView(_model: LorePageModel) {
+export function LegacyLoreView(_model: LorePageModel) {
   return (
     <article className={styles.thin}>
       <h1 className={styles.title}>Lore</h1>

@@ -1,7 +1,7 @@
 import type { DesignDefinition } from '@/lib/design/types'
 import type { PosterConfigV1 } from '@/lib/design/contracts'
 import { HEADER_LAYOUTS, DOCUMENT_STYLES, THEME_PRESETS } from '@/lib/theme/fonts'
-import { SharedAboutView, SharedDepartmentView, SharedDepartmentsView, SharedLoreView } from '../shared/thin'
+import { LegacyAboutView, LegacyDepartmentView, LegacyDepartmentsView, LegacyLoreView } from '../shared/legacy-thin'
 import { PosterShell } from './PosterShell'
 import { PosterHome } from './PosterHome'
 import { PosterRecords } from './PosterRecords'
@@ -31,10 +31,10 @@ export const poster: DesignDefinition<PosterConfigV1> = {
     home: PosterHome,
     records: PosterRecords,
     document: PosterDocument,
-    departments: SharedDepartmentsView,
-    department: SharedDepartmentView,
-    about: SharedAboutView,
-    lore: SharedLoreView,
+    departments: LegacyDepartmentsView,
+    department: LegacyDepartmentView,
+    about: LegacyAboutView,
+    lore: LegacyLoreView,
   },
   legacyTheme: {
     defaults: { primary: modern.primary, secondary: modern.secondary, accent: modern.accent, background: modern.background, headingFontKey: modern.headingFontKey, bodyFontKey: modern.bodyFontKey, contentWidth: 'standard' },

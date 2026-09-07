@@ -5,14 +5,15 @@ import type { DesignKey } from '@/lib/design/types'
 import type { DomainShellModel } from '@/lib/page-models/shell'
 
 import { OperatingContext } from '@/components/platform/OperatingContext'
-import styles from '@/components/theme/TenantShell.module.scss'
+import styles from '@/components/theme/LegacyShell.module.scss'
 
 /**
- * Shared shell skeleton. It renders the platform-owned operating context plus
- * the Domain frame regions every Design needs; each Design owns its Shell
- * file and may replace this skeleton with its own composition later.
+ * LEGACY shell skeleton (P08D-T08). Pre-isolation shared frame: it renders
+ * the platform OperatingContext plus the old template regions. Only the
+ * Poster compatibility Design still uses it — first-class Designs (Civic,
+ * Ledger) own their Shell DOM and must NOT import this module.
  */
-export function ShellFrame({ design, model, cssVars, headerLayout, children }: {
+export function LegacyShellFrame({ design, model, cssVars, headerLayout, children }: {
   design: DesignKey
   model: DomainShellModel
   cssVars: Record<string, string>
