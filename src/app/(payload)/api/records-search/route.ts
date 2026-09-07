@@ -5,7 +5,7 @@ import config from '@payload-config'
 
 import { resolveActingIdentity } from '@/lib/tenant/actingIdentity'
 import { loadAuthorizationSession } from '@/lib/authz/session'
-import { compileReadScope } from '@/lib/authz/readScope'
+import { compileReadScope, recordReadPredicate } from '@/lib/authz/readScope'
 
 const relationId = (value: unknown): number | null => typeof value === 'object' && value !== null && 'id' in value
   ? Number((value as { id: number }).id)
@@ -67,13 +67,11 @@ export async function GET(request: Request) {
     folderIds = descendants
   }
 
-  // P07X-T03: the record predicate is the two-axis scope — readable Types as
-  // the grant source, denied-Folder ancestry as the narrowing, plus direct
-  // Document exceptions. Folder grants alone no longer expose Documents.
-  const readableTypeIds = [...scope.readableTypeIds]
-  const denyFolderIds = [...scope.denyFolderIds]
-  const grantIds = [...scope.grantDocumentIds]
-  const denyIds = [...scope.denyDocumentIds]
+  // P07X-T03/T06: the record predicate is the shared scope — readable Types
+  // and stage-list read pairs as the grant sources, denied-Folder ancestry as
+  // the narrowing, direct Document exceptions, and the private-draft
+  // creator-Character boundary. Folder grants alone no longer expose
+  // Documents, and another Character's private draft never matches.
   const textMatch = query ? { or: [{ title: { like: query } }, { body: { like: query } }] } : undefined
   const typeMatch = typeRaw && Number.isFinite(Number(typeRaw)) ? { documentType: { equals: Number(typeRaw) } } : undefined
 
@@ -84,22 +82,14 @@ export async function GET(request: Request) {
       ...(folderIds ? [{ folder: { in: folderIds } }] : []),
       ...(typeMatch ? [typeMatch] : []),
       ...(textMatch ? [textMatch] : []),
-      ...(scope.authorityBypass ? [] : [
-        { id: { not_in: denyIds.length > 0 ? denyIds : [-1] } },
-        {
-          or: [
-            { and: [{ documentType: { in: readableTypeIds.length > 0 ? readableTypeIds : [-1] } }, { folder: { not_in: denyFolderIds.length > 0 ? denyFolderIds : [-1] } }] },
-            { id: { in: grantIds.length > 0 ? grantIds : [-1] } },
-          ],
-        },
-      ]),
+      ...recordReadPredicate(scope, session),
     ],
   }
 
   // Search is correctness-complete: do not silently stop at the old first
   // 100/500 rows. The explorer may window or paginate the projected response,
   // but the server predicate itself is applied before any client filtering.
-  const documentSelect = { id: true, domain: true, folder: true, documentType: true, title: true, updatedAt: true, lifecycle: true, locked: true } as const
+  const documentSelect = { id: true, domain: true, folder: true, documentType: true, title: true, updatedAt: true, lifecycle: true, locked: true, privateDraft: true, creatorCharacter: true } as const
   const documents = await payload.find({ collection: 'documents', where: where as never, select: documentSelect, depth: 0, limit: 0, pagination: false, sort: '-updatedAt', overrideAccess: true })
   const matchingDocuments = [...documents.docs]
   const allDocuments = new Map<number, typeof documents.docs[number]>(documents.docs.map((document) => [Number(document.id), document]))
@@ -133,13 +123,7 @@ export async function GET(request: Request) {
         { domain: { equals: domain.id } },
         { id: { in: batch } },
         { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] },
-        ...(scope.authorityBypass ? [] : [
-          { id: { not_in: denyIds.length ? denyIds : [-1] } },
-          { or: [
-            { and: [{ documentType: { in: readableTypeIds.length ? readableTypeIds : [-1] } }, { folder: { not_in: denyFolderIds.length ? denyFolderIds : [-1] } }] },
-            { id: { in: grantIds.length ? grantIds : [-1] } },
-          ] },
-        ]),
+        ...recordReadPredicate(scope, session),
       ] }, select: documentSelect, depth: 0, limit: 0, pagination: false, overrideAccess: true })
       for (const linked of linkedResult.docs) {
         const id = Number(linked.id)

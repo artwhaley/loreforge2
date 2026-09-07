@@ -37,6 +37,7 @@ export const Domains: CollectionConfig = {
     { name: 'ownerUser', type: 'relationship', relationTo: 'users', label: 'Owner User', index: true },
     { name: 'ownerCharacter', type: 'relationship', relationTo: 'characters', label: 'Owner Character', index: true },
     { name: 'lifecycle', type: 'select', required: true, defaultValue: 'active', options: [{ label: 'Setup pending', value: 'setup-pending' }, { label: 'Active', value: 'active' }, { label: 'Grace', value: 'grace' }, { label: 'Read-only', value: 'read-only' }, { label: 'Suspended', value: 'suspended' }, { label: 'Archived / Closed', value: 'archived' }] },
+    { name: 'authzEpoch', type: 'number', defaultValue: 0, admin: { hidden: true, description: 'P08X-T06: authorization facts version — bumped on lifecycle-stages writes so permission edits take effect immediately.' } },
     { name: 'defaultFilingPolicy', type: 'select', required: true, defaultValue: 'direct-file', options: [{ label: 'Direct file', value: 'direct-file' }, { label: 'Review required', value: 'review-required' }] },
     { name: 'motto', type: 'text' },
     { name: 'preset', type: 'select', label: 'Theme preset', options: [{ label: 'Heritage (traditional civic)', value: 'heritage' }, { label: 'Modern (coastal metropolitan)', value: 'modern' }, { label: 'Ink (Loreforge print)', value: 'ink' }, { label: 'Gallery (quiet light)', value: 'gallery' }, { label: 'Verdant (forest civic)', value: 'verdant' }, { label: 'Nocturne (dramatic dark)', value: 'nocturne' }], defaultValue: 'heritage', required: true },

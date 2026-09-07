@@ -115,12 +115,14 @@ export const Documents: CollectionConfig = {
             // Defense in depth behind access.update for stage moves with a
             // frozen capability. Submit (into Submitted) is author-allowed;
             // Deprecate has no frozen capability and is authorized through the
-            // stage-manage merge (P08X-T06) at the workflow seam.
+            // stage-manage merge (P08X-T06) at the workflow seam. The resource
+            // ref carries the DESTINATION stage so stage-list grants (manage
+            // roles on the destination) can authorize the move.
             const capabilityFor = to === 'filed' ? (from === 'submitted' ? 'approve_document' : 'file_document') : to === 'draft' ? 'edit_document' : null
             if (capabilityFor && req.user?.id && domainId) {
               // P07X-T02: the transition decision evaluates the acting identity
               // (carried by the selector cookie), never ambient User authority.
-              const decision = await evaluatePermission({ payload: req.payload, actor: { userId: req.user.id, activeCharacterId: requestActiveCharacterId(req) }, domainId, capability: capabilityFor, resource: { type: 'Document', id: originalDoc?.id ?? 0 } })
+              const decision = await evaluatePermission({ payload: req.payload, actor: { userId: req.user.id, activeCharacterId: requestActiveCharacterId(req) }, domainId, capability: capabilityFor, resource: { type: 'Document', id: originalDoc?.id ?? 0, stage: to } })
               if (!decision.allowed) throw new Error('An authorized acting identity or Role is required for this lifecycle transition.')
             }
           }
@@ -288,6 +290,15 @@ export const Documents: CollectionConfig = {
       relationTo: 'users',
       admin: {
         description: 'Author, if known',
+      },
+    },
+    {
+      name: 'creatorCharacter',
+      type: 'relationship',
+      relationTo: 'characters',
+      index: true,
+      admin: {
+        description: 'P08X-T06: the creating Character — the private-draft visibility boundary. Set from the acting Character at creation; private Drafts are visible only to this Character (plus administrators).',
       },
     },
   ],

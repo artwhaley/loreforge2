@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 
-import { compileReadScope } from './readScope'
+import { compileReadScope, recordReadPredicate } from './readScope'
 import { folderControlsSession } from './workspaces'
 import type { AuthzSession } from './session'
 
@@ -57,13 +57,7 @@ export async function projectVisibleFolders(args: {
     and: [
       { domain: { equals: session.domainId } },
       { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] },
-      ...(scope.authorityBypass ? [] : [
-        { id: { not_in: scope.denyDocumentIds.size > 0 ? [...scope.denyDocumentIds] : [-1] } },
-        { or: [
-          { and: [{ documentType: { in: scope.readableTypeIds.size > 0 ? [...scope.readableTypeIds] : [-1] } }, { folder: { not_in: scope.denyFolderIds.size > 0 ? [...scope.denyFolderIds] : [-1] } }] },
-          { id: { in: scope.grantDocumentIds.size > 0 ? [...scope.grantDocumentIds] : [-1] } },
-        ] },
-      ]),
+      ...recordReadPredicate(scope, session),
     ],
   }
   const documents = await payload.find({ collection: 'documents', where: countWhere as never, select: { folder: true }, depth: 0, limit: 0, pagination: false, overrideAccess: true })

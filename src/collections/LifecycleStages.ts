@@ -60,6 +60,14 @@ export const LifecycleStages: CollectionConfig = {
       }
       return data
     }],
+    // P08X-T06 invalidation note: stage role lists feed authorization
+    // decisions, so a write must invalidate the Domain's cached authorization
+    // facts. The bump intentionally lives at the mutation seams
+    // (applyLifecycleStageConfig, deleteTypeAction) rather than in a
+    // collection hook — a hook's nested payload.update on the domains
+    // collection collides with the row create/update transaction
+    // (SQLITE_BUSY on the shared SQLite connection). Access is closed, so the
+    // seams are the only write paths.
   },
   fields: [
     { name: 'documentType', type: 'relationship', relationTo: 'document-types', required: true, index: true },

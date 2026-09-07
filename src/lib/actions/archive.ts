@@ -364,9 +364,11 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   // P08-GATE-02: canonical Type-first plan + Folder-deny narrowing. No
   // caller-supplied Folder participates; a deny on the routed Folder, its
   // ancestors, its Department, or the Domain rejects the create.
+  type PreparedPlan = Awaited<ReturnType<typeof import('@/lib/documents/creation').prepareDocumentCreation>>
+  let plan: PreparedPlan | null = null
   try {
     const { prepareDocumentCreation } = await import('@/lib/documents/creation')
-    const plan = await prepareDocumentCreation({ payload: ctx.payload, actor, domainId: ctx.tenant.id, documentTypeId: Number(selectedType.id), method, templateId: selectedTemplate ? Number((selectedTemplate as { id: number | string }).id) : null, lifecycle })
+    plan = await prepareDocumentCreation({ payload: ctx.payload, actor, domainId: ctx.tenant.id, documentTypeId: Number(selectedType.id), method, templateId: selectedTemplate ? Number((selectedTemplate as { id: number | string }).id) : null, lifecycle })
     folder = plan.folderId
   } catch (error) {
     const message = error instanceof Error ? error.message : ''
@@ -383,7 +385,14 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   const createAndRelate = async (transactionID: number | string | null) => {
     if (transactionID == null) throw new Error('Document creation requires a real database transaction.')
     const req = { transactionID }
-    const created = await ctx.payload.create({ collection: 'documents', req, context: activeCharacterId && !administrativeActor ? { preparedByCharacterId: activeCharacterId, actorUserId: ctx.user.id } : { allowUserCreate: true, actorUserId: ctx.user.id }, data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body: renderedBody, origin: selectedTemplate?.kind === 'form' ? 'form' : 'web-editor', sourceKind: selectedTemplate?.kind === 'form' ? 'form' : 'web', documentType: Number(selectedType.id), lifecycle, publicAccess: 'inherit', createdBy: ctx.user.id, folder } })
+    // P08X-T06: private drafts exist only for Draft-stage creations when the
+    // Draft stage allows them (default private); every other initial stage
+    // creates a public record. The creator Character is the private-draft
+    // visibility boundary. T07 adds the explicit create-screen choice.
+    const privateDraft = lifecycle === 'draft' && plan?.privateDraftsAllowed
+      ? String(formData.get('privateDraft') ?? 'true') !== 'false'
+      : false
+    const created = await ctx.payload.create({ collection: 'documents', req, context: activeCharacterId && !administrativeActor ? { preparedByCharacterId: activeCharacterId, actorUserId: ctx.user.id } : { allowUserCreate: true, actorUserId: ctx.user.id }, data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body: renderedBody, origin: selectedTemplate?.kind === 'form' ? 'form' : 'web-editor', sourceKind: selectedTemplate?.kind === 'form' ? 'form' : 'web', documentType: Number(selectedType.id), lifecycle, privateDraft, creatorCharacter: activeCharacterId ?? undefined, publicAccess: 'inherit', createdBy: ctx.user.id, folder } })
     if (superseding) {
       await addDocumentRelationship({ payload: ctx.payload, domainId: ctx.tenant.id, sourceId: created.id, targetId: supersedesDocumentId, kind: 'supersedes', actor: { userId: ctx.user.id, characterId: activeCharacterId }, transactionID })
     }

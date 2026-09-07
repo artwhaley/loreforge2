@@ -85,7 +85,10 @@ async function rule(args: { domainId: number; principalType: 'Character' | 'Role
 
 async function document(domainId: number, typeId: number, folderId: number, title: string, userId: number): Promise<number> {
   const existing = await payload.find({ collection: 'documents', where: { and: [{ domain: { equals: domainId } }, { title: { equals: title } }] }, depth: 0, limit: 1, overrideAccess: true })
-  const row = existing.docs[0] ?? await payload.create({ collection: 'documents', overrideAccess: true, context: { allowSystemCreate: true, actorUserId: userId }, data: { domain: domainId, documentType: typeId, folder: folderId, title, body: `# ${title}\n\nbody`, lifecycle: 'filed', publicAccess: 'inherit', sourceKind: 'web', origin: 'web-editor', createdBy: userId } })
+  // P08X-T06: these fixtures test Folder/Type projections, not the private-
+  // draft boundary — create PUBLIC records explicitly (the field defaults to
+  // private).
+  const row = existing.docs[0] ?? await payload.create({ collection: 'documents', overrideAccess: true, context: { allowSystemCreate: true, actorUserId: userId }, data: { domain: domainId, documentType: typeId, folder: folderId, title, body: `# ${title}\n\nbody`, lifecycle: 'filed', privateDraft: false, publicAccess: 'inherit', sourceKind: 'web', origin: 'web-editor', createdBy: userId } })
   return Number(row.id)
 }
 

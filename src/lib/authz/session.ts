@@ -1,6 +1,8 @@
 import type { Payload } from 'payload'
 
 import { isRecordCapability, type Capability, type PrincipalType, type ResourceType } from '@/lib/permissions/capabilities'
+import { LIFECYCLE_STAGE_LABELS } from '@/lib/documents/lifecycleStages'
+import type { Lifecycle } from '@/lib/documents/lifecycle'
 import type { RoleNode } from './roleTree'
 
 /**
@@ -35,7 +37,20 @@ const relationForPrincipal: Record<PrincipalType, string> = { Character: 'charac
 const relationForResource: Record<ResourceType, string> = { Domain: 'domains', Subdomain: 'subdomains', Folder: 'folders', Document: 'documents', DocumentType: 'document-types' }
 
 export type AuthzActor = { userId: number | string; activeCharacterId?: number | string | null }
-export type AuthzResourceRef = { type: ResourceType; id: number | string; documentTypeId?: number | string | null }
+/**
+ * A resource reference. Document refs may carry the stage whose role lists
+ * decide the capability — the current lifecycle for read/edit, or the
+ * transition DESTINATION for submit/file/approve/reject/restore — plus the
+ * private-draft visibility fields when the row is already loaded.
+ */
+export type AuthzResourceRef = {
+  type: ResourceType
+  id: number | string
+  documentTypeId?: number | string | null
+  stage?: Lifecycle | null
+  privateDraft?: boolean | null
+  creatorCharacterId?: number | string | null
+}
 
 type RuleRow = {
   id: number | string
@@ -45,6 +60,22 @@ type RuleRow = {
   principalId: number
   resourceType: ResourceType
   resourceId: number
+}
+
+/**
+ * P08X-T06: the effective per-stage configuration of one Document Type.
+ * Loaded once per session so stage role lists feed decisions with ZERO
+ * additional SQL, exactly like the other session facts.
+ */
+export type StageListFacts = {
+  enabled: boolean
+  allowOnCreation: boolean
+  privateDraftsAllowed: boolean
+  folderId: number | null
+  readRoleIds: number[]
+  writeRoleIds: number[]
+  editOthersRoleIds: number[]
+  manageRoleIds: number[]
 }
 
 /** P07P: lexicographic specificity — a longer chain is strictly more specific. */
@@ -81,6 +112,8 @@ export type AuthzSession = {
   readonly subdomains: Map<number, { id: number }>
   /** Documents with exception rules (Document-scope rules exist for them). */
   readonly documentExceptions: Map<number, RuleRow[]>
+  /** P08X-T06: per-Type per-stage role lists (typeId -> stage -> facts). */
+  readonly stageLists: Map<number, Map<Lifecycle, StageListFacts>>
 }
 
 type FindAllArgs = { collection: string; where: Record<string, unknown>; depth?: number; req?: { transactionID?: number | string } }
@@ -138,6 +171,13 @@ async function loadFacts(payload: Payload, actor: AuthzActor, domainId: number, 
     find({ collection: 'subdomains', where: { domain: { equals: domainId } }, depth: 0, req: txReq }),
     find({ collection: 'document-types', where: { domain: { equals: domainId } }, depth: 0, req: txReq }),
   ])
+  // P08X-T06: lifecycle-stages rows carry no Domain column; they join through
+  // the Domain's own Document Types, so the stage-lists fact query is scoped
+  // by the type ids loaded above (one extra round trip, only when types exist).
+  const typeIdsForStages = (typesResult.docs as unknown as Record<string, unknown>[]).map((type) => Number(type.id))
+  const stagesResult = typeIdsForStages.length > 0
+    ? await find({ collection: 'lifecycle-stages', where: { documentType: { in: typeIdsForStages } }, depth: 0, req: txReq })
+    : { docs: [] }
 
   const roles: RoleNode[] = (rolesResult.docs as unknown as Record<string, unknown>[]).map((role) => ({
     id: Number(role.id),
@@ -180,6 +220,29 @@ async function loadFacts(payload: Payload, actor: AuthzActor, domainId: number, 
   const subdomains = new Map((subdomainsResult.docs as unknown as Record<string, unknown>[]).map((subdomain) => [Number(subdomain.id), { id: Number(subdomain.id) }]))
   const typeNames = new Map((typesResult.docs as unknown as Record<string, unknown>[]).map((type) => [Number(type.id), String(type.name ?? '')]))
 
+  const roleIdsOf = (value: unknown): number[] => {
+    const values = Array.isArray(value) ? value : value == null || value === '' ? [] : [value]
+    return values.map((entry) => idOf(entry)).filter((entry): entry is number => entry != null)
+  }
+  const stageLists = new Map<number, Map<Lifecycle, StageListFacts>>()
+  for (const raw of stagesResult.docs as unknown as Record<string, unknown>[]) {
+    const typeId = idOf(raw.documentType)
+    const stage = String(raw.stage ?? '') as Lifecycle
+    if (typeId == null || !LIFECYCLE_STAGE_LABELS[stage]) continue
+    const bucket = stageLists.get(typeId) ?? new Map<Lifecycle, StageListFacts>()
+    bucket.set(stage, {
+      enabled: raw.enabled !== false,
+      allowOnCreation: Boolean(raw.allowOnCreation),
+      privateDraftsAllowed: raw.privateDraftsAllowed !== false,
+      folderId: idOf(raw.folder),
+      readRoleIds: roleIdsOf(raw.readRoles),
+      writeRoleIds: roleIdsOf(raw.writeRoles),
+      editOthersRoleIds: roleIdsOf(raw.editOthersRoles),
+      manageRoleIds: roleIdsOf(raw.manageRoles),
+    })
+    stageLists.set(typeId, bucket)
+  }
+
   const domainRow = domain as unknown as { ownerUser?: unknown; ownerCharacter?: unknown; kind?: unknown }
   // P07X-T02 authority resolution — kind-driven, no ambient User authority:
   // - domain_admin whose administrativeDomain equals the selected Domain
@@ -206,7 +269,7 @@ async function loadFacts(payload: Payload, actor: AuthzActor, domainId: number, 
     .map((assignment) => idOf(assignment.role))
     .filter((id): id is number => id != null && roles.some((role) => role.id === id && role.active))
 
-  return { authority, characterState, roles, typeNames, heldRoleIds, rulesByCapability, documentExceptions, folders, subdomains, domain }
+  return { authority, characterState, roles, typeNames, heldRoleIds, rulesByCapability, documentExceptions, folders, subdomains, domain, stageLists }
 }
 
 /**
@@ -232,17 +295,34 @@ export function folderAncestry(session: AuthzSession, folderId: number): { chain
   return { chain, subdomainId }
 }
 
+export type DocumentTargetExtra = {
+  stage?: Lifecycle | null
+  privateDraft?: boolean | null
+  creatorCharacterId?: number | string | null
+}
+
 /**
  * Resolve a Document decision target from its already-known folder/subdomain
  * columns. The document's own subdomain wins over the nearest ancestor
  * folder's, matching the interim evaluator's node order. folderChain is the
  * document's folder ancestry (folder first), computed in-memory. The
  * documentTypeId feeds the P07X-T03 two-axis record decision (Type grant +
- * Folder narrowing); without it a Document target fails closed.
+ * Folder narrowing); without it a Document target fails closed. P08X-T06
+ * extra fields carry the current stage (lifecycle) plus the private-draft
+ * visibility boundary (creator Character) when the row is already loaded.
  */
-export function resolveDocumentTarget(session: AuthzSession, document: { id: number; folderId: number | null; subdomainId: number | null; documentTypeId?: number | null }): { type: 'Document'; id: number; folderChain: number[]; subdomainId: number | null; documentTypeId: number | null } {
+export function resolveDocumentTarget(session: AuthzSession, document: { id: number; folderId: number | null; subdomainId: number | null; documentTypeId?: number | null } & DocumentTargetExtra): { type: 'Document'; id: number; folderChain: number[]; subdomainId: number | null; documentTypeId: number | null } & DocumentTargetExtra {
   const ancestry = document.folderId == null ? { chain: [], subdomainId: null } : folderAncestry(session, document.folderId)
-  return { type: 'Document', id: document.id, folderChain: document.folderId == null ? [] : [document.folderId, ...ancestry.chain], subdomainId: document.subdomainId ?? ancestry.subdomainId, documentTypeId: document.documentTypeId == null ? null : Number(document.documentTypeId) }
+  return {
+    type: 'Document',
+    id: document.id,
+    folderChain: document.folderId == null ? [] : [document.folderId, ...ancestry.chain],
+    subdomainId: document.subdomainId ?? ancestry.subdomainId,
+    documentTypeId: document.documentTypeId == null ? null : Number(document.documentTypeId),
+    stage: document.stage ?? null,
+    privateDraft: document.privateDraft === true,
+    creatorCharacterId: document.creatorCharacterId == null ? null : Number(document.creatorCharacterId),
+  }
 }
 
 /**
@@ -314,7 +394,16 @@ function roleMatchesHeldRoleInSession(ruleRoleId: number, heldRoleIds: number[],
   })
 }
 
-export type SessionDecision = { allowed: boolean; reason: string; matchedRule?: { id: number | string; effect: 'grant' | 'deny'; principalType: PrincipalType; resourceType: ResourceType; resourceId: number; specificity: Specificity }; trace: string[] }
+export type StageGrantInfo = { roleId: number; roleName: string; stage: Lifecycle; list: 'read' | 'write' | 'editOthers' | 'manage' }
+
+export type SessionDecision = {
+  allowed: boolean
+  reason: string
+  matchedRule?: { id: number | string; effect: 'grant' | 'deny'; principalType: PrincipalType; resourceType: ResourceType; resourceId: number; specificity: Specificity }
+  /** P08X-T06: set when a lifecycle-stage role list granted the capability. */
+  stageGrant?: StageGrantInfo
+  trace: string[]
+}
 
 /**
  * Pure decision over preloaded facts — ZERO SQL. Frozen semantics:
@@ -360,17 +449,156 @@ function folderName(session: AuthzSession, id: number): string {
 }
 
 /**
- * P07X-T03 two-axis record decision for a Document target.
+ * P08X-T06: the private-draft visibility boundary. A private Draft is visible
+ * (read) and editable only through its creator Character — never the broader
+ * User account (a user's other characters must not see it) and never another
+ * actor, even with a read grant. Domain/platform administration bypasses via
+ * session authority. Returns a DENY decision when the gate closes; null when
+ * the caller should continue with normal evaluation.
+ */
+function privateDraftGate(session: AuthzSession, capability: Capability, target: { privateDraft?: boolean | null; creatorCharacterId?: number | string | null }): SessionDecision | null {
+  if (!target.privateDraft || (capability !== 'read' && capability !== 'edit_document')) return null
+  if (session.authority) return null
+  if (session.characterState == null) {
+    return { allowed: false, reason: 'Private draft — visible only to its creator Character.', trace: ['Private-draft gate: no acting Character.'] }
+  }
+  const isCreator = target.creatorCharacterId != null && target.creatorCharacterId === session.characterState.characterId
+  if (isCreator) return null
+  const reason = capability === 'read'
+    ? 'Private draft — visible only to its creator Character.'
+    : 'Private draft — editable only by its creator Character.'
+  return { allowed: false, reason, trace: [reason, 'Private-draft gate: another Character, even with a read grant, is denied.'] }
+}
+
+/**
+ * P08X-T06: evaluate one capability against a Type's stage role lists. The
+ * stage whose lists decide is `target.stage` — the document's CURRENT stage
+ * for read/edit, or the transition DESTINATION passed by the workflow seam
+ * for submit/file/approve/reject/restore. Explicit Type/Document rules and
+ * narrowing denies are handled by the caller; this is the spec §3.4
+ * stage-list grant source with default deny when nothing applies.
+ */
+function stageListDecision(session: AuthzSession, capability: Capability, target: { documentTypeId?: number | null; stage?: Lifecycle | null; privateDraft?: boolean | null; creatorCharacterId?: number | string | null }): SessionDecision | null {
+  if (session.characterState == null) return null
+  const typeId = target.documentTypeId
+  const stage = target.stage
+  if (typeId == null || stage == null) return null
+  const lists = session.stageLists.get(typeId)?.get(stage)
+  if (!lists || !lists.enabled) return null
+  const heldRole = (ids: number[]): { id: number; name: string } | null => {
+    for (const id of ids) {
+      if (roleMatchesHeldRoleInSession(id, session.heldRoleIds, session.roles)) {
+        const name = session.roles.find((role) => role.id === id)?.name ?? `Role ${id}`
+        return { id, name }
+      }
+    }
+    return null
+  }
+  const isOwn = target.creatorCharacterId != null && target.creatorCharacterId === session.characterState.characterId
+  const stageLabel = LIFECYCLE_STAGE_LABELS[stage] ?? stage
+  const grant = (role: { id: number; name: string }, list: 'read' | 'write' | 'editOthers' | 'manage'): SessionDecision => {
+    const reason = `Allowed by ${role.name} role on the ${stageLabel} stage.`
+    return { allowed: true, reason, stageGrant: { roleId: role.id, roleName: role.name, stage, list }, trace: [reason, `Stage-list grant: ${list}Roles on ${stageLabel}.`] }
+  }
+  switch (capability) {
+    case 'read': {
+      const role = heldRole(lists.readRoleIds)
+      return role ? grant(role, 'read') : null
+    }
+    case 'edit_document': {
+      // Private drafts: own-write only — editOthersRoles never exposes another
+      // Character's private draft, and the gate above already closed non-creators.
+      if (target.privateDraft) {
+        const role = isOwn ? heldRole(lists.writeRoleIds) : null
+        return role ? grant(role, 'write') : null
+      }
+      const editOthers = heldRole(lists.editOthersRoleIds)
+      if (editOthers) return grant(editOthers, 'editOthers')
+      const own = isOwn ? heldRole(lists.writeRoleIds) : null
+      return own ? grant(own, 'write') : null
+    }
+    case 'submit_document':
+    case 'file_document':
+    case 'approve_document':
+    case 'restore_document': {
+      // manageRoles of the DESTINATION stage authorizes the transition INTO it
+      // (spec §3.4). The workflow seam passes the destination as target.stage.
+      const role = heldRole(lists.manageRoleIds)
+      return role ? grant(role, 'manage') : null
+    }
+    default:
+      return null
+  }
+}
+
+/**
+ * P08X-T06: the standalone manage-into-stage check for transitions with no
+ * frozen capability (deprecate INTO Deprecated) and for T07's creation-phase
+ * validation. Returns a grant decision when a held role sits on the
+ * destination stage's manageRoles; null otherwise.
+ */
+export function stageManageGrant(session: AuthzSession, typeId: number | null, stage: Lifecycle): SessionDecision | null {
+  if (session.characterState == null || typeId == null) return null
+  const lists = session.stageLists.get(typeId)?.get(stage)
+  if (!lists || !lists.enabled) return null
+  const role = session.roles.find((candidate) => lists.manageRoleIds.includes(candidate.id) && roleMatchesHeldRoleInSession(candidate.id, session.heldRoleIds, session.roles))
+  if (!role) return null
+  const stageLabel = LIFECYCLE_STAGE_LABELS[stage] ?? stage
+  const roleName = role.name ?? `Role ${role.id}`
+  const reason = `Allowed by ${roleName} role on the ${stageLabel} stage.`
+  return { allowed: true, reason, stageGrant: { roleId: role.id, roleName, stage, list: 'manage' }, trace: [reason, `Stage-list grant: manageRoles on ${stageLabel}.`] }
+}
+
+/**
+ * P08X-T06: the (type, stage) pairs this actor can READ through the stage
+ * readRoles lists — the stage-list half of the record list predicate. Pure,
+ * zero SQL: derived from the session's stage lists and held roles.
+ */
+export function stageReadablePairs(session: AuthzSession): Array<{ typeId: number; stage: Lifecycle }> {
+  if (session.characterState == null) return []
+  const pairs: Array<{ typeId: number; stage: Lifecycle }> = []
+  for (const [typeId, stages] of session.stageLists) {
+    for (const [stage, lists] of stages) {
+      if (!lists.enabled) continue
+      if (lists.readRoleIds.some((id) => roleMatchesHeldRoleInSession(id, session.heldRoleIds, session.roles))) pairs.push({ typeId, stage })
+    }
+  }
+  return pairs
+}
+
+/**
+ * P08X-T06: can this actor CREATE a record starting at the given stage?
+ * Type-grant OR the stage's writeRoles (spec §3.4: write = create at that
+ * stage + edit my own at that stage). T07's creation phase dropdown and
+ * validation use this; it is NOT a full decision (no Folder narrowing here).
+ */
+export function canCreateAtStage(session: AuthzSession, typeId: number | null, stage: Lifecycle): boolean {
+  if (session.characterState == null || typeId == null) return false
+  const lists = session.stageLists.get(typeId)?.get(stage)
+  if (!lists || !lists.enabled) return false
+  return lists.writeRoleIds.some((id) => roleMatchesHeldRoleInSession(id, session.heldRoleIds, session.roles))
+}
+
+/**
+ * P07X-T03 two-axis record decision for a Document target, extended by
+ * P08X-T06 with the private-draft gate and stage-list grants.
  *
  * Grant axis (the normal source of record capability): direct Document rules
  * on the same record win when present (exceptional most-specific same-record
- * path); otherwise Document-Type rules on the record's type decide.
- * Narrowing axis: Folder/Subdomain/Domain DENIES narrow any Type or Document
- * grant; their grants never create a missing record capability. With no
- * Type/Document grant the decision denies even when the Folder is visible.
- * Principal precedence and deny-wins-ties match the legacy tier engine.
+ * path); otherwise Document-Type rules on the record's type decide. When
+ * neither exists, the stage role lists of the record's current stage (or a
+ * transition's destination) add per-stage grants (spec §3.4: Type-grant OR
+ * stage-list grant).
+ * Narrowing axis: Folder/Subdomain/Domain DENIES narrow any Type/Document/
+ * stage grant; their grants never create a missing record capability. With no
+ * Type/Document/stage grant the decision denies even when the Folder is
+ * visible. Principal precedence and deny-wins-ties match the legacy engine.
  */
-function decideRecordDocument(session: AuthzSession, capability: Capability, target: { type: 'Document'; id: number; folderChain?: number[]; subdomainId?: number | null; documentTypeId?: number | null }): SessionDecision {
+function decideRecordDocument(session: AuthzSession, capability: Capability, target: { type: 'Document'; id: number; folderChain?: number[]; subdomainId?: number | null; documentTypeId?: number | null } & DocumentTargetExtra): SessionDecision {
+  // P08X-T06: private-draft visibility closes the whole decision for non-
+  // creator Characters on read/edit, even against a direct grant.
+  const gate = privateDraftGate(session, capability, target)
+  if (gate) return gate
   const rules = (session.rulesByCapability.get(capability) ?? []).filter((rule) => ruleMatchesPrincipal(session, rule))
   const docRules = rules.filter((rule) => rule.resourceType === 'Document' && rule.resourceId === target.id)
   const typeRules = rules.filter((rule) => rule.resourceType === 'DocumentType' && target.documentTypeId != null && rule.resourceId === target.documentTypeId)
@@ -388,8 +616,13 @@ function decideRecordDocument(session: AuthzSession, capability: Capability, tar
   }
   const grantRules = docRules.length > 0 ? docRules : typeRules.length > 0 ? typeRules : []
   if (grantRules.length === 0) {
+    // P08X-T06: the stage-list grant source — a role on the stage's list grants
+    // the capability even without a matching Type rule (explicit denies above
+    // already won; default deny below when neither source grants).
+    const stage = stageListDecision(session, capability, target)
+    if (stage) return stage
     const reason = `Denied: no Document Type grant for ${typeName(session, target.documentTypeId)}.`
-    return { allowed: false, reason, trace: [reason, 'Default deny: no Type/Document grant.'] }
+    return { allowed: false, reason, trace: [reason, 'Default deny: no Type/Document/stage-list grant.'] }
   }
   const candidates = grantRules.map((rule) => ({ rule, classRank: classRankOf(rule.principalType), specificity: { tier: docRules.length > 0 ? 0 : 1, chain: [rule.resourceId] } as Specificity }))
   const winner = pickWinner(candidates)
@@ -432,7 +665,7 @@ function decideDocumentTypeTarget(session: AuthzSession, capability: Capability,
   return decisionForWinner(winner, reason, [text, ...candidates.filter((candidate) => candidate !== winner).map((candidate) => winnerText(candidate))])
 }
 
-export function decideInSession(session: AuthzSession, capability: Capability, target: { type: ResourceType; id: number; folderChain?: number[]; subdomainId?: number | null; documentTypeId?: number | null }): SessionDecision {
+export function decideInSession(session: AuthzSession, capability: Capability, target: { type: ResourceType; id: number; folderChain?: number[]; subdomainId?: number | null; documentTypeId?: number | null } & DocumentTargetExtra): SessionDecision {
   if (session.authority) {
     // P07X-T02: 'platform'/'owner' kinds are unreachable here (platform work
     // uses authorizePlatformOperation; ownerUser authority requires the
@@ -441,7 +674,7 @@ export function decideInSession(session: AuthzSession, capability: Capability, t
     return { allowed: true, reason, trace: [reason] }
   }
   if (session.characterState == null) return { allowed: false, reason: 'An active member Character is required.', trace: ['No active Character/Domain membership tuple.'] }
-  if (target.type === 'Document' && isRecordCapability(capability)) return decideRecordDocument(session, capability, target as { type: 'Document'; id: number; folderChain?: number[]; subdomainId?: number | null; documentTypeId?: number | null })
+  if (target.type === 'Document' && isRecordCapability(capability)) return decideRecordDocument(session, capability, target as { type: 'Document'; id: number; folderChain?: number[]; subdomainId?: number | null; documentTypeId?: number | null } & DocumentTargetExtra)
   if (target.type === 'DocumentType') return decideDocumentTypeTarget(session, capability, { type: 'DocumentType', id: Number(target.id) })
   const rules = session.rulesByCapability.get(capability) ?? []
   const candidates: Candidate[] = []
@@ -477,9 +710,16 @@ export async function loadAuthorizationSession(payload: Payload, actor: AuthzAct
 /** Decide many (capability, resource) pairs with zero SQL after preload. */
 export function decideManyInSession(session: AuthzSession, requests: Array<{ capability: Capability; resource: AuthzResourceRef }>): SessionDecision[] {
   return requests.map((request) => {
-    let target: { type: ResourceType; id: number; folderChain?: number[]; subdomainId?: number | null; documentTypeId?: number | null }
+    let target: { type: ResourceType; id: number; folderChain?: number[]; subdomainId?: number | null; documentTypeId?: number | null } & DocumentTargetExtra
     if (request.resource.type === 'Document') {
-      target = { type: 'Document', id: Number(request.resource.id), documentTypeId: request.resource.documentTypeId == null ? null : Number(request.resource.documentTypeId) }
+      target = {
+        type: 'Document',
+        id: Number(request.resource.id),
+        documentTypeId: request.resource.documentTypeId == null ? null : Number(request.resource.documentTypeId),
+        stage: request.resource.stage ?? null,
+        privateDraft: request.resource.privateDraft === true,
+        creatorCharacterId: request.resource.creatorCharacterId == null ? null : Number(request.resource.creatorCharacterId),
+      }
     } else if (request.resource.type === 'Folder') {
       const ancestry = folderAncestry(session, Number(request.resource.id))
       target = { type: 'Folder', id: Number(request.resource.id), folderChain: ancestry.chain, subdomainId: ancestry.subdomainId }

@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { isCapability, type Capability } from '@/lib/permissions/capabilities'
+import type { Lifecycle } from '@/lib/documents/lifecycle'
 import { decideInSession, folderAncestry, loadAuthorizationSession, resolveDocumentTarget, type AuthzActor, type AuthzResourceRef, type SessionDecision } from './session'
 import { loadCachedAuthorizationSession } from './sessionCache'
 
@@ -50,7 +51,20 @@ export async function evaluatePermission(args: { payload: Payload; actor: Permis
     if (!document) return { allowed: false, reason: 'Resource not found.', trace: ['Resource lookup failed.'] }
     if (idOf(document.domain) !== session.domainId) return { allowed: false, reason: 'Resource belongs to another Domain.', trace: ['Cross-Domain resource rejected.'] }
     if (document.softDeletedAt) return { allowed: false, reason: 'Document is soft-deleted.', trace: ['Soft-deleted resource rejected.'] }
-    const target = resolveDocumentTarget(session, { id: Number(id), folderId: idOf(document.folder), subdomainId: idOf(document.subdomain), documentTypeId: idOf(document.documentType) })
+    // P08X-T06: the stage whose role lists decide this capability — the
+    // document's current lifecycle by default, or the transition DESTINATION
+    // when the workflow seam passes it explicitly. The private-draft boundary
+    // rides on the row's creator Character.
+    const stage = (args.resource.stage ?? document.lifecycle) as Lifecycle | null | undefined
+    const target = resolveDocumentTarget(session, {
+      id: Number(id),
+      folderId: idOf(document.folder),
+      subdomainId: idOf(document.subdomain),
+      documentTypeId: idOf(document.documentType),
+      stage: stage ?? null,
+      privateDraft: (document as { privateDraft?: unknown }).privateDraft === true,
+      creatorCharacterId: idOf((document as { creatorCharacter?: unknown }).creatorCharacter),
+    })
     return decideInSession(session, capability, target)
   }
   if (type === 'Folder') {

@@ -1,7 +1,10 @@
 import type { Payload } from 'payload'
 
-import { decideInSession, folderAncestry, folderNarrowingDeny, grantedTypeIds, type AuthzSession } from './session'
+import type { Where } from 'payload'
+
+import { decideInSession, folderAncestry, folderNarrowingDeny, grantedTypeIds, stageReadablePairs, type AuthzSession } from './session'
 import type { Capability, ResourceType } from '@/lib/permissions/capabilities'
+import type { Lifecycle } from '@/lib/documents/lifecycle'
 
 /**
  * P07X-T03: compile the effective record read scope into sets.
@@ -36,6 +39,8 @@ export type ReadScope = {
   denyDocumentIds: Set<number>
   /** Folders the actor may at least see (container visibility; T04 refines). */
   visibleFolderIds: Set<number>
+  /** P08X-T06: (type, stage) pairs readable through the stage readRoles lists. */
+  stageListReadable: Array<{ typeId: number; stage: Lifecycle }>
   /** True when the actor's authority bypasses ACL rules entirely (owner/admin). */
   authorityBypass: boolean
 }
@@ -51,8 +56,8 @@ const idOf = (value: unknown): number | null => {
  * documents that carry a Document-scope rule (fetched once by the caller);
  * documents without exception rules are covered by the baseline predicate.
  */
-export function computeReadScope(session: AuthzSession, documents: Array<{ id: number; folderId: number | null; documentTypeId?: number | null }>, capability: Capability = 'read'): ReadScope {
-  if (session.authority) return { readableTypeIds: new Set(), denyFolderIds: new Set(), grantDocumentIds: new Set(), denyDocumentIds: new Set(), visibleFolderIds: new Set(session.folders.keys()), authorityBypass: true }
+export function computeReadScope(session: AuthzSession, documents: Array<{ id: number; folderId: number | null; documentTypeId?: number | null; stage?: string | null; privateDraft?: boolean | null; creatorCharacterId?: number | null }>, capability: Capability = 'read'): ReadScope {
+  if (session.authority) return { readableTypeIds: new Set(), denyFolderIds: new Set(), grantDocumentIds: new Set(), denyDocumentIds: new Set(), visibleFolderIds: new Set(session.folders.keys()), stageListReadable: [], authorityBypass: true }
 
   const readableTypeIds = grantedTypeIds(session, capability)
 
@@ -83,14 +88,72 @@ export function computeReadScope(session: AuthzSession, documents: Array<{ id: n
     if (finalAllowed && !baseline) grantDocumentIds.add(document.id)
     if (!finalAllowed && baseline) denyDocumentIds.add(document.id)
   }
-  return { readableTypeIds, denyFolderIds, grantDocumentIds, denyDocumentIds, visibleFolderIds, authorityBypass: false }
+  return { readableTypeIds, denyFolderIds, grantDocumentIds, denyDocumentIds, visibleFolderIds, stageListReadable: stageReadablePairs(session), authorityBypass: false }
 }
 
-type AnyTarget = { type: ResourceType; id: number; folderChain?: number[]; subdomainId?: number | null; documentTypeId?: number | null }
+/**
+ * P08X-T06: the private-draft visibility clause — public drafts plus drafts
+ * the acting Character created. Admins (authority) skip it. Returns null when
+ * nothing should be filtered (authority bypass).
+ */
+export function privateDraftClause(session: AuthzSession): Where | null {
+  if (session.authority) return null
+  const actorCharacterId = session.characterState?.characterId ?? null
+  return actorCharacterId == null
+    ? { privateDraft: { not_equals: true } }
+    : { or: [{ privateDraft: { not_equals: true } }, { creatorCharacter: { equals: actorCharacterId } }] }
+}
 
-function documentTarget(session: AuthzSession, document: { id: number; folderId: number | null; documentTypeId?: number | null }): AnyTarget {
+/**
+ * P08X-T06: the complete SQL record-read predicate shared by every record
+ * list/count query — the two-axis baseline (Type grant + Folder narrowing +
+ * direct Document exceptions), the stage-list read grants (each narrowed by
+ * the same Folder denies), and the private-draft creator-Character boundary.
+ * Callers wrap these clauses with their own domain/soft-delete/folder/type/
+ * text filters. Empty when authority bypasses ACLs.
+ */
+export function recordReadPredicate(scope: ReadScope, session: AuthzSession): Where[] {
+  if (scope.authorityBypass) return []
+  const clauses: Where[] = []
+  clauses.push({ id: { not_in: scope.denyDocumentIds.size > 0 ? [...scope.denyDocumentIds] : [-1] } })
+  const baseline: Where[] = [
+    {
+      and: [
+        { documentType: { in: scope.readableTypeIds.size > 0 ? [...scope.readableTypeIds] : [-1] } },
+        { folder: { not_in: scope.denyFolderIds.size > 0 ? [...scope.denyFolderIds] : [-1] } },
+      ],
+    },
+  ]
+  if (scope.grantDocumentIds.size > 0) baseline.push({ id: { in: [...scope.grantDocumentIds] } })
+  for (const { typeId, stage } of scope.stageListReadable) {
+    baseline.push({
+      and: [
+        { documentType: { equals: typeId } },
+        { lifecycle: { equals: stage } },
+        { folder: { not_in: scope.denyFolderIds.size > 0 ? [...scope.denyFolderIds] : [-1] } },
+      ],
+    })
+  }
+  clauses.push({ or: baseline })
+  const privateDraft = privateDraftClause(session)
+  if (privateDraft) clauses.push(privateDraft)
+  return clauses
+}
+
+type AnyTarget = { type: ResourceType; id: number; folderChain?: number[]; subdomainId?: number | null; documentTypeId?: number | null; stage?: Lifecycle | null; privateDraft?: boolean | null; creatorCharacterId?: number | null }
+
+function documentTarget(session: AuthzSession, document: { id: number; folderId: number | null; documentTypeId?: number | null; stage?: string | null; privateDraft?: boolean | null; creatorCharacterId?: number | null }): AnyTarget {
   const ancestry = document.folderId == null ? { chain: [], subdomainId: null } : folderAncestry(session, document.folderId)
-  return { type: 'Document', id: document.id, folderChain: document.folderId == null ? [] : [document.folderId, ...ancestry.chain], subdomainId: ancestry.subdomainId, documentTypeId: document.documentTypeId == null ? null : Number(document.documentTypeId) }
+  return {
+    type: 'Document',
+    id: document.id,
+    folderChain: document.folderId == null ? [] : [document.folderId, ...ancestry.chain],
+    subdomainId: ancestry.subdomainId,
+    documentTypeId: document.documentTypeId == null ? null : Number(document.documentTypeId),
+    stage: (document.stage ?? null) as Lifecycle | null,
+    privateDraft: document.privateDraft === true,
+    creatorCharacterId: document.creatorCharacterId ?? null,
+  }
 }
 
 /**
@@ -99,7 +162,7 @@ function documentTarget(session: AuthzSession, document: { id: number; folderId:
  * never scan the whole Domain corpus just to decide one record.
  */
 export async function compileReadScope(payload: Payload, session: AuthzSession, capability: Capability = 'read'): Promise<ReadScope> {
-  if (session.authority) return { readableTypeIds: new Set(), denyFolderIds: new Set(), grantDocumentIds: new Set(), denyDocumentIds: new Set(), visibleFolderIds: new Set(session.folders.keys()), authorityBypass: true }
+  if (session.authority) return { readableTypeIds: new Set(), denyFolderIds: new Set(), grantDocumentIds: new Set(), denyDocumentIds: new Set(), visibleFolderIds: new Set(session.folders.keys()), stageListReadable: [], authorityBypass: true }
   const exceptionIds = [...session.documentExceptions.keys()]
   const rows: Array<{ id: number; folderId: number | null; documentTypeId?: number | null }> = []
   // Keep each statement comfortably below SQLite's variable limit. This is
@@ -107,7 +170,14 @@ export async function compileReadScope(payload: Payload, session: AuthzSession, 
   for (let offset = 0; offset < exceptionIds.length; offset += 400) {
     const ids = exceptionIds.slice(offset, offset + 400)
     const documents = await payload.find({ collection: 'documents', where: { and: [{ domain: { equals: session.domainId } }, { id: { in: ids } }, { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] }] }, depth: 0, limit: 0, pagination: false, overrideAccess: true })
-    rows.push(...documents.docs.map((document) => ({ id: Number(document.id), folderId: idOf((document as { folder?: unknown }).folder), documentTypeId: idOf((document as { documentType?: unknown }).documentType) })))
+    rows.push(...documents.docs.map((document) => ({
+      id: Number(document.id),
+      folderId: idOf((document as { folder?: unknown }).folder),
+      documentTypeId: idOf((document as { documentType?: unknown }).documentType),
+      stage: (document as { lifecycle?: unknown }).lifecycle == null ? null : String((document as { lifecycle?: unknown }).lifecycle),
+      privateDraft: (document as { privateDraft?: unknown }).privateDraft === true,
+      creatorCharacterId: idOf((document as { creatorCharacter?: unknown }).creatorCharacter),
+    })))
   }
   return computeReadScope(session, rows, capability)
 }

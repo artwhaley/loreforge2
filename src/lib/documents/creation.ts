@@ -87,6 +87,8 @@ export type PreparedDocumentCreation = {
   lifecycle: Lifecycle
   folderId: number
   typeRow: Record<string, unknown>
+  /** P08X-T06: whether the draft stage allows the private-draft choice at creation. */
+  privateDraftsAllowed: boolean
 }
 
 type PrepareArgs = {
@@ -151,5 +153,11 @@ export async function prepareDocumentCreation(args: PrepareArgs): Promise<Prepar
   }
   if (folderId == null) throw new Error('folder')
   if (folderNarrowingDeny(session, 'create_document', folderId)) throw new Error('folder-narrowed')
-  return { typeId, method, lifecycle: initialLifecycle, folderId, typeRow }
+  // P08X-T06: the private-draft choice is only offered when the Draft stage's
+  // privateDraftsAllowed is on; other initial stages never create private
+  // records. T07 builds the create-screen dropdown on top of this flag.
+  const privateDraftsAllowed = initialLifecycle === 'draft'
+    ? (session.stageLists.get(typeId)?.get('draft')?.privateDraftsAllowed ?? true)
+    : false
+  return { typeId, method, lifecycle: initialLifecycle, folderId, typeRow, privateDraftsAllowed }
 }

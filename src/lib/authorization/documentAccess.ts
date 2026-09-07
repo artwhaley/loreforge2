@@ -2,7 +2,7 @@ import type { Payload, User } from 'payload'
 
 import { canEditDocumentBody, type Lifecycle } from '@/lib/documents/lifecycle'
 import { decideInSession, loadAuthorizationSession, resolveDocumentTarget } from '@/lib/authz/session'
-import { compileReadScope } from '@/lib/authz/readScope'
+import { compileReadScope, recordReadPredicate } from '@/lib/authz/readScope'
 
 const relationId = (value: unknown): number | null => value && typeof value === 'object' && 'id' in value ? Number((value as { id: number | string }).id) : value === null || value === undefined || value === '' ? null : Number(value)
 
@@ -39,7 +39,7 @@ export async function canAccessDocument(args: {
 }): Promise<boolean> {
   const { payload, user, activeCharacterId, documentId, capability } = args
   const currentResult = await payload.find({ collection: 'documents', where: { id: { equals: documentId } }, depth: 0, limit: 1, overrideAccess: true })
-  const current = currentResult.docs[0] as unknown as ({ domain?: unknown; tenant?: unknown; lifecycle?: unknown; softDeletedAt?: unknown; folder?: unknown; subdomain?: unknown; documentType?: unknown } & Record<string, unknown>) | undefined
+  const current = currentResult.docs[0] as unknown as ({ domain?: unknown; tenant?: unknown; lifecycle?: unknown; softDeletedAt?: unknown; folder?: unknown; subdomain?: unknown; documentType?: unknown; privateDraft?: unknown; creatorCharacter?: unknown } & Record<string, unknown>) | undefined
   if (!current) return false
   if (current.softDeletedAt) return false
   const domainId = relationId(current.domain)
@@ -48,8 +48,17 @@ export async function canAccessDocument(args: {
   // P07X-T03: the two-axis record decision (Type grant + Folder narrowing +
   // direct Document exception) is the single per-record decision for read and
   // update — never the old folder-baseline scope, which could expose a
-  // document through a Folder grant alone.
-  const target = resolveDocumentTarget(session, { id: Number(documentId), folderId: relationId(current.folder), subdomainId: relationId(current.subdomain), documentTypeId: relationId(current.documentType) })
+  // document through a Folder grant alone. P08X-T06 adds the stage role lists
+  // and the private-draft creator-Character boundary.
+  const target = resolveDocumentTarget(session, {
+    id: Number(documentId),
+    folderId: relationId(current.folder),
+    subdomainId: relationId(current.subdomain),
+    documentTypeId: relationId(current.documentType),
+    stage: (current.lifecycle ?? 'draft') as Lifecycle,
+    privateDraft: current.privateDraft === true,
+    creatorCharacterId: relationId(current.creatorCharacter),
+  })
   const decision = decideInSession(session, capability === 'update' ? 'edit_document' : 'read', target)
   return decision.allowed && (capability !== 'update' || lifecycleEditable(current.lifecycle, current.locked))
 }
@@ -128,17 +137,7 @@ export async function readableVersionParentQuery(args: {
     }
     const docs = await payload.find({
       collection: 'documents',
-      where: {
-        and: [
-          { domain: { equals: domainId } },
-          { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] },
-          { id: { not_in: scope.denyDocumentIds.size > 0 ? [...scope.denyDocumentIds] : [-1] } },
-          { or: [
-            { and: [{ documentType: { in: scope.readableTypeIds.size > 0 ? [...scope.readableTypeIds] : [-1] } }, { folder: { not_in: scope.denyFolderIds.size > 0 ? [...scope.denyFolderIds] : [-1] } }] },
-            { id: { in: scope.grantDocumentIds.size > 0 ? [...scope.grantDocumentIds] : [-1] } },
-          ] },
-        ],
-      },
+      where: { and: [{ domain: { equals: domainId } }, { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] }, ...recordReadPredicate(scope, session)] },
       depth: 0,
       limit: 0,
       pagination: false,

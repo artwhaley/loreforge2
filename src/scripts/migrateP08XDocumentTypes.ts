@@ -81,6 +81,22 @@ try {
   if (!documentColumns.has('private_draft')) db.exec('ALTER TABLE documents ADD COLUMN private_draft integer DEFAULT true')
   db.exec('CREATE INDEX IF NOT EXISTS documents_locked_idx ON documents (locked)')
 
+  // 4b. P08X-T06: the creator Character (private-draft visibility boundary).
+  // When this column is freshly added, the private-draft feature is being
+  // introduced with enforcement: nothing in the legacy corpus was a real
+  // private draft, so the whole existing archive becomes public. New creates
+  // set their own value from the draft-stage configuration.
+  const hadCreatorCharacter = documentColumns.has('creator_character_id')
+  if (!hadCreatorCharacter) db.exec('ALTER TABLE documents ADD COLUMN creator_character_id integer')
+  if (!hadCreatorCharacter) db.exec('UPDATE documents SET private_draft = 0')
+  db.exec('CREATE INDEX IF NOT EXISTS documents_creator_character_idx ON documents (creator_character_id)')
+
+  // 4c. P08X-T06: domains.authzEpoch — the authorization-facts version
+  // bumped by lifecycle-stages writes so permission edits invalidate the
+  // Domain's cached authorization sessions.
+  const domainColumns = new Set((db.prepare('PRAGMA table_info(domains)').all() as Array<{ name: string }>).map((row) => row.name))
+  if (!domainColumns.has('authz_epoch')) db.exec('ALTER TABLE domains ADD COLUMN authz_epoch integer DEFAULT 0')
+
   // 5. document-relationships: priorLifecycle -> priorLocked boolean.
   const relationshipColumns = new Set((db.prepare('PRAGMA table_info(document_relationships)').all() as Array<{ name: string }>).map((row) => row.name))
   if (!relationshipColumns.has('prior_locked')) db.exec('ALTER TABLE document_relationships ADD COLUMN prior_locked integer DEFAULT false')

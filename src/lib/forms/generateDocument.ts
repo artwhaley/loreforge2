@@ -191,7 +191,10 @@ export async function generateDocumentFromSubmission(args: {
     const req = { transactionID }
     // `domain` scopes the record; the legacy tenants collection has no row for
     // this Domain, so `tenant` is never written here (FOREIGN KEY fix).
-    const row = await payload.create({ collection: 'documents', req, context: actorCharacterId == null ? { allowUserCreate: true, actorUserId: user.id } : { preparedByCharacterId: actorCharacterId, actorUserId: user.id }, data: { domain: tenant.id, folder, title, body, origin: 'form', sourceKind: 'form', documentType, lifecycle, publicAccess: 'inherit', createdBy: user.id }, depth: 0 })
+    // P08X-T06: form generation never starts a Draft (submitted/filed only),
+    // so the record is always public; the creator Character is still stamped
+    // for the private-draft boundary.
+    const row = await payload.create({ collection: 'documents', req, context: actorCharacterId == null ? { allowUserCreate: true, actorUserId: user.id } : { preparedByCharacterId: actorCharacterId, actorUserId: user.id }, data: { domain: tenant.id, folder, title, body, origin: 'form', sourceKind: 'form', documentType, lifecycle, privateDraft: false, creatorCharacter: actorCharacterId ?? undefined, publicAccess: 'inherit', createdBy: user.id }, depth: 0 })
     if (actorCharacterId != null) await ensurePreparedBy({ payload, domainId: tenant.id, documentId: row.id, characterId: actorCharacterId, actor: { userId: user.id, characterId: actorCharacterId }, transactionID })
     // Character questions become real Character links on the record. A single
     // pick links one Character; a multiple pick links every chosen one.

@@ -74,7 +74,10 @@ async function applyTransition(args: WorkflowActor & { operation: WorkflowOperat
   }
 
   const transition = STAGE_TRANSITIONS[operation]
-  if (transactionID != null) await requirePermission({ payload, actor: { userId: args.userId, activeCharacterId: args.actorCharacterId }, domainId: args.domainId, capability: CAPABILITY[operation], resource: { type: 'Document', id: document.id }, transactionID })
+  // P08X-T06: stage-list grants decide transitions by the DESTINATION stage's
+  // manageRoles (spec §3.4) — submit/file/approve/reject pass the stage the
+  // record moves INTO so the stage lists can authorize it.
+  if (transactionID != null) await requirePermission({ payload, actor: { userId: args.userId, activeCharacterId: args.actorCharacterId }, domainId: args.domainId, capability: CAPABILITY[operation], resource: { type: 'Document', id: document.id, stage: transition.to }, transactionID })
   if (document.lifecycle !== transition.from) throw new Error(`This record is ${document.lifecycle}; it cannot be ${operation}.`)
   assertLifecycleTransition(document.lifecycle, transition.to)
   const typeId = relationId((document as { documentType?: unknown }).documentType)
@@ -82,7 +85,11 @@ async function applyTransition(args: WorkflowActor & { operation: WorkflowOperat
   const priorFolderId = relationId((document as { folder?: unknown }).folder)
   const routedFolderId = resolveLifecycleRouteFolder(typeRecord, transition.to, priorFolderId)
   const folderChanged = routedFolderId != null && priorFolderId != null && routedFolderId !== priorFolderId
-  const data: Record<string, unknown> = { lifecycle: transition.to }
+  // P08X-T06: leaving Draft ends the private-draft state — a Submitted/Filed
+  // record is no longer a private DRAFT, so it becomes visible to the
+  // destination stage's readers. The flag is creator-only by construction.
+  const privateDraft = (document as { privateDraft?: unknown }).privateDraft === true
+  const data: Record<string, unknown> = { lifecycle: transition.to, ...(privateDraft && transition.from === 'draft' ? { privateDraft: false } : {}) }
   if (folderChanged) data.folder = routedFolderId
   await payload.update({ collection: 'documents', id: document.id, data, depth: 0, ...(req ? { req } : {}) })
   await recordDocumentProvenance({

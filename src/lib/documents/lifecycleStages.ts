@@ -1,5 +1,6 @@
 import type { Payload } from 'payload'
 
+import { bumpAuthzEpoch } from '@/lib/authz/authzEpoch'
 import type { Lifecycle } from '@/lib/documents/lifecycle'
 
 /** The four intentional lifecycle stages (P08X spec §2.4). */
@@ -134,6 +135,11 @@ export async function applyLifecycleStageConfig(payload: Payload, args: { docume
       await payload.create({ collection: 'lifecycle-stages', overrideAccess: true, data: data as never })
     }
   }
+  // P08X-T06: stage role lists feed authorization decisions, so any write
+  // here invalidates the Domain's cached authorization facts. Runs after the
+  // loop (never inside a row transaction) — the next authorization session
+  // reloads the fresh stage lists.
+  await bumpAuthzEpoch(payload, domainId)
 }
 
 /** Load all stage rows for one Document Type, keyed by stage. */

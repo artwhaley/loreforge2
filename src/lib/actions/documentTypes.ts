@@ -8,6 +8,7 @@ import config from '@/payload.config'
 import { isAllowed } from '@/lib/authz/evaluate'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { applyLifecycleStageConfig, ensureLifecycleStageRows, lifecycleStageRowsForType, stageFolderId, type LifecycleStageConfigInput } from '@/lib/documents/lifecycleStages'
+import { bumpAuthzEpoch } from '@/lib/authz/authzEpoch'
 import { duplicateDocumentType } from '@/lib/documents/typeDuplicate'
 
 const relationId = (value: unknown): number | null => value && typeof value === 'object' && 'id' in value
@@ -273,6 +274,8 @@ export async function deleteTypeAction(input: { domainSlug: string; typeId: numb
     if (used.totalDocs > 0) return { ok: false, error: 'has-documents' }
     await ctx.payload.delete({ collection: 'document-types', id: typeId, overrideAccess: true })
     await ctx.payload.delete({ collection: 'lifecycle-stages', where: { documentType: { equals: typeId } }, overrideAccess: true })
+    // P08X-T06: stage rows were removed — invalidate the Domain's cached authorization facts.
+    await bumpAuthzEpoch(ctx.payload, ctx.domain.id)
     revalidatePath(`/domain/${ctx.domain.slug}/document-types`)
     return { ok: true, typeId }
   } catch (error) {

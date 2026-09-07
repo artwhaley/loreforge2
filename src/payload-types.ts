@@ -261,6 +261,10 @@ export interface Domain {
   ownerUser?: (number | null) | User;
   ownerCharacter?: (number | null) | Character;
   lifecycle: 'setup-pending' | 'active' | 'grace' | 'read-only' | 'suspended' | 'archived';
+  /**
+   * P08X-T06: authorization facts version — bumped on lifecycle-stages writes so permission edits take effect immediately.
+   */
+  authzEpoch?: number | null;
   defaultFilingPolicy: 'direct-file' | 'review-required';
   motto?: string | null;
   preset: 'heritage' | 'modern' | 'ink' | 'gallery' | 'verdant' | 'nocturne';
@@ -635,6 +639,10 @@ export interface Document {
    * Author, if known
    */
   createdBy?: (number | null) | User;
+  /**
+   * P08X-T06: the creating Character — the private-draft visibility boundary. Set from the acting Character at creation; private Drafts are visible only to this Character (plus administrators).
+   */
+  creatorCharacter?: (number | null) | Character;
   updatedAt: string;
   createdAt: string;
 }
@@ -1537,6 +1545,7 @@ export interface DomainsSelect<T extends boolean = true> {
   ownerUser?: T;
   ownerCharacter?: T;
   lifecycle?: T;
+  authzEpoch?: T;
   defaultFilingPolicy?: T;
   motto?: T;
   preset?: T;
@@ -1917,6 +1926,7 @@ export interface DocumentsSelect<T extends boolean = true> {
   softDeletedAt?: T;
   softDeletedBy?: T;
   createdBy?: T;
+  creatorCharacter?: T;
   updatedAt?: T;
   createdAt?: T;
 }

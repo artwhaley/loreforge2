@@ -8,7 +8,7 @@ import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 import { PLATFORM_NOUNS as vocab } from '@/lib/theme/nouns'
 import { loadCachedAuthorizationSession } from '@/lib/authz/sessionCache'
 import { decideInSession, resolveDocumentTarget } from '@/lib/authz/session'
-import { compileReadScope } from '@/lib/authz/readScope'
+import { compileReadScope, recordReadPredicate } from '@/lib/authz/readScope'
 import { projectVisibleFolders, type ProjectedFolder } from '@/lib/authz/folderProjection'
 
 import { RecordsExplorer, type ExplorerFolder } from './RecordsExplorer'
@@ -48,19 +48,13 @@ export default async function RecordsPage({ params, searchParams }: Props) {
   const documentsResult = await payload.find({ collection: 'documents', where: { and: [
     { domain: { equals: tenant.id } },
     { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] },
-    ...(scope && !scope.authorityBypass ? [
-      { id: { not_in: scope.denyDocumentIds.size ? [...scope.denyDocumentIds] : [-1] } },
-      { or: [
-        { and: [{ documentType: { in: scope.readableTypeIds.size ? [...scope.readableTypeIds] : [-1] } }, { folder: { not_in: scope.denyFolderIds.size ? [...scope.denyFolderIds] : [-1] } }] },
-        { id: { in: scope.grantDocumentIds.size ? [...scope.grantDocumentIds] : [-1] } },
-      ] },
-    ] : []),
-  ] }, select: { id: true, domain: true, folder: true, documentType: true, title: true, updatedAt: true, lifecycle: true, locked: true }, depth: 0, limit: 50, sort: '-updatedAt', overrideAccess: true })
+    ...(session && scope ? recordReadPredicate(scope, session) : []),
+  ] }, select: { id: true, domain: true, folder: true, documentType: true, title: true, updatedAt: true, lifecycle: true, locked: true, privateDraft: true, creatorCharacter: true }, depth: 0, limit: 50, sort: '-updatedAt', overrideAccess: true })
   const permissions = new Map<number, { read: boolean; canEdit: boolean; canSupersede: boolean; canDelete: boolean }>()
   const visibleDocs: typeof documentsResult.docs = []
   if (session) {
     for (const document of documentsResult.docs) {
-      const target = resolveDocumentTarget(session, { id: Number(document.id), folderId: relationId(document.folder), subdomainId: null, documentTypeId: relationId(document.documentType) })
+      const target = resolveDocumentTarget(session, { id: Number(document.id), folderId: relationId(document.folder), subdomainId: null, documentTypeId: relationId(document.documentType), stage: document.lifecycle as never, privateDraft: document.privateDraft === true, creatorCharacterId: relationId(document.creatorCharacter) })
       const read = decideInSession(session, 'read', target).allowed
       if (!read) continue
       visibleDocs.push(document)
@@ -105,13 +99,13 @@ export default async function RecordsPage({ params, searchParams }: Props) {
     frontier = []
     for (let offset = 0; offset < linkedIds.length; offset += 400) {
       const batch = linkedIds.slice(offset, offset + 400)
-      const result = await payload.find({ collection: 'documents', where: { and: [{ domain: { equals: tenant.id } }, { id: { in: batch } }, { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] }] }, select: { id: true, domain: true, folder: true, documentType: true, title: true, updatedAt: true, lifecycle: true, locked: true }, depth: 0, limit: 0, pagination: false, overrideAccess: true })
+      const result = await payload.find({ collection: 'documents', where: { and: [{ domain: { equals: tenant.id } }, { id: { in: batch } }, { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] }, ...(session && scope ? recordReadPredicate(scope, session) : [])] }, select: { id: true, domain: true, folder: true, documentType: true, title: true, updatedAt: true, lifecycle: true, locked: true, privateDraft: true, creatorCharacter: true }, depth: 0, limit: 0, pagination: false, overrideAccess: true })
       for (const document of result.docs) {
         const documentId = Number(document.id)
         if (allDocIds.has(documentId)) continue
         allDocIds.add(documentId)
         if (session) {
-          const target = resolveDocumentTarget(session, { id: documentId, folderId: relationId(document.folder), subdomainId: null, documentTypeId: relationId(document.documentType) })
+          const target = resolveDocumentTarget(session, { id: documentId, folderId: relationId(document.folder), subdomainId: null, documentTypeId: relationId(document.documentType), stage: document.lifecycle as never, privateDraft: document.privateDraft === true, creatorCharacterId: relationId(document.creatorCharacter) })
           if (!decideInSession(session, 'read', target).allowed) continue
           allDocs.push(document)
           const canEdit = decideInSession(session, 'edit_document', target).allowed
