@@ -1,0 +1,11 @@
+.posterDoc { color: var(--tenant-primary); display: grid; gap: 2.5rem; }
+.opening { border-bottom: 8px solid var(--tenant-primary); padding-bottom: 2rem; }
+.title { font: 700 clamp(2.6rem, 7cqi, 5.5rem)/0.95 var(--tenant-heading-font); letter-spacing: -.055em; margin: 0 0 1.25rem; max-width: 16ch; }
+.meta { display: flex; flex-wrap: wrap; gap: 1rem; color: var(--tenant-muted-text); font-size: .85rem; }
+.actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.25rem; }
+.actions a { border: 1px solid var(--tenant-primary); color: var(--tenant-primary); padding: .4rem .8rem; text-decoration: none; font-size: .82rem; }
+.body { width: min(100%, 70ch); margin-left: auto; line-height: 1.75; font-size: 1.05rem; }
+.foot { width: min(100%, 70ch); margin-left: auto; display: grid; gap: 1rem; border-top: 1px solid var(--tenant-surface-border); padding-top: 1.5rem; }
+.foot h2 { font: 700 .72rem var(--tenant-body-font); letter-spacing: .12em; text-transform: uppercase; margin: 0 0 .4rem; }
+.foot ul { margin: 0; padding-left: 1.1rem; }
+@media (max-width: 700px) { .body, .foot { margin-left: 0; } }

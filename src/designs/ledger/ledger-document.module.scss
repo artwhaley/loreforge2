@@ -1,0 +1,12 @@
+.ledgerDoc { color: var(--tenant-primary); display: grid; grid-template-columns: minmax(140px, .3fr) minmax(0, 1fr); gap: 1.5rem 2rem; border-top: 3px double var(--tenant-primary); padding-top: 2rem; }
+.ledgerDoc .head { grid-column: 1 / -1; border-bottom: 1px solid var(--tenant-primary); padding-bottom: 1.5rem; display: grid; grid-template-columns: minmax(0, 1fr) minmax(140px, .35fr); gap: 2rem; }
+.title { font: 500 clamp(2rem, 4cqi, 3.2rem)/1.05 var(--tenant-heading-font); letter-spacing: -.04em; margin: 0 0 .75rem; }
+.meta { display: flex; flex-direction: column; gap: .3rem; font-size: .72rem; line-height: 1.7; color: var(--tenant-muted-text); }
+.actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+.actions a, .actions button { font: inherit; font-size: .78rem; border: 1px solid var(--tenant-surface-border); background: var(--tenant-surface-bg); color: var(--tenant-primary); padding: .35rem .7rem; text-decoration: none; cursor: pointer; }
+.body { grid-column: 2; line-height: 1.75; max-width: 70ch; }
+.rail { grid-column: 1; font-size: .78rem; line-height: 1.65; display: grid; gap: 1.25rem; align-content: start; }
+.rail h2 { font: 700 .7rem var(--tenant-body-font); letter-spacing: .12em; text-transform: uppercase; margin: 0 0 .5rem; }
+.rail ul { margin: 0; padding-left: 1.1rem; }
+.notice { grid-column: 1 / -1; border: 2px solid var(--tenant-accent); padding: 1rem 1.25rem; font-size: 1.05rem; }
+@media (max-width: 700px) { .ledgerDoc { display: block; } .ledgerDoc .head { display: block; } .body { margin-top: 1.5rem; } }

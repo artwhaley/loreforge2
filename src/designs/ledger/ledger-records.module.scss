@@ -1,0 +1,13 @@
+.ledgerRecords { display: grid; gap: 1rem; color: var(--tenant-primary); }
+.toolbar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; border-bottom: 3px double var(--tenant-primary); padding-bottom: .8rem; }
+.toolbar h1 { font: 500 1.6rem var(--tenant-heading-font); margin: 0 auto 0 0; }
+.search { min-height: 2.2rem; border: 1px solid var(--tenant-surface-border); background: var(--tenant-page-bg); color: var(--tenant-primary); padding: .35rem .6rem; font: inherit; font-size: .85rem; min-width: 12rem; }
+.select { min-height: 2.2rem; border: 1px solid var(--tenant-surface-border); background: var(--tenant-page-bg); color: var(--tenant-primary); padding: .3rem .5rem; font: inherit; font-size: .8rem; }
+.index { border-top: 1px solid var(--tenant-primary); }
+.entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .3rem 2rem; padding: 1rem 0; border-bottom: 1px solid var(--tenant-surface-border); }
+.entryTitle { font: 500 1.25rem var(--tenant-heading-font); color: inherit; text-decoration: none; }
+.entryTitle:hover { text-decoration: underline; }
+.entryMeta { color: var(--tenant-muted-text); font-size: .72rem; text-align: right; }
+.child { margin-left: 1.5rem; border-left: 1px solid var(--tenant-surface-border); padding-left: 1rem; }
+.more { justify-self: center; border: 1px solid var(--tenant-primary); background: transparent; color: var(--tenant-primary); padding: .5rem 1rem; font: inherit; cursor: pointer; }
+.empty { color: var(--tenant-muted-text); padding: 2rem 0; }

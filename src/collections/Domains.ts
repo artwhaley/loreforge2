@@ -56,6 +56,11 @@ export const Domains: CollectionConfig = {
     { name: 'documentStyle', type: 'select', label: 'Document reading style', options: [{ label: 'Classic (serif record sheet)', value: 'classic' }, { label: 'Modern (clean reading)', value: 'modern' }], defaultValue: 'classic' },
     { name: 'backgroundTreatment', type: 'select', label: 'Background treatment', options: [{ label: 'Plain color', value: 'plain' }, { label: 'Color washes', value: 'washes' }, { label: 'Soft texture (image)', value: 'soft' }, { label: 'Vignette (image)', value: 'vignette' }], defaultValue: 'plain' },
     { name: 'backgroundImage', type: 'upload', relationTo: 'media', label: 'Background image' },
+    // ---- Structured Design configuration (spec §20/§21): versioned JSON.
+    // Legacy scalar appearance fields above remain authoritative until the
+    // compatibility migration proves the JSON path (Step 5); the resolver
+    // prefers valid JSON and falls back to scalars (see resolveEffectiveDomainDesign).
+    { name: 'designConfig', type: 'json', label: 'Design configuration', admin: { description: 'Versioned structured Design config (schemaVersion 1). Validated at the save boundary; never hand-edit.' } },
     { name: 'publicEnabled', type: 'checkbox', defaultValue: false },
     { name: 'installedPackKey', type: 'text', admin: { readOnly: true } },
     { name: 'installedPackVersion', type: 'text', admin: { readOnly: true } },

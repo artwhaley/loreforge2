@@ -8,22 +8,17 @@ import { uploadThemeAssetAction } from '@/lib/actions/uploadThemeAsset'
 import {
   BACKGROUND_TREATMENT_OPTIONS,
   CONTENT_WIDTH_OPTIONS,
-  DESIGN_TEMPLATE_OPTIONS,
-  DESIGN_TEMPLATES,
-  DOCUMENT_STYLE_OPTIONS,
   FONT_OPTIONS,
-  HEADER_LAYOUT_OPTIONS,
-  HEADER_LAYOUTS,
   THEME_PRESETS,
+  themeTokensToCssVars,
   tokensFromVars,
 } from '@/lib/theme/fonts'
 import { contrastWarnings } from '@/lib/theme/color'
+import { DESIGN_METADATA, resolveDesign } from '@/lib/design/registry'
+import { DOCUMENT_PREVIEW_MODEL, HOME_PREVIEW_MODEL, SHELL_PREVIEW_MODEL } from '@/lib/design/fixtures'
+import { RecordActionsProvider } from '@/components/functional/records/recordActions'
 
-import { DomainFrame } from './DomainFrame'
-import { DomainHome, type DomainHomeProps } from './DomainHome'
-import { DocumentPaper } from './DocumentPaper'
 import { PreviewViewport } from './PreviewViewport'
-import documentStyles from '@/app/(frontend)/domain/[slug]/documents/[id]/document.module.scss'
 import styles from './ThemeStudio.module.scss'
 
 type ThemeState = {
@@ -60,12 +55,9 @@ type Props = {
   logoUrl: string
   bannerUrl: string
   backgroundUrl: string
-  previewHtml: string
-  previewDocTitle: string
-  previewMeta: string
-  home: DomainHomeProps
 }
 
+/** Theme Studio renders the REAL registry views over deterministic fixtures — never fake preview copies. */
 export function ThemeStudio({
   tenantSlug,
   domainName,
@@ -74,10 +66,6 @@ export function ThemeStudio({
   logoUrl,
   bannerUrl,
   backgroundUrl,
-  previewHtml,
-  previewDocTitle,
-  previewMeta,
-  home,
 }: Props) {
   const [theme, setTheme] = useState<ThemeState>(initial)
   const [mobile, setMobile] = useState(false)
@@ -92,6 +80,10 @@ export function ThemeStudio({
   const [uploadStatus, setUploadStatus] = useState('')
   const router = useRouter()
 
+  // The selected Design owns its header/layout and document-style options;
+  // the Studio renders only what the selected Design supports.
+  const design = resolveDesign(theme.designTemplate)
+
   const tokens = useMemo(
     () =>
       tokensFromVars({
@@ -101,14 +93,14 @@ export function ThemeStudio({
         backgroundColor: theme.backgroundColor,
         headingFontKey: theme.headingFontKey,
         bodyFontKey: theme.bodyFontKey,
-        designTemplate: theme.designTemplate,
+        designTemplate: design.key,
         contentWidth: theme.contentWidth,
         headerLayout: theme.headerLayout,
         documentStyle: theme.documentStyle,
         backgroundTreatment: theme.backgroundTreatment,
         backgroundImageSet: Boolean(background),
       }),
-    [theme, background],
+    [theme, background, design.key],
   )
   const warnings = contrastWarnings({
     primary: theme.primaryColor,
@@ -128,6 +120,16 @@ export function ThemeStudio({
       backgroundColor: p.background,
       headingFontKey: p.headingFontKey,
       bodyFontKey: p.bodyFontKey,
+    }))
+  }
+
+  function selectDesign(designKey: string) {
+    const next = resolveDesign(designKey)
+    setTheme((prev) => ({
+      ...prev,
+      designTemplate: next.key,
+      headerLayout: next.theme.defaultHeaderLayout,
+      documentStyle: next.theme.defaultDocumentStyle,
     }))
   }
 
@@ -183,6 +185,24 @@ export function ThemeStudio({
     applyPreset(theme.preset)
   }
 
+  // Deterministic preview fixtures overlaid with the draft identity/assets.
+  // No database query: the same production Design components render here.
+  const previewShell = useMemo(() => ({
+    ...SHELL_PREVIEW_MODEL,
+    domain: { ...SHELL_PREVIEW_MODEL.domain, name: domainName, motto, logoUrl: logo || null, bannerUrl: banner || null, backgroundUrl: background || null },
+  }), [domainName, motto, logo, banner, background])
+  const previewHome = useMemo(() => ({
+    ...HOME_PREVIEW_MODEL,
+    domain: { name: domainName, motto },
+  }), [domainName, motto])
+  const Shell = design.Shell
+  const HomeView = design.pages.home
+  const DocumentView = design.pages.document
+  const previewMeta = 'Filed September 1, 2026'
+
+  // Inert action bridges: preview buttons render but post nowhere.
+  const previewNoop = useMemo(() => async () => {}, [])
+
   return (
     <div className={styles.studio} data-theme-studio>
       <div className={styles.controls}>
@@ -212,47 +232,47 @@ export function ThemeStudio({
           <div className={styles.tabPanel}>
             <h3 className={styles.groupTitle}>Design template</h3>
             <div className={styles.templateGrid}>
-              {DESIGN_TEMPLATE_OPTIONS.map((option) => (
+              {DESIGN_METADATA.map((option) => (
                 <button
-                  key={option.value}
+                  key={option.key}
                   type="button"
-                  className={theme.designTemplate === option.value ? `${styles.templateCard} ${styles.templateCardActive}` : styles.templateCard}
-                  data-template={option.value}
-                  onClick={() => setTheme((prev) => ({ ...prev, designTemplate: option.value }))}
-                  aria-pressed={theme.designTemplate === option.value}
+                  className={theme.designTemplate === option.key ? `${styles.templateCard} ${styles.templateCardActive}` : styles.templateCard}
+                  data-template={option.key}
+                  onClick={() => selectDesign(option.key)}
+                  aria-pressed={theme.designTemplate === option.key}
                 >
                   <span className={styles.templateThumb} aria-hidden="true">
                     <span className={styles.thumbHeader} />
                     <span className={styles.thumbRule} />
                     <span className={styles.thumbBlocks}><span /><span /><span /></span>
                   </span>
-                  <span className={styles.templateName}>{DESIGN_TEMPLATES[option.value as keyof typeof DESIGN_TEMPLATES].label}</span>
-                  <span className={styles.templateDesc}>{DESIGN_TEMPLATES[option.value as keyof typeof DESIGN_TEMPLATES].description}</span>
+                  <span className={styles.templateName}>{option.name}</span>
+                  <span className={styles.templateDesc}>{option.description}</span>
                 </button>
               ))}
             </div>
 
             <h3 className={styles.groupTitle}>Header &amp; navigation look</h3>
             <div className={styles.headerLayoutGrid}>
-              {HEADER_LAYOUT_OPTIONS.map((option) => (
+              {design.theme.headerLayouts.map((option) => (
                 <button
-                  key={option.value}
+                  key={option.key}
                   type="button"
-                  className={theme.headerLayout === option.value ? `${styles.headerCard} ${styles.headerCardActive}` : styles.headerCard}
-                  data-layout={option.value}
-                  onClick={() => setTheme((prev) => ({ ...prev, headerLayout: option.value }))}
-                  aria-pressed={theme.headerLayout === option.value}
+                  className={theme.headerLayout === option.key ? `${styles.headerCard} ${styles.headerCardActive}` : styles.headerCard}
+                  data-layout={option.key}
+                  onClick={() => setTheme((prev) => ({ ...prev, headerLayout: option.key }))}
+                  aria-pressed={theme.headerLayout === option.key}
                 >
                   <span className={styles.headerThumb} aria-hidden="true">
-                    {option.value === 'centered' ? (
+                    {option.key === 'centered' ? (
                       <><span className={styles.thumbDot} /><span className={styles.thumbNavRow}><span /><span /><span /></span></>
-                    ) : option.value === 'left-aligned' ? (
+                    ) : option.key === 'left-aligned' ? (
                       <><span className={styles.thumbBar}><span className={styles.thumbDot} /><span className={styles.thumbNavRow}><span /><span /><span /></span></span></>
                     ) : (
                       <><span className={styles.thumbHero} /><span className={styles.thumbBar}><span className={styles.thumbDot} /><span className={styles.thumbNavRow}><span /><span /><span /></span></span></>
                     )}
                   </span>
-                  <span className={styles.headerName}>{HEADER_LAYOUTS[option.value as keyof typeof HEADER_LAYOUTS].label}</span>
+                  <span className={styles.headerName}>{option.label}</span>
                 </button>
               ))}
             </div>
@@ -424,20 +444,20 @@ export function ThemeStudio({
           <div className={styles.tabPanel}>
             <h3 className={styles.groupTitle}>Document reading style</h3>
             <div className={styles.docStyleGrid}>
-              {DOCUMENT_STYLE_OPTIONS.map((o) => (
+              {design.theme.documentStyles.map((o) => (
                 <button
-                  key={o.value}
+                  key={o.key}
                   type="button"
-                  className={theme.documentStyle === o.value ? `${styles.docStyleCard} ${styles.docStyleCardActive}` : styles.docStyleCard}
-                  data-style={o.value}
-                  onClick={() => setTheme((prev) => ({ ...prev, documentStyle: o.value }))}
-                  aria-pressed={theme.documentStyle === o.value}
+                  className={theme.documentStyle === o.key ? `${styles.docStyleCard} ${styles.docStyleCardActive}` : styles.docStyleCard}
+                  data-style={o.key}
+                  onClick={() => setTheme((prev) => ({ ...prev, documentStyle: o.key }))}
+                  aria-pressed={theme.documentStyle === o.key}
                 >
                   <span className={styles.docStyleLabel}>{o.label}</span>
-                  <span className={styles.docStyleSpecimen} data-style={o.value}>
-                    <span className={styles.specimenTitle} data-style={o.value} style={{ fontFamily: o.value === 'classic' ? tokens.headingFont : tokens.bodyFont }}>{previewDocTitle || 'A Filed Record'}</span>
-                    <span className={styles.specimenMeta} data-style={o.value}>{previewMeta || 'Filed · Web'}</span>
-                    <span className={styles.specimenExcerpt} data-style={o.value} style={{ fontFamily: o.value === 'classic' ? tokens.headingFont : tokens.bodyFont }}>
+                  <span className={styles.docStyleSpecimen} data-style={o.key}>
+                    <span className={styles.specimenTitle} data-style={o.key} style={{ fontFamily: o.key === 'classic' ? tokens.headingFont : tokens.bodyFont }}>{DOCUMENT_PREVIEW_MODEL.title}</span>
+                    <span className={styles.specimenMeta} data-style={o.key}>{previewMeta}</span>
+                    <span className={styles.specimenExcerpt} data-style={o.key} style={{ fontFamily: o.key === 'classic' ? tokens.headingFont : tokens.bodyFont }}>
                       The clerk ruled a fresh line and copied the incident as spoken.
                     </span>
                   </span>
@@ -445,8 +465,7 @@ export function ThemeStudio({
               ))}
             </div>
             <p className={styles.helpText}>
-              Classic keeps the serif record-sheet: bordered headings, tinted quotes, a heavy top rule.
-              Modern reads like a clean article: open sans headings, airy lines, plain pull quotes.
+              Each Design owns its reading styles — the options above come from the selected Design, not a global list.
             </p>
           </div>
         ) : null}
@@ -477,12 +496,13 @@ export function ThemeStudio({
           </div>
         </div>
         <PreviewViewport mobile={mobile}>
-          <DomainFrame name={domainName} motto={motto} base={home.base} logo={logo} banner={banner} background={background} tokens={tokens}>
-            {surface === 'home' ? <DomainHome {...home} editHref={undefined} /> :
-              <article className={documentStyles.record} data-style={theme.documentStyle}>
-                <DocumentPaper title={previewDocTitle || 'No record yet'} meta={previewMeta} html={previewHtml} />
-              </article>}
-          </DomainFrame>
+          <RecordActionsProvider workflowAction={previewNoop} deleteAction={previewNoop}>
+            <Shell model={previewShell} theme={{ tokens: themeTokensToCssVars(tokens), headerLayout: theme.headerLayout, documentStyle: theme.documentStyle }}>
+              {surface === 'home'
+                ? <HomeView {...previewHome} headerLayout={theme.headerLayout} documentStyle={theme.documentStyle} />
+                : <DocumentView {...DOCUMENT_PREVIEW_MODEL} headerLayout={theme.headerLayout} documentStyle={theme.documentStyle} />}
+            </Shell>
+          </RecordActionsProvider>
         </PreviewViewport>
       </div>
     </div>

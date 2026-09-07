@@ -22,46 +22,13 @@
 .activity { color: var(--tenant-muted-text); font-size: .75rem; line-height: 1.6; }
 .empty { padding: 2rem 0; color: var(--tenant-muted-text); }
 
-:global([data-template='ledger']) .home { grid-template-columns: 1fr; gap: 2rem; }
-:global([data-template='ledger']) .title { max-width: 14ch; font-size: clamp(2.8rem, 5cqi, 5rem); letter-spacing: -.045em; }
-:global([data-template='ledger']) .welcome { border-bottom: 3px double var(--tenant-primary); padding: 1rem 0 2rem; }
-:global([data-template='ledger']) .intro { max-width: 70ch; }
-/* The primary rail already supplies these destinations: no second index. */
-:global([data-template='ledger']) .destinations { display: none; }
-:global([data-template='ledger']) .sectionTitle { border: 0; font-size: .75rem; font-family: var(--tenant-body-font); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; padding-top: 0; }
-:global([data-template='ledger']) .records { display: block; }
-:global([data-template='ledger']) .record { display: grid; grid-template-columns: minmax(0, 1fr) minmax(100px, .3fr); gap: .45rem 2rem; padding: 1.15rem 0; border-right: 0; }
-:global([data-template='ledger']) .recordTitle { grid-row: span 2; font-size: 1.4rem; }
-:global([data-template='ledger']) .recordType { font-size: .65rem; }
-
-:global([data-template='poster']) .home { grid-template-columns: minmax(0, 1fr) minmax(260px, .45fr); gap: 4rem 3rem; }
-:global([data-template='poster']) .welcome { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, .65fr); gap: 1rem 4rem; align-items: end; padding: 2rem 0 3rem; border-bottom: 8px solid var(--tenant-primary); }
-:global([data-template='poster']) .title { font-size: clamp(4rem, 9.5cqi, 9rem); font-weight: 700; letter-spacing: -.075em; line-height: .95; grid-row: span 3; margin: 0; }
-:global([data-template='poster']) .salutation { letter-spacing: .15em; }
-:global([data-template='poster']) .motto { margin: 0; font-size: 1.45rem; }
-:global([data-template='poster']) .intro { font-size: .9rem; }
-:global([data-template='poster']) .edit { grid-column: 2; margin: 0; }
-:global([data-template='poster']) .destinations { grid-column: 1; display: grid; grid-template-columns: 1fr 1fr; border: 0; gap: 1px; background: var(--tenant-primary); border: 1px solid var(--tenant-primary); }
-:global([data-template='poster']) .destination { display: grid; grid-template-columns: 1fr auto; align-content: space-between; min-height: 150px; padding: 1.5rem; border: 0; background: var(--tenant-page-bg); font: 500 clamp(1.5rem, 3cqi, 2.8rem) var(--tenant-heading-font); }
-:global([data-template='poster']) .destination:nth-child(2), :global([data-template='poster']) .destination:nth-child(3) { background: var(--tenant-primary); color: var(--tenant-text-on-primary); }
-:global([data-template='poster']) .destination .ordinal { grid-column: 1 / -1; }
-:global([data-template='poster']) .destination:hover .arrow { transform: translate(3px, -3px); }
-:global([data-template='poster']) .recent { grid-column: 2; }
-:global([data-template='poster']) .sectionTitle { font: 700 .75rem var(--tenant-body-font); text-transform: uppercase; letter-spacing: .12em; padding: 0 0 1.3rem; border: 0; }
-:global([data-template='poster']) .records { display: block; }
-:global([data-template='poster']) .record { padding: 1.25rem 0; border-right: 0; }
-:global([data-template='poster']) .recordTitle { font-size: 1.4rem; }
+/* Civic-owned home composition. Ledger and Poster compose the same model in
+   their own design stylesheets (src/designs/ledger, src/designs/poster). */
 @container domain (max-width: 760px) {
-  .home, :global([data-template='poster']) .home { grid-template-columns: 1fr; gap: 2rem; }
+  .home { grid-template-columns: 1fr; gap: 2rem; }
   .records { grid-template-columns: 1fr 1fr; }
-  :global([data-template='poster']) .welcome { grid-template-columns: 1fr; gap: 1.5rem; padding: 1rem 0 2rem; }
-  :global([data-template='poster']) .title { font-size: clamp(3rem, 12cqi, 6rem); grid-row: auto; }
-  :global([data-template='poster']) .edit, :global([data-template='poster']) .recent { grid-column: 1; }
-  :global([data-template='poster']) .destination { min-height: 100px; padding: 1rem; }
 }
 @container domain (max-width: 440px) {
   .records { grid-template-columns: 1fr; }
   .record { padding: 1rem 0; border-right: 0; }
-  :global([data-template='ledger']) .record { grid-template-columns: 1fr; }
-  :global([data-template='ledger']) .recordTitle { grid-row: auto; }
 }

@@ -10,7 +10,17 @@ import { compileReadScope } from '@/lib/authz/readScope'
 
 import type { Tenant, User, Character } from '@/payload-types'
 
-import type { DomainHomeProps } from '@/components/theme/DomainHome'
+import type { HomeRecordSummary } from '@/lib/page-models/common'
+
+/** Server-assembled home content (pre-registry shape). Reshaped into the explicit HomePageModel by buildHomePageModel. */
+export type DomainHomeProps = {
+  name: string
+  motto: string
+  base: string
+  welcomeHtml: string
+  editHref?: string
+  records: HomeRecordSummary[]
+}
 
 export async function loadDomainHome(tenant: Tenant, user: Pick<User, 'id'>, activeCharacter: Character | null) {
 

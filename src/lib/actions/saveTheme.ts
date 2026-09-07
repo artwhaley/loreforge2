@@ -44,6 +44,27 @@ export async function saveThemeAction(input: {
   // Owner decision 2026-09-05: vocabulary customization is removed; platform
   // nouns are code constants (src/lib/theme/nouns.ts) and the vocabulary
   // column is dropped by the P08 corrective migration.
+  // Design-registry seam (spec §21 Step 2): dual-write the structured JSON
+  // config alongside the legacy scalars. The resolver prefers valid JSON and
+  // falls back to scalars, so both representations always agree after a save.
+  const designConfig = {
+    schemaVersion: 1,
+    designKey: theme.designTemplate,
+    common: {
+      primaryColor: theme.primaryColor,
+      secondaryColor: theme.secondaryColor,
+      accentColor: theme.accentColor,
+      backgroundColor: theme.backgroundColor,
+      headingFontKey: theme.headingFontKey,
+      bodyFontKey: theme.bodyFontKey,
+      contentWidth: theme.contentWidth,
+    },
+    options: {
+      headerLayout: theme.headerLayout,
+      documentStyle: theme.documentStyle,
+    },
+    design: {},
+  }
   await payload.update({
     collection: 'domains',
     id: tenant.id,
@@ -60,6 +81,7 @@ export async function saveThemeAction(input: {
       headerLayout: theme.headerLayout as Domain['headerLayout'],
       documentStyle: theme.documentStyle as Domain['documentStyle'],
       backgroundTreatment: theme.backgroundTreatment as Domain['backgroundTreatment'],
+      designConfig,
       ...(theme.backgroundImageSet === false ? { backgroundImage: null } : {}),
     },
     depth: 0,

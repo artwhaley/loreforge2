@@ -282,6 +282,18 @@ export interface Domain {
   documentStyle?: ('classic' | 'modern') | null;
   backgroundTreatment?: ('plain' | 'washes' | 'soft' | 'vignette') | null;
   backgroundImage?: (number | null) | Media;
+  /**
+   * Versioned structured Design config (schemaVersion 1). Validated at the save boundary; never hand-edit.
+   */
+  designConfig?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   publicEnabled?: boolean | null;
   installedPackKey?: string | null;
   installedPackVersion?: string | null;
@@ -1563,6 +1575,7 @@ export interface DomainsSelect<T extends boolean = true> {
   documentStyle?: T;
   backgroundTreatment?: T;
   backgroundImage?: T;
+  designConfig?: T;
   publicEnabled?: T;
   installedPackKey?: T;
   installedPackVersion?: T;

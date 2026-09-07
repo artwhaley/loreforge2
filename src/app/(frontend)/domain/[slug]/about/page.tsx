@@ -1,12 +1,8 @@
 import { notFound } from 'next/navigation'
 
-import { TenantShell } from '@/components/theme/TenantShell'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
-import { getPageForTenant, getTenantsForUser } from '@/lib/tenant/queries'
-import { renderMarkdown } from '@/lib/markdown/render'
-import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
-
-import styles from './about.module.scss'
+import { resolveDomainRouteShell } from '@/lib/design/resolveRoute'
+import { buildAboutPageModel } from '@/lib/departments/buildDepartmentPageModels'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -16,35 +12,21 @@ export const dynamic = 'force-dynamic'
 
 export default async function AboutPage({ params }: Props) {
   const { slug } = await params
-  const { tenant, role, user } = await getActiveTenant()
+  const { tenant, role, user, activeCharacter } = await getActiveTenant()
 
   if (!tenant || tenant.slug !== slug) {
     notFound()
   }
 
-  const base = `/domain/${tenant.slug}`
-  const myTenants = user ? await getTenantsForUser(user.id) : []
-  const page = await getPageForTenant(tenant, 'about')
-  const tokens = resolveThemeTokens(tenant)
-  const html = page ? renderMarkdown(page.body) : ''
-
+  const [route, about] = await Promise.all([
+    resolveDomainRouteShell({ tenant, role, user, activeCharacter }),
+    buildAboutPageModel({ tenant, user }),
+  ])
+  const Shell = route.design.Shell
+  const About = route.design.pages.about
   return (
-    <TenantShell
-      tenant={tenant}
-      cssVars={themeTokensToCssVars(tokens)}
-      role={role}
-      switcherTenants={myTenants}
-    >
-      <article className={styles.article}>
-        <div className={styles.actions}>
-          {user && page ? (
-            <a className={styles.action} href={`${base}/pages/about/edit`}>
-              Edit
-            </a>
-          ) : null}
-        </div>
-        <div className={styles.body} dangerouslySetInnerHTML={{ __html: html }} />
-      </article>
-    </TenantShell>
+    <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }}>
+      <About {...about} headerLayout={route.headerLayout} documentStyle={route.documentStyle} />
+    </Shell>
   )
 }
