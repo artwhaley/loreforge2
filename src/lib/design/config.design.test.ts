@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { pickDesignKey, pickDesignOption, resolveDocumentStyle, resolveEffectiveDomainDesign, resolveHeaderLayout } from '@/lib/design/config'
+import { legacyThemeOf, pickDesignKey, pickDesignOption, resolveDocumentStyle, resolveEffectiveDomainDesign, resolveHeaderLayout } from '@/lib/design/config'
 import { civic } from '@/designs/civic'
 
 /** Compatibility resolution: legacy scalars become a validated structured config. */
@@ -44,7 +44,7 @@ describe('design config resolution', () => {
     const config = resolveEffectiveDomainDesign(civic, { designTemplate: 'nope', headerLayout: 'rail' })
     expect(config.designKey).toBe('civic')
     expect(config.options.headerLayout).toBe('centered')
-    expect(config.common.primaryColor).toBe(civic.theme.defaults.primary)
+    expect(config.common.primaryColor).toBe(legacyThemeOf(civic).defaults.primary)
   })
 
   it('axis resolvers never crash public rendering on obsolete values', () => {

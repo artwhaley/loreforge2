@@ -15,26 +15,6 @@
 .root h1, .root h2, .root h3 { overflow-wrap: anywhere; }
 .bgOverlay { position: absolute; inset: 0; background: var(--tenant-background-overlay); pointer-events: none; z-index: -1; }
 
-/* The operating context is platform-owned chrome, deliberately unthemed. */
-.contextBar { width: 100%; padding: .7rem max(1.5rem, calc((100vw - 1400px) / 2)); display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto; gap: 1rem; align-items: center; background: #f9fafb; color: #243145; border-bottom: 1px solid #d5d9df; --tenant-primary: #243145; --tenant-accent: #b9c0c9; --tenant-surface-bg: #fff; --tenant-text-on-primary: #fff; --tenant-heading-font: Georgia, serif; --tenant-body-font: Verdana, sans-serif; font-family: Verdana, sans-serif; position: relative; z-index: 5; }
-.platformBrand { display: inline-flex; align-items: center; gap: .4rem; color: var(--tenant-primary); font-family: var(--tenant-heading-font); font-size: .95rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
-.platformMark { display: inline-grid; place-items: center; width: 1.55rem; height: 1.55rem; border: 1px solid var(--tenant-accent); border-radius: 50%; color: var(--tenant-text-on-primary); background: var(--tenant-primary); font-size: .75rem; }
-.contextControl { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
-.contextLabel { color: var(--tenant-primary); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
-.contextSelect { min-width: 0; flex: 1; padding: 0.4rem 0.5rem; border: 1px solid var(--tenant-accent); border-radius: 3px; background: var(--tenant-surface-bg, #fff); color: var(--tenant-primary); font: inherit; }
-.accountControls { align-self: center; justify-self: end; display: flex; align-items: center; gap: 0.55rem; color: var(--tenant-primary); font-size: 0.78rem; white-space: nowrap; }
-.accountMenu { position: relative; }
-.accountMenu summary { cursor: pointer; list-style: none; }
-.accountMenu summary::-webkit-details-marker { display: none; }
-.accountPopover { position: absolute; z-index: 5; right: 0; top: calc(100% + .45rem); display: grid; gap: .5rem; min-width: 150px; padding: .7rem; border: 1px solid var(--tenant-accent); border-radius: 4px; background: var(--tenant-surface-bg, #fff); box-shadow: 0 8px 20px rgba(0, 0, 0, .12); }
-.accountPopover a { color: var(--tenant-primary); text-decoration: none; }
-.accountPopover a:hover { text-decoration: underline; }
-.logoutButton { border: 0; padding: 0; background: transparent; color: var(--tenant-primary); font: inherit; text-decoration: underline; cursor: pointer; }
-@media (max-width: 680px) {
-  .contextBar { grid-template-columns: 1fr; }
-  .accountControls { justify-self: start; }
-}
-
 /* ---- Frame skeleton (template compositions restyle these regions) ---- */
 .domainGrid { width: var(--tenant-shell-width); max-width: 100%; margin: auto; display: grid; grid-template-columns: minmax(0, 1fr); min-height: calc(100vh - 65px); grid-template-rows: auto 1fr auto; }
 .header { min-width: 0; border-bottom: 3px solid var(--tenant-primary); }

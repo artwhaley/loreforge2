@@ -1,9 +1,19 @@
-import type { DesignDefinition, DesignKey, DesignThemeDefaults } from './types'
+import type { DesignKey, DesignThemeDefaults, LegacyDesignTheme } from './types'
+import type { LegacyDomainAppearance } from './contracts'
+
+/**
+ * Structural view of a Definition the compatibility helpers need. The legacy
+ * helpers must accept ANY Design (config generics erased), so they take the
+ * minimal shape rather than the full invariant generic (P08D-T03-D).
+ */
+export type DesignLike = { legacyTheme?: LegacyDesignTheme }
 
 /**
  * Versioned, structured Domain design configuration. Long-term persistence
  * target (spec §20); for now the resolver constructs it from legacy scalar
  * appearance fields. Never a junk drawer — every field is validated.
+ * P08D-T03/T04: this V1 envelope is being superseded by per-Design banked V2
+ * config; it remains the compatibility resolution path until T04 lands.
  */
 export type DomainDesignConfig = {
   schemaVersion: 1
@@ -35,25 +45,33 @@ export function pickDesignKey(value: unknown): DesignKey {
   return DESIGN_KEYS.includes(value as DesignKey) ? (value as DesignKey) : 'civic'
 }
 
-/** Pick a supported option from a Design's own list, defaulting to its default. */
-export function pickDesignOption(design: DesignDefinition, axis: 'headerLayout' | 'documentStyle', value: unknown): string {
-  const options = axis === 'headerLayout' ? design.theme.headerLayouts : design.theme.documentStyles
-  const defaultValue = axis === 'headerLayout' ? design.theme.defaultHeaderLayout : design.theme.defaultDocumentStyle
-  return typeof value === 'string' && options.some((option) => option.key === value) ? value : defaultValue
+/** Fallback legacy block for Definitions that no longer declare legacy axes. */
+const EMPTY_LEGACY_THEME: LegacyDesignTheme = {
+  defaults: { primary: '#243145', secondary: '#8A6A3C', accent: '#B9975B', background: '#F3EFE6', headingFontKey: 'georgia', bodyFontKey: 'verdana' },
+  headerLayouts: [],
+  defaultHeaderLayout: 'centered',
+  documentStyles: [],
+  defaultDocumentStyle: 'classic',
+  controls: [],
+  validate: () => ({}),
 }
 
-type LegacyDomainAppearance = {
-  designTemplate?: unknown
-  headerLayout?: unknown
-  documentStyle?: unknown
-  primaryColor?: unknown
-  secondaryColor?: unknown
-  accentColor?: unknown
-  backgroundColor?: unknown
-  headingFontKey?: unknown
-  bodyFontKey?: unknown
-  contentWidth?: unknown
-  designConfig?: unknown
+/**
+ * P08D-T03-F: explicit legacy ownership bridge. The universal visual axes are
+ * no longer the runtime contract — first-class Designs own their vocabulary in
+ * `config`. This reads the transitional `legacyTheme` block so the current
+ * studio/resolver keep working until T04 resolution and T06/T07 isolation.
+ */
+export function legacyThemeOf(design: DesignLike): LegacyDesignTheme {
+  return design.legacyTheme ?? EMPTY_LEGACY_THEME
+}
+
+/** Pick a supported option from a Design's own list, defaulting to its default. */
+export function pickDesignOption(design: DesignLike, axis: 'headerLayout' | 'documentStyle', value: unknown): string {
+  const legacy = legacyThemeOf(design)
+  const options = axis === 'headerLayout' ? legacy.headerLayouts : legacy.documentStyles
+  const defaultValue = axis === 'headerLayout' ? legacy.defaultHeaderLayout : legacy.defaultDocumentStyle
+  return typeof value === 'string' && options.some((option) => option.key === value) ? value : defaultValue
 }
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i
@@ -116,9 +134,10 @@ function isDesignKeyLike(value: unknown): value is DomainDesignConfig['designKey
  * Domains: pre-migration rows carry no JSON and resolve exactly as before.
  */
 export function resolveEffectiveDomainDesign(
-  design: DesignDefinition,
+  design: DesignLike,
   domain: LegacyDomainAppearance,
 ): DomainDesignConfig {
+  const legacy = legacyThemeOf(design)
   const stored = validateDomainDesignConfig(domain.designConfig)
   const storedKey = stored ? pickDesignKey(stored.designKey) : null
   // A stored config names its own Design; the passed Design is the resolved
@@ -131,12 +150,12 @@ export function resolveEffectiveDomainDesign(
     schemaVersion: 1,
     designKey,
     common: {
-      primaryColor: common?.primaryColor ?? (typeof domain.primaryColor === 'string' ? domain.primaryColor : design.theme.defaults.primary),
-      secondaryColor: common?.secondaryColor ?? (typeof domain.secondaryColor === 'string' ? domain.secondaryColor : design.theme.defaults.secondary),
-      accentColor: common?.accentColor ?? (typeof domain.accentColor === 'string' ? domain.accentColor : design.theme.defaults.accent),
-      backgroundColor: common?.backgroundColor ?? (typeof domain.backgroundColor === 'string' ? domain.backgroundColor : design.theme.defaults.background),
-      headingFontKey: common?.headingFontKey ?? (typeof domain.headingFontKey === 'string' ? domain.headingFontKey : design.theme.defaults.headingFontKey),
-      bodyFontKey: common?.bodyFontKey ?? (typeof domain.bodyFontKey === 'string' ? domain.bodyFontKey : design.theme.defaults.bodyFontKey),
+      primaryColor: common?.primaryColor ?? (typeof domain.primaryColor === 'string' ? domain.primaryColor : legacy.defaults.primary),
+      secondaryColor: common?.secondaryColor ?? (typeof domain.secondaryColor === 'string' ? domain.secondaryColor : legacy.defaults.secondary),
+      accentColor: common?.accentColor ?? (typeof domain.accentColor === 'string' ? domain.accentColor : legacy.defaults.accent),
+      backgroundColor: common?.backgroundColor ?? (typeof domain.backgroundColor === 'string' ? domain.backgroundColor : legacy.defaults.background),
+      headingFontKey: common?.headingFontKey ?? (typeof domain.headingFontKey === 'string' ? domain.headingFontKey : legacy.defaults.headingFontKey),
+      bodyFontKey: common?.bodyFontKey ?? (typeof domain.bodyFontKey === 'string' ? domain.bodyFontKey : legacy.defaults.bodyFontKey),
       ...((common?.contentWidth ?? (typeof domain.contentWidth === 'string' ? domain.contentWidth : undefined)) !== undefined
         ? { contentWidth: (common?.contentWidth ?? domain.contentWidth) as string }
         : {}),
@@ -147,15 +166,15 @@ export function resolveEffectiveDomainDesign(
 }
 
 /** Effective option value for a Design axis, with safe default fallback. */
-export function resolveHeaderLayout(design: DesignDefinition, domain: LegacyDomainAppearance): string {
+export function resolveHeaderLayout(design: DesignLike, domain: LegacyDomainAppearance): string {
   return pickDesignOption(design, 'headerLayout', domain.headerLayout)
 }
 
-export function resolveDocumentStyle(design: DesignDefinition, domain: LegacyDomainAppearance): string {
+export function resolveDocumentStyle(design: DesignLike, domain: LegacyDomainAppearance): string {
   return pickDesignOption(design, 'documentStyle', domain.documentStyle)
 }
 
 /** Theme Studio needs the Design's curated defaults for a pristine configuration. */
-export function designThemeDefaults(design: DesignDefinition): DesignThemeDefaults {
-  return { ...design.theme.defaults }
+export function designThemeDefaults(design: DesignLike): DesignThemeDefaults {
+  return { ...legacyThemeOf(design).defaults }
 }

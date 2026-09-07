@@ -31,29 +31,26 @@ export const FONT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'lato', label: 'Lato (Loreforge clean sans)' },
 ]
 
-/**
- * First-class design templates (owner decision 2026-09-05): three complete,
- * distinct top-level site designs. Every template consumes the same palette
- * and typography tokens, so each remains fully themeable.
- */
-export const DESIGN_TEMPLATES = {
-  civic: {
-    label: 'Civic (classic community)',
-    description: 'An institutional portal: composed masthead, a clear directory, and a structured record grid.',
-  },
-  ledger: {
-    label: 'Ledger (Loreforge print)',
-    description: 'An editorial archive: a persistent side index, generous reading column, and a ruled register.',
-  },
-  poster: {
-    label: 'Poster (bold modern)',
-    description: 'A cultural publication: monumental type, asymmetric compositions, and graphic destination tiles.',
-  },
-} as const
-
-export type DesignTemplateKey = keyof typeof DESIGN_TEMPLATES
-
-export const DESIGN_TEMPLATE_OPTIONS = (Object.entries(DESIGN_TEMPLATES) as Array<[DesignTemplateKey, { label: string }]>).map(([value, v]) => ({ value, label: v.label }))
+// P08D-T03-F: the global axis constants are legacy ownership now — they are
+// defined in ./legacy.ts and imported here for the legacy token resolver;
+// they are re-exported only for existing importers.
+import {
+  DESIGN_TEMPLATES,
+  HEADER_LAYOUTS,
+  DOCUMENT_STYLES,
+  type DesignTemplateKey,
+  type HeaderLayoutKey,
+  type DocumentStyleKey,
+} from './legacy'
+export {
+  DESIGN_TEMPLATES,
+  DESIGN_TEMPLATE_OPTIONS,
+  HEADER_LAYOUTS,
+  HEADER_LAYOUT_OPTIONS,
+  DOCUMENT_STYLES,
+  DOCUMENT_STYLE_OPTIONS,
+} from './legacy'
+export type { DesignTemplateKey, HeaderLayoutKey, DocumentStyleKey } from './legacy'
 
 /**
  * Color palettes (owner decision 2026-09-05: richer theming). Each preset
@@ -136,24 +133,7 @@ export const CONTENT_WIDTHS = {
 
 export type ContentWidthKey = keyof typeof CONTENT_WIDTHS
 
-/**
- * Header layouts (owner decision 2026-09-05): three genuinely different
- * navigation/identity presentations, distinct within every design template.
- */
-export const HEADER_LAYOUTS = {
-  centered: { label: 'Centered masthead' },
-  'left-aligned': { label: 'Compact bar' },
-  'banner-forward': { label: 'Banner hero' },
-} as const
 
-export type HeaderLayoutKey = keyof typeof HEADER_LAYOUTS
-
-export const DOCUMENT_STYLES = {
-  classic: { label: 'Classic (serif record sheet)' },
-  modern: { label: 'Modern (clean reading)' },
-} as const
-
-export type DocumentStyleKey = keyof typeof DOCUMENT_STYLES
 
 /**
  * Background treatments (owner decision 2026-09-05: treatments must be
@@ -170,8 +150,6 @@ export const BACKGROUND_TREATMENTS = {
 export type BackgroundTreatmentKey = keyof typeof BACKGROUND_TREATMENTS
 
 export const CONTENT_WIDTH_OPTIONS = (Object.entries(CONTENT_WIDTHS) as Array<[ContentWidthKey, { label: string }]>).map(([value, v]) => ({ value, label: v.label }))
-export const HEADER_LAYOUT_OPTIONS = (Object.entries(HEADER_LAYOUTS) as Array<[HeaderLayoutKey, { label: string }]>).map(([value, v]) => ({ value, label: v.label }))
-export const DOCUMENT_STYLE_OPTIONS = (Object.entries(DOCUMENT_STYLES) as Array<[DocumentStyleKey, { label: string }]>).map(([value, v]) => ({ value, label: v.label }))
 export const BACKGROUND_TREATMENT_OPTIONS = (Object.entries(BACKGROUND_TREATMENTS) as Array<[BackgroundTreatmentKey, { label: string; requiresImage?: boolean }]>).map(([value, v]) => ({ value, label: v.label, requiresImage: Boolean(v.requiresImage) }))
 
 const DEFAULTS = {

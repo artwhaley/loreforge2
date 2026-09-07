@@ -39,7 +39,7 @@ const read = (p: string) => readFileSync(p, 'utf8')
 test('Design shells expose exactly one Domain selector and the frozen primary nav order', () => {
   // Design-registry seam: the operating-context chrome lives in the shared
   // design primitive, which every Design Shell renders exactly once.
-  const operating = read(path.join(SRC, 'designs/shared/operating.tsx'))
+  const operating = read(path.join(SRC, 'components/platform/OperatingContext.tsx'))
   // Exactly one Domain selector (label + select), not a mode toggle.
   const selectorCount = (operating.match(/id="tenant-switcher"/g) ?? []).length
   assert.equal(selectorCount, 1, 'exactly one Domain selector control')

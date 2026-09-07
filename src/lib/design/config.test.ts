@@ -14,7 +14,7 @@ import {
  */
 const civic = {
   key: 'civic',
-  theme: {
+  legacyTheme: {
     defaults: {
       primary: '#243145',
       secondary: '#8A6A3C',

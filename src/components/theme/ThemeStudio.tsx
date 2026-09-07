@@ -80,9 +80,12 @@ export function ThemeStudio({
   const router = useRouter()
 
   // The selected Design owns its header/layout and document-style options;
-  // the Studio renders only what the selected Design supports.
+  // the Studio renders only what the selected Design supports. T03-F: these
+  // are the transitional legacy axes; the Design-owned Studio editors (T05)
+  // replace this surface with per-Design vocabularies. Property access only
+  // here — passing `design` into helper calls confuses the compiler's memo
+  // analysis, and the legacy axes are optional on the Definition.
   const design = resolveDesign(theme.designTemplate)
-
   const tokens = useMemo(
     () =>
       tokensFromVars({
@@ -127,8 +130,8 @@ export function ThemeStudio({
     setTheme((prev) => ({
       ...prev,
       designTemplate: next.key,
-      headerLayout: next.theme.defaultHeaderLayout,
-      documentStyle: next.theme.defaultDocumentStyle,
+      headerLayout: next.legacyTheme?.defaultHeaderLayout ?? 'centered',
+      documentStyle: next.legacyTheme?.defaultDocumentStyle ?? 'classic',
     }))
   }
 
@@ -253,7 +256,7 @@ export function ThemeStudio({
 
             <h3 className={styles.groupTitle}>Header &amp; navigation look</h3>
             <div className={styles.headerLayoutGrid}>
-              {design.theme.headerLayouts.map((option) => (
+              {(design.legacyTheme?.headerLayouts ?? []).map((option) => (
                 <button
                   key={option.key}
                   type="button"
@@ -443,7 +446,7 @@ export function ThemeStudio({
           <div className={styles.tabPanel}>
             <h3 className={styles.groupTitle}>Document reading style</h3>
             <div className={styles.docStyleGrid}>
-              {design.theme.documentStyles.map((o) => (
+              {(design.legacyTheme?.documentStyles ?? []).map((o) => (
                 <button
                   key={o.key}
                   type="button"

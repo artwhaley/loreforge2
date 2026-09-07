@@ -6,25 +6,30 @@ import { useRef, useState } from 'react'
 
 import type { CharacterSwitcherOption, DomainShellModel, DomainSwitcherOption } from '@/lib/page-models/shell'
 
-import shellStyles from '@/components/theme/TenantShell.module.scss'
+import styles from './operating.module.scss'
 
-/** Shared operating-context chrome. Platform-owned and deliberately unthemed; Designs place it, never restyle it. */
+/**
+ * Platform-owned operating-context chrome (P08D-T03-G): the LoreForge brand,
+ * Domain switcher, and acting-Character switcher belong outside art direction.
+ * Neutral and deliberately unthemed — first-class Shells import this and never
+ * restyle it.
+ */
 export function OperatingContext({ model }: { model: DomainShellModel }) {
   const { operatingContext } = model
   return (
-    <div className={shellStyles.contextBar} aria-label="Operating context">
-      <Link href="/" className={shellStyles.platformBrand}><span className={shellStyles.platformMark} aria-hidden="true">L</span>{operatingContext.platformLabel}</Link>
+    <div className={styles.contextBar} aria-label="Operating context">
+      <Link href="/" className={styles.platformBrand}><span className={styles.platformMark} aria-hidden="true">L</span>{operatingContext.platformLabel}</Link>
       <DomainSelect options={operatingContext.availableDomains} currentSlug={model.domain.slug} disabled={operatingContext.availableDomains.length === 0} />
       <CharacterSelect options={operatingContext.availableCharacters} activeId={operatingContext.activeCharacterId} />
       {operatingContext.account ? (
-        <div className={shellStyles.accountControls}>
-          <details className={shellStyles.accountMenu}>
+        <div className={styles.accountControls}>
+          <details className={styles.accountMenu}>
             <summary>{operatingContext.account.name}</summary>
-            <div className={shellStyles.accountPopover}>
+            <div className={styles.accountPopover}>
               <Link href="/">Dashboard</Link>
               <Link href="/account">Account</Link>
               <Link href="/account/characters">Characters</Link>
-              <form action="/api/logout" method="post"><button type="submit" className={shellStyles.logoutButton}>Log out</button></form>
+              <form action="/api/logout" method="post"><button type="submit" className={styles.logoutButton}>Log out</button></form>
             </div>
           </details>
         </div>
@@ -36,9 +41,9 @@ export function OperatingContext({ model }: { model: DomainShellModel }) {
 function DomainSelect({ options, currentSlug, disabled }: { options: DomainSwitcherOption[]; currentSlug: string; disabled: boolean }) {
   const formRef = useRef<HTMLFormElement>(null)
   return (
-    <form ref={formRef} action="/api/switch-tenant" method="post" className={shellStyles.contextControl}>
-      <label htmlFor="tenant-switcher" className={shellStyles.contextLabel}>Domain</label>
-      <select id="tenant-switcher" name="tenantSlug" defaultValue={currentSlug} className={shellStyles.contextSelect} disabled={disabled} onChange={() => formRef.current?.requestSubmit()}>
+    <form ref={formRef} action="/api/switch-tenant" method="post" className={styles.contextControl}>
+      <label htmlFor="tenant-switcher" className={styles.contextLabel}>Domain</label>
+      <select id="tenant-switcher" name="tenantSlug" defaultValue={currentSlug} className={styles.contextSelect} disabled={disabled} onChange={() => formRef.current?.requestSubmit()}>
         {options.length === 0 ? <option value={currentSlug}>{currentSlug}</option> : null}
         {options.map((item) => <option key={item.id} value={item.slug}>{item.name}</option>)}
       </select>
@@ -72,9 +77,9 @@ function CharacterSelect({ options, activeId }: { options: CharacterSwitcherOpti
     }
   }
   return (
-    <form className={shellStyles.contextControl}>
-      <label htmlFor="character-switcher" className={shellStyles.contextLabel}>Acting as</label>
-      <select id="character-switcher" name="characterId" value={selectedId} onChange={submit} className={shellStyles.contextSelect} disabled={pending}>
+    <form className={styles.contextControl}>
+      <label htmlFor="character-switcher" className={styles.contextLabel}>Acting as</label>
+      <select id="character-switcher" name="characterId" value={selectedId} onChange={submit} className={styles.contextSelect} disabled={pending}>
         <option value="">No participating Character</option>
         {options.map((character) => <option key={character.id} value={character.id}>{character.name}</option>)}
       </select>

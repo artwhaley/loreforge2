@@ -4,7 +4,7 @@ import Link from 'next/link'
 import type { DesignKey } from '@/lib/design/types'
 import type { DomainShellModel } from '@/lib/page-models/shell'
 
-import { OperatingContext } from './operating'
+import { OperatingContext } from '@/components/platform/OperatingContext'
 import styles from '@/components/theme/TenantShell.module.scss'
 
 /**
