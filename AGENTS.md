@@ -10,6 +10,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # LoreForge product-contract rules
 
+- Any task that creates or materially changes a site Design must read and follow `DESIGN_AUTHORING.md` before editing `src/designs/**`.
+
 - Treat the owner's accepted product decisions and the current ticket as the complete feature boundary. Do not invent fields, labels, actions, modes, relationships, dashboards, or workflow steps because they seem useful or appear in an older ticket.
 - Before changing a customer page, preserve the requested information hierarchy. The primary noun/content belongs first; controls belong only where the owner explicitly placed them. Do not add explanatory “app-shaped” copy, diagnostic panels, or duplicate navigation.
 - A feature removed by the owner is removed from customer UI, routes/actions, and active ticket/gate instructions. Do not reintroduce it from stale packet text without an explicit owner decision.

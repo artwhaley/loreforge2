@@ -143,3 +143,12 @@ and tracked by the P07X execution notes in `execution-notes/`.
 The original SL Civic Archive MVP (Ravenhurst multi-tenant spike, tickets 01–08, `tenants`/
 `memberships` models) is superseded by LoreForge2. Legacy models remain in the schema only
 for migration compatibility and are marked "Legacy compatibility only" at their definitions.
+
+## Site Design architecture (P08D)
+
+LoreForge renders each Domain through an isolated, source-controlled **Design** — a complete presentation layer (Shell, Home, Records, Document, Departments/Department/About/Lore, config vocabulary, Studio editor, thumbnail) over the authorized semantic Page Models. First-class Designs (Civic, Ledger) own their DOM/SCSS and config banks; Poster remains a compatibility Design on the legacy frame. See `DESIGN_AUTHORING.md` (repo root) before creating or materially changing a Design — any agent touching `src/designs/**` must read it first (AGENTS.md).
+
+- Design registry/resolution: `src/lib/design/` — `registry.ts`, `catalog.ts`, `resolveDomainDesign.ts` (V2 banked config is the live read authority).
+- Design tests: `npm run test:design` (vitest conformance + registry contract + Site Studio genericity).
+- V2 migration (legacy scalar/V1 → banked per-Design config): `node --import tsx src/scripts/migrateP08DesignConfigV2.ts --dry-run` (add `--apply` to write; always backs up and is idempotent).
+- Full checks before shipping a Design: `npm test`, `npm run test:security`, `npm run test:design`, `npx tsc --noEmit`, `npm run lint`, `npm run build`.
