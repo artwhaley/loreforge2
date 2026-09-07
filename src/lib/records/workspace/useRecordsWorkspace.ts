@@ -16,7 +16,17 @@ function descendantIdsOf(folder: FolderSummary): number[] {
   return [folder.id, ...folder.children.flatMap(descendantIdsOf)]
 }
 
-type SearchRow = { id: number; title: string; folderId: number | null; documentTypeId: number | null; updatedAt: string; preparedBy: string | null; lifecycle: string; locked: boolean }
+type SearchRow = {
+  id: number
+  title: string
+  folderId: number | null
+  documentTypeId: number | null
+  updatedAt: string
+  preparedBy: string | null
+  lifecycle: string
+  locked: boolean
+  capabilities: RecordSummary['capabilities']
+}
 
 /**
  * Shared Records interactive behavior (spec §13/Stage G). Owns search,
@@ -27,7 +37,10 @@ type SearchRow = { id: number; title: string; folderId: number | null; documentT
 export function useRecordsWorkspace(model: RecordsPageModel) {
   const { folders, records, documentTypes, supersessionEdges, query, capabilities } = model
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(query.folderId)
-  const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null)
+  // Raw selection intent; the EFFECTIVE selection is derived below so a
+  // filter/search that removes the record never mutates state during render
+  // (P08D-T01-C).
+  const [rawSelectedRecordId, setRawSelectedRecordId] = useState<number | null>(null)
   const [search, setSearch] = useState(query.search)
   const [searchSubfolders, setSearchSubfolders] = useState(true)
   const [typeChoice, setTypeChoice] = useState('')
@@ -80,7 +93,9 @@ export function useRecordsWorkspace(model: RecordsPageModel) {
         if (!response.ok) return
         const data = await response.json() as { results: SearchRow[]; supersessionEdges?: SupersessionEdge[]; nextCursor?: string | null }
         if (searchKeyRef.current !== searchKey) return
-        setSearchRecords(data.results.map((row) => ({ ...row, capabilities: { read: true, edit: false, supersede: false, delete: false } })))
+        // P08D-T01-B: rows arrive with server-projected capabilities; never
+        // overwrite them with client guesses.
+        setSearchRecords(data.results)
         setSearchEdges(data.supersessionEdges ?? [])
         setSearchCursor(data.nextCursor ?? null)
         setSearchHasMore(Boolean(data.nextCursor))
@@ -108,7 +123,7 @@ export function useRecordsWorkspace(model: RecordsPageModel) {
       if (searchKeyRef.current !== searchKey) return
       setSearchRecords((current) => {
         const merged = new Map(current.map((row) => [row.id, row]))
-        for (const row of data.results) merged.set(row.id, { ...row, capabilities: { read: true, edit: false, supersede: false, delete: false } })
+        for (const row of data.results) merged.set(row.id, row)
         return [...merged.values()]
       })
       setSearchEdges((current) => {
@@ -124,8 +139,8 @@ export function useRecordsWorkspace(model: RecordsPageModel) {
   }
 
   const resetSearchResults = () => { setSearchRecords([]); setSearchEdges([]); setSearchCursor(null); setSearchHasMore(false) }
-  const selectFolder = (folderId: number | null) => { setSelectedFolderId(folderId); setSelectedRecordId(null); resetSearchResults() }
-  const applyExposure = (choice: string) => { setExposedTypeId(choice ? Number(choice) : null); setSelectedRecordId(null); resetSearchResults() }
+  const selectFolder = (folderId: number | null) => { setSelectedFolderId(folderId); setRawSelectedRecordId(null); resetSearchResults() }
+  const applyExposure = (choice: string) => { setExposedTypeId(choice ? Number(choice) : null); setRawSelectedRecordId(null); resetSearchResults() }
   const toggleFolder = (folderId: number) => setExpandedFolders((current) => {
     const next = new Set(current)
     if (next.has(folderId)) next.delete(folderId)
@@ -158,25 +173,29 @@ export function useRecordsWorkspace(model: RecordsPageModel) {
   const recordTrees = useMemo(() => buildSupersessionTrees(matchingRecords, activeEdges), [matchingRecords, activeEdges])
   const directCountByFolder = useMemo(() => {
     const counts = new Map<number, number>()
-    const visit = (nodes: FolderSummary[]) => nodes.forEach((folder) => { counts.set(folder.id, folder.readableRecordCount); visit(folder.children) })
-    visit(folders)
     if (exposedTypeId !== null) {
+      // P08D-T01-D: type exposure counts ONLY matching readable records per
+      // folder — never the full readable count plus a client recount.
       for (const record of records) {
-        if (record.documentTypeId !== exposedTypeId) continue
-        if (record.folderId !== null) counts.set(record.folderId, (counts.get(record.folderId) ?? 0) + 1)
+        if (record.documentTypeId !== exposedTypeId || record.folderId === null) continue
+        counts.set(record.folderId, (counts.get(record.folderId) ?? 0) + 1)
       }
+    } else {
+      const visit = (nodes: FolderSummary[]) => nodes.forEach((folder) => { counts.set(folder.id, folder.readableRecordCount); visit(folder.children) })
+      visit(folders)
     }
     return counts
   }, [exposedTypeId, folders, records])
   const rootBadgeCount = exposedTypeId === null ? model.totalReadableRecordCount : records.filter((record) => record.documentTypeId === exposedTypeId).length
   const documentTypeName = exposedTypeId === null ? null : documentTypes.find((type) => type.id === exposedTypeId)?.name ?? null
+  // Effective selection: derived, so invalidation never mutates state during
+  // render. When the search/filter no longer contains the raw selection, the
+  // workspace reports no selection (P08D-T01-C).
+  const selectedRecordId = rawSelectedRecordId !== null && matchingRecords.some((record) => record.id === rawSelectedRecordId) ? rawSelectedRecordId : null
   const selectedRecord = selectedRecordId != null ? activeRecords.find((record) => record.id === selectedRecordId) ?? null : null
   const selectedIsSuperseded = selectedRecord ? isSuperseded(selectedRecord.id, activeEdges) : false
   const returnTo = selectedFolderId === null ? `${model.baseUrl}/records` : `${model.baseUrl}/records?folder=${selectedFolderId}`
 
-  if (selectedRecordId !== null && !matchingRecords.some((record) => record.id === selectedRecordId)) {
-    setSelectedRecordId(null)
-  }
   useEffect(() => {
     if (!contextMenu) return
     const close = () => setContextMenu(null)
@@ -188,7 +207,7 @@ export function useRecordsWorkspace(model: RecordsPageModel) {
     search: { value: search, setValue: setSearch, active: searchActive, loading: searching, subfolders: searchSubfolders, setSubfolders: setSearchSubfolders },
     folders: { list: visibleFolders, byId: folderById, selectedId: selectedFolderId, select: selectFolder, expandedIds: expandedFolders, toggleExpanded: toggleFolder, selected: selectedFolder, descendantIds: selectedFolderDescendants },
     results: { records: matchingRecords, trees: recordTrees, edges: activeEdges, loadMore, hasMore: searchActive && searchHasMore, loadingMore, counts: directCountByFolder, total: model.totalReadableRecordCount, rootCount: rootBadgeCount },
-    selection: { recordId: selectedRecordId, selectRecord: setSelectedRecordId, selected: selectedRecord, isSuperseded: selectedIsSuperseded },
+    selection: { recordId: selectedRecordId, selectRecord: setRawSelectedRecordId, selected: selectedRecord, isSuperseded: selectedIsSuperseded },
     actions: { dialog, setDialog, menu: contextMenu, setMenu: setContextMenu, returnTo },
     exposure: { typeId: exposedTypeId, apply: applyExposure, typeChoice, setTypeChoice, typeName: documentTypeName },
     capabilities,

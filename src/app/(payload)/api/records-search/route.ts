@@ -6,6 +6,7 @@ import config from '@payload-config'
 import { resolveActingIdentity } from '@/lib/tenant/actingIdentity'
 import { loadAuthorizationSession } from '@/lib/authz/session'
 import { compileReadScope, recordReadPredicate } from '@/lib/authz/readScope'
+import { computeRecordCapabilities, type RecordCapabilityFlags } from '@/lib/records/recordCapabilities'
 
 const relationId = (value: unknown): number | null => typeof value === 'object' && value !== null && 'id' in value
   ? Number((value as { id: number }).id)
@@ -220,6 +221,22 @@ export async function GET(request: Request) {
   }
   const typeName = new Map(types.docs.map((type) => [Number(type.id), type.name]))
 
+  // P08D-T01-A: every search result carries the same server-computed
+  // capability flags the initial Records Page Model ships (shared projection,
+  // never inferred client-side). All rows here already passed the read
+  // predicate, so read is always true; edit/supersede/delete are the real
+  // grants for this acting identity.
+  type SearchDocument = typeof documents.docs[number]
+  const capabilityFor = (document: SearchDocument): RecordCapabilityFlags => computeRecordCapabilities(session, {
+    id: Number(document.id),
+    folderId: relationId(document.folder),
+    documentTypeId: relationId(document.documentType),
+    lifecycle: document.lifecycle,
+    locked: Boolean(document.locked),
+    privateDraft: document.privateDraft === true,
+    creatorCharacterId: relationId(document.creatorCharacter),
+  })
+
   return NextResponse.json({
     results: pageDocuments.map((id) => allDocuments.get(id)!).map((document) => ({
       id: Number(document.id),
@@ -231,6 +248,7 @@ export async function GET(request: Request) {
       preparedBy: preparedBy.get(Number(document.id)) ?? null,
       lifecycle: document.lifecycle,
       locked: Boolean(document.locked),
+      capabilities: capabilityFor(document),
     })),
     supersessionEdges: supersessionEdges.filter((edge) => selectedIds.has(edge.newerId) && selectedIds.has(edge.olderId)),
     nextCursor,

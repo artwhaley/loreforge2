@@ -29,7 +29,25 @@ function model(overrides: Partial<RecordsPageModel> = {}): RecordsPageModel {
   }
 }
 
-type SearchResponse = { results: Array<{ id: number; title: string; folderId: number | null; documentTypeId: number | null; updatedAt: string; preparedBy: string | null; lifecycle: string; locked: boolean }>; supersessionEdges?: Array<{ newerId: number; olderId: number }>; nextCursor?: string | null }
+type SearchRow = { id: number; title: string; folderId: number | null; documentTypeId: number | null; updatedAt: string; preparedBy: string | null; lifecycle: string; locked: boolean; capabilities: { read: boolean; edit: boolean; supersede: boolean; delete: boolean } }
+
+function searchRow(overrides: Partial<SearchRow> = {}): SearchRow {
+  return {
+    id: 1,
+    title: 'row',
+    folderId: null,
+    documentTypeId: null,
+    updatedAt: '2026-09-01T00:00:00.000Z',
+    preparedBy: null,
+    lifecycle: 'filed',
+    locked: false,
+    // Server-projected capabilities travel in the DTO (P08D-T01-A/B).
+    capabilities: { read: true, edit: false, supersede: false, delete: false },
+    ...overrides,
+  }
+}
+
+type SearchResponse = { results: SearchRow[]; supersessionEdges?: Array<{ newerId: number; olderId: number }>; nextCursor?: string | null }
 
 function jsonResponse(body: SearchResponse, delayMs = 0) {
   return new Promise<Response>((resolve, reject) => {
@@ -74,7 +92,7 @@ describe('useRecordsWorkspace shared behavior', () => {
     let resolveFirst: ((body: SearchResponse) => void) | null = null
     fetchMock.impl = (_url, init) => new Promise<Response>((resolve, reject) => {
       const isSecond = fetchMock.calls.length === 2
-      if (isSecond) resolve(new Response(JSON.stringify({ results: [{ id: 99, title: 'fresh', folderId: null, documentTypeId: null, updatedAt: '2026-09-01T00:00:00.000Z', preparedBy: null, lifecycle: 'filed', locked: false }], nextCursor: null }), { status: 200 }))
+      if (isSecond) resolve(new Response(JSON.stringify({ results: [searchRow({ id: 99, title: 'fresh' })], nextCursor: null }), { status: 200 }))
       else {
         resolveFirst = (body) => resolve(new Response(JSON.stringify(body), { status: 200 }))
         init?.signal?.addEventListener('abort', () => { resolveFirst = null; reject(new DOMException('Aborted', 'AbortError')) })
@@ -88,7 +106,7 @@ describe('useRecordsWorkspace shared behavior', () => {
     // The stale first response must not overwrite the fresh results. If the
     // abort already rejected it, resolving is a harmless no-op.
     const resolveStale: (body: SearchResponse) => void = (body) => { resolveFirst?.(body) }
-    await act(async () => { resolveStale({ results: [{ id: 1, title: 'STALE', folderId: null, documentTypeId: null, updatedAt: '2026-09-01T00:00:00.000Z', preparedBy: null, lifecycle: 'filed', locked: false }], nextCursor: null }) })
+    await act(async () => { resolveStale({ results: [searchRow({ id: 1, title: 'STALE' })], nextCursor: null }) })
     await waitFor(() => {
       expect(result.current.results.records.some((record) => record.title === 'STALE')).toBe(false)
       expect(result.current.results.records.some((record) => record.title === 'fresh')).toBe(true)
@@ -99,7 +117,7 @@ describe('useRecordsWorkspace shared behavior', () => {
     let page = 0
     fetchMock.impl = () => {
       page += 1
-      const row = (id: number) => ({ id, title: `row-${id}`, folderId: null, documentTypeId: null, updatedAt: '2026-09-01T00:00:00.000Z', preparedBy: null, lifecycle: 'filed', locked: false })
+      const row = (id: number) => searchRow({ id, title: `row-${id}` })
       if (page === 1) return Promise.resolve(new Response(JSON.stringify({ results: [row(1), row(2)], nextCursor: 'c2' }), { status: 200 }))
       if (page === 2) return Promise.resolve(new Response(JSON.stringify({ results: [row(2), row(3)], nextCursor: null }), { status: 200 }))
       throw new Error('unexpected page')
@@ -130,6 +148,60 @@ describe('useRecordsWorkspace shared behavior', () => {
     expect(result.current.folders.expandedIds.has(1)).toBe(true)
     act(() => { result.current.folders.toggleExpanded(1) })
     expect(result.current.folders.expandedIds.has(1)).toBe(false)
+  })
+
+  it('keeps the server-projected capabilities on fetched rows (no client inference)', async () => {
+    fetchMock.impl = () => Promise.resolve(new Response(JSON.stringify({
+      results: [
+        searchRow({ id: 10, title: 'Editable result', capabilities: { read: true, edit: true, supersede: true, delete: false } }),
+        searchRow({ id: 11, title: 'Read-only result' }),
+      ],
+      nextCursor: null,
+    }), { status: 200 }))
+    const { result } = renderHook(() => useRecordsWorkspace(model()))
+    act(() => { result.current.search.setValue('match')
+      result.current.resetSearchResults() })
+    await waitFor(() => { expect(result.current.results.records.length).toBe(2) })
+    const editable = result.current.results.records.find((record) => record.id === 10)
+    const readOnly = result.current.results.records.find((record) => record.id === 11)
+    expect(editable?.capabilities).toEqual({ read: true, edit: true, supersede: true, delete: false })
+    expect(readOnly?.capabilities).toEqual({ read: true, edit: false, supersede: false, delete: false })
+  })
+
+  it('drops the selected record when a search removes it — without render-time state mutation', async () => {
+    const { result } = renderHook(() => useRecordsWorkspace(model()))
+    act(() => { result.current.selection.selectRecord(10) })
+    expect(result.current.selection.recordId).toBe(10)
+    // The search response no longer contains record 10, so the derived
+    // selection reports null instead of mutating state during render.
+    fetchMock.impl = () => Promise.resolve(new Response(JSON.stringify({ results: [searchRow({ id: 99, title: 'different result' })], nextCursor: null }), { status: 200 }))
+    act(() => { result.current.search.setValue('nomatch')
+      result.current.resetSearchResults() })
+    await waitFor(() => { expect(result.current.selection.recordId).toBeNull() })
+  })
+
+  it('type exposure recomputes folder counts to matching readable records, including nested folders', () => {
+    const countsModel = model({
+      folders: [
+        { id: 1, name: 'Root', systemManaged: false, readableRecordCount: 4, children: [{ id: 2, name: 'Nested', systemManaged: false, readableRecordCount: 2, children: [] }] },
+      ],
+      records: [
+        { id: 10, title: 'root typeA', folderId: 1, documentTypeId: 11, updatedAt: '2026-09-01T00:00:00.000Z', preparedBy: null, lifecycle: 'filed', locked: false, capabilities: { read: true, edit: false, supersede: false, delete: false } },
+        { id: 11, title: 'nested typeA', folderId: 2, documentTypeId: 11, updatedAt: '2026-09-01T00:00:00.000Z', preparedBy: null, lifecycle: 'filed', locked: false, capabilities: { read: true, edit: false, supersede: false, delete: false } },
+        { id: 12, title: 'nested typeB', folderId: 2, documentTypeId: 12, updatedAt: '2026-09-01T00:00:00.000Z', preparedBy: null, lifecycle: 'filed', locked: false, capabilities: { read: true, edit: false, supersede: false, delete: false } },
+        { id: 13, title: 'root typeC', folderId: 1, documentTypeId: 13, updatedAt: '2026-09-01T00:00:00.000Z', preparedBy: null, lifecycle: 'filed', locked: false, capabilities: { read: true, edit: false, supersede: false, delete: false } },
+      ],
+    })
+    const { result } = renderHook(() => useRecordsWorkspace(countsModel))
+    // Unfiltered: the projection's readable counts.
+    expect(result.current.results.counts.get(1)).toBe(4)
+    expect(result.current.results.counts.get(2)).toBe(2)
+    act(() => { result.current.exposure.apply('11') })
+    // Exposed type 11: counts are matching readable records ONLY (P08D-T01-D),
+    // not the full count plus a client recount.
+    expect(result.current.results.counts.get(1)).toBe(1)
+    expect(result.current.results.counts.get(2)).toBe(1)
+    expect(result.current.results.rootCount).toBe(2)
   })
 
   it('derives supersession trees from already-authorized edges without fetching', () => {

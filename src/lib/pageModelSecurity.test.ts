@@ -21,6 +21,8 @@ import config from '@/payload.config'
 import { buildRecordsPageModel } from '@/lib/records/buildRecordsPageModel'
 import { buildDocumentPageModel } from '@/lib/document/buildDocumentPageModel'
 import { ensureDomainAdminIdentity } from '@/lib/characters/provisioning'
+import { loadAuthorizationSession } from '@/lib/authz/session'
+import { computeRecordCapabilities } from '@/lib/records/recordCapabilities'
 import type { Capability } from '@/lib/permissions/capabilities'
 import type { FolderSummary } from '@/lib/page-models/common'
 
@@ -237,6 +239,82 @@ test('document model hides an inaccessible successor title', async () => {
 test('document model for the member private draft is visible to its creator character only', async () => {
   const own = await buildDocumentPageModel({ tenant, user: { id: memberUserId }, activeCharacter: { id: memberCharId } as never, documentId: String(memberDraftId) })
   assert.ok(own, 'the creating Character reads its own private draft')
+})
+
+// --- Records search capability projection (P08D-T01-A) ------------------------
+// The live /api/records-search endpoint projects capabilities through the SAME
+// server-side computation as the initial page model. These tests pin that
+// projection: unauthorized flags are false, hidden documents never project as
+// readable, and real grants surface as true flags.
+
+test('search capability projection: read-only persona gets no action flags', async () => {
+  const session = await loadAuthorizationSession(payload, { userId: memberUserId, activeCharacterId: memberCharId }, domainId)
+  const caps = computeRecordCapabilities(session, {
+    id: incidentDocId,
+    folderId: incidentsId,
+    documentTypeId: incidentTypeId,
+    lifecycle: 'filed',
+    locked: false,
+    privateDraft: false,
+    creatorCharacterId: null,
+  })
+  assert.deepEqual(caps, { read: true, edit: false, supersede: false, delete: false }, 'the member may read the Incident but never act on it')
+})
+
+test('search capability projection: a hidden document never projects as readable', async () => {
+  const session = await loadAuthorizationSession(payload, { userId: memberUserId, activeCharacterId: memberCharId }, domainId)
+  const caps = computeRecordCapabilities(session, {
+    id: sealedDocId,
+    folderId: sealedId,
+    documentTypeId: incidentTypeId,
+    lifecycle: 'filed',
+    locked: false,
+    privateDraft: false,
+    creatorCharacterId: null,
+  })
+  assert.deepEqual(caps, { read: false, edit: false, supersede: false, delete: false }, 'a Folder-denied document is read=false so callers never ship it')
+})
+
+test('search capability projection: granted actions surface as true flags', async () => {
+  // A second Type the Guard role may read/edit/create-on/delete, so the
+  // existing read-only persona tests stay untouched.
+  const openId = await childFolder(domainId, rootId, 'Open Ledger')
+  const ledgerTypeId = await documentType(domainId, 'Open Ledger Type')
+  const openDocId = await document(domainId, ledgerTypeId, openId, 'P08REG Open Ledger Entry', ownerId)
+  for (const capability of ['read', 'edit_document', 'create_document', 'delete_document'] as const) {
+    await rule({ domainId, principalType: 'Role', principal: guardRoleId, resourceType: 'DocumentType', resource: ledgerTypeId, capability, effect: 'grant', actorUser: ownerId })
+  }
+  const session = await loadAuthorizationSession(payload, { userId: memberUserId, activeCharacterId: memberCharId }, domainId)
+  const caps = computeRecordCapabilities(session, {
+    id: openDocId,
+    folderId: openId,
+    documentTypeId: ledgerTypeId,
+    lifecycle: 'filed',
+    locked: false,
+    privateDraft: false,
+    creatorCharacterId: null,
+  })
+  assert.deepEqual(caps, { read: true, edit: true, supersede: true, delete: true }, 'Type-level grants drive the search capability projection')
+})
+
+test('search capability projection matches the page-model projection for shipped records', async () => {
+  const session = await loadAuthorizationSession(payload, { userId: memberUserId, activeCharacterId: memberCharId }, domainId)
+  const model = await buildRecordsPageModel({ tenant, user: { id: memberUserId }, activeCharacter: { id: memberCharId } as never })
+  for (const record of model.records) {
+    // Re-read the source fields the model builder used so the private-draft
+    // boundary is evaluated identically, not guessed from the summary.
+    const doc = await payload.findByID({ collection: 'documents', id: record.id, overrideAccess: true, depth: 0 })
+    const caps = computeRecordCapabilities(session, {
+      id: record.id,
+      folderId: record.folderId,
+      documentTypeId: record.documentTypeId,
+      lifecycle: record.lifecycle,
+      locked: record.locked,
+      privateDraft: doc.privateDraft === true,
+      creatorCharacterId: idOf((doc as { creatorCharacter?: unknown }).creatorCharacter),
+    })
+    assert.deepEqual(caps, record.capabilities, `record ${record.id} projects identically in page model and search`)
+  }
 })
 
 // --- Design consumer guard -----------------------------------------------------

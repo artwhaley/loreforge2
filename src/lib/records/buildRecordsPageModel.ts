@@ -6,9 +6,10 @@ import { getLorePayload } from '@/lib/payload'
 import { getFoldersForTenant } from '@/lib/tenant/queries'
 import { PLATFORM_NOUNS as vocab } from '@/lib/theme/nouns'
 import { loadCachedAuthorizationSession } from '@/lib/authz/sessionCache'
-import { decideInSession, resolveDocumentTarget } from '@/lib/authz/session'
+import { decideInSession } from '@/lib/authz/session'
 import { compileReadScope, recordReadPredicate } from '@/lib/authz/readScope'
 import { projectVisibleFolders, type ProjectedFolder } from '@/lib/authz/folderProjection'
+import { computeRecordCapabilities, type RecordCapabilityFlags } from '@/lib/records/recordCapabilities'
 
 const relationId = (value: unknown): number | null => typeof value === 'object' && value !== null && 'id' in value
   ? Number((value as { id: number }).id)
@@ -44,22 +45,23 @@ export async function buildRecordsPageModel(input: {
     { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] },
     ...(session && scope ? recordReadPredicate(scope, session) : []),
   ] }, select: { id: true, domain: true, folder: true, documentType: true, title: true, updatedAt: true, lifecycle: true, locked: true, privateDraft: true, creatorCharacter: true }, depth: 0, limit: 50, sort: '-updatedAt', overrideAccess: true })
-  const permissions = new Map<number, { read: boolean; canEdit: boolean; canSupersede: boolean; canDelete: boolean }>()
+  const permissions = new Map<number, RecordCapabilityFlags>()
   const visibleDocs: typeof documentsResult.docs = []
   if (session) {
     for (const document of documentsResult.docs) {
-      const target = resolveDocumentTarget(session, { id: Number(document.id), folderId: relationId(document.folder), subdomainId: null, documentTypeId: relationId(document.documentType), stage: document.lifecycle as never, privateDraft: document.privateDraft === true, creatorCharacterId: relationId(document.creatorCharacter) })
-      const read = decideInSession(session, 'read', target).allowed
-      if (!read) continue
+      // P08D-T01-A: the same shared projection the live search endpoint uses.
+      const caps = computeRecordCapabilities(session, {
+        id: Number(document.id),
+        folderId: relationId(document.folder),
+        documentTypeId: relationId(document.documentType),
+        lifecycle: document.lifecycle,
+        locked: Boolean(document.locked),
+        privateDraft: document.privateDraft === true,
+        creatorCharacterId: relationId(document.creatorCharacter),
+      })
+      if (!caps.read) continue
       visibleDocs.push(document)
-      const canEdit = decideInSession(session, 'edit_document', target).allowed
-      // P07X-T03: supersession is a Type-gated create (create_document on the
-      // record's Document Type) — the destination Folder is Type-routed, not
-      // a customer choice.
-      const typeId = relationId(document.documentType)
-      const canSupersede = typeId !== null && decideInSession(session, 'create_document', { type: 'DocumentType', id: typeId }).allowed
-      const canDelete = decideInSession(session, 'delete_document', target).allowed
-      permissions.set(Number(document.id), { read, canEdit, canSupersede, canDelete })
+      permissions.set(Number(document.id), caps)
     }
   }
   const allDocs: typeof documentsResult.docs = [...visibleDocs]
@@ -99,13 +101,19 @@ export async function buildRecordsPageModel(input: {
         if (allDocIds.has(documentId)) continue
         allDocIds.add(documentId)
         if (session) {
-          const target = resolveDocumentTarget(session, { id: documentId, folderId: relationId(document.folder), subdomainId: null, documentTypeId: relationId(document.documentType), stage: document.lifecycle as never, privateDraft: document.privateDraft === true, creatorCharacterId: relationId(document.creatorCharacter) })
-          if (!decideInSession(session, 'read', target).allowed) continue
+          // Chain-closed documents use the same shared projection.
+          const caps = computeRecordCapabilities(session, {
+            id: documentId,
+            folderId: relationId(document.folder),
+            documentTypeId: relationId(document.documentType),
+            lifecycle: document.lifecycle,
+            locked: Boolean(document.locked),
+            privateDraft: document.privateDraft === true,
+            creatorCharacterId: relationId(document.creatorCharacter),
+          })
+          if (!caps.read) continue
           allDocs.push(document)
-          const canEdit = decideInSession(session, 'edit_document', target).allowed
-          const typeId = relationId(document.documentType)
-          const canSupersede = typeId !== null && decideInSession(session, 'create_document', { type: 'DocumentType', id: typeId }).allowed
-          permissions.set(documentId, { read: true, canEdit, canSupersede, canDelete: decideInSession(session, 'delete_document', target).allowed })
+          permissions.set(documentId, caps)
         }
         frontier.push(documentId)
       }
@@ -139,7 +147,7 @@ export async function buildRecordsPageModel(input: {
   })
   const toRecordSummary = (document: (typeof allDocs)[number]): RecordSummary => {
     const id = Number(document.id)
-    const caps = permissions.get(id) ?? { read: false, canEdit: false, canSupersede: false, canDelete: false }
+    const caps = permissions.get(id) ?? { read: false, edit: false, supersede: false, delete: false }
     return {
       id,
       title: document.title,
@@ -149,7 +157,7 @@ export async function buildRecordsPageModel(input: {
       preparedBy: preparedBy.get(id) ?? null,
       lifecycle: document.lifecycle,
       locked: Boolean(document.locked),
-      capabilities: { read: caps.read, edit: caps.canEdit, supersede: caps.canSupersede, delete: caps.canDelete },
+      capabilities: caps,
     }
   }
   const initialFolderId = folderRaw && Number.isFinite(Number(folderRaw)) ? Number(folderRaw) : null
