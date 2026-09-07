@@ -10,7 +10,7 @@ import config from '@/payload.config'
 
 import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
-import { canSupersedeDocument, resolveFilingPolicy, type FilingPolicy } from '@/lib/documents/lifecycle'
+import { canSupersedeDocument, resolveFilingPolicy, type FilingPolicy, type Lifecycle } from '@/lib/documents/lifecycle'
 import { assertEffectiveCreationMethod, effectiveCreationMethods, initialRouteFolder, type CreationMethod } from '@/lib/documents/creation'
 import { latestDocumentRevisionId, recordDocumentProvenance } from '@/lib/documents/provenance'
 import { attachDocumentCharacterLink, attachDocumentTag, ensurePreparedBy, findOrCreateDomainTag } from '@/lib/documents/links'
@@ -47,6 +47,7 @@ export type DocumentEditorActionState = {
       templateId: string
       formAnswers: string
       creationMethod: string
+      lifecycle: string
   }
 }
 
@@ -62,6 +63,7 @@ function editorValues(formData: FormData): DocumentEditorActionState['values'] {
     templateId: String(formData.get('templateId') ?? ''),
     formAnswers: String(formData.get('formAnswers') ?? ''),
     creationMethod: String(formData.get('creationMethod') ?? formData.get('method') ?? ''),
+    lifecycle: String(formData.get('lifecycle') ?? ''),
   }
 }
 
@@ -354,13 +356,23 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   const policy = method === 'blank'
     ? 'direct-file'
     : resolveFilingPolicy({ template: (selectedTemplate?.lifecyclePolicy ?? 'inherit') as FilingPolicy, folder: (folderRecord?.filingPolicy ?? 'inherit') as FilingPolicy, documentType: selectedType.defaultFilingPolicy, domain: domainPolicy })
-  const lifecycle: 'draft' | 'submitted' | 'filed' = method === 'blank'
+  const legacyLifecycle: 'draft' | 'submitted' | 'filed' = method === 'blank'
     ? 'draft'
     : policy === 'review-required' ? 'submitted' : 'filed'
-  if (lifecycle !== initialLifecycle) {
-    folder = routeFor(lifecycle) ?? folder
+  if (legacyLifecycle !== initialLifecycle) {
+    folder = routeFor(legacyLifecycle) ?? folder
     folderRecord = await ctx.payload.findByID({ collection: 'folders', id: folder, depth: 0 }).catch(() => null)
   }
+  // P08X-T07: the create screen sends the chosen starting phase (the
+  // lifecycle dropdown, filtered to stages the actor may write at). Anything
+  // else falls back to the legacy filing-policy lifecycle. prepareDocumentCreation
+  // below re-validates the effective phase against the Type's stage
+  // configuration server-side, so a forged value cannot bypass it.
+  const requestedLifecycleRaw = String(formData.get('lifecycle') ?? '').trim()
+  const requestedLifecycle: Lifecycle | null = requestedLifecycleRaw === 'draft' || requestedLifecycleRaw === 'submitted' || requestedLifecycleRaw === 'filed'
+    ? requestedLifecycleRaw
+    : null
+  const lifecycle: Lifecycle = requestedLifecycle ?? legacyLifecycle
   // P08-GATE-02: canonical Type-first plan + Folder-deny narrowing. No
   // caller-supplied Folder participates; a deny on the routed Folder, its
   // ancestors, its Department, or the Domain rejects the create.
@@ -374,6 +386,9 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
     const message = error instanceof Error ? error.message : ''
     if (message === 'template-type') return { error: 'template-type', values }
     if (message === 'method' || message === 'template') return { error: 'method', values }
+    // P08X-T07: the requested starting phase is not creatable for this Type
+    // (stage disabled, not allowed on creation, or the actor lacks stage write).
+    if (message === 'stage') return { error: 'stage', values }
     return { error: 'authorization', values }
   }
   // P05R-T02 A: every application create is ONE atomic operation — create the

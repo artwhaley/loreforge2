@@ -7,11 +7,14 @@ import { ConcernCharacterChips } from '@/components/characters/ConcernCharacterC
 import { FieldControl, type FieldValue } from '@/components/forms/FieldControl'
 import type { LoreForgeFormField, LoreForgeFormSchema } from '@/lib/forms/schema'
 import type { CreationMethod } from '@/lib/documents/creation'
+import type { Lifecycle } from '@/lib/documents/lifecycle'
 
 type Option = { id: number; name: string; systemManaged?: boolean }
 type TypeOption = Option & { allowBlank?: boolean; allowTemplate?: boolean; allowForm?: boolean; methods: CreationMethod[] }
 type Character = { id: number; name: string }
 type TemplateOption = { id: number; name: string; kind: 'document' | 'form'; creationMethod: Exclude<CreationMethod, 'blank'>; documentTypeId: number; formSchema?: LoreForgeFormSchema | null }
+
+type CreationStageOption = { stage: Lifecycle; label: string }
 
 type Props = {
   tenantSlug: string
@@ -20,9 +23,11 @@ type Props = {
   activeCharacter: Character | null
   initialState?: DocumentEditorActionState
   supersedesDocumentId?: number
+  /** P08X-T07: per-Type starting-phase options the actor may write at (server-computed). */
+  creationStages?: Record<number, CreationStageOption[]>
 }
 
-const emptyState: DocumentEditorActionState = { values: { title: '', body: '', documentTypeId: '', folderId: '', concernLinks: '', tagNames: '', preparedByCharacterIds: '', templateId: '', formAnswers: '', creationMethod: '' } }
+const emptyState: DocumentEditorActionState = { values: { title: '', body: '', documentTypeId: '', folderId: '', concernLinks: '', tagNames: '', preparedByCharacterIds: '', templateId: '', formAnswers: '', creationMethod: '', lifecycle: '' } }
 
 /** Parse the hidden JSON answer snapshot without throwing. */
 function parseAnswers(raw: string): Record<string, FieldValue> {
@@ -51,14 +56,21 @@ function mergeDefaults(raw: string, schema: LoreForgeFormSchema | null | undefin
   return JSON.stringify(parsed)
 }
 
-export function NewDocumentForm({ tenantSlug, types, templates = [], activeCharacter, initialState = emptyState, supersedesDocumentId }: Props) {
+const lifecycleStageOptions = (creationStages: Record<number, CreationStageOption[]> | undefined, typeId: number | string): CreationStageOption[] => creationStages?.[Number(typeId)] ?? []
+
+/** The latest stage the actor may start at (default = last of the ordered options). */
+const defaultLifecycle = (options: CreationStageOption[]): Lifecycle | '' => options.length > 0 ? options[options.length - 1].stage : ''
+
+export function NewDocumentForm({ tenantSlug, types, templates = [], activeCharacter, initialState = emptyState, supersedesDocumentId, creationStages = {} }: Props) {
   const [state, formAction, pending] = useActionState(createDocumentFromEditorAction, initialState)
   const values = state.values ?? emptyState.values!
   const defaultType = types.find((item) => String(item.id) === String(values.documentTypeId)) ?? types[0]
   const submittedMethod = values.creationMethod as CreationMethod
   const initialMethod = defaultType?.methods.includes(submittedMethod) ? submittedMethod : defaultType?.methods[0] || 'blank'
+  const initialStageOptions = lifecycleStageOptions(creationStages, defaultType?.id ?? '')
   const [selectedTypeId, setSelectedTypeId] = useState(String(defaultType?.id ?? ''))
   const [selectedMethod, setSelectedMethod] = useState<CreationMethod>(initialMethod)
+  const [selectedLifecycle, setSelectedLifecycle] = useState<Lifecycle | ''>(() => lifecycleStageOptions(creationStages, values.documentTypeId ?? defaultType?.id ?? '').some((option) => option.stage === values.lifecycle) ? (values.lifecycle as Lifecycle) : defaultLifecycle(initialStageOptions))
   const [selectedTemplateId, setSelectedTemplateId] = useState(String(values.templateId || ''))
   const [formAnswers, setFormAnswers] = useState(() => {
     const initialTemplate = templates.find((item) => String(item.id) === String(values.templateId || ''))
@@ -68,6 +80,8 @@ export function NewDocumentForm({ tenantSlug, types, templates = [], activeChara
   const [body, setBody] = useState(values.body)
   const [tagNames, setTagNames] = useState(values.tagNames)
   const selectedType = types.find((item) => String(item.id) === selectedTypeId) ?? null
+  const stageOptions = lifecycleStageOptions(creationStages, selectedTypeId)
+  const showLifecycleDropdown = stageOptions.length >= 2
   const availableTemplates = templates.filter((item) => item.documentTypeId === Number(selectedTypeId) && item.creationMethod === selectedMethod)
   const selectedTemplate = availableTemplates.find((item) => String(item.id) === selectedTemplateId) ?? null
   const answerValues = useMemo(() => {
@@ -78,7 +92,7 @@ export function NewDocumentForm({ tenantSlug, types, templates = [], activeChara
   // controlled fields from it so the user never has to retype a document. The
   // guarded render keeps this synchronization local without an effect-driven
   // cascading render.
-  const stateSignature = JSON.stringify([values.title, values.body, values.tagNames, values.preparedByCharacterIds, values.formAnswers, values.templateId, values.documentTypeId, values.creationMethod])
+  const stateSignature = JSON.stringify([values.title, values.body, values.tagNames, values.preparedByCharacterIds, values.formAnswers, values.templateId, values.documentTypeId, values.creationMethod, values.lifecycle])
   const [lastStateSignature, setLastStateSignature] = useState<string | null>(null)
   if (lastStateSignature !== stateSignature) {
     setLastStateSignature(stateSignature)
@@ -89,6 +103,9 @@ export function NewDocumentForm({ tenantSlug, types, templates = [], activeChara
     if (values.documentTypeId) setSelectedTypeId(values.documentTypeId)
     if (values.creationMethod && (!selectedTypeId || types.find((type) => String(type.id) === String(values.documentTypeId))?.methods.includes(values.creationMethod as CreationMethod))) setSelectedMethod(values.creationMethod as CreationMethod)
     setSelectedTemplateId(values.templateId ?? '')
+    const hydratedOptions = lifecycleStageOptions(creationStages, values.documentTypeId ?? selectedTypeId)
+    if (hydratedOptions.some((option) => option.stage === values.lifecycle)) setSelectedLifecycle(values.lifecycle as Lifecycle)
+    else if (values.documentTypeId && !stageOptions.some((option) => option.stage === (selectedLifecycle as Lifecycle))) setSelectedLifecycle(defaultLifecycle(hydratedOptions))
   }
 
   const hasEnteredContent = Boolean(title.trim() || body.trim() || tagNames.trim() || Object.values(answerValues).some((value) => value !== '' && value !== null && value !== undefined))
@@ -101,6 +118,7 @@ export function NewDocumentForm({ tenantSlug, types, templates = [], activeChara
     setSelectedMethod(nextType?.methods[0] ?? 'blank')
     setSelectedTemplateId('')
     setFormAnswers('{}')
+    setSelectedLifecycle(defaultLifecycle(lifecycleStageOptions(creationStages, typeId)))
   }
 
   const chooseMethod = (method: CreationMethod) => {
@@ -152,17 +170,21 @@ export function NewDocumentForm({ tenantSlug, types, templates = [], activeChara
                   ? 'That Template is not available for the selected Document Type.'
                   : state.error === 'unable-to-create'
                     ? 'The record could not be created. Your entries are preserved so you can correct and retry.'
+                    : state.error === 'stage'
+                      ? 'That starting phase is not available for this Document Type under the acting Character — choose another phase or ask the Domain supervisor to grant it.'
               : null
 
   return <form action={formAction} style={{ display: 'grid', gap: '1rem', padding: '1.25rem', border: '1px solid var(--tenant-accent)', background: 'var(--tenant-surface-bg)' }}>
     <input type="hidden" name="tenantSlug" value={tenantSlug} />
     {supersedesDocumentId ? <input type="hidden" name="supersedesDocumentId" value={supersedesDocumentId} /> : null}
     <input type="hidden" name="creationMethod" value={selectedMethod} />
+    <input type="hidden" name="lifecycle" value={selectedLifecycle} />
     <input type="hidden" name="templateId" value={selectedTemplate?.id ?? ''} />
     <input type="hidden" name="formAnswers" value={formAnswers} />
     {message ? <p role="alert" style={{ color: '#8f2d21' }}>{message}</p> : null}
     <label style={{ display: 'grid', gap: '.35rem' }}><strong>Document Type</strong><select name="documentTypeId" required value={selectedTypeId} onChange={(event) => chooseType(event.target.value)}><option value="">Choose a Document Type</option>{types.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select><small>Only Types with an effective create permission are listed.</small></label>
     {selectedType ? selectedType.methods.length > 1 ? <fieldset style={{ display: 'grid', gap: '.45rem' }}><legend><strong>How do you want to create it?</strong></legend>{selectedType.methods.map((method) => <label key={method} style={{ display: 'flex', gap: '.45rem', alignItems: 'center' }}><input type="radio" name="creationMethodChoice" value={method} checked={selectedMethod === method} onChange={() => chooseMethod(method)} />{methodLabel(method)}</label>)}</fieldset> : <p role="status"><strong>Creation method:</strong> {methodLabel(selectedType.methods[0])}</p> : null}
+    {selectedType && stageOptions.length > 0 ? showLifecycleDropdown ? <label style={{ display: 'grid', gap: '.35rem' }}><strong>Starting phase</strong><select name="lifecycleChoice" value={selectedLifecycle} onChange={(event) => setSelectedLifecycle(event.target.value as Lifecycle)}><option value="">Choose a starting phase</option>{stageOptions.map((option) => <option key={option.stage} value={option.stage}>{option.label}</option>)}</select><small>Where the record begins its life. A character with permission to file can skip Draft and Submitted and start Filed; a draft can be saved for later. The default is the latest phase you may set.</small></label> : <p role="status"><strong>Starting phase:</strong> {stageOptions[0].label}</p> : null}
     {selectedMethod !== 'blank' && selectedType ? <label style={{ display: 'grid', gap: '.35rem' }}><strong>{selectedMethod === 'form' ? 'Form' : 'Template'}</strong><select required value={selectedTemplateId} onChange={(event) => chooseTemplate(event.target.value)}><option value="">Choose a {selectedMethod === 'form' ? 'Form' : 'Template'}</option>{availableTemplates.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><small>{selectedTemplate ? `${selectedTemplate.name} · attached to ${selectedType.name}` : `Only active ${selectedMethod === 'form' ? 'Forms' : 'Templates'} attached to ${selectedType.name} are available.`}</small></label> : null}
     <input type="hidden" name="folderId" value="" />
     <label style={{ display: 'grid', gap: '.35rem' }}><strong>Title{selectedMethod === 'form' ? ' (generated by the Form when available)' : ''}</strong><input name="title" required={selectedMethod !== 'form'} autoFocus value={title} onChange={(event) => setTitle(event.target.value)} /></label>

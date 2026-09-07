@@ -89,6 +89,8 @@ export type PreparedDocumentCreation = {
   typeRow: Record<string, unknown>
   /** P08X-T06: whether the draft stage allows the private-draft choice at creation. */
   privateDraftsAllowed: boolean
+  /** P08X-T07: stages the actor may start a record at (enabled + allowOnCreation + writable). */
+  availableCreationStages: Lifecycle[]
 }
 
 type PrepareArgs = {
@@ -141,12 +143,28 @@ export async function prepareDocumentCreation(args: PrepareArgs): Promise<Prepar
     const expectedKind = method === 'form' ? 'form' : 'document'
     if (!template || !templateActive || templateTypeId !== typeId || templateKind !== expectedKind) throw new Error('template-type')
   }
-  const { loadAuthorizationSession, decideOne, folderNarrowingDeny } = await import('@/lib/authz/session')
+  const { loadAuthorizationSession, decideOne, folderNarrowingDeny, canCreateAtStage } = await import('@/lib/authz/session')
   const session = await loadAuthorizationSession(payload, actor, domain)
   const decision = decideOne(session, 'create_document', { type: 'DocumentType', id: typeId })
   if (!decision.allowed) throw new Error('authorization')
   const initialLifecycle: Lifecycle = lifecycle ?? 'draft'
+  // P08X-T07: when the Type carries lifecycle-stage configuration, the
+  // requested starting phase must be an enabled stage with allowOnCreation,
+  // the actor must be able to write at that stage (or hold Domain authority),
+  // and the initial Folder comes from the stage row — never a caller-supplied
+  // value. Types without stage rows keep the legacy policy routing below.
+  const stageLists = session.stageLists.get(typeId)
+  if (stageLists && stageLists.size > 0) {
+    const lists = stageLists.get(initialLifecycle)
+    if (!lists || !lists.enabled) throw new Error('stage')
+    if (!lists.allowOnCreation) throw new Error('stage')
+    if (session.authority == null && !canCreateAtStage(session, typeId, initialLifecycle)) throw new Error('authorization')
+  }
   let folderId = resolveLifecycleRouteFolder(typeRow, initialLifecycle, null)
+  if (stageLists && stageLists.size > 0) {
+    const stagedFolder = stageLists.get(initialLifecycle)?.folderId ?? null
+    if (stagedFolder != null) folderId = stagedFolder
+  }
   if (folderId == null) {
     const roots = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domain } }, { systemManaged: { equals: true } }, { parent: { equals: null } }] }, depth: 0, limit: 1, overrideAccess: true })
     folderId = roots.docs[0] ? Number((roots.docs[0] as { id: number | string }).id) : null
@@ -159,5 +177,14 @@ export async function prepareDocumentCreation(args: PrepareArgs): Promise<Prepar
   const privateDraftsAllowed = initialLifecycle === 'draft'
     ? (session.stageLists.get(typeId)?.get('draft')?.privateDraftsAllowed ?? true)
     : false
-  return { typeId, method, lifecycle: initialLifecycle, folderId, typeRow, privateDraftsAllowed }
+  // P08X-T07: expose the writable creation stages so the create screen can
+  // offer (or hide) the starting-phase dropdown and default to the latest one.
+  const availableCreationStages = session.stageLists.get(typeId) && session.stageLists.get(typeId)!.size > 0
+    ? ['draft', 'submitted', 'filed'].filter((stage) => {
+      const lists = session.stageLists.get(typeId)?.get(stage as Lifecycle)
+      if (!lists || !lists.enabled || !lists.allowOnCreation) return false
+      return session.authority != null || canCreateAtStage(session, typeId, stage as Lifecycle)
+    }) as Lifecycle[]
+    : []
+  return { typeId, method, lifecycle: initialLifecycle, folderId, typeRow, privateDraftsAllowed, availableCreationStages }
 }

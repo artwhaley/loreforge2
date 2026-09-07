@@ -10,9 +10,9 @@ import { renderMarkdown } from '@/lib/markdown/render'
 import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 import { PLATFORM_NOUNS as vocab } from '@/lib/theme/nouns'
 import { getDocumentCharacterLinks, getDocumentTags } from '@/lib/documents/links'
-import { canSupersedeDocument } from '@/lib/documents/lifecycle'
+import { canSupersedeDocument, type Lifecycle } from '@/lib/documents/lifecycle'
 import { canEditDocumentBody } from '@/lib/documents/lifecycle'
-import { decideInSession, resolveDocumentTarget } from '@/lib/authz/session'
+import { decideInSession, resolveDocumentTarget, stageManageGrant, type DocumentTargetExtra } from '@/lib/authz/session'
 import { loadCachedAuthorizationSession } from '@/lib/authz/sessionCache'
 
 import styles from './document.module.scss'
@@ -52,13 +52,23 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
 
   const payload = await (await import('@/lib/payload')).getLorePayload()
   const session = user ? await loadCachedAuthorizationSession(payload, Number(user.id), activeCharacter?.id ?? null, tenant.id) : null
-  const docTarget = session ? resolveDocumentTarget(session, { id: Number(doc.id), folderId: relationId(doc.folder), subdomainId: relationId((doc as unknown as { subdomain?: unknown }).subdomain) }) : null
+  // P08X-T06/T07: the document decision target carries the Type id, the
+  // deciding stage (current lifecycle), and the private-draft visibility
+  // boundary so stage-list grants and the creator-only gate apply here —
+  // exactly as they do in the evaluator and the records list.
+  const docRow = doc as unknown as { subdomain?: unknown; documentType?: unknown; privateDraft?: unknown; creatorCharacter?: unknown }
+  const docTarget = session ? resolveDocumentTarget(session, { id: Number(doc.id), folderId: relationId(doc.folder), subdomainId: relationId(docRow.subdomain), documentTypeId: relationId(docRow.documentType), stage: (doc.lifecycle ?? null) as Lifecycle | null, privateDraft: docRow.privateDraft === true, creatorCharacterId: relationId(docRow.creatorCharacter) }) : null
   if (!session || !docTarget || !decideInSession(session, 'read', docTarget).allowed) notFound()
   const canEdit = canEditDocumentBody(doc.lifecycle, Boolean((doc as unknown as { locked?: unknown }).locked)) && decideInSession(session, 'edit_document', docTarget).allowed
   // P08-GATE-01: affordances come from the decision engine, never role === 'admin'.
-  const canSubmit = decideInSession(session, 'submit_document', docTarget).allowed
-  const canFile = decideInSession(session, 'file_document', docTarget).allowed
-  const canApprove = decideInSession(session, 'approve_document', docTarget).allowed
+  // Stage-move capabilities evaluate against the DESTINATION stage (the same
+  // stage the workflow seam passes), so the UI never shows a button the seam
+  // would reject. Lock/unlock and deprecate are stage-agnostic / list-only.
+  const canSubmit = decideInSession(session, 'submit_document', { ...docTarget, stage: 'submitted' as Lifecycle }).allowed
+  const canFile = decideInSession(session, 'file_document', { ...docTarget, stage: 'filed' as Lifecycle }).allowed
+  const canApprove = decideInSession(session, 'approve_document', { ...docTarget, stage: 'filed' as Lifecycle }).allowed
+  const canRestore = decideInSession(session, 'restore_document', { ...docTarget, stage: 'filed' as Lifecycle }).allowed
+  const canDeprecate = docTarget.documentTypeId != null && stageManageGrant(session, docTarget.documentTypeId, 'deprecated') != null
   const canLock = decideInSession(session, 'lock_document', docTarget).allowed
   const canUnlock = decideInSession(session, 'unlock_document', docTarget).allowed
   const canDeleteDoc = decideInSession(session, 'delete_document', docTarget).allowed
@@ -76,7 +86,13 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
   const linkedDocs = linkedIds.length === 0 ? { docs: [] } : await payload.find({ collection: 'documents', where: { and: [{ domain: { equals: tenant.id } }, { id: { in: linkedIds } }, { or: [{ softDeletedAt: { equals: null } }, { softDeletedAt: { exists: false } }] }] }, select: { id: true, domain: true, folder: true, documentType: true, title: true, createdAt: true, updatedAt: true, lifecycle: true }, depth: 0, limit: 0, pagination: false, overrideAccess: true })
   const readableLinked = new Map<number, typeof linkedDocs.docs[number]>()
   for (const linked of linkedDocs.docs) {
-    const target = resolveDocumentTarget(session, { id: Number(linked.id), folderId: relationId(linked.folder), subdomainId: relationId((linked as unknown as { subdomain?: unknown }).subdomain) })
+    const linkedRow = linked as unknown as { subdomain?: unknown; documentType?: unknown; privateDraft?: unknown; creatorCharacter?: unknown; lifecycle?: unknown }
+    const extra: DocumentTargetExtra = {
+      stage: (linkedRow.lifecycle ?? null) as Lifecycle | null,
+      privateDraft: linkedRow.privateDraft === true,
+      creatorCharacterId: relationId(linkedRow.creatorCharacter),
+    }
+    const target = resolveDocumentTarget(session, { id: Number(linked.id), folderId: relationId(linked.folder), subdomainId: relationId(linkedRow.subdomain), documentTypeId: relationId(linkedRow.documentType), ...extra })
     if (decideInSession(session, 'read', target).allowed) readableLinked.set(Number(linked.id), linked)
   }
 
@@ -140,6 +156,22 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
               <input type="hidden" name="documentId" value={doc.id} />
               <input type="hidden" name="operation" value="approve" />
               <button type="submit" className={styles.action}>Approve</button>
+            </form>
+          ) : null}
+          {doc.lifecycle === 'filed' && canDeprecate ? (
+            <form action={documentWorkflowAction}>
+              <input type="hidden" name="tenantSlug" value={tenant.slug} />
+              <input type="hidden" name="documentId" value={doc.id} />
+              <input type="hidden" name="operation" value="deprecate" />
+              <button type="submit" className={styles.action}>Deprecate</button>
+            </form>
+          ) : null}
+          {doc.lifecycle === 'deprecated' && canRestore ? (
+            <form action={documentWorkflowAction}>
+              <input type="hidden" name="tenantSlug" value={tenant.slug} />
+              <input type="hidden" name="documentId" value={doc.id} />
+              <input type="hidden" name="operation" value="restore" />
+              <button type="submit" className={styles.action}>Restore</button>
             </form>
           ) : null}
           {canLock && !(doc as unknown as { locked?: unknown }).locked && !isSuperseded ? (

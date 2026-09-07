@@ -17,16 +17,17 @@ function fakePayload(initialLifecycle: string, failUpdate = false) {
 }
 
 test('workflow transitions append the corresponding provenance event', async () => {
-  const cases: Array<[WorkflowOperation, string, string]> = [
-    ['submit', 'draft', 'submitted'],
-    ['file', 'draft', 'filed'],
-    ['approve', 'submitted', 'approved'],
-    ['reject', 'submitted', 'rejected'],
+  const cases: Array<[WorkflowOperation, string, string, string]> = [
+    ['submit', 'draft', 'submitted', 'submitted'],
+    ['file', 'draft', 'filed', 'filed'],
+    ['approve', 'submitted', 'filed', 'approved'],
+    ['reject', 'submitted', 'draft', 'rejected'],
+    ['deprecate', 'filed', 'deprecated', 'deprecated'],
+    ['restore', 'deprecated', 'filed', 'restored'],
   ]
-  for (const [operation, from, eventType] of cases) {
+  for (const [operation, from, to, eventType] of cases) {
     const { payload, updates, events } = fakePayload(from)
     await transitionDocument({ payload, userId: 2, domainId: 4, documentId: 12, operation, note: operation === 'reject' ? 'Needs a seal' : null })
-    const to = operation === 'submit' ? 'submitted' : operation === 'file' || operation === 'approve' ? 'filed' : 'draft'
     assert.equal(updates[0].data.lifecycle, to)
     assert.equal(events[0].data.eventType, eventType)
     if (operation === 'reject') assert.equal(events[0].data.context.note, 'Needs a seal')

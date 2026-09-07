@@ -538,6 +538,11 @@ function stageListDecision(session: AuthzSession, capability: Capability, target
  * destination stage's manageRoles; null otherwise.
  */
 export function stageManageGrant(session: AuthzSession, typeId: number | null, stage: Lifecycle): SessionDecision | null {
+  // Domain administration bypasses the role lists exactly as in decideInSession.
+  if (session.authority) {
+    const reason = 'Acting Domain Admin authority (Administrator of this Domain).'
+    return { allowed: true, reason, stageGrant: { roleId: 0, roleName: 'Domain Administrator', stage, list: 'manage' }, trace: [reason] }
+  }
   if (session.characterState == null || typeId == null) return null
   const lists = session.stageLists.get(typeId)?.get(stage)
   if (!lists || !lists.enabled) return null
@@ -577,6 +582,26 @@ export function canCreateAtStage(session: AuthzSession, typeId: number | null, s
   const lists = session.stageLists.get(typeId)?.get(stage)
   if (!lists || !lists.enabled) return false
   return lists.writeRoleIds.some((id) => roleMatchesHeldRoleInSession(id, session.heldRoleIds, session.roles))
+}
+
+/**
+ * P08X-T07: the creation-phase options for one Document Type — stages that
+ * are enabled, allowOnCreation, and writable by this actor (authority
+ * bypasses the write-list check). Ordered Draft -> Submitted -> Filed so a
+ * caller's "latest" choice is the last element. The create-screen dropdown
+ * renders when this has >= 2 entries; a single entry means direct-file
+ * behavior with no dropdown. Types without stage configuration return []
+ * and keep the legacy filing-policy creation path.
+ */
+export function creationStageOptions(session: AuthzSession, typeId: number | null): Lifecycle[] {
+  if (typeId == null) return []
+  const options: Lifecycle[] = []
+  for (const stage of ['draft', 'submitted', 'filed'] as const) {
+    const lists = session.stageLists.get(typeId)?.get(stage)
+    if (!lists || !lists.enabled || !lists.allowOnCreation) continue
+    if (session.authority || canCreateAtStage(session, typeId, stage)) options.push(stage)
+  }
+  return options
 }
 
 /**

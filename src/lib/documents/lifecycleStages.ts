@@ -120,9 +120,11 @@ export async function applyLifecycleStageConfig(payload: Payload, args: { docume
     const data: Record<string, unknown> = {
       documentType: typeId,
       stage: config.stage,
-      enabled: config.enabled ?? true,
-      allowOnCreation: config.allowOnCreation ?? false,
     }
+    // Merge contract: a missing field leaves the stored value untouched, so
+    // partial updates (move a Folder, flip one switch) never clobber the rest.
+    if (config.enabled !== undefined) data.enabled = Boolean(config.enabled)
+    if (config.allowOnCreation !== undefined) data.allowOnCreation = Boolean(config.allowOnCreation)
     if (config.privateDraftsAllowed !== undefined) data.privateDraftsAllowed = Boolean(config.privateDraftsAllowed)
     if (config.folderId !== undefined) data.folder = config.folderId ? Number(config.folderId) : null
     if (config.readRoleIds !== undefined) data.readRoles = config.readRoleIds.map(Number)
@@ -143,7 +145,7 @@ export async function applyLifecycleStageConfig(payload: Payload, args: { docume
 }
 
 /** Load all stage rows for one Document Type, keyed by stage. */
-export async function lifecycleStageRowsForType(payload: Payload, documentTypeId: number | string): Promise<Record<Lifecycle, LifecycleStageRowShape | null>> {
+export async function lifecycleStageRowsForType(payload: Payload, documentTypeId: number | string, transactionID?: number | string | null): Promise<Record<Lifecycle, LifecycleStageRowShape | null>> {
   const typeId = Number(documentTypeId)
   const result = await payload.find({
     collection: 'lifecycle-stages',
@@ -151,6 +153,7 @@ export async function lifecycleStageRowsForType(payload: Payload, documentTypeId
     depth: 0,
     limit: 10,
     overrideAccess: true,
+    ...(transactionID == null ? {} : { req: { transactionID } }),
   })
   const byStage: Record<Lifecycle, LifecycleStageRowShape | null> = { draft: null, submitted: null, filed: null, deprecated: null }
   for (const row of result.docs) {

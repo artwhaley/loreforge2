@@ -24,7 +24,7 @@ export default async function ReviewQueuePage({ params, searchParams }: Props) {
       <main style={{ maxWidth: 980, margin: '0 auto', padding: '1rem 0 3rem' }}>
         <p><a href={`/domain/${tenant.slug}`}>Home</a> / Review queue</p>
         <h1>Review queue</h1>
-        <p>Pending records are frozen until a Domain supervisor approves or returns them to Draft.</p>
+        <p>Submitted records are frozen until a Domain supervisor approves or returns them to Draft.</p>
         {query?.error ? <p role="alert" style={{ color: '#8f2d21' }}>The requested transition could not be completed ({query.error.replaceAll('-', ' ')}).</p> : null}
         {pending.docs.length === 0 ? <p>No records are waiting for review.</p> : (
           <ul style={{ display: 'grid', gap: '1rem', padding: 0, listStyle: 'none' }}>

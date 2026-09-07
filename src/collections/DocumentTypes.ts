@@ -90,7 +90,7 @@ export const DocumentTypes: CollectionConfig = {
     { name: 'defaultFilingPolicy', type: 'select', required: true, defaultValue: 'direct-file', options: [{ label: 'Direct file', value: 'direct-file' }, { label: 'Review required', value: 'review-required' }] },
     { name: 'defaultFolder', type: 'relationship', relationTo: 'folders', label: 'Default folder', admin: { description: 'Fallback route Folder when a lifecycle state has no specific route.' } },
     { name: 'draftFolder', type: 'relationship', relationTo: 'folders', label: 'Draft folder', admin: { description: 'P07X-T05 lifecycle route for Draft records.' } },
-    { name: 'pendingReviewFolder', type: 'relationship', relationTo: 'folders', label: 'Pending review folder', admin: { description: 'P07X-T05 lifecycle route for Pending-Review records.' } },
+    { name: 'pendingReviewFolder', type: 'relationship', relationTo: 'folders', label: 'Submitted folder (legacy route)', admin: { description: 'P07X-T05 legacy lifecycle route for Submitted records — fallback compatibility only; stage configuration supersedes it.' } },
     { name: 'filedFolder', type: 'relationship', relationTo: 'folders', label: 'Filed folder', admin: { description: 'P07X-T05 lifecycle route for Filed records.' } },
     { name: 'lockedFolder', type: 'relationship', relationTo: 'folders', label: 'Locked folder', admin: { description: 'P07X-T05 lifecycle route for Locked records.' } },
     { name: 'templateFilingPolicy', type: 'select', required: true, defaultValue: 'inherit', label: 'Template-compatible filing policy', options: [{ label: 'Inherit', value: 'inherit' }, { label: 'Direct file', value: 'direct-file' }, { label: 'Review required', value: 'review-required' }] },

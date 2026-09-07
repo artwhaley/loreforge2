@@ -7,7 +7,10 @@ import { resolveThemeTokens, themeTokensToCssVars } from '@/lib/theme/fonts'
 import { NewDocumentForm } from '@/components/documents/NewDocumentForm'
 import { getDocumentCharacterLinks } from '@/lib/documents/links'
 import { isAllowed } from '@/lib/authz/evaluate'
+import { loadAuthorizationSession, creationStageOptions } from '@/lib/authz/session'
 import { effectiveCreationMethods } from '@/lib/documents/creation'
+import { LIFECYCLE_STAGE_LABELS } from '@/lib/documents/lifecycleStages'
+import type { Lifecycle } from '@/lib/documents/lifecycle'
 
 type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<{ error?: string; folder?: string; supersedes?: string }> }
 export const dynamic = 'force-dynamic'
@@ -36,6 +39,16 @@ export default async function NewDocumentPage({ params, searchParams }: Props) {
     if (methods.length === 0 || !await isAllowed({ payload, actor, domainId: tenant.id, capability: 'create_document', resource: { type: 'DocumentType', id: item.id } })) return null
     return { id: Number(item.id), name: item.name, allowBlank: item.allowBlank !== false, allowTemplate: item.allowTemplate === true, allowForm: item.allowForm === true, methods }
   }))).filter((item): item is NonNullable<typeof item> => item !== null)
+  // P08X-T07: one authorization session computes the per-Type creation-stage
+  // options (enabled + allowOnCreation + stage write permission, authority
+  // bypassing the write list). The form shows the starting-phase dropdown
+  // when a Type offers >= 2 options and defaults to the latest one.
+  const session = await loadAuthorizationSession(payload, actor, tenant.id)
+  const creationStages: Record<number, Array<{ stage: Lifecycle; label: string }>> = {}
+  for (const type of creationTypes) {
+    const options = creationStageOptions(session, type.id)
+    if (options.length > 0) creationStages[type.id] = options.map((stage) => ({ stage, label: LIFECYCLE_STAGE_LABELS[stage] }))
+  }
   const typeIds = new Set(creationTypes.map((item) => item.id))
   // The chooser only receives active child Templates attached to an
   // authorized Type. Legacy destination fields are deliberately absent from
@@ -72,10 +85,11 @@ export default async function NewDocumentPage({ params, searchParams }: Props) {
       templateId: '',
       formAnswers: '',
       creationMethod: 'blank',
+      lifecycle: '',
     },
   } : undefined
 
   return <TenantShell tenant={tenant} cssVars={themeTokensToCssVars(resolveThemeTokens(tenant))} role={role} switcherTenants={domains} activeCharacter={activeCharacter}>
-    <section style={{ maxWidth: 1100, margin: '0 auto' }}><p><a href={`/domain/${slug}/records`}>Records</a> / New document</p><h1>{supersededDocument ? 'Create superseding document' : 'New document'}</h1><p>{supersededDocument ? `Start a new version of “${supersededDocument.title}”.` : 'Choose a Document Type, then choose how to create the record. Its Folder is resolved automatically from the Type.'}</p>{query?.error === 'character' ? <p role="alert" style={{ color: '#8f2d21' }}>Choose an acting Character from the selector above — members must create through an acting Character, which becomes the non-removable Prepared-by credit (CC-2026-09-03-05).</p> : query?.error === 'missing' ? <p role="alert" style={{ color: '#8f2d21' }}>A title is required.</p> : query?.error === 'type' ? <p role="alert" style={{ color: '#8f2d21' }}>Choose an active Document Type before creating a document.</p> : null}{creationTypes.length === 0 ? <p role="status">No Document Types are available for creation under the selected acting Character.</p> : <NewDocumentForm tenantSlug={slug} types={creationTypes} templates={templateOptions} activeCharacter={activeCharacter ? { id: Number(activeCharacter.id), name: activeCharacter.name } : null} initialState={supersedingInitialState} supersedesDocumentId={supersededDocument?.id} />}</section>
+    <section style={{ maxWidth: 1100, margin: '0 auto' }}><p><a href={`/domain/${slug}/records`}>Records</a> / New document</p><h1>{supersededDocument ? 'Create superseding document' : 'New document'}</h1><p>{supersededDocument ? `Start a new version of “${supersededDocument.title}”.` : 'Choose a Document Type, then choose how to create the record. Its Folder is resolved automatically from the Type.'}</p>{query?.error === 'character' ? <p role="alert" style={{ color: '#8f2d21' }}>Choose an acting Character from the selector above — members must create through an acting Character, which becomes the non-removable Prepared-by credit (CC-2026-09-03-05).</p> : query?.error === 'missing' ? <p role="alert" style={{ color: '#8f2d21' }}>A title is required.</p> : query?.error === 'type' ? <p role="alert" style={{ color: '#8f2d21' }}>Choose an active Document Type before creating a document.</p> : query?.error === 'stage' ? <p role="alert" style={{ color: '#8f2d21' }}>That starting phase is not available for the selected Document Type under the acting Character.</p> : null}{creationTypes.length === 0 ? <p role="status">No Document Types are available for creation under the selected acting Character.</p> : <NewDocumentForm tenantSlug={slug} types={creationTypes} templates={templateOptions} activeCharacter={activeCharacter ? { id: Number(activeCharacter.id), name: activeCharacter.name } : null} initialState={supersedingInitialState} supersedesDocumentId={supersededDocument?.id} creationStages={creationStages} />}</section>
   </TenantShell>
 }

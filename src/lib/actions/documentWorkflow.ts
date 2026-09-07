@@ -39,14 +39,14 @@ function reviewPath(tenantSlug: string, documentId: string | number, error?: str
   return `/domain/${tenantSlug}/documents/${documentId}/history${suffix}`
 }
 
-/** Submit a Draft as Pending Review, or apply an interim supervisor transition. */
+/** Submit a Draft into Submitted, or apply a supervisor/transition operation. */
 export async function documentWorkflowAction(formData: FormData): Promise<void> {
   const tenantSlug = String(formData.get('tenantSlug') ?? '').trim()
   const documentId = String(formData.get('documentId') ?? '').trim()
   const operation = String(formData.get('operation') ?? '').trim() as WorkflowOperation
   const note = String(formData.get('note') ?? '').trim() || null
   const destination = reviewPath(tenantSlug, documentId)
-  if (!tenantSlug || !documentId || !['submit', 'file', 'approve', 'reject', 'lock', 'unlock'].includes(operation)) redirect('/')
+  if (!tenantSlug || !documentId || !['submit', 'file', 'approve', 'reject', 'deprecate', 'restore', 'lock', 'unlock'].includes(operation)) redirect('/')
 
   const ctx = await resolveDomainAction(tenantSlug)
   if (!ctx) redirect(destination + '?error=unauthorized')
@@ -58,10 +58,13 @@ export async function documentWorkflowAction(formData: FormData): Promise<void> 
   try {
     await transitionDocument({ payload: ctx.payload, userId: ctx.userId, domainId: ctx.domain.id, documentId, actorCharacterId: ctx.actorCharacterId, operation, note })
   } catch (error) {
-    const code = error instanceof Error && /cannot be|not found/i.test(error.message) ? 'invalid-transition' : 'failed'
+    const code = error instanceof Error && /cannot be|not found|not part of|no longer part of/i.test(error.message) ? 'invalid-transition' : 'failed'
     redirect(destination + `?error=${code}`)
   }
-  redirect(operation === 'submit' ? reviewPath(tenantSlug, documentId) : `/domain/${tenantSlug}/review`)
+  // P08X-T07: deprecate/restore land back on the record so its new stage is
+  // visible; submit returns to the review flow; everything else returns to
+  // the Review queue.
+  redirect(operation === 'submit' ? reviewPath(tenantSlug, documentId) : operation === 'deprecate' || operation === 'restore' ? `/domain/${tenantSlug}/documents/${documentId}` : `/domain/${tenantSlug}/review`)
 }
 
 /** Soft-delete a record while retaining its ID, revisions, and provenance. */

@@ -34,6 +34,14 @@ export async function loadDomainHome(tenant: Tenant, user: Pick<User, 'id'>, act
 
   // Document exceptions). Folder-read grants alone no longer expose records.
 
+  // P08X-T06: the private-draft boundary applies to every record list — a
+
+  // draft created by another Character never surfaces here even under a
+
+  // Type-level read grant (administration bypasses via scope.authorityBypass).
+
+  const actorCharacterId = activeCharacter?.id != null ? Number(activeCharacter.id) : null
+
   const docs = candidates.filter((doc) => {
 
     const id = Number(doc.id)
@@ -41,6 +49,12 @@ export async function loadDomainHome(tenant: Tenant, user: Pick<User, 'id'>, act
     const folderId = doc.folder && typeof doc.folder === 'object' ? Number(doc.folder.id) : doc.folder != null ? Number(doc.folder) : null
 
     const typeId = doc.documentType && typeof doc.documentType === 'object' ? Number(doc.documentType.id) : doc.documentType != null ? Number(doc.documentType) : null
+
+    const privateDraft = doc.privateDraft === true
+
+    const creatorId = doc.creatorCharacter && typeof doc.creatorCharacter === 'object' ? Number(doc.creatorCharacter.id) : doc.creatorCharacter != null ? Number(doc.creatorCharacter) : null
+
+    if (privateDraft && !scope.authorityBypass && (actorCharacterId == null || creatorId !== actorCharacterId)) return false
 
     return scope.authorityBypass || (typeId != null && scope.readableTypeIds.has(typeId) && folderId != null && !scope.denyFolderIds.has(folderId) && !scope.denyDocumentIds.has(id)) || scope.grantDocumentIds.has(id)
 

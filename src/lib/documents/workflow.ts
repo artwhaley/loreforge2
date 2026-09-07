@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 
 import { requirePermission } from '@/lib/authz/evaluate'
 import { assertLifecycleTransition, type Lifecycle } from '@/lib/documents/lifecycle'
+import { LIFECYCLE_STAGES, LIFECYCLE_STAGE_LABELS, lifecycleStageRowsForType, stageEnabled, stageFolderId } from '@/lib/documents/lifecycleStages'
 import { latestDocumentRevisionId, recordDocumentProvenance, type ProvenanceEventType } from '@/lib/documents/provenance'
 import { resolveLifecycleRouteFolder } from '@/lib/documents/typeRouting'
 import { domainAndIdWhere } from '@/lib/tenant/scope'
@@ -10,7 +11,7 @@ const relationId = (value: unknown): number | null => value && typeof value === 
   ? Number((value as { id: number | string }).id)
   : value === null || value === undefined || value === '' ? null : Number(value)
 
-export type WorkflowOperation = 'submit' | 'file' | 'approve' | 'reject' | 'lock' | 'unlock'
+export type WorkflowOperation = 'submit' | 'file' | 'approve' | 'reject' | 'deprecate' | 'restore' | 'lock' | 'unlock'
 
 export type WorkflowActor = {
   payload: Payload
@@ -22,19 +23,24 @@ export type WorkflowActor = {
 
 /**
  * P08X-T02 vocabulary. Stage moves: submit (Draft -> Submitted), direct file
- * (Draft -> Filed), approve (Submitted -> Filed), reject (Submitted -> Draft).
- * Deprecate (Filed -> Deprecated) and restore (Deprecated -> Filed) arrive
- * with the P08X-T07 transition surface. Lock/unlock are NOT stage moves — they
- * toggle the document's locked boolean (exactly one meaning: not editable).
+ * (Draft -> Filed), approve (Submitted -> Filed), reject (Submitted -> Draft),
+ * deprecate (Filed -> Deprecated), restore (Deprecated -> Filed). Lock/unlock
+ * are NOT stage moves — they toggle the document's locked boolean (exactly
+ * one meaning: not editable).
  */
 const STAGE_TRANSITIONS: Record<Exclude<WorkflowOperation, 'lock' | 'unlock'>, { from: Lifecycle; to: Lifecycle; event: ProvenanceEventType }> = {
   submit: { from: 'draft', to: 'submitted', event: 'submitted' },
   file: { from: 'draft', to: 'filed', event: 'filed' },
   approve: { from: 'submitted', to: 'filed', event: 'approved' },
   reject: { from: 'submitted', to: 'draft', event: 'rejected' },
+  deprecate: { from: 'filed', to: 'deprecated', event: 'deprecated' },
+  restore: { from: 'deprecated', to: 'filed', event: 'restored' },
 }
-const CAPABILITY: Record<WorkflowOperation, 'submit_document' | 'file_document' | 'approve_document' | 'edit_document' | 'lock_document' | 'unlock_document'> = {
-  submit: 'submit_document', file: 'file_document', approve: 'approve_document', reject: 'edit_document', lock: 'lock_document', unlock: 'unlock_document',
+/** Deprecate has no frozen capability (spec §3.4) — it is authorized through
+ * manage(deprecated) alone at the workflow seam. Restore composes the frozen
+ * restore_document capability with manage(filed) via the destination stage. */
+const CAPABILITY: Partial<Record<WorkflowOperation, 'submit_document' | 'file_document' | 'approve_document' | 'edit_document' | 'restore_document' | 'lock_document' | 'unlock_document'>> = {
+  submit: 'submit_document', file: 'file_document', approve: 'approve_document', reject: 'edit_document', restore: 'restore_document', lock: 'lock_document', unlock: 'unlock_document',
 }
 
 /**
@@ -57,7 +63,7 @@ async function applyTransition(args: WorkflowActor & { operation: WorkflowOperat
   // path — the unit-test seam below passes no transactionID on purpose.
   if (operation === 'lock' || operation === 'unlock') {
     const lock = operation === 'lock'
-    if (transactionID != null) await requirePermission({ payload, actor: { userId: args.userId, activeCharacterId: args.actorCharacterId }, domainId: args.domainId, capability: CAPABILITY[operation], resource: { type: 'Document', id: document.id }, transactionID })
+    if (transactionID != null) await requirePermission({ payload, actor: { userId: args.userId, activeCharacterId: args.actorCharacterId }, domainId: args.domainId, capability: CAPABILITY[operation]!, resource: { type: 'Document', id: document.id }, transactionID })
     await payload.update({ collection: 'documents', id: document.id, data: { locked: lock }, depth: 0, ...(req ? { req } : {}) })
     await recordDocumentProvenance({
       payload,
@@ -74,16 +80,39 @@ async function applyTransition(args: WorkflowActor & { operation: WorkflowOperat
   }
 
   const transition = STAGE_TRANSITIONS[operation]
-  // P08X-T06: stage-list grants decide transitions by the DESTINATION stage's
-  // manageRoles (spec §3.4) — submit/file/approve/reject pass the stage the
-  // record moves INTO so the stage lists can authorize it.
-  if (transactionID != null) await requirePermission({ payload, actor: { userId: args.userId, activeCharacterId: args.actorCharacterId }, domainId: args.domainId, capability: CAPABILITY[operation], resource: { type: 'Document', id: document.id, stage: transition.to }, transactionID })
+  // P08X-T06/T07: stage-list grants decide transitions by the DESTINATION
+  // stage's manageRoles (spec §3.4) — submit/file/approve/reject/restore pass
+  // the stage the record moves INTO so the stage lists can authorize them.
+  // Deprecate has no frozen capability and is authorized through
+  // manage(deprecated) directly.
+  if (transactionID != null) {
+    if (operation === 'deprecate') {
+      const { loadAuthorizationSession, stageManageGrant } = await import('@/lib/authz/session')
+      const typeIdForAuth = relationId((document as { documentType?: unknown }).documentType)
+      const authSession = await loadAuthorizationSession(payload, { userId: args.userId, activeCharacterId: args.actorCharacterId }, args.domainId, { transactionID })
+      if (typeIdForAuth == null || stageManageGrant(authSession, typeIdForAuth, 'deprecated') == null) throw new Error('Not authorized to deprecate this record.')
+    } else {
+      await requirePermission({ payload, actor: { userId: args.userId, activeCharacterId: args.actorCharacterId }, domainId: args.domainId, capability: CAPABILITY[operation]!, resource: { type: 'Document', id: document.id, stage: transition.to }, transactionID })
+    }
+  }
   if (document.lifecycle !== transition.from) throw new Error(`This record is ${document.lifecycle}; it cannot be ${operation}.`)
   assertLifecycleTransition(document.lifecycle, transition.to)
   const typeId = relationId((document as { documentType?: unknown }).documentType)
   const typeRecord = typeId == null ? null : await payload.findByID({ collection: 'document-types', id: typeId, depth: 0, ...(req ? { req } : {}) }).catch(() => null) as Record<string, unknown> | null
   const priorFolderId = relationId((document as { folder?: unknown }).folder)
-  const routedFolderId = resolveLifecycleRouteFolder(typeRecord, transition.to, priorFolderId)
+  // P08X-T07: disabled stages block transitions through them, and the
+  // destination Folder comes from the destination stage's row when the Type
+  // has stage configuration (legacy route fields remain fallback only).
+  const stageRows = typeId == null ? null : await lifecycleStageRowsForType(payload, typeId, transactionID ?? undefined)
+  const hasStageConfig = stageRows != null && LIFECYCLE_STAGES.some((stage) => stageRows[stage] != null)
+  if (hasStageConfig) {
+    const destinationRow = stageRows![transition.to]
+    const sourceRow = stageRows![transition.from]
+    if (destinationRow == null || !stageEnabled(destinationRow)) throw new Error(`The ${LIFECYCLE_STAGE_LABELS[transition.to]} stage is not part of this Document Type's lifecycle.`)
+    if (sourceRow != null && !stageEnabled(sourceRow)) throw new Error(`The ${LIFECYCLE_STAGE_LABELS[transition.from]} stage is no longer part of this Document Type's lifecycle.`)
+  }
+  const stagedFolder = hasStageConfig ? stageFolderId(stageRows![transition.to]) : null
+  const routedFolderId = stagedFolder ?? resolveLifecycleRouteFolder(typeRecord, transition.to, priorFolderId)
   const folderChanged = routedFolderId != null && priorFolderId != null && routedFolderId !== priorFolderId
   // P08X-T06: leaving Draft ends the private-draft state — a Submitted/Filed
   // record is no longer a private DRAFT, so it becomes visible to the
