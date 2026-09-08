@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b1419"/>
+      <stop offset="1" stop-color="#142128"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="160" fill="url(#sky)"/>
+  <path d="M0 118 C 40 108, 70 122, 110 114 C 150 106, 190 120, 240 112 L 240 160 L 0 160 Z" fill="#0e1d23"/>
+  <path d="M0 130 C 50 122, 90 134, 140 126 C 180 120, 210 130, 240 126 L 240 160 L 0 160 Z" fill="#12252b"/>
+  <circle cx="196" cy="34" r="13" fill="#bce6d3" opacity="0.85"/>
+  <text x="20" y="42" font-family="Georgia, serif" font-size="21" fill="#edf2ef" font-style="italic">Obsidian</text>
+  <text x="20" y="60" font-family="Verdana, sans-serif" font-size="8" fill="#a7b7bc" letter-spacing="2">NIGHT HARBOUR</text>
+</svg>
