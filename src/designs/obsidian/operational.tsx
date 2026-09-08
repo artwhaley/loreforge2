@@ -6,17 +6,18 @@ import type { PeopleManagementPageModel, PersonManagementPageModel } from '@/lib
 import type { InvitationsManagementPageModel } from '@/lib/page-models/management/invitations'
 import type { DepartmentsManagementPageModel } from '@/lib/page-models/management/departments'
 import type { WorkDesignViewProps } from '@/lib/design/types'
+import { FolderManager } from '@/components/folders/FolderManager'
+import { DocumentTypesBrowser } from '@/components/documentTypes/DocumentTypesBrowser'
+import { RoleManager } from '@/components/roles/RoleManager'
+import { PeopleSearch } from '@/components/functional/people/PeopleSearch'
+import { ObsidianCharacterProfile } from './ObsidianCharacterProfile'
 
-import { DepartmentsBody, DocumentTypesBody, FoldersBody, InvitationsBody, MembersBody, PeopleBody, PersonBody, RolesBody, WorkBody } from '../shared/operational/bodies'
+import { DepartmentsBody, InvitationsBody, MembersBody, RolesBody, WorkBody } from '../shared/operational/bodies'
 
 /**
- * Obsidian operational entrypoints (OBSIDIAN-T11). The slot contract is
- * required for every Design, so Obsidian declares the full set from
- * registration; T17/T18 bind the bespoke Obsidian presentations
- * (ObsidianFolderManager/ObsidianDocumentTypes/ObsidianManagement). Until
- * then these delegate to the shared operational bodies — the same posture
- * Poster's compatibility renderers take, and Obsidian's status stays
- * 'compatibility' until T19's full conformance pass.
+ * Obsidian operational entrypoints. Presentation may reuse shared functional
+ * primitives, but every route resolves through this Design-owned slot map and
+ * every mutation remains behind the shared workspace/action boundary.
  */
 
 export function ObsidianWork(props: WorkDesignViewProps) {
@@ -32,23 +33,23 @@ export function ObsidianDepartments(props: DepartmentsManagementPageModel) {
 }
 
 export function ObsidianFolders(props: FolderManagementPageModel) {
-  return <FoldersBody {...props} />
+  return <section className="obsidian-management-surface"><p><a href={`/domain/${props.domainSlug}`}>← Domain home</a></p><h1>Folders</h1>{props.status ? <p role="alert">{props.status.message}</p> : null}<FolderManager model={props} /></section>
 }
 
 export function ObsidianRoles(props: RoleManagementPageModel) {
-  return <RolesBody {...props} />
+  return <section className="obsidian-management-surface"><p><a href={`/domain/${props.domainSlug}`}>← Domain home</a></p><h1>Roles</h1>{props.status ? <p role="alert">{props.status.message}</p> : null}<RoleManager model={props} /></section>
 }
 
 export function ObsidianDocumentTypes(props: DocumentTypesManagementPageModel) {
-  return <DocumentTypesBody {...props} />
+  return <section className="obsidian-management-surface"><p><a href={`/domain/${props.domainSlug}`}>← Domain home</a></p><h1>Document Types</h1>{props.status ? <p role="alert">{props.status.message}</p> : null}<DocumentTypesBrowser model={props} /></section>
 }
 
 export function ObsidianPeople(props: PeopleManagementPageModel) {
-  return <PeopleBody {...props} />
+  return <section className="obsidian-management-surface"><p><a href={`/domain/${props.domainSlug}`}>← Domain home</a></p><h1>People</h1>{props.status ? <p role="alert">{props.status.message}</p> : null}{props.canOpenPeople ? <PeopleSearch domainSlug={props.domainSlug} /> : <p>People management is not available to this identity.</p>}</section>
 }
 
 export function ObsidianPerson(props: PersonManagementPageModel) {
-  return <PersonBody {...props} />
+  return <ObsidianCharacterProfile model={props} />
 }
 
 export function ObsidianInvitations(props: InvitationsManagementPageModel) {
