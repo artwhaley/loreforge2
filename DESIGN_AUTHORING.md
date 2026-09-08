@@ -20,12 +20,22 @@ It owns:
 - Department composition;
 - About composition;
 - Lore composition;
+- Members directory composition (OBSIDIAN-T01);
+- Work composition (OBSIDIAN-T01);
+- Domain-local operational/management surfaces: Department management, Folder management, Role management, Document Type management, People search, the individual person/Character workspace, and Invitations (OBSIDIAN-T01);
 - its visual styles;
 - its configuration schema;
 - defaults;
 - config validation/migration;
 - its Site Studio editor;
 - its preview thumbnail.
+
+Operational surfaces are presentation-owned: LoreForge core owns the authorized
+semantic Page Models, capability derivation, mutation endpoints/server actions,
+and reusable interaction workspaces. A Design arranges those surfaces visually;
+it never queries Payload, reproduces permission evaluators, or builds a second
+state machine. (The operational slots are declared optionally at T01 and become
+required for first-class status at conformance — see §19.)
 
 It does **not** own:
 
@@ -607,23 +617,46 @@ If the model did not supply it, do not invent it.
 
 # 19. Management Pages
 
-Management/authoring pages are shared LoreForge application surfaces.
+Domain-local operational/management pages are **Design-owned presentation** over
+shared authorization-safe Page Models and workspaces (OBSIDIAN-T01, supersedes
+the old rule that they were shared generic surfaces).
 
-Your Shell wraps them.
-
-Your Design is **not** required to rewrite:
+A first-class Design owns a body for each of:
 
 ```text
-Role editor
-Folder manager
-Document Type editor
-Invitation workflow
-Work queue internals
+Work
+Members directory
+Department management
+Folder management
+Role management
+Document Type management
+People search
+person/Character workspace
+Invitations
 ```
 
-Your Shell must provide a content region where those shared application pages remain usable.
+Core owns semantics and behavior for all of these:
 
-Do not reach into their internals with fragile global selectors.
+- authorization-safe Page Model builders;
+- capability derivation (manage/assign/archive/restore flags);
+- guarded mutation endpoints and server actions;
+- shared interactive workspaces (`useFolderManagementWorkspace`,
+  `useRoleManagementWorkspace`, `useDocumentTypesManagementWorkspace`,
+  `usePeopleManagementWorkspace`), so two Designs never implement a second
+  search/selection/mutation state machine.
+
+Requiredness ladder (frozen): the operational slots are declared **optional** in
+`DesignDefinition` during contract remediation, become **required in the type**
+when every Design implements them, and are **enforced by the conformance gate**
+for first-class status. Poster may satisfy them through explicitly marked
+compatibility renderers without lowering the first-class standard.
+
+Genuinely shared editors remain shared: Templates, Forms, document
+create/edit/import flows, page editors, the review queue, and Site Studio render
+inside the selected Design's Shell via the design-aware `TenantShell`
+compatibility wrapper and stay usable under every Design.
+
+Do not reach into shared editor internals with fragile global selectors.
 
 ---
 

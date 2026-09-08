@@ -5,8 +5,16 @@ import type { LorePageModel } from '@/lib/page-models/info'
 import type { DepartmentsPageModel, DepartmentPageModel } from '@/lib/page-models/departments'
 import type { DocumentPageModel } from '@/lib/page-models/document'
 import type { HomePageModel } from '@/lib/page-models/home'
+import type { MembersPageModel } from '@/lib/page-models/members'
 import type { RecordsPageModel } from '@/lib/page-models/records'
 import type { DomainShellModel } from '@/lib/page-models/shell'
+import type { DepartmentsManagementPageModel } from '@/lib/page-models/management/departments'
+import type { DocumentTypesManagementPageModel } from '@/lib/page-models/management/documentTypes'
+import type { FolderManagementPageModel } from '@/lib/page-models/management/folders'
+import type { InvitationsManagementPageModel } from '@/lib/page-models/management/invitations'
+import type { PeopleManagementPageModel, PersonManagementPageModel } from '@/lib/page-models/management/people'
+import type { RoleManagementPageModel } from '@/lib/page-models/management/roles'
+import type { WorkPageModel } from '@/lib/page-models/management/work'
 import type {
   DesignStatus,
   DesignStudioEditorProps,
@@ -111,6 +119,24 @@ export type DesignDefinition<TConfig extends object = object> = {
     department: ComponentType<DepartmentPageModel & DesignVariantProps>
     about: ComponentType<AboutPageModel & DesignVariantProps>
     lore: ComponentType<LorePageModel & DesignVariantProps>
+    /**
+     * Operational slots (OBSIDIAN-T01). OPTIONAL until T08 flips them to
+     * required; see the frozen requiredness ladder in the patch spec §5.1.
+     * `work` is intentionally not nested under `management`: ordinary
+     * authorized approvers may use it without being Domain administrators.
+     * `members` is a public directory slot (patched packet, OBSIDIAN-T00).
+     */
+    work?: ComponentType<WorkPageModel & DesignVariantProps>
+    members?: ComponentType<MembersPageModel & DesignVariantProps>
+    management?: {
+      departments?: ComponentType<DepartmentsManagementPageModel & DesignVariantProps>
+      folders?: ComponentType<FolderManagementPageModel & DesignVariantProps>
+      roles?: ComponentType<RoleManagementPageModel & DesignVariantProps>
+      documentTypes?: ComponentType<DocumentTypesManagementPageModel & DesignVariantProps>
+      people?: ComponentType<PeopleManagementPageModel & DesignVariantProps>
+      person?: ComponentType<PersonManagementPageModel & DesignVariantProps>
+      invitations?: ComponentType<InvitationsManagementPageModel & DesignVariantProps>
+    }
   }
 
   /** Transitional legacy visual-axes block; replaced by `config` (T04+). */
