@@ -10,7 +10,7 @@ export function Navigation({
   active,
 }: {
   model: DomainShellModel;
-  active: string;
+  active?: string;
 }) {
   const [open, setOpen] = useState(false);
   const items = [

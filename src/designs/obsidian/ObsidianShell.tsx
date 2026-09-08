@@ -1,43 +1,28 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Settings2 } from "lucide-react";
-import type { DomainShellModel } from "@/lib/page-models/shell";
+import type { DesignShellProps } from "@/lib/design/types";
+import { OperatingContext } from "@/components/platform/OperatingContext";
 import { Navigation } from "./Navigation";
 import { ActionMenu } from "./controls";
 import {
-  OBSIDIAN_DEFAULTS,
   resolveObsidianTokens,
-  type ObsidianConfig,
 } from "./config";
+import type { ObsidianConfigV1 } from "@/lib/design/contracts";
 import s from "./obsidian.module.css";
 
 /** OperatingContext is a required slot; integration mounts the core component once. */
-export function ObsidianShell({
-  model,
-  active,
-  children,
-  operatingContext,
-  config = OBSIDIAN_DEFAULTS,
-}: {
-  model: DomainShellModel;
-  active: string;
-  children: ReactNode;
-  operatingContext: ReactNode;
-  config?: ObsidianConfig;
-}) {
+export function ObsidianShell({ model, theme, designConfig, children }: DesignShellProps<ObsidianConfigV1>) {
+  const designVars = resolveObsidianTokens(designConfig)
   return (
-    <div className={s.root} style={resolveObsidianTokens(config)}>
+    <div className={s.root} data-template="obsidian" style={{ ...theme.tokens, ...designVars }}>
       <a href="#main-content" className={s.skip}>
         Skip to content
       </a>
       <div className={s.contextBar}>
-        <Link href="/" className={s.platform}>
-          LOREFORGE <ArrowUpRight size={12} />
-        </Link>
-        {operatingContext}
+        <OperatingContext model={model} />
       </div>
       <div className={s.navPosition}>
-        <Navigation model={model} active={active} />
+        <Navigation model={model} />
       </div>
       <main id="main-content" tabIndex={-1}>
         {children}
