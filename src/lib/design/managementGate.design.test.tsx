@@ -17,6 +17,8 @@ import { civic } from '@/designs/civic'
 import { civicDefaults } from '@/designs/civic/config'
 import { ledger } from '@/designs/ledger'
 import { ledgerDefaults } from '@/designs/ledger/config'
+import { obsidian } from '@/designs/obsidian'
+import { obsidianDefaults } from '@/designs/obsidian/config'
 import { resolveDomainDesign } from './resolveDomainDesign'
 import type { DesignDefinition } from './types'
 import type { LegacyDomainAppearance } from './contracts'
@@ -42,7 +44,7 @@ const stubAction = async () => {}
 
 /**
  * OBSIDIAN-T09 management conformance gate. The same deterministic Page Model
- * fixtures render through Civic and Ledger's operational slots; capability
+ * fixtures render through each first-class Design's operational slots; capability
  * absence produces no actionable control; the required slot set is enforced
  * (T08 type-level + this gate). Poster stays out of first-class assertions —
  * its status is 'compatibility' (asserted in operationalSlots fixture).
@@ -51,6 +53,7 @@ describe('OBSIDIAN-T09 management conformance gate', () => {
   const pairs: Array<[Erased, object]> = [
     [civic as unknown as Erased, civicDefaults],
     [ledger as unknown as Erased, ledgerDefaults],
+    [obsidian as unknown as Erased, obsidianDefaults],
   ]
 
   it('Civic and Ledger render the same work model with the same actionable approve/reject surface', () => {
