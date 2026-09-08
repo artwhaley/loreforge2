@@ -2,7 +2,7 @@
 
 A midnight archive for LoreForge. Mineral green light, a floating navigation capsule, quiet translucent surfaces, Manrope typography, and Instrument Serif reading accents. Aster Reach is fictional fixture content; the art direction is the reusable deliverable.
 
-This is an isolated React prototype, **not a registered or production-ready LoreForge Design**. Scope agreed with the owner: Shell, Home, Records, one long Document treatment, desktop/mobile, keyboard navigation, reduced motion. No Studio, customization controls, persistence, or secondary page implementations in this pass.
+This is an isolated React prototype, **not a registered or production-ready LoreForge Design**. It now includes the public Shell, Home, About, Lore, Departments, Records, Document, Work, and management-page treatments, along with desktop/mobile, keyboard navigation, and reduced motion. Studio, saved customization controls, persistence, and final core adapters remain intentionally deferred.
 
 ## Preview
 
@@ -19,15 +19,20 @@ The local server uses port **3066**, separate from LoreForge's 3055.
 - Records: http://127.0.0.1:3066/domain/aster-reach/records
 - Long Document: http://127.0.0.1:3066/domain/aster-reach/documents/1
 - Earlier/superseded Document: http://127.0.0.1:3066/domain/aster-reach/documents/7
+- About: http://127.0.0.1:3066/domain/aster-reach/about
+- Lore index: http://127.0.0.1:3066/domain/aster-reach/lore
+- Lore article: http://127.0.0.1:3066/domain/aster-reach/lore/northwatch
+- Departments: http://127.0.0.1:3066/domain/aster-reach/departments
+- Management: http://127.0.0.1:3066/domain/aster-reach/manage/people
 - Empty Home: http://127.0.0.1:3066/domain/aster-reach?fixture=empty
 - Empty Records: http://127.0.0.1:3066/domain/aster-reach/records?fixture=empty
 - Visitor: http://127.0.0.1:3066/domain/aster-reach?fixture=visitor
 
-Search, type filtering, nested folder selection, subfolder inclusion, load-more, menus, mobile navigation, and Document/source tabs operate on deterministic local fixtures. The archive has 72 rows, long titles, draft/submitted/filed/deprecated/locked examples, and one predecessor/successor pair. Document pages reuse a representative long body to exercise different presentation states.
+Search, type filtering, nested folder selection, subfolder inclusion, pagination, menus, mobile navigation, and Document/source tabs operate on deterministic local fixtures. The archive has 72 rows, long titles, draft/submitted/filed/deprecated/locked examples, and one predecessor/successor pair. Document pages reuse a representative long body to exercise different presentation states.
 
 Records can switch between an atmospheric card grid and a dense ordered index. The index supports newest/oldest and title A–Z/Z–A ordering, with Title, prepared-by, date, lifecycle, and the required action menu in each row. Footer controls expose 6/12/24 cards or 25/50/100 rows per page. The typed defaults currently select 6 cards and 50 rows; these values are ready for later Site Studio configuration.
 
-New/Import/Edit/lifecycle/folder actions open clearly identified preview surfaces. Delete demonstrates confirmation without removing anything. About/Lore/Departments/Work/management/account routes explain their integration boundary when activated; they are not implemented pages. There is no database or authenticated session.
+New/Import/Edit/lifecycle/folder and management actions open clearly identified preview surfaces. Delete demonstrates confirmation without removing anything. About, Lore, Departments, Work, and management pages use deterministic fixture content only. There is no database or authenticated session.
 
 ## Structure
 

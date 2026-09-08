@@ -9,5 +9,17 @@ export type AboutPageModel = {
 
 export type LorePageModel = {
   baseUrl: string;
+  introduction: string;
   destinations: NavigationItem[];
+  entries: LoreEntry[];
+};
+
+export type LoreEntry = {
+  id: number;
+  title: string;
+  slug: string;
+  group: string;
+  summary: string;
+  updatedLabel: string;
+  bodyHtml: string;
 };

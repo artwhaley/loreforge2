@@ -11,6 +11,10 @@ import { ObsidianShell } from "../ObsidianShell";
 import { ObsidianHome } from "../ObsidianHome";
 import { ObsidianRecords } from "../ObsidianRecords";
 import { ObsidianDocument } from "../ObsidianDocument";
+import { ObsidianAbout } from "../ObsidianAbout";
+import { ObsidianLore } from "../ObsidianLore";
+import { ObsidianManagement } from "../ObsidianManagement";
+import { ObsidianDepartments } from "../ObsidianDepartments";
 import { DocumentActions } from "../DocumentActions";
 import { ActionMenu, Modal, type Action } from "../controls";
 import { OBSIDIAN_DEFAULTS } from "../config";
@@ -20,6 +24,10 @@ import {
   document as documentFixture,
   documentActions,
   home,
+  about,
+  lore,
+  departments,
+  management,
   shell,
 } from "./fixtures";
 import { useMockWorkspace } from "./useMockWorkspace";
@@ -88,11 +96,7 @@ function App() {
       const url = new URL(href, location.origin);
       if (url.origin !== location.origin) return;
       event.preventDefault();
-      if (
-        url.pathname === base ||
-        url.pathname === `${base}/records` ||
-        new RegExp(`^${base}/documents/\\d+$`).test(url.pathname)
-      )
+      if (url.pathname === base || url.pathname.startsWith(`${base}/`))
         navigate(href);
       else
         setDialog({
@@ -105,11 +109,23 @@ function App() {
     return () => window.removeEventListener("click", click);
   }, []);
   const isRecord = path === `${base}/records`,
+    isAbout = path === `${base}/about`,
+    isDepartments = path === `${base}/departments`,
+    loreMatch = path.match(new RegExp(`^${base}/lore(?:/([^/]+))?$`)),
+    isLore = Boolean(loreMatch),
+    managementMatch = path.match(
+      new RegExp(`^${base}/(?:manage/)?(people|roles|folders|departments|document-types|customize|work)$`),
+    ),
+    managementKey = managementMatch
+      ? managementMatch[1] === "document-types"
+        ? "types"
+        : managementMatch[1]
+      : null,
     match = path.match(/\/documents\/(\d+)$/),
     record = match
       ? archive.records.find((r) => r.id === Number(match[1]))
       : null;
-  const active = isRecord || match ? "records" : "";
+  const active = isRecord || match ? "records" : isAbout ? "about" : isLore ? "lore" : isDepartments ? "departments" : "";
   const currentDoc = record
     ? {
         ...documentFixture,
@@ -245,6 +261,28 @@ function App() {
                   />
                 )
               }
+            />
+          ) : isAbout ? (
+            <ObsidianAbout
+              model={visitor ? { ...about, editHref: null } : about}
+            />
+          ) : isLore ? (
+            <ObsidianLore
+              model={lore}
+              entry={
+                loreMatch?.[1]
+                  ? lore.entries.find((entry) => entry.slug === loreMatch[1])
+                  : undefined
+              }
+            />
+          ) : isDepartments ? (
+            <ObsidianDepartments
+              model={visitor ? { ...departments, manageHref: null } : departments}
+            />
+          ) : managementKey ? (
+            <ObsidianManagement
+              model={management[managementKey]}
+              onAction={(label) => setDialog({ key: "management", label })}
             />
           ) : (
             <ObsidianHome

@@ -8,8 +8,10 @@ The visual composition, scoped CSS, generated asset, icons, and most React marku
 
 - `ObsidianShell`: standalone Shell DOM with one required `operatingContext` slot, primary navigation, Work, management access, account/dashboard route, and children.
 - `ObsidianHome`: semantic welcome, destinations, recent records, edit affordance, and empty state.
+- `ObsidianAbout`, `ObsidianLore`, and `ObsidianDepartments`: public information surfaces. Lore consumes a flat entry collection with a group field, allowing a core adapter to support three or fifty entries without encoding the index layout.
 - `ObsidianRecords`: card and dense ordered-list workspace driven by `RecordsPageModel` plus a controlled `RecordsViewState` presentation adapter. No live search implementation inside the component. Cards place type and lifecycle together; the index supports date/title ordering and mode-specific page sizes.
 - `ObsidianDocument`: server-renderable content composition with `ReadingSurface` as a client tab island; actions are supplied as a React slot.
+- `ObsidianManagement`: a thin, generic management presentation driven by capability-filtered rows and supplied actions. It does not model authorization locally.
 - Radix controls and CSS Modules. No shared `ShellFrame`, route stylesheet, Civic/Ledger/Poster imports, or Payload/auth imports.
 
 “Ready to copy” means reusable visual source, not that the current entrypoint signatures are final. Copy the presentation into `src/designs/obsidian/`; do not merge the entire preview harness into production routes.
@@ -38,9 +40,9 @@ The current typography uses self-hosted Fontsource assets. Register those fonts 
 
 ### Records
 
-Map the actual `useRecordsWorkspace(model)` output to `RecordsViewState`: search, selection, expanded folders, subfolder scope, type exposure, results, load-more/loading, view, ordering, and page size. Seed view/page-size state from the validated Obsidian config. Use final shared record/folder/New/Import descriptors and server action bridges. Match disabled-versus-absent semantics to the final descriptors.
+Map the actual `useRecordsWorkspace(model)` output to `RecordsViewState`: search, selection, expanded folders, subfolder scope, type exposure, results, pagination/loading, view, ordering, and page size. Seed view/page-size state from the validated Obsidian config. Use final shared record/folder/New/Import descriptors and server action bridges. Match disabled-versus-absent semantics to the final descriptors.
 
-The first-pass mock has no asynchronous loading/error state. Add those displays when connecting real hook behavior, including fetch failure and loading-more. The current Page Model/workspace uses cursor load-more semantics, so the selected page size should define the requested/display batch rather than create a competing server pagination system. Verify initial and searched records expose identical permitted operations. Preserve authorized supersession trees/links and type-exposure folder count semantics. Do not infer permissions from lifecycle strings in Obsidian.
+The first-pass mock has no asynchronous loading/error state. Add those displays when connecting real hook behavior, including fetch failure and page transitions. Decide with P08D whether the final core route uses cursor batches or page navigation; keep the selected size as the requested/display batch and avoid a competing client pagination system. Verify initial and searched records expose identical permitted operations. Preserve authorized supersession trees/links and type-exposure folder count semantics. Do not infer permissions from lifecycle strings in Obsidian.
 
 ### Document
 
@@ -50,14 +52,14 @@ The long fixture body intentionally repeats across record examples; it is not pr
 
 ### Registration and remaining product work
 
-After the look is accepted and P08D passes its gate: implement the remaining Departments/Department/About/Lore views, bespoke Studio editor, validated branding configuration, thumbnail and conformance coverage. Register through the documented catalog/registry hooks only. Validate in Next with a production build, then perform required P08D conformance/security and saved-bank switching checks at integration time. No production Design registration is part of this first pass.
+After the look is accepted and P08D passes its gate: bind the public information and generic management surfaces to their final adapters, then implement a bespoke Studio editor, validated branding configuration, thumbnail and conformance coverage. Register through the documented catalog/registry hooks only. Validate in Next with a production build, then perform required P08D conformance/security and saved-bank switching checks at integration time. No production Design registration is part of this incubation pass.
 
 ## Focused verification performed
 
 - TypeScript check and Vite production build.
 - Desktop Home/Records/Document and mobile Home/Records/Document visual inspection.
 - Search returns matching Northwatch fixtures; type menu restricts results to Accord.
-- Load more increases displayed results from 6 to 12 of 36.
+- Card and dense-list page sizes reset the fixture pager and expose a bounded results page.
 - Empty Records renders its empty state; the visitor fixture omits New and management controls.
 - Radix Document/source tabs work with click and keyboard arrow navigation.
 - Mobile navigation contains all primary, Work and supplied management entries.

@@ -2,6 +2,9 @@ import type { DomainShellModel } from "../contracts/shell";
 import type { HomePageModel } from "../contracts/home";
 import type { RecordsPageModel } from "../contracts/records";
 import type { DocumentPageModel } from "../contracts/document";
+import type { AboutPageModel, LorePageModel } from "../contracts/info";
+import type { ManagementPageModel } from "../contracts/management";
+import type { DepartmentsPageModel } from "../contracts/departments";
 import type { Action } from "../controls";
 
 // TEMPORARY INCUBATION FIXTURES. No database, authentication or network behavior.
@@ -193,6 +196,178 @@ export const home: HomePageModel = {
       activity: "September 7, 2026",
     })),
 };
+
+export const about: AboutPageModel = {
+  baseUrl: base,
+  editHref: `${base}/pages/about/edit`,
+  destinations: shell.primaryNavigation.filter(
+    (item) => item.segment === "lore" || item.segment === "departments" || item.segment === "records",
+  ),
+  bodyHtml: `<p class="lead">Aster Reach begins after the voyage. It is a roleplaying community about the fragile work of building a life together in a place that still feels new.</p><p>Beyond the silver shoals, the Reach is a coast of stubborn settlements, shared harbors, unfinished maps, and people carrying histories they may not be ready to name. There is wonder here, but it is the wonder of ordinary things made meaningful: a lantern left burning, a council decision argued late into the night, a route across dangerous water known only to a few.</p><p>We make this world together. Every character arrives with a point of view; every relationship, trade, promise, and mistake gives the setting another edge. The lore is here to offer a common horizon. The stories are what we choose to do beneath it.</p>`,
+};
+
+export const lore: LorePageModel = {
+  baseUrl: base,
+  introduction:
+    "A growing field guide to the places, customs, and tensions that shape life at the edge of the known sea. Start anywhere; each entry is a door into the shared world.",
+  destinations: shell.primaryNavigation.filter((item) => item.segment !== ""),
+  entries: [
+    {
+      id: 1,
+      title: "The Reach at a glance",
+      slug: "the-reach",
+      group: "The coast",
+      summary: "The scattered settlements, the waters between them, and why no map of the Reach stays finished for long.",
+      updatedLabel: "A foundational entry",
+      bodyHtml: `<p class="lead">Aster Reach is not an empire, a kingdom, or a city. It is a collection of inhabited places that have learned they are safer when they can name one another across the water.</p><h2>At the edge of the chart</h2><p>The northern coast bends around a cold inner sea. Northwatch anchors the western shore; the eastern passage leads toward the old routes; farther out, the islands appear and disappear in weather that can turn a morning crossing into an expedition.</p><p>No authority governs the whole coast. The Reach holds together through exchange, custom, and the uneasy knowledge that isolation is more dangerous than compromise.</p><h2>What the sea remembers</h2><p>Every settlement keeps its own stories of arrival. Some speak of lost homelands. Others claim they were always here. The archive preserves both kinds of account without insisting they agree.</p>`,
+    },
+    {
+      id: 2,
+      title: "Northwatch",
+      slug: "northwatch",
+      group: "The coast",
+      summary: "A harbor settlement built around a working lighthouse, an open storehouse, and the habit of taking strangers seriously.",
+      updatedLabel: "Revised this season",
+      bodyHtml: `<p class="lead">Northwatch is the first light most travelers see when they reach the coast from the west.</p><h2>A place of arrivals</h2><p>The town grew around the old observatory and the harbor beneath it. Its docks are small, its weather unforgiving, and its residents practiced at making room before they know how long a visitor will stay.</p><p>The council chamber faces the water. The archive is kept two streets inland, where salt and storms do less harm to paper.</p>`,
+    },
+    {
+      id: 3,
+      title: "The outer islands",
+      slug: "outer-islands",
+      group: "The coast",
+      summary: "Remote communities, shifting routes, and the islanders who navigate by patterns mainlanders have not learned to see.",
+      updatedLabel: "Revised this season",
+      bodyHtml: `<p class="lead">The outer islands are less a chain than an argument with the sea.</p><h2>Routes that move</h2><p>Some islands have reliable harbors; some do not. Island pilots read current, bird flight, and the color of the water. Their knowledge is practical, local, and hard won.</p><p>Visitors are welcome when they remember that invitation is not entitlement. A marked route is a promise of effort, not safety.</p>`,
+    },
+    {
+      id: 4,
+      title: "The autumn assembly",
+      slug: "autumn-assembly",
+      group: "Civic life",
+      summary: "The yearly gathering where the coast takes stock, settles what it can, and makes room for what remains unresolved.",
+      updatedLabel: "A foundational entry",
+      bodyHtml: `<p class="lead">Once the worst summer weather has passed, representatives and residents gather at Northwatch for the autumn assembly.</p><h2>How decisions travel</h2><p>The assembly is not a parliament. It is a public meeting where agreements can be heard, challenged, and entered into the record. Some matters are settled by consensus, others by the authority each settlement recognizes in its own representatives.</p><p>Its real strength is continuity: people return to questions that would be easy to abandon after a single season.</p>`,
+    },
+    {
+      id: 5,
+      title: "Stewards and keepers",
+      slug: "stewards-and-keepers",
+      group: "Civic life",
+      summary: "The ordinary offices that keep shared places open, records legible, and responsibilities visible.",
+      updatedLabel: "Revised this season",
+      bodyHtml: `<p class="lead">In Aster Reach, a title should describe a responsibility before it describes a rank.</p><h2>Care as a public office</h2><p>A keeper tends a place. A steward accounts for what that place needs. An archivist preserves the trail of decisions that explains why the work is done.</p><p>These roles are often held by people with other trades. Their authority is narrow on purpose and recorded so that it can be questioned with care.</p>`,
+    },
+    {
+      id: 6,
+      title: "Trade and passage",
+      slug: "trade-and-passage",
+      group: "Daily life",
+      summary: "What moves along the coast, who carries it, and the practical ethics of asking safe passage from a neighbor.",
+      updatedLabel: "Revised this season",
+      bodyHtml: `<p class="lead">Trade in the Reach depends as much on trust as on cargo.</p><h2>What travels</h2><p>Salt fish, lamp oil, maps, timber, repaired tools, letters, and stories all pass through the harbors. A crew can pay its way in labor when coin is scarce, but no vessel leaves a port without someone knowing where it intended to go.</p><p>Passage is common, never casual. Weather and obligation travel with every request.</p>`,
+    },
+  ],
+};
+
+const managementRows = {
+  people: [
+    ["Elara Voss", "Archivist · Northwatch", "Active"],
+    ["Cael Ren", "Surveyor · Outer islands", "Active"],
+    ["Mira Sol", "Council clerk · Northwatch", "Active"],
+    ["Sera Vale", "Harbor keeper · Eastern passage", "Away"],
+  ],
+  roles: [
+    ["Archivist", "Can maintain records and archive settings", "4 members"],
+    ["Council representative", "Can file and approve assembly records", "7 members"],
+    ["Contributor", "Can prepare drafts and submit records", "28 members"],
+  ],
+  folders: [
+    ["Foundations", "18 records · includes Earlier agreements", "Visible"],
+    ["The council", "24 records", "Visible"],
+    ["Expeditions", "12 records", "Visible"],
+    ["People & places", "18 records", "Visible"],
+  ],
+  departments: [
+    ["Northwatch Council", "7 members · civic office", "Active"],
+    ["Harbor office", "3 members · passage and mooring", "Active"],
+    ["Survey corps", "5 members · maps and field work", "Active"],
+  ],
+  types: [
+    ["Accord", "Formal shared agreement", "18 records"],
+    ["Field report", "Observation or expedition account", "21 records"],
+    ["Council minutes", "Assembly and council proceedings", "17 records"],
+    ["Charter", "Standing responsibility or custom", "16 records"],
+  ],
+  customize: [
+    ["Domain identity", "Name, motto, and emblem", "Configured"],
+    ["Navigation", "Public destinations and order", "Configured"],
+    ["Atmosphere", "Background image and visual tone", "Configured"],
+  ],
+  work: [
+    ["Minutes of the autumn assembly", "Submitted by Mira Sol", "Needs review"],
+    ["The return of the Wayfarer", "Draft by Cael Ren", "Draft"],
+    ["Outer-island mooring guidance", "A proposed charter", "Needs review"],
+  ],
+} as const;
+
+export const management: Record<string, ManagementPageModel> = {
+  people: createManagement("People", "DOMAIN MEMBERS", "The people who can participate in this domain.", "Invite person", "Search people", managementRows.people),
+  roles: createManagement("Roles", "ACCESS AND RESPONSIBILITY", "Define what people can do and where they can do it.", "Create role", "Search roles", managementRows.roles),
+  folders: createManagement("Folders", "RECORDS ORGANIZATION", "Collections that give the archive a durable shape.", "New folder", "Search folders", managementRows.folders),
+  departments: createManagement("Departments", "DOMAIN ORGANIZATION", "Groups, offices, and shared work within Aster Reach.", "New department", "Search departments", managementRows.departments),
+  types: createManagement("Document types", "RECORDS ORGANIZATION", "The templates and vocabulary used to classify records.", "New document type", "Search document types", managementRows.types),
+  customize: createManagement("Customize", "DOMAIN APPEARANCE", "Domain settings that shape the public face of Aster Reach.", "Edit settings", "Search settings", managementRows.customize),
+  work: createManagement("Your work", "CURRENT DOMAIN", "Drafts and decisions that need your attention.", "New document", "Search your work", managementRows.work),
+};
+
+export const departments: DepartmentsPageModel = {
+  baseUrl: base,
+  domainSlug: "aster-reach",
+  domainName: "Aster Reach",
+  manageHref: `${base}/manage/departments`,
+  vocabulary: { subdomainSingular: "Department", subdomainPlural: "Departments" },
+  departments: managementRows.departments.map(([name, description], index) => ({
+    id: index + 1,
+    name,
+    slug: name.toLowerCase().replaceAll(" ", "-"),
+    description,
+    memberCount: [7, 3, 5][index],
+  })),
+};
+
+function createManagement(
+  title: string,
+  eyebrow: string,
+  description: string,
+  createLabel: string,
+  searchPlaceholder: string,
+  rows: readonly (readonly [string, string, string])[],
+): ManagementPageModel {
+  return {
+    baseUrl: base,
+    title,
+    eyebrow,
+    description,
+    createLabel,
+    searchPlaceholder,
+    columns: [
+      {
+        People: "Person",
+        Customize: "Setting",
+        "Your work": "Item",
+      }[title] ?? title.slice(0, -1),
+      "Details",
+      "Status",
+    ],
+    rows: rows.map(([primary, secondary, status], index) => ({
+      id: index + 1,
+      primary,
+      secondary,
+      status,
+    })),
+    emptyLabel: `No ${title.toLowerCase()} match that search.`,
+  };
+}
 const sections = [
   {
     title: "01. A common shore",

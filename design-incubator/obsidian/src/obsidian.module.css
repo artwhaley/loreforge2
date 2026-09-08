@@ -2677,3 +2677,540 @@
     transform: none !important;
   }
 }
+
+/* Public information pages */
+.publicPage {
+  max-width: var(--obsidian-max);
+  margin: auto;
+  padding: 163px var(--obsidian-gutter) 92px;
+}
+.aboutHero,
+.directoryHeading {
+  max-width: 820px;
+  padding: 38px 0 86px;
+}
+.aboutHero .eyebrow {
+  margin-bottom: 26px;
+}
+.aboutHero h1,
+.directoryHeading h1,
+.loreOverview h1,
+.loreArticle h1 {
+  font-size: clamp(56px, 7.2vw, 98px);
+  font-weight: 400;
+  line-height: 0.95;
+}
+.aboutHero h1 em,
+.directoryHeading h1 em,
+.loreOverview h1 em {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-weight: 400;
+  color: #b9d9cf;
+}
+.aboutHero > p:last-child,
+.directoryHeading > p:last-child {
+  max-width: 590px;
+  margin-top: 31px;
+  color: #aebfc1;
+  font-size: 18px;
+  line-height: 1.75;
+}
+.aboutStatement {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.62fr) minmax(0, 1.38fr);
+  gap: clamp(42px, 11vw, 180px);
+  padding: 48px 0 84px;
+  border-top: 1px solid #a7bdc126;
+  border-bottom: 1px solid #a7bdc126;
+}
+.aboutMark {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 17px;
+  color: #b8d9cf;
+}
+.aboutMark span {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: #80999d;
+}
+.aboutCopy {
+  max-width: 640px;
+  color: #b5c4c6;
+  font-size: 17px;
+  line-height: 1.9;
+}
+.aboutCopy p + p {
+  margin-top: 22px;
+}
+.aboutCopy .lead,
+.loreArticle .lead {
+  color: #dbe6e4;
+  font-size: 22px;
+  line-height: 1.65;
+}
+.aboutCopy .quietLink {
+  margin-top: 26px;
+}
+.aboutDestinations {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid #a7bdc126;
+}
+.aboutDestinations a {
+  min-height: 122px;
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 26px 22px;
+  border-left: 1px solid #a7bdc126;
+}
+.aboutDestinations a:first-child {
+  border-left: 0;
+  padding-left: 0;
+}
+.aboutDestinations a:last-child {
+  padding-right: 0;
+}
+.aboutDestinations a:hover {
+  background: linear-gradient(0deg, #bce6d310, transparent);
+}
+.aboutDestinations span {
+  color: #759197;
+  font-size: 12px;
+}
+.aboutDestinations strong {
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+.aboutDestinations svg {
+  color: #a7cfc3;
+}
+
+/* Lore index and reading surface */
+.lorePage {
+  max-width: var(--obsidian-max);
+  margin: auto;
+  padding: 153px var(--obsidian-gutter) 92px;
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr);
+  gap: clamp(42px, 7vw, 116px);
+}
+.loreIndex {
+  align-self: start;
+  position: sticky;
+  top: 28px;
+  padding: 20px 0 27px;
+  border-top: 1px solid #9fb7bf2b;
+  border-bottom: 1px solid #9fb7bf1e;
+}
+.loreIndexHeading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #a6c7bf;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+}
+.loreSearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 19px 0 18px;
+  padding: 8px 0;
+  border-bottom: 1px solid #9fb7bf25;
+  color: #829ca3;
+}
+.loreSearch input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: #d8e8e5;
+  outline: 0;
+  font-size: 13px;
+}
+.loreSearch input::placeholder {
+  color: #79949b;
+}
+.loreSearch button {
+  display: grid;
+  place-items: center;
+  padding: 3px;
+}
+.loreNav > a,
+.loreGroup a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  margin-left: -10px;
+  border-radius: 5px;
+  color: #a8bdc0;
+  font-size: 13px;
+}
+.loreNav a:hover,
+.loreNav a[aria-current="page"] {
+  color: #d7eee4;
+  background: #bce6d310;
+}
+.loreNav a[aria-current="page"] {
+  box-shadow: inset 2px 0 #bce6d3;
+}
+.loreNav small {
+  color: #6f8d94;
+  font-size: 11px;
+}
+.loreGroup {
+  margin-top: 18px;
+}
+.loreGroup > p {
+  margin-bottom: 5px;
+  color: #718a91;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.loreGroup a {
+  justify-content: flex-start;
+  padding-left: 10px;
+}
+.loreEmpty {
+  margin-top: 20px;
+  color: #829ba0;
+  font-size: 13px;
+}
+.loreOverview {
+  max-width: 910px;
+  padding-top: 30px;
+}
+.loreOverview > .eyebrow,
+.loreArticle > .eyebrow {
+  margin-bottom: 23px;
+}
+.loreIntroduction {
+  max-width: 670px;
+  margin-top: 28px !important;
+  color: #adbec1;
+  font-size: 18px;
+  line-height: 1.8;
+}
+.loreShelf {
+  margin-top: 77px;
+}
+.loreShelf > section + section {
+  margin-top: 64px;
+}
+.shelfHeading {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #9fb7bf22;
+}
+.shelfHeading > span {
+  color: #6e8b90;
+  font-size: 12px;
+}
+.shelfHeading h2 {
+  font-size: 27px;
+  font-weight: 400;
+}
+.shelfHeading small {
+  margin-left: auto;
+  color: #80999f;
+  font-size: 12px;
+}
+.loreCards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+  padding-top: 14px;
+}
+.loreCards a {
+  min-height: 215px;
+  display: flex;
+  flex-direction: column;
+  padding: 23px;
+  border: 1px solid #9fb7bf24;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #1a2a3088, #14212838);
+}
+.loreCards a:hover {
+  border-color: #bce6d35f;
+  background: linear-gradient(135deg, #223a3e99, #142a2c50);
+  transform: translateY(-3px);
+}
+.loreCards > a > span {
+  color: #88a49e;
+  font-size: 11px;
+  letter-spacing: 0.07em;
+}
+.loreCards h3 {
+  margin: 22px 0 11px;
+  font-size: 23px;
+  font-weight: 400;
+}
+.loreCards p {
+  color: #91a9ae;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.loreCards svg {
+  margin-top: auto;
+  align-self: flex-end;
+  color: #b5d8cd;
+}
+.loreArticle {
+  max-width: 710px;
+  padding-top: 30px;
+  color: #b8c7c9;
+  font-size: 17px;
+  line-height: 1.88;
+}
+.loreArticle h1 {
+  font-size: clamp(50px, 5.8vw, 82px);
+  color: #ecf3f0;
+}
+.loreArticleMeta {
+  margin: 19px 0 50px !important;
+  color: #829da1;
+  font-size: 13px;
+}
+.loreArticle h2 {
+  margin: 47px 0 13px;
+  color: #dce8e5;
+  font-size: 30px;
+  font-weight: 400;
+}
+.loreArticle p + p {
+  margin-top: 20px;
+}
+
+/* Directory and management */
+.directoryHeading {
+  padding-bottom: 60px;
+}
+.departmentGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+  padding: 0 0 27px;
+}
+.departmentCard {
+  min-height: 284px;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  border: 1px solid #9fb7bf24;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #18282e, #122127);
+}
+.departmentCard:hover {
+  border-color: #bce6d366;
+  background: linear-gradient(135deg, #213a3d, #14282c);
+  transform: translateY(-4px);
+}
+.departmentIcon {
+  color: #b9d8d0;
+}
+.departmentCardTop {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 31px;
+  color: #82a19f;
+  font-size: 12px;
+}
+.departmentCardTop svg {
+  color: #b7dcd0;
+}
+.departmentCard strong {
+  margin-top: 13px;
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: -0.04em;
+}
+.departmentCard p {
+  margin-top: 10px;
+  color: #91a9ae;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.departmentFoot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 20px;
+  color: #a9c3bd;
+  font-size: 12px;
+}
+.publicPage > .quietLink {
+  margin-top: 8px;
+}
+.managementSurface {
+  overflow: hidden;
+  border: 1px solid #9fb7bf26;
+  border-radius: 14px;
+  background: linear-gradient(130deg, #132128d9, #111d23c9);
+}
+.managementToolbar {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #9fb7bf1f;
+}
+.managementToolbar .search {
+  padding: 4px 0;
+}
+.managementTable {
+  min-width: 680px;
+}
+.managementHead,
+.managementRow {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.2fr) minmax(230px, 1.5fr) minmax(100px, 0.65fr) 35px;
+  align-items: center;
+  gap: 14px;
+  padding: 0 18px;
+}
+.managementHead {
+  min-height: 44px;
+  color: #769298;
+  border-bottom: 1px solid #9fb7bf18;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.managementRow {
+  min-height: 66px;
+  border-bottom: 1px solid #9fb7bf16;
+  color: #9fb5ba;
+  font-size: 13px;
+}
+.managementRow:last-child {
+  border-bottom: 0;
+}
+.managementRow:hover {
+  background: #bce6d307;
+}
+.managementRow strong {
+  color: #d5e2e1;
+  font-size: 14px;
+  font-weight: 500;
+}
+.managementStatus {
+  color: #a9d3c4;
+}
+.managementRow .menuTrigger {
+  color: #a4bdc1;
+}
+.managementEmpty {
+  padding: 31px 18px;
+  color: #91a8ad;
+}
+
+@media (max-width: 900px) {
+  .lorePage {
+    grid-template-columns: 210px minmax(0, 1fr);
+    gap: 45px;
+  }
+  .departmentGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 680px) {
+  .publicPage,
+  .lorePage {
+    padding: 125px 22px 58px;
+  }
+  .aboutHero,
+  .directoryHeading {
+    padding: 24px 0 57px;
+  }
+  .aboutHero h1,
+  .directoryHeading h1,
+  .loreOverview h1 {
+    font-size: clamp(52px, 17vw, 76px);
+  }
+  .aboutHero > p:last-child,
+  .directoryHeading > p:last-child,
+  .loreIntroduction {
+    font-size: 16px;
+  }
+  .aboutStatement {
+    grid-template-columns: 1fr;
+    gap: 34px;
+    padding: 33px 0 54px;
+  }
+  .aboutCopy {
+    font-size: 16px;
+  }
+  .aboutCopy .lead,
+  .loreArticle .lead {
+    font-size: 19px;
+  }
+  .aboutDestinations {
+    grid-template-columns: 1fr;
+  }
+  .aboutDestinations a,
+  .aboutDestinations a:first-child,
+  .aboutDestinations a:last-child {
+    min-height: 76px;
+    padding: 17px 0;
+    border-left: 0;
+    border-top: 1px solid #a7bdc126;
+  }
+  .aboutDestinations a:first-child {
+    border-top: 0;
+  }
+  .lorePage {
+    display: block;
+  }
+  .loreIndex {
+    position: static;
+    margin-bottom: 42px;
+  }
+  .loreNav {
+    max-height: 280px;
+    overflow: auto;
+  }
+  .loreOverview,
+  .loreArticle {
+    padding-top: 0;
+  }
+  .loreShelf {
+    margin-top: 48px;
+  }
+  .loreCards {
+    grid-template-columns: 1fr;
+  }
+  .loreCards a {
+    min-height: 185px;
+  }
+  .loreArticle {
+    font-size: 16px;
+  }
+  .loreArticle h1 {
+    font-size: clamp(48px, 15vw, 68px);
+  }
+  .departmentGrid {
+    grid-template-columns: 1fr;
+  }
+  .departmentCard {
+    min-height: 230px;
+  }
+  .managementSurface {
+    overflow-x: auto;
+  }
+  .managementToolbar {
+    min-width: 500px;
+  }
+}
