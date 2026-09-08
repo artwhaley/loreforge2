@@ -3,7 +3,7 @@
 import { createContext, useContext, useMemo, useRef, useState } from 'react'
 import { Tree, type CursorProps, type NodeApi, type NodeRendererProps, type TreeApi } from 'react-arborist'
 
-import type { AdminFolderNode } from './FolderManager'
+import type { FolderManagementNode as AdminFolderNode } from '@/lib/page-models/management/folders'
 
 import styles from './FolderManager.module.scss'
 
