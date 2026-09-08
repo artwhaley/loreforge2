@@ -12,6 +12,9 @@ The visual composition, scoped CSS, generated asset, icons, and most React marku
 - `ObsidianRecords`: card and dense ordered-list workspace driven by `RecordsPageModel` plus a controlled `RecordsViewState` presentation adapter. No live search implementation inside the component. Cards place type and lifecycle together; the index supports date/title ordering and mode-specific page sizes.
 - `ObsidianDocument`: server-renderable content composition with `ReadingSurface` as a client tab island; actions are supplied as a React slot.
 - `ObsidianManagement`: a thin, generic management presentation driven by capability-filtered rows and supplied actions. It does not model authorization locally.
+- `ObsidianFolderManager`: an Arborist-powered hierarchy adapter for the existing Folder-management route. Search, sort, selection, drag/drop, rename, and action descriptors must bind to the existing authorized server actions.
+- `ObsidianDocumentTypes`: an Arborist-powered Department/type-folder/Document-Type tree with the selected Type inspector. The P08X core already exposes this exact semantic distinction; bind its resolved tree and inspector descriptors instead of rematerializing it in the Design.
+- `ObsidianDepartmentDetail`: department tabs plus a lazy Syncfusion organization chart. The chart needs a supplied organization relationship model; it must not infer reports-to edges from membership.
 - Radix controls and CSS Modules. No shared `ShellFrame`, route stylesheet, Civic/Ledger/Poster imports, or Payload/auth imports.
 
 “Ready to copy” means reusable visual source, not that the current entrypoint signatures are final. Copy the presentation into `src/designs/obsidian/`; do not merge the entire preview harness into production routes.
@@ -35,6 +38,8 @@ Discard or replace:
 Bind final `DesignShellProps<ObsidianConfig>` and page config props after P08D. Mount the real core `OperatingContext` exactly once in the Shell slot. Keep all supplied nav entries. Exercise one real shared management page inside the content region.
 
 Expand the current developer defaults into the final Design config object only after visual approval: `version`, `defaults`, strict `validate`, `migrate`, `resolveTheme`. Provide the ten required `--tenant-*` base tokens alongside Obsidian tokens. Colors must be supported strict formats, dimensions finite/bounded, object shapes exact, and persisted media `/media/...` only. No raw CSS or arbitrary remote URLs. No need for legacy adaptation for a new Design.
+
+P08D-T05 already provides the shared `SiteStudio` host, per-Design validated config banks, Design-owned editor slot, live preview, save/revert/reset flow, and asset-upload bridge. The isolated Vite preview cannot use that machinery faithfully because it has no Design registry, resolver, server actions, or persistence. Register Obsidian after visual approval and supply its own Studio editor then. About and Lore body editing are core content concerns, not Design config; retain or add their content-editor routes separately rather than storing community text in the Design bank.
 
 The current typography uses self-hosted Fontsource assets. Register those fonts through the completed catalog/utilities or retain a Design-scoped font dependency; do not silently reinterpret an existing font key.
 

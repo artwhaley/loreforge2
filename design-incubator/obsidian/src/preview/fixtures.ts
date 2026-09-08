@@ -5,6 +5,9 @@ import type { DocumentPageModel } from "../contracts/document";
 import type { AboutPageModel, LorePageModel } from "../contracts/info";
 import type { ManagementPageModel } from "../contracts/management";
 import type { DepartmentsPageModel } from "../contracts/departments";
+import type { ManagedFolderNode } from "../ObsidianFolderManager";
+import type { DocumentTypeTreeNode } from "../ObsidianDocumentTypes";
+import type { DepartmentDetailModel } from "../ObsidianDepartmentDetail";
 import type { Action } from "../controls";
 
 // TEMPORARY INCUBATION FIXTURES. No database, authentication or network behavior.
@@ -333,6 +336,144 @@ export const departments: DepartmentsPageModel = {
     description,
     memberCount: [7, 3, 5][index],
   })),
+};
+
+export const folderTree: ManagedFolderNode[] = [
+  {
+    id: "foundation",
+    name: "Foundations",
+    createdLabel: "Apr 14, 2026",
+    children: [
+      { id: "agreements", name: "Earlier agreements", createdLabel: "May 2, 2026", children: [] },
+      { id: "charters", name: "Charters", createdLabel: "Apr 29, 2026", children: [] },
+    ],
+  },
+  {
+    id: "council",
+    name: "The council",
+    createdLabel: "May 18, 2026",
+    systemManaged: true,
+    children: [
+      { id: "assemblies", name: "Assemblies", createdLabel: "Jun 1, 2026", children: [] },
+      { id: "appointments", name: "Appointments", createdLabel: "Jun 4, 2026", children: [] },
+    ],
+  },
+  {
+    id: "expeditions",
+    name: "Expeditions",
+    createdLabel: "Jul 7, 2026",
+    children: [
+      { id: "islands", name: "Outer islands", createdLabel: "Jul 11, 2026", children: [] },
+      { id: "soundings", name: "Soundings", createdLabel: "Aug 3, 2026", children: [] },
+    ],
+  },
+  { id: "people-places", name: "People & places", createdLabel: "Aug 20, 2026", children: [] },
+];
+
+export const documentTypeTree: DocumentTypeTreeNode[] = [
+  {
+    id: "dept-council",
+    kind: "department",
+    name: "Northwatch Council",
+    children: [
+      {
+        id: "type-council-minutes",
+        kind: "type",
+        name: "Council minutes",
+        template: "Markdown",
+        templateName: "Assembly minutes",
+        description: "Formal proceedings from a council or assembly meeting.",
+        children: [],
+      },
+      {
+        id: "folder-civic",
+        kind: "folder",
+        name: "Civic instruments",
+        children: [
+          {
+            id: "type-accord",
+            kind: "type",
+            name: "Accord",
+            template: "Markdown",
+            templateName: "Common agreement",
+            description: "A shared agreement with a filed, reviewable record.",
+            children: [],
+          },
+          {
+            id: "type-charter",
+            kind: "type",
+            name: "Charter",
+            template: "Blank",
+            templateName: undefined,
+            description: "A standing responsibility, custom, or office.",
+            children: [],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "dept-survey",
+    kind: "department",
+    name: "Survey Corps",
+    children: [
+      {
+        id: "type-field-report",
+        kind: "type",
+        name: "Field report",
+        template: "Form",
+        templateName: "Expedition report",
+        description: "A structured observation or account from the field.",
+        children: [],
+      },
+    ],
+  },
+  {
+    id: "unassigned",
+    kind: "unassigned",
+    name: "Unassigned",
+    children: [
+      {
+        id: "type-plain-text",
+        kind: "type",
+        name: "Plain Text",
+        template: "Blank",
+        templateName: undefined,
+        description: "A simple inheritable note for records without a specialized type.",
+        children: [],
+      },
+    ],
+  },
+];
+
+export const departmentDetails: Record<string, DepartmentDetailModel> = {
+  "northwatch-council": {
+    department: departments.departments[0],
+    members: [
+      { id: "elara", parentId: null, name: "Elara Voss", role: "Archivist", detail: "Records and common memory" },
+      { id: "mira", parentId: "elara", name: "Mira Sol", role: "Council clerk", detail: "Proceedings and appointments" },
+      { id: "orren", parentId: "elara", name: "Orren Pike", role: "Assembly steward", detail: "Public sessions" },
+      { id: "lyra", parentId: "orren", name: "Lyra Fen", role: "Minute keeper", detail: "Assembly records" },
+      { id: "kest", parentId: "orren", name: "Kest Marrow", role: "Petitions officer", detail: "Public requests" },
+    ],
+  },
+  "harbor-office": {
+    department: departments.departments[1],
+    members: [
+      { id: "sera", parentId: null, name: "Sera Vale", role: "Harbor keeper", detail: "Mooring and passage" },
+      { id: "niko", parentId: "sera", name: "Niko Ardent", role: "Dockmaster", detail: "Berths and cargo" },
+      { id: "vela", parentId: "sera", name: "Vela Ohn", role: "Signal keeper", detail: "Weather and lights" },
+    ],
+  },
+  "survey-corps": {
+    department: departments.departments[2],
+    members: [
+      { id: "cael", parentId: null, name: "Cael Ren", role: "Lead surveyor", detail: "Outer-island expeditions" },
+      { id: "imani", parentId: "cael", name: "Imani Dorr", role: "Cartographer", detail: "Charts and revisions" },
+      { id: "tomas", parentId: "cael", name: "Tomas Rill", role: "Field naturalist", detail: "Coastal observations" },
+      { id: "wen", parentId: "cael", name: "Wen Hara", role: "Quartermaster", detail: "Equipment and supplies" },
+    ],
+  },
 };
 
 function createManagement(

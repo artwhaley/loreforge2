@@ -24,6 +24,9 @@ The local server uses port **3066**, separate from LoreForge's 3055.
 - Lore article: http://127.0.0.1:3066/domain/aster-reach/lore/northwatch
 - Departments: http://127.0.0.1:3066/domain/aster-reach/departments
 - Management: http://127.0.0.1:3066/domain/aster-reach/manage/people
+- Folder manager: http://127.0.0.1:3066/domain/aster-reach/manage/folders
+- Document Types: http://127.0.0.1:3066/domain/aster-reach/document-types
+- Department chart: http://127.0.0.1:3066/domain/aster-reach/departments/northwatch-council
 - Empty Home: http://127.0.0.1:3066/domain/aster-reach?fixture=empty
 - Empty Records: http://127.0.0.1:3066/domain/aster-reach/records?fixture=empty
 - Visitor: http://127.0.0.1:3066/domain/aster-reach?fixture=visitor
@@ -55,9 +58,11 @@ Resolved versions are locked in `package-lock.json`. Package metadata checked lo
 | Lucide React | 0.577.0 | ISC | Consistent icons; retain |
 | Manrope via Fontsource | 5.3.0 | OFL-1.1 | Self-hosted UI font; register via LoreForge font facilities on integration |
 | Instrument Serif via Fontsource | 5.3.0 | OFL-1.1 | Self-hosted display/reading accent; same integration requirement |
+| React Arborist | 3.16.0 | MIT | Accessible virtualized folder and Document Type management trees; already used in LoreForge core |
+| Syncfusion React Diagram | 34.2.7 | Syncfusion Community / commercial | Department organization-chart layout; lazy-loaded only on Department detail pages |
 | Vite / TypeScript | lockfile | MIT / Apache-2.0 | Incubator tooling only; do not add to LoreForge |
 
-Radix, Motion and Lucide declare React 19 support. The isolated TypeScript/Vite production build succeeds with React 19.2.4; this is not a claim that final Next/RSC integration is tested. No Syncfusion dependency was needed for these surfaces.
+Radix, Motion and Lucide declare React 19 support. The isolated TypeScript/Vite production build succeeds with React 19.2.4; this is not a claim that final Next/RSC integration is tested. The Syncfusion chart is loaded only for the public Department detail route, keeping it out of the default shell bundle.
 
 Radix behavior reference: https://www.radix-ui.com/primitives/docs/components
 Motion accessibility reference: https://motion.dev/docs/react-accessibility

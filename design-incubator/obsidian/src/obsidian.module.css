@@ -2196,6 +2196,379 @@
     padding: 45px 12px;
   }
 }
+
+/* Management trees: react-arborist owns keyboard navigation, selection, and drag affordances. */
+.treeManager,
+.typeBrowser {
+  overflow: hidden;
+  border: 1px solid #9fb7bf26;
+  border-radius: 15px;
+  background: linear-gradient(130deg, #132128d9, #111d23c9);
+}
+.treeToolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #9fb7bf1f;
+}
+.treeToolbar .search {
+  flex: 1;
+  padding: 4px 0;
+}
+.treeCanvas {
+  min-width: 560px;
+  padding: 12px 8px;
+}
+.arboristRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 11px 0 4px;
+  border-radius: 6px;
+  color: #a7bdc0;
+  font-size: 13px;
+  cursor: pointer;
+}
+.arboristRow:hover {
+  background: #bce6d309;
+}
+.arboristSelected {
+  color: #d9eee6;
+  background: #bce6d312 !important;
+  box-shadow: inset 2px 0 #bce6d3;
+}
+.treeChevron {
+  display: grid;
+  width: 18px;
+  height: 22px;
+  flex: 0 0 18px;
+  place-items: center;
+  color: #8aa3a8;
+}
+.treeChevron svg {
+  transition: transform 0.16s;
+}
+.treeOpen .treeChevron svg {
+  transform: rotate(90deg);
+}
+.treeFolderIcon,
+.typeIcon {
+  flex: 0 0 auto;
+  color: #9dc4b9;
+}
+.typeIcon {
+  color: #b6d9ce;
+}
+.treeName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.treeDate,
+.systemTag,
+.rootTag,
+.templateChip,
+.templateName {
+  flex: 0 0 auto;
+  font-size: 11px;
+}
+.treeDate {
+  margin-left: auto;
+  color: #78969d;
+}
+.systemTag,
+.rootTag {
+  border: 1px solid #9fc0ba32;
+  border-radius: 999px;
+  padding: 2px 7px;
+  color: #94b7ad;
+}
+.treeRename {
+  min-width: 160px;
+  flex: 1;
+  border: 1px solid #bce6d35c;
+  border-radius: 5px;
+  padding: 4px 7px;
+  background: #081216;
+  color: #e2efeb;
+  outline: 0;
+}
+.treeFooter,
+.typeTreeFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 58px;
+  padding: 10px 17px;
+  border-top: 1px solid #9fb7bf1f;
+  color: #829ea4;
+  font-size: 12px;
+}
+.typeSubnav {
+  display: flex;
+  gap: 20px;
+  margin: -11px 0 25px;
+  border-bottom: 1px solid #9fb7bf1f;
+}
+.typeSubnav a {
+  padding: 8px 1px 13px;
+  color: #8da5aa;
+  font-size: 13px;
+}
+.typeSubnav a[aria-current="page"] {
+  color: #d7eee5;
+  box-shadow: inset 0 -2px #bce6d3;
+}
+.typeBrowser {
+  display: grid;
+  grid-template-columns: minmax(440px, 1.3fr) minmax(280px, 0.7fr);
+}
+.typeTreePane {
+  min-width: 0;
+  border-right: 1px solid #9fb7bf1f;
+}
+.typeTreeRow .treeName {
+  max-width: 220px;
+}
+.rootTag {
+  color: #8fabab;
+}
+.templateChip {
+  margin-left: auto;
+  border: 1px solid #bce6d33d;
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: #b5d9ce;
+}
+.templateName {
+  width: 130px;
+  overflow: hidden;
+  color: #809ba2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.typeInspector {
+  min-height: 520px;
+  padding: 25px;
+  background: #0d191e66;
+}
+.inspectorHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.typeInspector h2 {
+  margin: 25px 0 12px;
+  color: #e5efec;
+  font-size: 31px;
+  font-weight: 400;
+}
+.typeInspector > p {
+  color: #94aaae;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.inspectorFacts {
+  display: grid;
+  gap: 14px;
+  margin: 30px 0;
+}
+.inspectorFacts div {
+  display: grid;
+  gap: 3px;
+}
+.inspectorFacts dt {
+  color: #789399;
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.inspectorFacts dd {
+  margin: 0;
+  color: #c9dad7;
+  font-size: 13px;
+}
+.quietButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 17px;
+  color: #9cc3b7;
+  font-size: 12px;
+}
+.inspectorEmpty {
+  display: grid;
+  min-height: 380px;
+  align-content: center;
+  justify-items: start;
+  color: #849da2;
+}
+.inspectorEmpty h2 {
+  margin: 17px 0 8px;
+  font-size: 25px;
+}
+.inspectorEmpty p {
+  max-width: 245px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* Department details and the Syncfusion organizational diagram. */
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #95bcb1 !important;
+  font-size: 12px;
+}
+.departmentTabs {
+  display: flex;
+  gap: 8px;
+  margin: 33px 0 54px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.departmentTabs a {
+  flex: 0 0 auto;
+  padding: 8px 13px;
+  border: 1px solid #9fb7bf25;
+  border-radius: 999px;
+  color: #97b0b5;
+  font-size: 12px;
+}
+.departmentTabs a:hover,
+.departmentTabs a[aria-selected="true"] {
+  border-color: #bce6d36b;
+  color: #ddf0e8;
+  background: #bce6d312;
+}
+.departmentDetailHeading {
+  display: flex;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: 44px;
+}
+.departmentDetailHeading h1 {
+  margin: 15px 0 13px;
+  font-size: clamp(48px, 6vw, 80px);
+  font-weight: 400;
+}
+.departmentDetailHeading > div > p:last-child {
+  max-width: 670px;
+  color: #a7babd;
+  font-size: 17px;
+  line-height: 1.75;
+}
+.departmentDetailHeading > span,
+.orgChartHeading > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  color: #91aaa9;
+  font-size: 12px;
+}
+.orgChartPanel {
+  overflow: hidden;
+  border: 1px solid #9fb7bf27;
+  border-radius: 16px;
+  background: radial-gradient(ellipse at 50% 15%, #1b33373d, transparent 60%), #101e24c9;
+}
+.orgChartHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 27px;
+  border-bottom: 1px solid #9fb7bf1f;
+}
+.orgChartHeading h2 {
+  margin-top: 8px;
+  font-size: 28px;
+  font-weight: 400;
+}
+.syncfusionChart {
+  cursor: pointer;
+}
+.syncfusionChart .e-diagram {
+  background: transparent !important;
+}
+.syncfusionChart .e-drawing-surface {
+  background: transparent !important;
+}
+.personDetail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 15px 18px;
+  border: 1px solid #9fb7bf25;
+  border-radius: 10px;
+  color: #a9c7c0;
+}
+.personDetail > div {
+  display: grid;
+  gap: 2px;
+}
+.personDetail strong {
+  color: #e2eeea;
+  font-size: 13px;
+  font-weight: 500;
+}
+.personDetail span,
+.personDetail a {
+  color: #89a5aa;
+  font-size: 12px;
+}
+.personDetail a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  color: #b4dacd;
+}
+
+@media (max-width: 760px) {
+  .treeManager,
+  .typeBrowser {
+    overflow-x: auto;
+  }
+  .treeToolbar {
+    min-width: 560px;
+  }
+  .typeBrowser {
+    grid-template-columns: 560px;
+  }
+  .typeTreePane {
+    border-right: 0;
+    border-bottom: 1px solid #9fb7bf1f;
+  }
+  .typeInspector {
+    min-height: auto;
+  }
+  .departmentDetailHeading,
+  .orgChartHeading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .orgChartPanel {
+    overflow-x: auto;
+  }
+  .syncfusionChart {
+    min-width: 650px;
+  }
+  .personDetail {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .personDetail a {
+    width: 100%;
+    margin-left: 30px;
+  }
+}
 .mobileFolderList {
   margin-top: 24px;
   max-height: 65svh;

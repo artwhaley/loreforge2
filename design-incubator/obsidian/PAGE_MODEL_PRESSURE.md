@@ -20,6 +20,14 @@ Lore's index needs a core-provided list of visible entries. Each entry should in
 
 The public Departments directory uses existing name, description, member count, and route fields. Its individual detail route remains a later design decision; this pass only establishes the directory treatment.
 
+## Management trees and department charts
+
+Folders already have a hierarchical core model and authorized management actions. Obsidian needs that hierarchy, system-managed state, creation metadata, and capability-filtered actions; it does not need a second Folder model.
+
+Document Types already have a resolved Department-root / manual-folder / Type tree in the P08X surface. Preserve the virtual Unassigned rule: it renders only for types with no active Department root or no assigned Department. The selected Type inspector needs the supplied template selection, template link, lifecycle stage descriptors, and capability-filtered actions.
+
+The department chart is the one new semantic request. A useful organization chart needs a stable person/role node, a supplied reports-to or parent-role relationship, a role label, and viewer-safe profile/contact target. Department membership alone cannot establish reporting relationships. Keep that model optional: where a Department has no organization relationship data, render its member directory instead of inventing a hierarchy.
+
 ## Document
 
 Body, optional source, metadata, lifecycle, prepared-by, lineage, tags and concerns are sufficient. Heading typography is applied to canonical supplied HTML. No author avatar or additional relationship data is required. There is no generated summary or reading-time fact in the UI.

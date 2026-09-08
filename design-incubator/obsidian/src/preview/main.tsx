@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { lazy, Suspense, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { motion, MotionConfig, useReducedMotion } from "motion/react";
 import { ChevronDown, Check, ArrowUpRight } from "lucide-react";
 import "@fontsource-variable/manrope";
 import "@fontsource/instrument-serif/latin-400.css";
 import "@fontsource/instrument-serif/latin-400-italic.css";
+import "@syncfusion/ej2-react-diagrams/styles/tailwind-dark.css";
 import "./reset.css";
 import s from "../obsidian.module.css";
 import { ObsidianShell } from "../ObsidianShell";
@@ -27,10 +28,29 @@ import {
   about,
   lore,
   departments,
+  departmentDetails,
+  folderTree,
+  documentTypeTree,
   management,
   shell,
 } from "./fixtures";
 import { useMockWorkspace } from "./useMockWorkspace";
+
+const ObsidianDepartmentDetail = lazy(() =>
+  import("../ObsidianDepartmentDetail").then((module) => ({
+    default: module.ObsidianDepartmentDetail,
+  })),
+);
+const ObsidianFolderManager = lazy(() =>
+  import("../ObsidianFolderManager").then((module) => ({
+    default: module.ObsidianFolderManager,
+  })),
+);
+const ObsidianDocumentTypes = lazy(() =>
+  import("../ObsidianDocumentTypes").then((module) => ({
+    default: module.ObsidianDocumentTypes,
+  })),
+);
 
 function App() {
   const [path, setPath] = useState(window.location.pathname),
@@ -111,6 +131,7 @@ function App() {
   const isRecord = path === `${base}/records`,
     isAbout = path === `${base}/about`,
     isDepartments = path === `${base}/departments`,
+    departmentMatch = path.match(new RegExp(`^${base}/departments/([^/]+)$`)),
     loreMatch = path.match(new RegExp(`^${base}/lore(?:/([^/]+))?$`)),
     isLore = Boolean(loreMatch),
     managementMatch = path.match(
@@ -279,6 +300,29 @@ function App() {
             <ObsidianDepartments
               model={visitor ? { ...departments, manageHref: null } : departments}
             />
+          ) : departmentMatch ? (
+            <Suspense fallback={<div className={s.workspacePage}>Loading department chart…</div>}>
+              <ObsidianDepartmentDetail
+                baseUrl={base}
+                departments={departments.departments}
+                selectedSlug={departmentMatch[1]}
+                details={departmentDetails}
+              />
+            </Suspense>
+          ) : managementKey === "folders" ? (
+            <Suspense fallback={<div className={s.workspacePage}>Loading folder tree…</div>}>
+              <ObsidianFolderManager
+                folders={folderTree}
+                onAction={(label) => setDialog({ key: "folder-manager", label })}
+              />
+            </Suspense>
+          ) : managementKey === "types" ? (
+            <Suspense fallback={<div className={s.workspacePage}>Loading document types…</div>}>
+              <ObsidianDocumentTypes
+                nodes={documentTypeTree}
+                onAction={(label) => setDialog({ key: "document-types", label })}
+              />
+            </Suspense>
           ) : managementKey ? (
             <ObsidianManagement
               model={management[managementKey]}
