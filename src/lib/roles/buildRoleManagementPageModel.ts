@@ -133,6 +133,7 @@ export async function buildRoleManagementPageModel(input: {
   return {
     baseUrl: `/domain/${tenant.slug}`,
     domainSlug: tenant.slug,
+    domainId: Number(tenant.id),
     domainName: tenant.name,
     departments: roleDepartments,
     roleRecords,

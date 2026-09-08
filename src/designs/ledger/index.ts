@@ -6,6 +6,7 @@ import { LedgerShell } from './LedgerShell'
 import { LedgerHome } from './LedgerHome'
 import { LedgerRecords } from './LedgerRecords'
 import { LedgerDocument } from './LedgerDocument'
+import { LedgerDepartments, LedgerDocumentTypes, LedgerFolders, LedgerInvitations, LedgerMembers, LedgerPeople, LedgerPerson, LedgerRoles, LedgerWork } from './operational'
 import { ledgerDefaults, ledgerFromLegacy, migrateLedgerConfig, resolveLedgerTheme, validateLedgerConfig } from './config'
 import { LedgerStudioEditor } from './studio/LedgerStudioEditor'
 
@@ -35,6 +36,17 @@ export const ledger: DesignDefinition<LedgerConfigV1> = {
     department: LedgerDepartmentView,
     about: LedgerAboutView,
     lore: LedgerLoreView,
+    work: LedgerWork,
+    members: LedgerMembers,
+    management: {
+      departments: LedgerDepartments,
+      folders: LedgerFolders,
+      roles: LedgerRoles,
+      documentTypes: LedgerDocumentTypes,
+      people: LedgerPeople,
+      person: LedgerPerson,
+      invitations: LedgerInvitations,
+    },
   },
   legacyTheme: {
     defaults: { primary: ink.primary, secondary: ink.secondary, accent: ink.accent, background: ink.background, headingFontKey: ink.headingFontKey, bodyFontKey: ink.bodyFontKey, contentWidth: 'standard' },

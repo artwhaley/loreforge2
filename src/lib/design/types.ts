@@ -120,22 +120,24 @@ export type DesignDefinition<TConfig extends object = object> = {
     about: ComponentType<AboutPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
     lore: ComponentType<LorePageModel & DesignVariantProps & DesignConfigProps<TConfig>>
     /**
-     * Operational slots (OBSIDIAN-T01). OPTIONAL until T08 flips them to
-     * required; see the frozen requiredness ladder in the patch spec §5.1.
-     * `work` is intentionally not nested under `management`: ordinary
-     * authorized approvers may use it without being Domain administrators.
-     * `members` is a public directory slot (patched packet, OBSIDIAN-T00).
+     * Operational slots (OBSIDIAN-T08). REQUIRED for every Design — first-
+     * class Designs own real operational bodies; the Poster compatibility
+     * Design declares compatibility renderers (its `status` marks the
+     * difference, never the slot shape). `work` is intentionally not nested
+     * under `management`: ordinary authorized approvers may use it without
+     * being Domain administrators. `members` is a public directory slot
+     * (patched packet, OBSIDIAN-T00).
      */
-    work?: ComponentType<WorkPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
-    members?: ComponentType<MembersPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
-    management?: {
-      departments?: ComponentType<DepartmentsManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
-      folders?: ComponentType<FolderManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
-      roles?: ComponentType<RoleManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
-      documentTypes?: ComponentType<DocumentTypesManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
-      people?: ComponentType<PeopleManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
-      person?: ComponentType<PersonManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
-      invitations?: ComponentType<InvitationsManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+    work: ComponentType<WorkDesignViewProps & DesignVariantProps & DesignConfigProps<TConfig>>
+    members: ComponentType<MembersPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+    management: {
+      departments: ComponentType<DepartmentsManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+      folders: ComponentType<FolderManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+      roles: ComponentType<RoleManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+      documentTypes: ComponentType<DocumentTypesManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+      people: ComponentType<PeopleManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+      person: ComponentType<PersonManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+      invitations: ComponentType<InvitationsManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
     }
   }
 
@@ -170,6 +172,17 @@ export type DesignShellProps<TConfig extends object = object> = {
   }
   designConfig: TConfig
   children: React.ReactNode
+}
+
+/**
+ * Work actions cross as server-action bridges (OBSIDIAN-T07/T08): the route
+ * hands its real approve/reject server actions to the selected Design's Work
+ * entrypoint as props, so Designs never import the workflow module directly
+ * and every submission re-authorizes server-side.
+ */
+export type WorkDesignViewProps = WorkPageModel & {
+  approveAction: (formData: FormData) => void | Promise<void>
+  rejectAction: (formData: FormData) => void | Promise<void>
 }
 
 /**

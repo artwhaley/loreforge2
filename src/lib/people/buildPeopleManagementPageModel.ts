@@ -25,6 +25,7 @@ export async function buildPeopleManagementPageModel(input: {
   return {
     baseUrl: `/domain/${tenant.slug}`,
     domainSlug: tenant.slug,
+    domainId: Number(tenant.id),
     domainName: tenant.name,
     canOpenPeople: true,
     status: null,

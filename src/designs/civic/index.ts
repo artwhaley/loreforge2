@@ -6,6 +6,7 @@ import { CivicShell } from './CivicShell'
 import { CivicHome } from './CivicHome'
 import { CivicRecords } from './CivicRecords'
 import { CivicDocument } from './CivicDocument'
+import { CivicDepartments, CivicDocumentTypes, CivicFolders, CivicInvitations, CivicMembers, CivicPeople, CivicPerson, CivicRoles, CivicWork } from './operational'
 import { civicDefaults, civicFromLegacy, migrateCivicConfig, resolveCivicTheme, validateCivicConfig } from './config'
 import { CivicStudioEditor } from './studio/CivicStudioEditor'
 
@@ -35,6 +36,17 @@ export const civic: DesignDefinition<CivicConfigV1> = {
     department: CivicDepartmentView,
     about: CivicAboutView,
     lore: CivicLoreView,
+    work: CivicWork,
+    members: CivicMembers,
+    management: {
+      departments: CivicDepartments,
+      folders: CivicFolders,
+      roles: CivicRoles,
+      documentTypes: CivicDocumentTypes,
+      people: CivicPeople,
+      person: CivicPerson,
+      invitations: CivicInvitations,
+    },
   },
   legacyTheme: {
     defaults: { primary: heritage.primary, secondary: heritage.secondary, accent: heritage.accent, background: heritage.background, headingFontKey: heritage.headingFontKey, bodyFontKey: heritage.bodyFontKey, contentWidth: 'standard' },

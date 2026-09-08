@@ -18,4 +18,6 @@ export type ManagementRouteFacts = {
   baseUrl: string
   domainSlug: string
   domainName: string
+  /** Numeric Domain id — needed by action forms that post to API routes. */
+  domainId: number
 }

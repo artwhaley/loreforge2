@@ -27,6 +27,7 @@ export async function buildDocumentTypesManagementPageModel(input: {
   return {
     baseUrl: `/domain/${tenant.slug}`,
     domainSlug: tenant.slug,
+    domainId: Number(tenant.id),
     domainName: tenant.name,
     tree,
     inspector,

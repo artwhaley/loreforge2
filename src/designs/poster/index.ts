@@ -6,6 +6,7 @@ import { PosterShell } from './PosterShell'
 import { PosterHome } from './PosterHome'
 import { PosterRecords } from './PosterRecords'
 import { PosterDocument } from './PosterDocument'
+import { PosterDepartments, PosterDocumentTypes, PosterFolders, PosterInvitations, PosterMembers, PosterPeople, PosterPerson, PosterRoles, PosterWork } from './operational'
 import { migratePosterConfig, posterDefaults, posterFromLegacy, resolvePosterTheme, validatePosterConfig } from './config'
 import { PosterStudioEditor } from './studio/PosterStudioEditor'
 
@@ -35,6 +36,17 @@ export const poster: DesignDefinition<PosterConfigV1> = {
     department: LegacyDepartmentView,
     about: LegacyAboutView,
     lore: LegacyLoreView,
+    work: PosterWork,
+    members: PosterMembers,
+    management: {
+      departments: PosterDepartments,
+      folders: PosterFolders,
+      roles: PosterRoles,
+      documentTypes: PosterDocumentTypes,
+      people: PosterPeople,
+      person: PosterPerson,
+      invitations: PosterInvitations,
+    },
   },
   legacyTheme: {
     defaults: { primary: modern.primary, secondary: modern.secondary, accent: modern.accent, background: modern.background, headingFontKey: modern.headingFontKey, bodyFontKey: modern.bodyFontKey, contentWidth: 'standard' },

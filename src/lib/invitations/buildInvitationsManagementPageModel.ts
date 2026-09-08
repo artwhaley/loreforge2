@@ -53,6 +53,7 @@ export async function buildInvitationsManagementPageModel(input: {
   return {
     baseUrl,
     domainSlug: tenant.slug,
+    domainId: Number(tenant.id),
     domainName: tenant.name,
     canManage,
     invitations: invitations.map((invitation) => ({

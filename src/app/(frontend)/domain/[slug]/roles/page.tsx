@@ -1,20 +1,16 @@
 import { notFound } from 'next/navigation'
 
-import { RoleManager } from '@/components/roles/RoleManager'
-import { TenantShell } from '@/components/theme/TenantShell'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
-import { getTenantsForUser } from '@/lib/tenant/queries'
+import { resolveDomainRouteShell } from '@/lib/design/resolveRoute'
 import { buildRoleManagementPageModel } from '@/lib/roles/buildRoleManagementPageModel'
 
 type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<{ roleId?: string }> }
 export const dynamic = 'force-dynamic'
 
 /**
- * Role management (OBSIDIAN-T04). Thin route: the authorized builder owns
- * admission + projection; the shared workspace owns selection/search/dialogs
- * and the guarded mutation transports. Body renders inside the selected
- * Design's Shell via the design-aware TenantShell; T08 moves it behind a
- * Design-owned entrypoint.
+ * Role management (OBSIDIAN-T08). Thin route: the authorized builder owns
+ * admission + projection; the body dispatches through the selected Design's
+ * `management.roles` slot (no per-Design branching in the route).
  */
 export default async function RolesPage({ params, searchParams }: Props) {
   const { slug } = await params
@@ -23,16 +19,16 @@ export default async function RolesPage({ params, searchParams }: Props) {
   if (!tenant || tenant.slug !== slug || !user) notFound()
   const requestedRoleIdRaw = Number(query?.roleId ?? '')
   const requestedRoleId = Number.isFinite(requestedRoleIdRaw) && requestedRoleIdRaw > 0 ? requestedRoleIdRaw : null
-  const model = await buildRoleManagementPageModel({ tenant, user, activeCharacter, requestedRoleId })
+  const [route, model] = await Promise.all([
+    resolveDomainRouteShell({ tenant, role, user, activeCharacter }),
+    buildRoleManagementPageModel({ tenant, user, activeCharacter, requestedRoleId }),
+  ])
   if (!model) notFound()
-  const domains = await getTenantsForUser(user.id)
+  const Shell = route.design.Shell
+  const Roles = route.design.pages.management.roles
   return (
-    <TenantShell tenant={tenant} role={role} switcherTenants={domains} activeCharacter={activeCharacter}>
-      <section>
-        <p><a href={`/domain/${slug}`}>← Domain home</a></p>
-        <h1>Roles</h1>
-        <RoleManager model={model} />
-      </section>
-    </TenantShell>
+    <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }} designConfig={route.config as object}>
+      <Roles {...model} headerLayout={route.headerLayout} documentStyle={route.documentStyle} designConfig={route.config as object} />
+    </Shell>
   )
 }

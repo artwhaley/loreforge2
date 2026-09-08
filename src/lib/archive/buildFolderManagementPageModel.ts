@@ -44,6 +44,7 @@ export async function buildFolderManagementPageModel(input: {
   return {
     baseUrl: `/domain/${tenant.slug}`,
     domainSlug: tenant.slug,
+    domainId: Number(tenant.id),
     domainName: tenant.name,
     rootManageable: domainAllowed,
     nodes: buildFolderTree(folders.docs).map(toNode),

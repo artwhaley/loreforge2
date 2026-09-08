@@ -31,6 +31,7 @@ export async function buildDepartmentsManagementPageModel(input: {
   return {
     baseUrl,
     domainSlug: tenant.slug,
+    domainId: Number(tenant.id),
     domainName: tenant.name,
     canCreate: canManage,
     departments: departments.map((department) => ({

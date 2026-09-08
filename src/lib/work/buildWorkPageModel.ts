@@ -22,6 +22,7 @@ export async function buildWorkPageModel(input: {
   return {
     baseUrl: `/domain/${domainSlug}`,
     domainSlug,
+    domainId: Number(tenantId),
     domainName,
     authorized: work.authorized,
     domainAdmin: work.domainAdmin,

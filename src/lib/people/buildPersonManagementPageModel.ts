@@ -131,6 +131,7 @@ export async function buildPersonManagementPageModel(input: {
   return {
     baseUrl: `/domain/${tenant.slug}`,
     domainSlug: tenant.slug,
+    domainId: Number(tenant.id),
     domainName: tenant.name,
     character: { id: characterId, name: character.name, kind: String(character.kind ?? 'player'), status: String(character.status ?? 'active') },
     controller: controller ? { id: Number(controller.id), name: controller.name ?? null, email: controller.email ?? '' } : null,

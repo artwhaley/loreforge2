@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { PeopleSearch } from '@/app/(frontend)/domain/[slug]/manage/people/PeopleSearch'
+import { PeopleSearch } from '@/components/functional/people/PeopleSearch'
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/domain/preview/manage/people',
