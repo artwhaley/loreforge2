@@ -50,6 +50,7 @@ function App() {
       ? { ...archive, records: [], totalReadableRecordCount: 0, folders: [] }
       : archive,
     action,
+    OBSIDIAN_DEFAULTS.records,
   );
   useEffect(() => {
     document.querySelector<HTMLElement>("main")?.focus({ preventScroll: true });

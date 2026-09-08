@@ -10,6 +10,11 @@ export type ObsidianConfig = {
     accent: string;
   };
   geometry: { contentMax: number; pageGutter: number; surfaceRadius: number };
+  records: {
+    defaultView: "cards" | "list";
+    cardPageSize: 6 | 12 | 24;
+    listPageSize: 25 | 50 | 100;
+  };
   atmosphereImage: string | null;
 };
 export const OBSIDIAN_DEFAULTS: ObsidianConfig = {
@@ -21,6 +26,7 @@ export const OBSIDIAN_DEFAULTS: ObsidianConfig = {
     accent: "#bce6d3",
   },
   geometry: { contentMax: 1440, pageGutter: 56, surfaceRadius: 18 },
+  records: { defaultView: "cards", cardPageSize: 6, listPageSize: 50 },
   atmosphereImage: "/obsidian-coastline.png",
 };
 /** Local asset path is preview-only; persisted integration must use DesignAssetRef. */

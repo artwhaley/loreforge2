@@ -23,14 +23,16 @@ The local server uses port **3066**, separate from LoreForge's 3055.
 - Empty Records: http://127.0.0.1:3066/domain/aster-reach/records?fixture=empty
 - Visitor: http://127.0.0.1:3066/domain/aster-reach?fixture=visitor
 
-Search, type filtering, nested folder selection, subfolder inclusion, load-more, menus, mobile navigation, and Document/source tabs operate on deterministic local fixtures. The archive has 36 rows, long titles, draft/submitted/filed/deprecated/locked examples, and one predecessor/successor pair. Document pages reuse a representative long body to exercise different presentation states.
+Search, type filtering, nested folder selection, subfolder inclusion, load-more, menus, mobile navigation, and Document/source tabs operate on deterministic local fixtures. The archive has 72 rows, long titles, draft/submitted/filed/deprecated/locked examples, and one predecessor/successor pair. Document pages reuse a representative long body to exercise different presentation states.
+
+Records can switch between an atmospheric card grid and a dense ordered index. The index supports newest/oldest and title A–Z/Z–A ordering, with Title, prepared-by, date, lifecycle, and the required action menu in each row. Footer controls expose 6/12/24 cards or 25/50/100 rows per page. The typed defaults currently select 6 cards and 50 rows; these values are ready for later Site Studio configuration.
 
 New/Import/Edit/lifecycle/folder actions open clearly identified preview surfaces. Delete demonstrates confirmation without removing anything. About/Lore/Departments/Work/management/account routes explain their integration boundary when activated; they are not implemented pages. There is no database or authenticated session.
 
 ## Structure
 
 - `src/Obsidian*.tsx`, `Navigation.tsx`, `ReadingSurface.tsx`, `DocumentActions.tsx`, `controls.tsx`, `obsidian.module.css`: portable presentation.
-- `src/config.ts`: typed developer-owned color/geometry defaults; no user controls or persistence schema yet.
+- `src/config.ts`: typed developer-owned color/geometry/Records defaults; no user controls or persistence schema yet.
 - `src/contracts/`: frozen, type-only Page Model snapshots from baseline `6de87a6`. Replace with final P08D imports.
 - `src/preview/`: discardable host, fixture content, mock workspace, navigation interception, reset, fonts and animation bootstrap.
 - `public/obsidian-coastline.png`: original generated hero artwork, created by one Luna asset subagent.

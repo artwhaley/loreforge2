@@ -8,7 +8,7 @@ The visual composition, scoped CSS, generated asset, icons, and most React marku
 
 - `ObsidianShell`: standalone Shell DOM with one required `operatingContext` slot, primary navigation, Work, management access, account/dashboard route, and children.
 - `ObsidianHome`: semantic welcome, destinations, recent records, edit affordance, and empty state.
-- `ObsidianRecords`: visual workspace driven by `RecordsPageModel` plus a controlled `RecordsViewState` presentation adapter. No live search implementation inside the component.
+- `ObsidianRecords`: card and dense ordered-list workspace driven by `RecordsPageModel` plus a controlled `RecordsViewState` presentation adapter. No live search implementation inside the component. Cards place type and lifecycle together; the index supports date/title ordering and mode-specific page sizes.
 - `ObsidianDocument`: server-renderable content composition with `ReadingSurface` as a client tab island; actions are supplied as a React slot.
 - Radix controls and CSS Modules. No shared `ShellFrame`, route stylesheet, Civic/Ledger/Poster imports, or Payload/auth imports.
 
@@ -38,9 +38,9 @@ The current typography uses self-hosted Fontsource assets. Register those fonts 
 
 ### Records
 
-Map the actual `useRecordsWorkspace(model)` output to `RecordsViewState`: search, selection, expanded folders, subfolder scope, type exposure, results, load-more/loading. Use final shared record/folder/New/Import descriptors and server action bridges. Match disabled-versus-absent semantics to the final descriptors.
+Map the actual `useRecordsWorkspace(model)` output to `RecordsViewState`: search, selection, expanded folders, subfolder scope, type exposure, results, load-more/loading, view, ordering, and page size. Seed view/page-size state from the validated Obsidian config. Use final shared record/folder/New/Import descriptors and server action bridges. Match disabled-versus-absent semantics to the final descriptors.
 
-The first-pass mock has no asynchronous loading/error state. Add those displays when connecting real hook behavior, including fetch failure and loading-more. Verify initial and searched records expose identical permitted operations. Preserve authorized supersession trees/links and type-exposure folder count semantics. Do not infer permissions from lifecycle strings in Obsidian.
+The first-pass mock has no asynchronous loading/error state. Add those displays when connecting real hook behavior, including fetch failure and loading-more. The current Page Model/workspace uses cursor load-more semantics, so the selected page size should define the requested/display batch rather than create a competing server pagination system. Verify initial and searched records expose identical permitted operations. Preserve authorized supersession trees/links and type-exposure folder count semantics. Do not infer permissions from lifecycle strings in Obsidian.
 
 ### Document
 

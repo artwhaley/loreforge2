@@ -6,6 +6,8 @@
 
 Record cards intentionally use title, type, prepared-by, date, lifecycle, lock state and authorized supersession edges. They do not assume excerpts, cover art, unread state, favorites, popularity, or counts beyond those provided by the model. Type labels can be resolved from supplied `documentTypes`; no extra query is needed.
 
+The card/list switch, sort choice, and page-size choices are presentation/workspace state. They are not new semantic Page Model facts. Final integration may need the Records endpoint/workspace adapter to accept requested ordering and batch size so a 50-row view does not fetch five small batches merely to fill its first screen; that is API ergonomics, not a new authorized fact.
+
 ## Shell / Home atmosphere
 
 The atmospheric image and its optional caption are Design-owned presentation/configuration, not authorized archive facts. Aster Reach / Northwatch text belongs to fixtures. The Design does not require an invented featured story or featured department to make the homepage work.

@@ -1,23 +1,24 @@
 "use client";
 import { useState } from "react";
-import { Collapsible } from "radix-ui";
+import { Collapsible, ToggleGroup } from "radix-ui";
 import {
   ArrowUpRight,
   ArrowRight,
+  ArrowLeft,
   ChevronRight,
   Check,
   Folder,
   FolderOpen,
   Folders,
-  FileText,
   Search,
   Plus,
   Upload,
   MoreHorizontal,
-  SlidersHorizontal,
   LockKeyhole,
   CornerDownRight,
   X,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import type { RecordsPageModel } from "./contracts/records";
 import type { FolderSummary, RecordSummary } from "./contracts/common";
@@ -36,10 +37,17 @@ export type RecordsViewState = {
   setIncludeSubfolders(value: boolean): void;
   type: string;
   setType(value: string): void;
+  view: "cards" | "list";
+  setView(value: "cards" | "list"): void;
+  sort: "newest" | "oldest" | "title-asc" | "title-desc";
+  setSort(value: RecordsViewState["sort"]): void;
+  pageSize: number;
+  setPageSize(value: number): void;
+  page: number;
+  pageCount: number;
+  setPage(value: number): void;
   records: RecordSummary[];
   resultCount: number;
-  hasMore: boolean;
-  loadMore(): void;
   actions: Record<number, Action[]>;
   folderActions: Action[];
   onAction(action: Action, target?: RecordSummary): void;
@@ -249,17 +257,48 @@ export function ObsidianRecords({
               <span>{selectedFolder?.name ?? "All records"}</span>
               <small aria-live="polite">{ws.resultCount} records</small>
             </div>
-            <label className={s.checkbox}>
-              <input
-                type="checkbox"
-                checked={ws.includeSubfolders}
-                onChange={(e) => ws.setIncludeSubfolders(e.target.checked)}
+            <div className={s.resultControls}>
+              <label className={s.checkbox}>
+                <input
+                  type="checkbox"
+                  checked={ws.includeSubfolders}
+                  onChange={(e) => ws.setIncludeSubfolders(e.target.checked)}
+                />
+                <Check size={12} />
+                <span>Include subfolders</span>
+              </label>
+              <ChoiceMenu
+                label="Sort records"
+                value={ws.sort}
+                onChange={(value) =>
+                  ws.setSort(value as RecordsViewState["sort"])
+                }
+                choices={[
+                  { value: "newest", label: "Newest first" },
+                  { value: "oldest", label: "Oldest first" },
+                  { value: "title-asc", label: "Title A–Z" },
+                  { value: "title-desc", label: "Title Z–A" },
+                ]}
               />
-              <Check size={12} />
-              <span>Include subfolders</span>
-            </label>
+              <ToggleGroup.Root
+                className={s.viewToggle}
+                type="single"
+                value={ws.view}
+                onValueChange={(value) => {
+                  if (value === "cards" || value === "list") ws.setView(value);
+                }}
+                aria-label="Records view"
+              >
+                <ToggleGroup.Item value="cards" aria-label="Card view">
+                  <LayoutGrid size={16} />
+                </ToggleGroup.Item>
+                <ToggleGroup.Item value="list" aria-label="List view">
+                  <List size={17} />
+                </ToggleGroup.Item>
+              </ToggleGroup.Root>
+            </div>
           </div>
-          <div className={s.recordGrid}>
+          <div className={ws.view === "cards" ? s.recordGrid : s.recordList}>
             {ws.records.map((record) => {
               const type = model.documentTypes.find(
                 (t) => t.id === record.documentTypeId,
@@ -270,28 +309,62 @@ export function ObsidianRecords({
               const successor = model.supersessionEdges.find(
                 (edge) => edge.olderId === record.id,
               );
+              const lifecycle = successor ? "Superseded" : record.lifecycle;
+              const formattedDate = new Date(record.updatedAt).toLocaleDateString(
+                "en-US",
+                {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                  timeZone: "UTC",
+                },
+              );
+              if (ws.view === "list") {
+                return (
+                  <article
+                    key={record.id}
+                    className={`${s.recordRow} ${successor ? s.supersededRow : ""}`}
+                  >
+                    <a
+                      className={s.rowTitle}
+                      href={`${model.baseUrl}/documents/${record.id}`}
+                    >
+                      {record.title}
+                    </a>
+                    <span className={s.rowAuthor}>
+                      {record.preparedBy ?? "Unattributed"}
+                      {record.locked && (
+                        <LockKeyhole size={13} aria-label="Locked" />
+                      )}
+                    </span>
+                    <time dateTime={record.updatedAt}>{formattedDate}</time>
+                    <span
+                      className={`${s.status} ${record.lifecycle === "draft" || record.lifecycle === "submitted" ? s.draft : ""}`}
+                    >
+                      {lifecycle}
+                    </span>
+                    <ActionMenu
+                      label={`Actions for ${record.title}`}
+                      trigger={<MoreHorizontal size={18} />}
+                      items={ws.actions[record.id] ?? []}
+                      onAction={(action) => ws.onAction(action, record)}
+                    />
+                  </article>
+                );
+              }
               return (
                 <article
                   key={record.id}
                   className={`${s.recordCard} ${successor ? s.supersededCard : ""}`}
                 >
                   <div className={s.recordCardTop}>
-                    <span className={s.fileIcon}>
-                      <FileText size={21} strokeWidth={1.2} />
-                    </span>
+                    <span className={s.recordType}>{type}</span>
                     <span
                       className={`${s.status} ${record.lifecycle === "draft" || record.lifecycle === "submitted" ? s.draft : ""}`}
                     >
-                      {successor ? "Superseded" : record.lifecycle}
+                      {lifecycle}
                     </span>
-                    <ActionMenu
-                      label={`Actions for ${record.title}`}
-                      trigger={<MoreHorizontal size={19} />}
-                      items={ws.actions[record.id] ?? []}
-                      onAction={(action) => ws.onAction(action, record)}
-                    />
                   </div>
-                  <span className={s.recordType}>{type}</span>
                   <h2>
                     <a href={`${model.baseUrl}/documents/${record.id}`}>
                       {record.title}
@@ -312,14 +385,13 @@ export function ObsidianRecords({
                     </span>
                   )}
                   <div className={s.recordCardBottom}>
-                    <time dateTime={record.updatedAt}>
-                      {new Date(record.updatedAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        timeZone: "UTC",
-                      })}
-                    </time>
+                    <time dateTime={record.updatedAt}>{formattedDate}</time>
+                    <ActionMenu
+                      label={`Actions for ${record.title}`}
+                      trigger={<MoreHorizontal size={18} />}
+                      items={ws.actions[record.id] ?? []}
+                      onAction={(action) => ws.onAction(action, record)}
+                    />
                     <a
                       href={`${model.baseUrl}/documents/${record.id}`}
                       aria-label={`Read ${record.title}`}
@@ -350,14 +422,39 @@ export function ObsidianRecords({
           )}
           <div className={s.pagination}>
             <span>
-              Showing {ws.records.length} of {ws.resultCount}
+              Showing {ws.resultCount === 0 ? 0 : (ws.page - 1) * ws.pageSize + 1}–
+              {Math.min(ws.page * ws.pageSize, ws.resultCount)} of {ws.resultCount}
             </span>
-            {ws.hasMore && (
-              <button className={s.secondaryButton} onClick={ws.loadMore}>
-                Load more records <ArrowRight size={16} />
+            <div className={s.paginationControls}>
+              <span>{ws.view === "cards" ? "Cards" : "Rows"} per page</span>
+              <ChoiceMenu
+                label={`${ws.view === "cards" ? "Cards" : "Rows"} per page`}
+                value={String(ws.pageSize)}
+                onChange={(value) => ws.setPageSize(Number(value))}
+                choices={(ws.view === "cards" ? [6, 12, 24] : [25, 50, 100]).map(
+                  (value) => ({ value: String(value), label: String(value) }),
+                )}
+              />
+              <button
+                className={s.pageButton}
+                onClick={() => ws.setPage(ws.page - 1)}
+                disabled={ws.page <= 1}
+                aria-label="Previous page"
+              >
+                <ArrowLeft size={15} />
               </button>
-            )}
-            <SlidersHorizontal size={15} aria-hidden="true" />
+              <span className={s.pageCount}>
+                {ws.page} / {ws.pageCount}
+              </span>
+              <button
+                className={s.pageButton}
+                onClick={() => ws.setPage(ws.page + 1)}
+                disabled={ws.page >= ws.pageCount}
+                aria-label="Next page"
+              >
+                <ArrowRight size={15} />
+              </button>
+            </div>
           </div>
         </section>
       </div>

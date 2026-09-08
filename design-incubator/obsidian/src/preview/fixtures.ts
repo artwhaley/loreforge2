@@ -94,19 +94,19 @@ const titles = [
 export const archive: RecordsPageModel = {
   baseUrl: base,
   domainSlug: "aster-reach",
-  totalReadableRecordCount: 36,
+  totalReadableRecordCount: 72,
   folders: [
     {
       id: 1,
       name: "Foundations",
       systemManaged: false,
-      readableRecordCount: 6,
+      readableRecordCount: 18,
       children: [
         {
           id: 5,
           name: "Earlier agreements",
           systemManaged: false,
-          readableRecordCount: 3,
+          readableRecordCount: 6,
           children: [],
         },
       ],
@@ -115,25 +115,25 @@ export const archive: RecordsPageModel = {
       id: 2,
       name: "The council",
       systemManaged: false,
-      readableRecordCount: 12,
+      readableRecordCount: 24,
       children: [],
     },
     {
       id: 3,
       name: "Expeditions",
       systemManaged: false,
-      readableRecordCount: 6,
+      readableRecordCount: 12,
       children: [],
     },
     {
       id: 4,
       name: "People & places",
       systemManaged: false,
-      readableRecordCount: 9,
+      readableRecordCount: 18,
       children: [],
     },
   ],
-  records: Array.from({ length: 36 }, (_, i) => {
+  records: Array.from({ length: 72 }, (_, i) => {
     const title = titles[i % titles.length];
     return {
       id: i + 1,
@@ -143,7 +143,7 @@ export const archive: RecordsPageModel = {
         ["Accord", "Field report", "Council minutes", "Charter"].indexOf(
           title[1],
         ) + 1,
-      updatedAt: `2026-09-${String(7 - Math.floor(i / 6)).padStart(2, "0")}T12:00:00Z`,
+      updatedAt: `2026-${String(9 - Math.floor(i / 28)).padStart(2, "0")}-${String(28 - (i % 28)).padStart(2, "0")}T12:00:00Z`,
       preparedBy: title[4],
       lifecycle: title[3],
       locked: i === 3,
