@@ -27,11 +27,11 @@ export function ReadingSurface({
         </Tabs.List>
         <span className={s.readingLabel}>THE DOMAIN RECORD</span>
       </div>
-      <Tabs.Content value="document" className={s.readingPanel}>
+      <Tabs.Content value="document" className={s.readingPanel} forceMount>
         {children}
       </Tabs.Content>
       {source !== null && (
-        <Tabs.Content value="source" className={s.sourcePanel}>
+        <Tabs.Content value="source" className={s.sourcePanel} forceMount>
           <pre>{source}</pre>
         </Tabs.Content>
       )}

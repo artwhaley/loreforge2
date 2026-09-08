@@ -37,6 +37,9 @@ export function ObsidianDepartmentDetail({ model }: { model: DepartmentPageModel
         </div>
         <span><UsersRound size={16} /> {model.members.length} people</span>
       </section>
+      {model.manageHref ? (
+        <p><a className={s.quietLink} href={model.manageHref}>Manage people</a></p>
+      ) : null}
       <section className={s.orgChartPanel} aria-label={`${model.name} members`}>
         <div className={s.orgChartHeading}>
           <div>

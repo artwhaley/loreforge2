@@ -20,6 +20,8 @@ import { ledger } from '@/designs/ledger'
 import { ledgerDefaults } from '@/designs/ledger/config'
 import { poster } from '@/designs/poster'
 import { posterDefaults } from '@/designs/poster/config'
+import { obsidian } from '@/designs/obsidian'
+import { obsidianDefaults } from '@/designs/obsidian/config'
 import type { FolderManagementPageModel } from '@/lib/page-models/management/folders'
 import type { DesignDefinition } from './types'
 
@@ -54,12 +56,13 @@ const FOLDERS_MODEL: FolderManagementPageModel = {
  */
 describe('OBSIDIAN-T08 operational dispatch', () => {
   it('each Design registers its own operational entrypoint for the same slot', () => {
-    const designs = { civic: civic as unknown as Erased, ledger: ledger as unknown as Erased, poster: poster as unknown as Erased }
+    const designs = { civic: civic as unknown as Erased, ledger: ledger as unknown as Erased, poster: poster as unknown as Erased, obsidian: obsidian as unknown as Erased }
     const entries = Object.values(designs).map((design) => design.pages.management.folders)
-    expect(new Set(entries).size).toBe(3)
+    expect(new Set(entries).size).toBe(4)
     // Type-level requiredness is the real gate; these are distinct functions.
     expect(entries[0]).not.toBe(entries[1])
     expect(entries[1]).not.toBe(entries[2])
+    expect(entries[2]).not.toBe(entries[3])
   })
 
   it('the same FolderManagementPageModel renders through every Design slot without branching', () => {
@@ -67,6 +70,7 @@ describe('OBSIDIAN-T08 operational dispatch', () => {
       () => render(<civic.pages.management.folders {...FOLDERS_MODEL} {...VARIANT} designConfig={civicDefaults} />).container,
       () => render(<ledger.pages.management.folders {...FOLDERS_MODEL} {...VARIANT} designConfig={ledgerDefaults} />).container,
       () => render(<poster.pages.management.folders {...FOLDERS_MODEL} {...VARIANT} designConfig={posterDefaults} />).container,
+      () => render(<obsidian.pages.management.folders {...FOLDERS_MODEL} {...VARIANT} designConfig={obsidianDefaults} />).container,
     ]
     for (const renderSlot of renders) {
       const container = renderSlot()
@@ -77,11 +81,13 @@ describe('OBSIDIAN-T08 operational dispatch', () => {
     }
   })
 
-  it('Civic and Ledger both drive the model with distinct owned renderers', () => {
+  it('first-class Designs drive the model with distinct owned renderers', () => {
     const { container: civicContainer } = render(<civic.pages.management.folders {...FOLDERS_MODEL} {...VARIANT} designConfig={civicDefaults} />)
     const { container: ledgerContainer } = render(<ledger.pages.management.folders {...FOLDERS_MODEL} {...VARIANT} designConfig={ledgerDefaults} />)
+    const { container: obsidianContainer } = render(<obsidian.pages.management.folders {...FOLDERS_MODEL} {...VARIANT} designConfig={obsidianDefaults} />)
     expect(civicContainer.innerHTML).toBeTruthy()
     expect(ledgerContainer.innerHTML).toBeTruthy()
+    expect(obsidianContainer.innerHTML).toBeTruthy()
     // Same model, same surface copy, but rendered by different owned entrypoints.
     expect(civic.pages.management.folders).not.toBe(ledger.pages.management.folders)
   })

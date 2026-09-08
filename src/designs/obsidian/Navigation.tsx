@@ -22,7 +22,7 @@ export function Navigation({
       <a
         href={model.routes.baseUrl}
         className={s.identity}
-        aria-label={`${model.domain.name} home`}
+        aria-label={`${model.domain.name} Domain home`}
       >
         <span className={s.emblem}>
           {model.domain.logoUrl ? (
@@ -45,6 +45,13 @@ export function Navigation({
           </a>
         ))}
       </nav>
+      {model.managementNavigation.length > 0 && (
+        <nav className={s.srOnly} aria-label="Management navigation">
+          {model.managementNavigation.map((item) => (
+            <a key={item.segment} href={item.href}>{item.label}</a>
+          ))}
+        </nav>
+      )}
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Trigger className={s.mobileMenu} aria-label="Open navigation">
           <Menu size={22} />

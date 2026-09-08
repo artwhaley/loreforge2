@@ -37,7 +37,7 @@ export const DESIGN_CATALOG: readonly DesignCatalogEntry[] = [
   },
   {
     key: 'obsidian',
-    status: 'compatibility',
+    status: 'first-class',
     name: 'Obsidian',
     description: 'A night-harbour world: dark atmospheric surfaces, luminous accents, cinematic records.',
     thumbnail: '/designs/obsidian.svg',
@@ -47,9 +47,8 @@ export const DESIGN_CATALOG: readonly DesignCatalogEntry[] = [
 export const DESIGN_CATALOG_KEYS: readonly DesignKey[] = DESIGN_CATALOG.map((entry) => entry.key)
 
 /**
- * First-class Designs (T06/T07): Civic and Ledger are completely isolated
- * presentation layers passing the full shared conformance contract. Poster
- * remains compatibility throughout the milestone. A Design earns its place
- * here by passing the T09 first-class registry contract — never by fiat.
+ * First-class Designs pass the shared conformance contract and isolation
+ * checks. Poster remains compatibility; a Design earns its place here by
+ * passing the release-gate registry contract — never by fiat.
  */
 export const FIRST_CLASS_DESIGNS: readonly DesignKey[] = DESIGN_CATALOG.filter((entry) => entry.status === 'first-class').map((entry) => entry.key)

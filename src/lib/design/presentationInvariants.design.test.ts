@@ -58,7 +58,7 @@ describe('P08D-T01 records presentation ownership', () => {
 })
 
 describe('P08D-T09 first-class isolation scan', () => {
-  const FIRST_CLASS_DIRS = ['civic', 'ledger']
+  const FIRST_CLASS_DIRS = ['civic', 'ledger', 'obsidian']
   const FORBIDDEN = [
     '@/app/',
     '@/components/theme/',

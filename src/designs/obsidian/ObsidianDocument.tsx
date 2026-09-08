@@ -129,7 +129,7 @@ export function ObsidianDocument(props: DocumentDesignViewProps & DesignVariantP
           )}
           {model.routes.historyUrl && (
             <a className={s.quietLink} href={model.routes.historyUrl}>
-              View document history <ArrowUpRight size={14} />
+              History <ArrowUpRight size={14} />
             </a>
           )}
         </aside>

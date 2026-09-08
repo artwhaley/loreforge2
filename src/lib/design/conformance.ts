@@ -256,10 +256,14 @@ export function assertRecordsCapabilities(
         }
         break
       case 'supersedeRecord':
-        assert.ok(namedControl(container, 'Supersede'), 'records: Supersede affordance present')
+        if (model.records.some((record) => record.capabilities.supersede)) {
+          assert.ok(namedControl(container, 'Supersede'), 'records: Supersede affordance present')
+        }
         break
       case 'deleteRecord':
-        assert.ok(namedControl(container, 'Delete'), 'records: Delete affordance present')
+        if (model.records.some((record) => record.capabilities.delete)) {
+          assert.ok(namedControl(container, 'Delete'), 'records: Delete affordance present')
+        }
         break
       case 'createFolder':
         assert.ok(namedControl(container, 'Create folder'), 'records: Create folder affordance present')

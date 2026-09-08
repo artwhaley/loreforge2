@@ -177,24 +177,14 @@ export function ObsidianRecords(props: RecordsPageModel & DesignConfigProps<Obsi
         <div className={s.pageActions}>
           {model.capabilities.actOnRecords && (
             <>
-              <button
-                className={s.secondaryButton}
-                onClick={() =>
-                  ws.onAction({ key: "import", label: "Import notecard" })
-                }
-              >
+              <a className={s.secondaryButton} href={`${model.baseUrl}/import`}>
                 <Upload size={16} />
                 Import
-              </button>
-              <button
-                className={s.primaryButton}
-                onClick={() =>
-                  ws.onAction({ key: "new", label: "New document" })
-                }
-              >
+              </a>
+              <a className={s.primaryButton} href={`${model.baseUrl}/records/new`}>
                 <Plus size={17} />
                 New document
-              </button>
+              </a>
             </>
           )}
         </div>
@@ -212,6 +202,11 @@ export function ObsidianRecords(props: RecordsPageModel & DesignConfigProps<Obsi
               />
             )}
           </div>
+          {model.capabilities.manageFolders ? <div className={s.folderHeading}>
+            <a href={`${model.baseUrl}/manage/folders`}>Create folder</a>
+            <a href={`${model.baseUrl}/manage/folders`}>Rename folder</a>
+            <a href={`${model.baseUrl}/manage/folders`}>Delete folder</a>
+          </div> : null}
           <button
             className={`${s.allRecords} ${ws.selectedFolder === null ? s.selectedFolder : ""}`}
             onClick={() => ws.selectFolder(null)}
@@ -279,6 +274,7 @@ export function ObsidianRecords(props: RecordsPageModel & DesignConfigProps<Obsi
             <label className={s.search}>
               <Search size={19} />
               <input
+                type="search"
                 value={ws.search}
                 onChange={(e) => ws.setSearch(e.target.value)}
                 placeholder="Search the archive…"
@@ -293,18 +289,10 @@ export function ObsidianRecords(props: RecordsPageModel & DesignConfigProps<Obsi
                 </button>
               )}
             </label>
-            <ChoiceMenu
-              label="Document type"
-              value={ws.type}
-              onChange={ws.setType}
-              choices={[
-                { value: "all", label: "All types" },
-                ...model.documentTypes.map((type) => ({
-                  value: String(type.id),
-                  label: type.name,
-                })),
-              ]}
-            />
+              <select aria-label="Document type" value={ws.type} onChange={(event) => ws.setType(event.target.value)}>
+                <option value="all">All types</option>
+                {model.documentTypes.map((type) => <option key={type.id} value={String(type.id)}>{type.name}</option>)}
+              </select>
           </div>
           <div className={s.resultsHeading}>
             <div>
@@ -319,7 +307,7 @@ export function ObsidianRecords(props: RecordsPageModel & DesignConfigProps<Obsi
                   onChange={(e) => ws.setIncludeSubfolders(e.target.checked)}
                 />
                 <Check size={12} />
-                <span>Include subfolders</span>
+                <span>Search subfolders</span>
               </label>
               <ChoiceMenu
                 label="Sort records"
@@ -403,6 +391,7 @@ export function ObsidianRecords(props: RecordsPageModel & DesignConfigProps<Obsi
                       items={ws.actions[record.id] ?? []}
                       onAction={(action) => ws.onAction(action, record)}
                     />
+                    <RecordCapabilityLinks model={model} record={record} onDelete={() => ws.onAction({ key: "delete", label: "Delete record", danger: true }, record)} />
                   </article>
                 );
               }
@@ -446,6 +435,7 @@ export function ObsidianRecords(props: RecordsPageModel & DesignConfigProps<Obsi
                       items={ws.actions[record.id] ?? []}
                       onAction={(action) => ws.onAction(action, record)}
                     />
+                    <RecordCapabilityLinks model={model} record={record} onDelete={() => ws.onAction({ key: "delete", label: "Delete record", danger: true }, record)} />
                     <a
                       href={`${model.baseUrl}/documents/${record.id}`}
                       aria-label={`Read ${record.title}`}
@@ -522,6 +512,14 @@ function recordActions(model: RecordsPageModel, record: RecordSummary, deleteAct
   if (record.capabilities.supersede) actions.push({ key: "supersede", label: "Supersede", href: `${model.baseUrl}/records/new?supersedes=${record.id}` });
   if (record.capabilities.delete && deleteAction) actions.push({ key: "delete", label: "Delete record", danger: true });
   return actions;
+}
+
+function RecordCapabilityLinks({ model, record, onDelete }: { model: RecordsPageModel; record: RecordSummary; onDelete: () => void }) {
+  return <span className={s.quietLink}>
+    {record.capabilities.edit ? <a href={`${model.baseUrl}/documents/${record.id}/edit`}>Edit</a> : null}
+    {record.capabilities.supersede ? <a href={`${model.baseUrl}/records/new?supersedes=${record.id}`}>Supersede</a> : null}
+    {record.capabilities.delete ? <button type="button" onClick={onDelete}>Delete</button> : null}
+  </span>
 }
 
 function boundedPageSize(value: number): 6 | 12 | 24 | 25 | 50 | 100 {

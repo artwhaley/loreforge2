@@ -7,6 +7,7 @@ import { resolveActingIdentity } from '@/lib/tenant/actingIdentity'
 import { loadAuthorizationSession } from '@/lib/authz/session'
 import { compileReadScope, recordReadPredicate } from '@/lib/authz/readScope'
 import { computeRecordCapabilities, type RecordCapabilityFlags } from '@/lib/records/recordCapabilities'
+import { parseRecordsSearchOptions } from '@/lib/records/workspace/queryOptions'
 
 const relationId = (value: unknown): number | null => typeof value === 'object' && value !== null && 'id' in value
   ? Number((value as { id: number }).id)
@@ -30,11 +31,7 @@ export async function GET(request: Request) {
   const typeRaw = url.searchParams.get('type')
   const subfolders = url.searchParams.get('subfolders') !== 'false'
   const cursorRaw = url.searchParams.get('cursor')
-  const allowedPageSizes = [6, 12, 24, 25, 50, 100] as const
-  const requestedPageSize = Number(url.searchParams.get('pageSize') ?? 50)
-  const pageSize = (allowedPageSizes as readonly number[]).includes(requestedPageSize) ? requestedPageSize : 50
-  const requestedSort = url.searchParams.get('sort') ?? '-updatedAt'
-  const sort = (['-updatedAt', 'updatedAt', 'title', '-title'] as const).includes(requestedSort as never) ? requestedSort as '-updatedAt' | 'updatedAt' | 'title' | '-title' : '-updatedAt'
+  const { pageSize, sort } = parseRecordsSearchOptions(url.searchParams)
   if (!domainSlug) return NextResponse.json({ results: [] }, { status: 403 })
   const domainResult = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
   const domain = domainResult.docs[0]

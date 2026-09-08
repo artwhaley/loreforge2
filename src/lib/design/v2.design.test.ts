@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { resolveDomainDesign } from '@/lib/design/resolveDomainDesign'
 import { buildV2Envelope, mergeDesignBanks, parseV2Envelope, validateSubmittedBanks } from '@/lib/design/v2'
 import { DESIGNS } from '@/lib/design/registry'
-import type { LegacyDomainAppearance } from '@/lib/design/contracts'
+import type { LegacyDomainAppearance, ObsidianConfigV1 } from '@/lib/design/contracts'
 
 const LEGACY_SCALARS = {
   designTemplate: 'civic',
@@ -49,7 +49,7 @@ describe('P08D-T04 JSON authority', () => {
   })
 
   it('unknown active key resolves to Civic defaults safely', () => {
-    const v2 = buildV2Envelope('obsidian', { obsidian: { version: 1, config: {} } })
+    const v2 = buildV2Envelope('gazette', { gazette: { version: 1, config: {} } })
     const resolved = resolveDomainDesign({ designConfig: v2 })
     expect(resolved.design.key).toBe('civic')
   })
@@ -79,6 +79,33 @@ describe('P08D-T04 bank behavior', () => {
     expect(resolved.design.key).toBe('civic')
     expect(resolved.config).toEqual(DESIGNS.civic.config.defaults)
     expect(resolved.diagnostic).toMatch(/migration/)
+  })
+
+  it('T19 switching restores distinct Civic, Ledger, and Obsidian banks', () => {
+    const civicBank = { version: 1, config: DESIGNS.civic.config.defaults }
+    const ledgerBank = { version: 1, config: { ...DESIGNS.ledger.config.defaults, rules: { strength: 'heavy' as const } } }
+    const obsidianDefaults = DESIGNS.obsidian.config.defaults as ObsidianConfigV1
+    const obsidianBank = {
+      version: 1,
+      config: {
+        ...obsidianDefaults,
+        palette: { ...obsidianDefaults.palette, accent: '#f2c879' },
+        records: { ...obsidianDefaults.records, defaultView: 'list' as const, listPageSize: 100 as const },
+      },
+    }
+    let stored = buildV2Envelope('civic', { civic: civicBank, ledger: ledgerBank, obsidian: obsidianBank })
+    for (const activeDesign of ['obsidian', 'ledger', 'obsidian', 'civic']) {
+      stored = mergeDesignBanks(parseV2Envelope(stored), {}, activeDesign)
+      const resolved = resolveDomainDesign({ designConfig: stored })
+      expect(resolved.design.key).toBe(activeDesign)
+      if (activeDesign === 'obsidian') {
+        expect((resolved.config as typeof obsidianBank.config).palette.accent).toBe('#f2c879')
+        expect((resolved.config as typeof obsidianBank.config).records.defaultView).toBe('list')
+      }
+    }
+    expect(stored.settingsByDesign.civic).toEqual(civicBank)
+    expect(stored.settingsByDesign.ledger).toEqual(ledgerBank)
+    expect(stored.settingsByDesign.obsidian).toEqual(obsidianBank)
   })
 })
 

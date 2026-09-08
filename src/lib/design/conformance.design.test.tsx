@@ -7,6 +7,8 @@ import { ledger } from '@/designs/ledger'
 import { ledgerDefaults } from '@/designs/ledger/config'
 import { poster } from '@/designs/poster'
 import { posterDefaults } from '@/designs/poster/config'
+import { obsidian } from '@/designs/obsidian'
+import { obsidianDefaults } from '@/designs/obsidian/config'
 import type { DesignDefinition } from './types'
 
 import {
@@ -36,10 +38,11 @@ import {
   type RecordsCapability,
 } from '@/lib/design/conformance'
 
-// Config is erased at the fixture boundary (OBSIDIAN-T02); conformance asserts
-// capability representation, not config fields.
+// Config is erased at the registry boundary; conformance runs each renderer
+// with its real validated defaults so config-dependent production surfaces are
+// exercised rather than hidden behind an empty fixture object.
 type Erased = DesignDefinition<object>
-const CONFIG = {}
+type DesignKey = 'civic' | 'ledger' | 'poster' | 'obsidian'
 
 // The shared shell chrome is a client component under Next router hooks;
 // jsdom has no router, so stub the navigation surface for shell conformance.
@@ -54,11 +57,19 @@ vi.mock('next/link', () => ({
   ),
 }))
 
-const ALL_DESIGNS: Array<['civic' | 'ledger' | 'poster', Erased]> = [
+const ALL_DESIGNS: Array<[DesignKey, Erased]> = [
   ['civic', civic as unknown as Erased],
   ['ledger', ledger as unknown as Erased],
   ['poster', poster as unknown as Erased],
+  ['obsidian', obsidian as unknown as Erased],
 ]
+
+const DESIGN_CONFIGS: Record<DesignKey, object> = {
+  civic: civicDefaults,
+  ledger: ledgerDefaults,
+  poster: posterDefaults,
+  obsidian: obsidianDefaults,
+}
 
 const SHELL_THEME = { tokens: {}, headerLayout: 'centered', documentStyle: 'classic' }
 const stubAction = async () => {}
@@ -66,15 +77,13 @@ const VARIANT = { headerLayout: 'centered', documentStyle: 'classic' }
 
 /**
  * P08D-T00 capability conformance. The same fixtures and the same helpers run
- * against every Design. Gaps are declared through the `omit` lists below —
- * these are the "expected future first-class contract" markers: T06 (Civic
- * isolation) and T07 (Ledger isolation) close them by shrinking the lists, not
- * by weakening the assertions.
+ * against every Design. Compatibility gaps remain explicit in the `omit`
+ * lists; first-class Obsidian is held to the complete contract.
  */
 describe('P08D-T00 shell conformance', () => {
   it.each(ALL_DESIGNS)('%s shell renders the full shared chrome and hosts page children', (_key, Design) => {
     const { container } = render(
-      <Design.Shell model={SHELL_PREVIEW_MODEL} theme={SHELL_THEME} designConfig={CONFIG}>
+      <Design.Shell model={SHELL_PREVIEW_MODEL} theme={SHELL_THEME} designConfig={DESIGN_CONFIGS[_key]}>
         <p>CONFORMANCE-SHELL-CHILD</p>
       </Design.Shell>,
     )
@@ -83,21 +92,21 @@ describe('P08D-T00 shell conformance', () => {
 })
 
 describe('P08D-T00 records conformance', () => {
-  // What each Design currently omits from the Records contract. Civic and
-  // Ledger (T07) carry the full capability set; Poster closes the gaps later.
+  // Poster remains compatibility. All first-class Designs carry the full set.
   const RECORDS_GAPS: Record<string, readonly RecordsCapability[]> = {
     civic: [],
     ledger: [],
+    obsidian: [],
     poster: ['searchSubfolders', 'typeFilter', 'import', 'supersedeRecord', 'deleteRecord', 'createFolder', 'renameFolder', 'deleteFolder', 'supersessionRepresentation'],
   }
 
   it.each(ALL_DESIGNS)('%s records represent every fixture record, folder, search, and permitted action', (_key, Design) => {
-    const { container } = render(<Design.pages.records {...RECORDS_CONFORMANCE_MODEL} designConfig={CONFIG} />)
+    const { container } = render(<Design.pages.records {...RECORDS_CONFORMANCE_MODEL} designConfig={DESIGN_CONFIGS[_key]} />)
     assertRecordsCapabilities(container, RECORDS_CONFORMANCE_MODEL, { omit: RECORDS_GAPS[_key] })
   })
 
   it.each(ALL_DESIGNS)('%s records render an empty state when nothing is readable', (_key, Design) => {
-    const { container } = render(<Design.pages.records {...EMPTY_RECORDS_CONFORMANCE_MODEL} designConfig={CONFIG} />)
+    const { container } = render(<Design.pages.records {...EMPTY_RECORDS_CONFORMANCE_MODEL} designConfig={DESIGN_CONFIGS[_key]} />)
     assertRecordsCapabilities(container, EMPTY_RECORDS_CONFORMANCE_MODEL, { omit: RECORDS_GAPS[_key] })
   })
 
@@ -108,11 +117,12 @@ describe('P08D-T00 records conformance', () => {
 })
 
 describe('P08D-T00 document conformance', () => {
-  // Civic (T06) and Ledger (T07) both badge lifecycle state and render raw
-  // source + predecessor links; Poster closes its gaps later.
+  // First-class Designs badge lifecycle state and render raw source plus
+  // predecessor links; Poster remains compatibility.
   const DOCUMENT_GAPS: Record<string, readonly DocumentCapability[]> = {
     civic: [],
     ledger: [],
+    obsidian: [],
     poster: ['bodySource', 'lifecycleRepresentation', 'predecessorLink'],
   }
 
@@ -130,7 +140,7 @@ describe('P08D-T00 document conformance', () => {
   it.each(ALL_DESIGNS)('%s document represents title, body, credits, tags, concerns, and every permitted action', (_key, Design) => {
     for (const [, fixture] of LIFECYCLE_FIXTURES) {
       const { container } = render(
-        <Design.pages.document {...fixture} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} designConfig={CONFIG} />,
+        <Design.pages.document {...fixture} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} designConfig={DESIGN_CONFIGS[_key]} />,
       )
       assertDocumentCapabilities(container, fixture, { omit: DOCUMENT_GAPS[_key], workflowAction: stubAction, deleteAction: stubAction })
     }
@@ -138,7 +148,7 @@ describe('P08D-T00 document conformance', () => {
 
   it.each(ALL_DESIGNS)('%s document surfaces the route status message with role=alert', (_key, Design) => {
     const { container } = render(
-      <Design.pages.document {...STATUS_DOCUMENT_MODEL} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} designConfig={CONFIG} />,
+      <Design.pages.document {...STATUS_DOCUMENT_MODEL} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} designConfig={DESIGN_CONFIGS[_key]} />,
     )
     assertDocumentCapabilities(container, STATUS_DOCUMENT_MODEL, { omit: DOCUMENT_GAPS[_key], workflowAction: stubAction, deleteAction: stubAction })
   })
@@ -178,22 +188,22 @@ describe('P08D-T00 document conformance', () => {
 
 describe('P08D-T00 thin-page conformance', () => {
   it.each(ALL_DESIGNS)('%s departments directory lists every department with a working link', (_key, Design) => {
-    const { container } = render(<Design.pages.departments {...DEPARTMENTS_PREVIEW_MODEL} {...VARIANT} designConfig={CONFIG} />)
+    const { container } = render(<Design.pages.departments {...DEPARTMENTS_PREVIEW_MODEL} {...VARIANT} designConfig={DESIGN_CONFIGS[_key]} />)
     assertThinPageCapabilities(container, 'departments', DEPARTMENTS_PREVIEW_MODEL)
   })
 
   it.each(ALL_DESIGNS)('%s department detail shows members, folders, and the manage route', (_key, Design) => {
-    const { container } = render(<Design.pages.department {...DEPARTMENT_PREVIEW_MODEL} {...VARIANT} designConfig={CONFIG} />)
+    const { container } = render(<Design.pages.department {...DEPARTMENT_PREVIEW_MODEL} {...VARIANT} designConfig={DESIGN_CONFIGS[_key]} />)
     assertThinPageCapabilities(container, 'department', DEPARTMENT_PREVIEW_MODEL)
   })
 
   it.each(ALL_DESIGNS)('%s about renders the body and the edit route', (_key, Design) => {
-    const { container } = render(<Design.pages.about {...ABOUT_PREVIEW_MODEL} {...VARIANT} designConfig={CONFIG} />)
+    const { container } = render(<Design.pages.about {...ABOUT_PREVIEW_MODEL} {...VARIANT} designConfig={DESIGN_CONFIGS[_key]} />)
     assertThinPageCapabilities(container, 'about', ABOUT_PREVIEW_MODEL)
   })
 
   it.each(ALL_DESIGNS)('%s lore renders the canonical Lore surface', (_key, Design) => {
-    const { container } = render(<Design.pages.lore {...LORE_PREVIEW_MODEL} {...VARIANT} designConfig={CONFIG} />)
+    const { container } = render(<Design.pages.lore {...LORE_PREVIEW_MODEL} {...VARIANT} designConfig={DESIGN_CONFIGS[_key]} />)
     assertThinPageCapabilities(container, 'lore', LORE_PREVIEW_MODEL)
   })
 })

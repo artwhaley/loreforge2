@@ -93,7 +93,7 @@ function LoreOverview({ model }: { model: LorePageModelAdapter }) {
     <section className={s.loreOverview}>
       <p className={s.eyebrow}>WORLD GUIDE</p>
       <h1>
-        The lore of
+        The Lore of
         <br />
         <em>Aster Reach.</em>
       </h1>

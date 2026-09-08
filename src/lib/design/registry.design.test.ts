@@ -8,11 +8,12 @@ import { DESIGN_CATALOG, FIRST_CLASS_DESIGNS } from '@/lib/design/catalog'
 import { civic } from '@/designs/civic'
 import { ledger } from '@/designs/ledger'
 import { poster } from '@/designs/poster'
+import { obsidian } from '@/designs/obsidian'
 
 /** Stage C smoke: the registry resolves, falls back safely, and every Design is complete. */
 describe('design registry', () => {
-  it('registers exactly civic, ledger, and poster', () => {
-    expect(DESIGN_KEYS).toEqual(['civic', 'ledger', 'poster'])
+  it('registers exactly civic, ledger, poster, and obsidian', () => {
+    expect(DESIGN_KEYS).toEqual(['civic', 'ledger', 'poster', 'obsidian'])
     expect(DESIGN_METADATA.map((entry) => entry.key)).toEqual(DESIGN_KEYS)
   })
 
@@ -20,7 +21,7 @@ describe('design registry', () => {
     expect(resolveDesign('civic').key).toBe('civic')
     expect(resolveDesign('ledger').key).toBe('ledger')
     expect(resolveDesign('poster').key).toBe('poster')
-    expect(resolveDesign('obsidian').key).toBe('civic')
+    expect(resolveDesign('obsidian').key).toBe('obsidian')
     expect(resolveDesign(undefined).key).toBe('civic')
     expect(resolveDesign(null).key).toBe('civic')
   })
@@ -46,11 +47,12 @@ describe('design registry', () => {
   it('the pure catalog matches the registry and the status contract', () => {
     expect(DESIGN_CATALOG.map((entry) => entry.key)).toEqual(DESIGN_KEYS)
     expect(DESIGN_METADATA.map((entry) => entry.status)).toEqual(DESIGN_CATALOG.map((entry) => entry.status))
-    // T06/T07: Civic and Ledger are first-class; Poster stays compatibility.
-    expect(FIRST_CLASS_DESIGNS).toEqual(['civic', 'ledger'])
+    // T06/T07/T19: Civic, Ledger, and Obsidian are first-class; Poster stays compatibility.
+    expect(FIRST_CLASS_DESIGNS).toEqual(['civic', 'ledger', 'obsidian'])
     expect(DESIGNS.civic.status).toBe('first-class')
     expect(DESIGNS.ledger.status).toBe('first-class')
     expect(DESIGNS.poster.status).toBe('compatibility')
+    expect(DESIGNS.obsidian.status).toBe('first-class')
   })
 
   it('T09-B first-class contract: every registered first-class Design is complete and self-validating', () => {
@@ -88,12 +90,14 @@ describe('design registry', () => {
     expect(ledgerConfig.document.treatment).toBe('register')
     expect('layout' in ledgerConfig).toBe(false)
     expect('headerLayout' in ledgerConfig).toBe(false)
-    // Poster stays a compatibility Design with its own small vocabulary.
+    // Poster remains compatibility; Obsidian has its production vocabulary.
     expect(poster.config.defaults.masthead.treatment).toBe('bold')
+    expect(obsidian.config.defaults.records.defaultView).toBe('cards')
   })
 
-  it('isDesignKey narrows only the three registered keys', () => {
+  it('isDesignKey narrows only the four registered keys', () => {
     expect(isDesignKey('civic')).toBe(true)
+    expect(isDesignKey('obsidian')).toBe(true)
     expect(isDesignKey('gazette')).toBe(false)
   })
 })

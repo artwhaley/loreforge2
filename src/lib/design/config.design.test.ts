@@ -8,6 +8,7 @@ describe('design config resolution', () => {
   it('picks known design keys and falls back to Civic', () => {
     expect(pickDesignKey('ledger')).toBe('ledger')
     expect(pickDesignKey('poster')).toBe('poster')
+    expect(pickDesignKey('obsidian')).toBe('obsidian')
     expect(pickDesignKey('gazette')).toBe('civic')
     expect(pickDesignKey(undefined)).toBe('civic')
   })

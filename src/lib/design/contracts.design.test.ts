@@ -106,7 +106,7 @@ describe('Poster config v1 (compatibility)', () => {
 
 describe('design catalog purity', () => {
   it('exposes exactly the registered keys with basic metadata', () => {
-    expect(DESIGN_CATALOG_KEYS).toEqual(['civic', 'ledger', 'poster'])
+    expect(DESIGN_CATALOG_KEYS).toEqual(['civic', 'ledger', 'poster', 'obsidian'])
   })
 
   it('the catalog module imports no React/Design bundles (payload-safe)', () => {
@@ -116,7 +116,7 @@ describe('design catalog purity', () => {
     expect(catalog).not.toMatch(/\.tsx/)
   })
 
-  it('catalog status: Civic and Ledger are first-class after T06/T07; Poster stays compatibility', () => {
-    expect(DESIGN_CATALOG.map((entry) => entry.status)).toEqual(['first-class', 'first-class', 'compatibility'])
+  it('catalog status: Civic, Ledger, and Obsidian are first-class; Poster stays compatibility', () => {
+    expect(DESIGN_CATALOG.map((entry) => entry.status)).toEqual(['first-class', 'first-class', 'compatibility', 'first-class'])
   })
 })

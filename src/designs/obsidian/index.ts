@@ -9,14 +9,13 @@ import { ObsidianDepartments as ObsidianDepartmentsManagement, ObsidianDocumentT
 import { migrateObsidianConfig, obsidianDefaults, obsidianFromLegacy, resolveObsidianTheme, validateObsidianConfig } from './config'
 
 /**
- * Obsidian Design definition (OBSIDIAN-T11). Registered with status
- * 'compatibility' — it flips to first-class only at T19's full conformance
- * pass. The slot bodies are type-honest adapters over the ported components;
- * no casts.
+ * Obsidian Design definition. It is a first-class production renderer: the
+ * slot bodies are type-honest adapters over the ported components and shared
+ * workspaces; no casts are used at the Design boundary.
  */
 export const obsidian: DesignDefinition<ObsidianConfigV1> = {
   key: 'obsidian',
-  status: 'compatibility',
+  status: 'first-class',
   name: 'Obsidian',
   description: 'A night-harbour world: dark atmospheric surfaces, luminous accents, cinematic records.',
   preview: { thumbnail: '/designs/obsidian.svg' },

@@ -1485,11 +1485,16 @@ Use the completed first-class Designs as examples for **contract**, not as templ
 ```text
 src/designs/civic
 src/designs/ledger
+src/designs/obsidian
 ```
 
 Civic demonstrates an institutional masthead/portal.
 
 Ledger demonstrates a structurally different editorial rail/register.
+
+Obsidian demonstrates an atmospheric night-harbour treatment while consuming
+the same authorized Page Models, operational contracts, and shared mutation
+workspaces.
 
 A new Design should not become “Civic with different colors” merely because Civic is easy to copy.
 
