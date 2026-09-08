@@ -24,15 +24,23 @@ export type DepartmentsPageModel = {
 export type DepartmentMember = {
   id: number
   name: string
+  /** Role metadata powers the Obsidian organization chart when available. */
+  characterId?: number
+  roleId?: number | null
+  parentRoleId?: number | null
+  role?: string
 }
 
 /** Department detail page model. */
 export type DepartmentPageModel = {
   baseUrl: string
   domainSlug: string
+  slug?: string
   name: string
   description: string | null
   members: DepartmentMember[]
+  /** Sibling departments used by the public detail-page tab strip. */
+  departments?: DepartmentSummary[]
   folderNames: string[]
   manageHref: string | null
   vocabulary: {

@@ -25,7 +25,9 @@ export const obsidianDefaults: ObsidianConfigV1 = {
   },
   geometry: { contentMax: 1440, pageGutter: 56, surfaceRadius: 18 },
   records: { defaultView: 'cards', cardPageSize: 6, listPageSize: 50 },
-  atmosphere: null,
+  // The incubator's original coastline/fortress artwork is part of Obsidian's
+  // visual identity, not an optional content decoration.
+  atmosphere: { url: '/media/obsidian-coastline.png' },
 }
 
 /** Compatibility name retained for the frozen incubation imports. */

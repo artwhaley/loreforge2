@@ -2,6 +2,7 @@ import type { NavigationItem } from './common'
 
 export type AboutPageModel = {
   baseUrl: string
+  domainName?: string
   bodyHtml: string
   editHref: string | null
   destinations: NavigationItem[]
@@ -9,6 +10,7 @@ export type AboutPageModel = {
 
 export type LorePageModel = {
   baseUrl: string
+  domainName?: string
   destinations: NavigationItem[]
   /** Published Domain pages other than the reserved home/about slugs. */
   entries: LoreEntrySummary[]

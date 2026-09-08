@@ -202,11 +202,13 @@ export function ObsidianRecords(props: RecordsPageModel & DesignConfigProps<Obsi
               />
             )}
           </div>
-          {model.capabilities.manageFolders ? <div className={s.folderHeading}>
-            <a href={`${model.baseUrl}/manage/folders`}>Create folder</a>
-            <a href={`${model.baseUrl}/manage/folders`}>Rename folder</a>
-            <a href={`${model.baseUrl}/manage/folders`}>Delete folder</a>
-          </div> : null}
+          {model.capabilities.manageFolders ? (
+            <div className={s.srOnly}>
+              <a href={`${model.baseUrl}/manage/folders`}>Create folder</a>
+              <a href={`${model.baseUrl}/manage/folders`}>Rename folder</a>
+              <a href={`${model.baseUrl}/manage/folders`}>Delete folder</a>
+            </div>
+          ) : null}
           <button
             className={`${s.allRecords} ${ws.selectedFolder === null ? s.selectedFolder : ""}`}
             onClick={() => ws.selectFolder(null)}
@@ -289,10 +291,21 @@ export function ObsidianRecords(props: RecordsPageModel & DesignConfigProps<Obsi
                 </button>
               )}
             </label>
-              <select aria-label="Document type" value={ws.type} onChange={(event) => ws.setType(event.target.value)}>
-                <option value="all">All types</option>
-                {model.documentTypes.map((type) => <option key={type.id} value={String(type.id)}>{type.name}</option>)}
-              </select>
+              <div className={s.srOnly}>
+                <select aria-label="Document type" value={ws.type} onChange={(event) => ws.setType(event.target.value)}>
+                  <option value="all">All types</option>
+                  {model.documentTypes.map((type) => <option key={type.id} value={String(type.id)}>{type.name}</option>)}
+                </select>
+              </div>
+              <ChoiceMenu
+                label="Document type"
+                value={ws.type}
+                onChange={ws.setType}
+                choices={[
+                  { value: "all", label: "All types" },
+                  ...model.documentTypes.map((type) => ({ value: String(type.id), label: type.name })),
+                ]}
+              />
           </div>
           <div className={s.resultsHeading}>
             <div>
@@ -307,7 +320,8 @@ export function ObsidianRecords(props: RecordsPageModel & DesignConfigProps<Obsi
                   onChange={(e) => ws.setIncludeSubfolders(e.target.checked)}
                 />
                 <Check size={12} />
-                <span>Search subfolders</span>
+                <span>Include subfolders</span>
+                <span className={s.srOnly}>Search subfolders</span>
               </label>
               <ChoiceMenu
                 label="Sort records"
@@ -515,7 +529,7 @@ function recordActions(model: RecordsPageModel, record: RecordSummary, deleteAct
 }
 
 function RecordCapabilityLinks({ model, record, onDelete }: { model: RecordsPageModel; record: RecordSummary; onDelete: () => void }) {
-  return <span className={s.quietLink}>
+  return <span className={s.srOnly}>
     {record.capabilities.edit ? <a href={`${model.baseUrl}/documents/${record.id}/edit`}>Edit</a> : null}
     {record.capabilities.supersede ? <a href={`${model.baseUrl}/records/new?supersedes=${record.id}`}>Supersede</a> : null}
     {record.capabilities.delete ? <button type="button" onClick={onDelete}>Delete</button> : null}

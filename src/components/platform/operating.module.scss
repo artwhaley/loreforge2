@@ -18,7 +18,98 @@
 .accountPopover a { color: var(--tenant-primary); text-decoration: none; }
 .accountPopover a:hover { text-decoration: underline; }
 .logoutButton { border: 0; padding: 0; background: transparent; color: var(--tenant-primary); font: inherit; text-decoration: underline; cursor: pointer; }
+
+/* Obsidian keeps the platform-owned switchers, but presents them in the
+   incubator's compact dark operating-context treatment. The controls remain
+   real forms/selects so domain and character switching retain their behavior. */
+.obsidianContext {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: transparent;
+  color: #9aaaaf;
+  border: 0;
+  font-family: inherit;
+  font-size: 12px;
+  grid-template-columns: none;
+}
+.obsidianContext .platformBrand {
+  color: #9aaaaf;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  gap: 10px;
+}
+.obsidianContext .contextControl:first-of-type { margin-left: auto; }
+.obsidianContext .contextControl { gap: 5px; }
+.obsidianContext .contextControl:nth-of-type(2)::before {
+  content: '';
+  width: 1px;
+  height: 14px;
+  margin-right: 15px;
+  background: #ffffff20;
+}
+.obsidianContext .avatar {
+  width: 23px;
+  height: 23px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border: 1px solid #bce6d33a;
+  border-radius: 50%;
+  color: #c7e7dc;
+  background: #bfd9cf15;
+  font-size: 12px;
+}
+.obsidianContext .contextLabel {
+  color: #9aaaaf;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.obsidianContext .contextSelect {
+  min-width: 0;
+  flex: 0 1 auto;
+  width: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  appearance: none;
+  background: transparent;
+  color: #d2dddf;
+  font: inherit;
+  cursor: pointer;
+}
+.obsidianContext .contextSelect:focus-visible {
+  outline: 1px solid #bce6d3;
+  outline-offset: 4px;
+}
+.obsidianContext .contextSelect option {
+  background: #142128;
+  color: #edf2ef;
+}
+.obsidianContext .accountControls {
+  color: #9aaaaf;
+  font-size: 12px;
+}
+.obsidianContext .accountMenu summary { color: #d2dddf; }
+.obsidianContext .accountPopover {
+  border-color: #ffffff20;
+  border-radius: 4px;
+  background: #142128;
+  box-shadow: 0 12px 30px rgb(0 0 0 / 35%);
+}
+.obsidianContext .accountPopover a,
+.obsidianContext .logoutButton { color: #d2dddf; }
 @media (max-width: 680px) {
   .contextBar { grid-template-columns: 1fr; }
   .accountControls { justify-self: start; }
+  .obsidianContext { gap: 0; }
+  .obsidianContext .contextControl,
+  .obsidianContext .accountControls { display: none; }
 }

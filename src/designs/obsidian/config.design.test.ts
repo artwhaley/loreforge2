@@ -22,6 +22,6 @@ describe('Obsidian config v1', () => {
     const theme = obsidian.config.resolveTheme(obsidianDefaults)
     expect(theme.base.pageBg).toBe(obsidianDefaults.palette.background)
     expect(theme.vars?.['--obsidian-max']).toBe('1440px')
-    expect(theme.vars?.['--obsidian-atmosphere']).toBe('none')
+    expect(theme.vars?.['--obsidian-atmosphere']).toBe('/media/obsidian-coastline.png')
   })
 })

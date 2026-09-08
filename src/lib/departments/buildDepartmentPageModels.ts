@@ -8,6 +8,13 @@ import { getLorePayload } from '@/lib/payload'
 import { renderMarkdown } from '@/lib/markdown/render'
 import { PLATFORM_NOUNS as vocab } from '@/lib/theme/nouns'
 
+const relationId = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === '') return null
+  return typeof value === 'object' && value !== null && 'id' in value
+    ? Number((value as { id: number | string }).id)
+    : Number(value)
+}
+
 /** Thin-page builders (Stage J): small semantic models, no layout concepts. */
 export async function buildDepartmentsPageModel(input: {
   tenant: Domain | Tenant
@@ -43,19 +50,36 @@ export async function buildDepartmentPageModel(input: {
   const baseUrl = `/domain/${tenant.slug}`
   const department = await getSubdomainBySlug(tenant.id, departmentSlug)
   if (!department) return null
-  const [memberships, folders] = await Promise.all([
+  const [memberships, folders, siblingDepartments] = await Promise.all([
     getDepartmentParticipants(department.id),
     getFoldersForTenant(tenant),
+    getSubdomainsForDomain(tenant.id),
   ])
   const departmentFolders = folders.filter((folder) => Number(typeof folder.subdomain === 'object' ? folder.subdomain?.id : folder.subdomain) === Number(department.id))
   return {
     baseUrl,
     domainSlug: tenant.slug,
+    slug: departmentSlug,
     name: department.name,
     description: department.description ?? null,
+    departments: siblingDepartments.map((item) => ({
+      id: Number(item.id),
+      name: item.name,
+      slug: item.slug,
+      description: item.description ?? null,
+      memberCount: 0,
+    })),
     members: memberships.map((membership) => {
       const character = typeof membership.character === 'object' ? membership.character : null
-      return { id: Number(membership.id), name: character?.name ?? 'Unknown Character' }
+      const role = typeof membership.role === 'object' ? membership.role : null
+      return {
+        id: Number(membership.id),
+        name: character?.name ?? 'Unknown Character',
+        characterId: character ? Number(character.id) : relationId(membership.character) ?? undefined,
+        roleId: relationId(membership.role),
+        parentRoleId: relationId(role?.parentRole),
+        role: role?.name ?? 'Member',
+      }
     }),
     folderNames: departmentFolders.map((folder) => folder.name),
     manageHref: role === 'admin' ? `${baseUrl}/manage/people` : null,
@@ -73,9 +97,14 @@ export async function buildAboutPageModel(input: {
   const page = await getPageForTenant(tenant, 'about')
   return {
     baseUrl,
+    domainName: tenant.name,
     bodyHtml: page ? renderMarkdown(page.body) : '',
     editHref: user && page ? `${baseUrl}/pages/about/edit` : null,
-    destinations: [],
+    destinations: [
+      { label: 'Lore', segment: 'lore', href: `${baseUrl}/lore` },
+      { label: vocab.subdomain.plural, segment: 'departments', href: `${baseUrl}/departments` },
+      { label: 'Records', segment: 'records', href: `${baseUrl}/records` },
+    ],
   }
 }
 
@@ -106,6 +135,7 @@ export async function buildLorePageModel(input: { tenant: Domain | Tenant }): Pr
   const baseUrl = `/domain/${input.tenant.slug}`
   return {
     baseUrl,
+    domainName: input.tenant.name,
     destinations: [],
     entries: result.docs.map((page) => ({
       slug: page.slug,

@@ -6,13 +6,18 @@ import type { PeopleManagementPageModel, PersonManagementPageModel } from '@/lib
 import type { InvitationsManagementPageModel } from '@/lib/page-models/management/invitations'
 import type { DepartmentsManagementPageModel } from '@/lib/page-models/management/departments'
 import type { WorkDesignViewProps } from '@/lib/design/types'
-import { FolderManager } from '@/components/folders/FolderManager'
-import { DocumentTypesBrowser } from '@/components/documentTypes/DocumentTypesBrowser'
-import { RoleManager } from '@/components/roles/RoleManager'
-import { PeopleSearch } from '@/components/functional/people/PeopleSearch'
 import { ObsidianCharacterProfile } from './ObsidianCharacterProfile'
-
-import { DepartmentsBody, InvitationsBody, MembersBody, RolesBody, WorkBody } from '../shared/operational/bodies'
+import { ObsidianDocumentTypes as ObsidianDocumentTypesSurface } from './ObsidianDocumentTypes'
+import { ObsidianFolderManager } from './ObsidianFolderManager'
+import { ObsidianMembersDirectory } from './ObsidianMembersDirectory'
+import {
+  ObsidianDepartmentsManagement,
+  ObsidianInvitationsManagement,
+  ObsidianPeopleManagement,
+  ObsidianPersonManagement,
+  ObsidianRolesManagement,
+  ObsidianWork as ObsidianWorkSurface,
+} from './ObsidianOperationalSurfaces'
 
 /**
  * Obsidian operational entrypoints. Presentation may reuse shared functional
@@ -21,31 +26,31 @@ import { DepartmentsBody, InvitationsBody, MembersBody, RolesBody, WorkBody } fr
  */
 
 export function ObsidianWork(props: WorkDesignViewProps) {
-  return <WorkBody {...props} />
+  return <ObsidianWorkSurface {...props} />
 }
 
 export function ObsidianMembers(props: MembersPageModel) {
-  return <MembersBody {...props} />
+  return <ObsidianMembersDirectory model={props} />
 }
 
 export function ObsidianDepartments(props: DepartmentsManagementPageModel) {
-  return <DepartmentsBody {...props} />
+  return <ObsidianDepartmentsManagement model={props} />
 }
 
 export function ObsidianFolders(props: FolderManagementPageModel) {
-  return <section className="obsidian-management-surface"><p><a href={`/domain/${props.domainSlug}`}>← Domain home</a></p><h1>Folders</h1>{props.status ? <p role="alert">{props.status.message}</p> : null}<FolderManager model={props} /></section>
+  return <ObsidianFolderManager model={props} />
 }
 
 export function ObsidianRoles(props: RoleManagementPageModel) {
-  return <section className="obsidian-management-surface"><p><a href={`/domain/${props.domainSlug}`}>← Domain home</a></p><h1>Roles</h1>{props.status ? <p role="alert">{props.status.message}</p> : null}<RoleManager model={props} /></section>
+  return <ObsidianRolesManagement model={props} />
 }
 
 export function ObsidianDocumentTypes(props: DocumentTypesManagementPageModel) {
-  return <section className="obsidian-management-surface"><p><a href={`/domain/${props.domainSlug}`}>← Domain home</a></p><h1>Document Types</h1>{props.status ? <p role="alert">{props.status.message}</p> : null}<DocumentTypesBrowser model={props} /></section>
+  return <ObsidianDocumentTypesSurface model={props} />
 }
 
 export function ObsidianPeople(props: PeopleManagementPageModel) {
-  return <section className="obsidian-management-surface"><p><a href={`/domain/${props.domainSlug}`}>← Domain home</a></p><h1>People</h1>{props.status ? <p role="alert">{props.status.message}</p> : null}{props.canOpenPeople ? <PeopleSearch domainSlug={props.domainSlug} /> : <p>People management is not available to this identity.</p>}</section>
+  return <ObsidianPeopleManagement model={props} />
 }
 
 export function ObsidianPerson(props: PersonManagementPageModel) {
@@ -53,5 +58,5 @@ export function ObsidianPerson(props: PersonManagementPageModel) {
 }
 
 export function ObsidianInvitations(props: InvitationsManagementPageModel) {
-  return <InvitationsBody {...props} />
+  return <ObsidianInvitationsManagement model={props} />
 }

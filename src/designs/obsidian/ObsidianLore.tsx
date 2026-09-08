@@ -11,6 +11,7 @@ function LoreIndex({
   model: LorePageModelAdapter;
   activeSlug?: string;
 }) {
+  const domainName = model.domainName ?? "Aster Reach";
   const [query, setQuery] = useState("");
   const entries = useMemo(
     () =>
@@ -26,7 +27,7 @@ function LoreIndex({
     <aside className={s.loreIndex} aria-label="Lore index">
       <div className={s.loreIndexHeading}>
         <BookOpen size={17} />
-        <span>THE LORE OF ASTER REACH</span>
+        <span>THE LORE OF {domainName.toUpperCase()}</span>
       </div>
       <label className={s.loreSearch}>
         <Search size={15} />
@@ -88,15 +89,17 @@ export function ObsidianLore({
 }
 
 function LoreOverview({ model }: { model: LorePageModelAdapter }) {
+  const domainName = model.domainName ?? "Aster Reach";
   const groups = [...new Set(model.entries.map((entry) => entry.group || "Lore"))];
   return (
     <section className={s.loreOverview}>
       <p className={s.eyebrow}>WORLD GUIDE</p>
       <h1>
-        The Lore of
+        The lore of
         <br />
-        <em>Aster Reach.</em>
+        <em>{domainName}.</em>
       </h1>
+      <span className={s.srOnly}>Lore</span>
       <p className={s.loreIntroduction}>{model.introduction}</p>
       <div className={s.loreShelf}>
         {groups.map((group, index) => {

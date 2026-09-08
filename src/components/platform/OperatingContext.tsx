@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { ArrowUpRight } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useRef, useState } from 'react'
 
@@ -14,17 +15,22 @@ import styles from './operating.module.scss'
  * Neutral and deliberately unthemed — first-class Shells import this and never
  * restyle it.
  */
-export function OperatingContext({ model }: { model: DomainShellModel }) {
+export function OperatingContext({ model, tone = 'neutral' }: { model: DomainShellModel; tone?: 'neutral' | 'obsidian' }) {
   const { operatingContext } = model
+  const isObsidian = tone === 'obsidian'
   return (
-    <div className={styles.contextBar} aria-label="Operating context">
-      <Link href="/" className={styles.platformBrand}><span className={styles.platformMark} aria-hidden="true">L</span>{operatingContext.platformLabel}</Link>
+    <div className={`${styles.contextBar} ${isObsidian ? styles.obsidianContext : ''}`} aria-label="Operating context">
+      <Link href="/" className={styles.platformBrand}>
+        {isObsidian ? <>{operatingContext.platformLabel.toUpperCase()} <ArrowUpRight size={12} /></> : <><span className={styles.platformMark} aria-hidden="true">L</span>{operatingContext.platformLabel}</>}
+      </Link>
       <DomainSelect options={operatingContext.availableDomains} currentSlug={model.domain.slug} disabled={operatingContext.availableDomains.length === 0} />
-      <CharacterSelect options={operatingContext.availableCharacters} activeId={operatingContext.activeCharacterId} />
+      <CharacterSelect options={operatingContext.availableCharacters} activeId={operatingContext.activeCharacterId} showAvatar={isObsidian} />
       {operatingContext.account ? (
         <div className={styles.accountControls}>
           <details className={styles.accountMenu}>
-            <summary>{operatingContext.account.name}</summary>
+            <summary aria-label={isObsidian ? `Account menu for ${operatingContext.account.name}` : undefined}>
+              {isObsidian ? <span aria-hidden="true">⌄</span> : operatingContext.account.name}
+            </summary>
             <div className={styles.accountPopover}>
               <Link href="/">Dashboard</Link>
               <Link href="/account">Account</Link>
@@ -51,7 +57,7 @@ function DomainSelect({ options, currentSlug, disabled }: { options: DomainSwitc
   )
 }
 
-function CharacterSelect({ options, activeId }: { options: CharacterSwitcherOption[]; activeId: number | null }) {
+function CharacterSelect({ options, activeId, showAvatar = false }: { options: CharacterSwitcherOption[]; activeId: number | null; showAvatar?: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -76,8 +82,10 @@ function CharacterSelect({ options, activeId }: { options: CharacterSwitcherOpti
       setPending(false)
     }
   }
+  const activeCharacter = options.find((character) => character.id === activeId)
   return (
     <form className={styles.contextControl}>
+      {showAvatar ? <span className={styles.avatar} aria-hidden="true">{initials(activeCharacter?.name ?? 'Account')}</span> : null}
       <label htmlFor="character-switcher" className={styles.contextLabel}>Acting as</label>
       <select id="character-switcher" name="characterId" value={selectedId} onChange={submit} className={styles.contextSelect} disabled={pending}>
         <option value="">No participating Character</option>
@@ -86,4 +94,14 @@ function CharacterSelect({ options, activeId }: { options: CharacterSwitcherOpti
       <input type="hidden" name="returnTo" value={returnTo} />
     </form>
   )
+}
+
+function initials(value: string): string {
+  return value
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+    .slice(0, 2)
 }

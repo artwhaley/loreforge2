@@ -12,15 +12,19 @@ export function ObsidianDepartments({
       <section className={s.directoryHeading}>
         <p className={s.eyebrow}>THE PEOPLE WHO KEEP THINGS GOING</p>
         <h1>
-          {model.vocabulary.subdomainPlural} of
+          Offices of
           <br />
           <em>{model.domainName}.</em>
         </h1>
-        <p>These are the working groups that make {model.domainName} more than a place on a map.</p>
+        <p>
+          These are the working groups, civic offices, and crews that make the
+          Reach more than a place on a map.
+        </p>
+        <span className={s.srOnly}>{model.vocabulary.subdomainPlural}</span>
       </section>
       <section className={s.departmentGrid} aria-label="Departments">
         {model.departments.length === 0 ? <p className={s.managementEmpty}>No {model.vocabulary.subdomainPlural.toLowerCase()} have been configured.</p> : model.departments.map((department) => (
-          <DepartmentCard key={department.id} department={department} baseUrl={model.baseUrl} />
+          <DepartmentCard key={department.id} department={department} baseUrl={model.baseUrl} domainName={model.domainName} />
         ))}
       </section>
       {model.manageHref && (
@@ -35,9 +39,11 @@ export function ObsidianDepartments({
 function DepartmentCard({
   department,
   baseUrl,
+  domainName,
 }: {
   department: DepartmentSummary;
   baseUrl: string;
+  domainName: string;
 }) {
   return (
     <a className={s.departmentCard} href={`${baseUrl}/departments/${department.slug}`}>
@@ -49,7 +55,7 @@ function DepartmentCard({
         <ArrowUpRight size={18} />
       </span>
       <strong>{department.name}</strong>
-      <p>{department.description ?? `A ${department.name} working group within this Domain.`}</p>
+      <p>{department.description ?? `A working group of ${domainName}.`}</p>
       <span className={s.departmentFoot}>
         <UsersRound size={14} /> View the office
       </span>

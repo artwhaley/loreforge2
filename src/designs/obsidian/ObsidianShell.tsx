@@ -19,7 +19,7 @@ export function ObsidianShell({ model, theme, designConfig, children }: DesignSh
         Skip to content
       </a>
       <div className={s.contextBar}>
-        <OperatingContext model={model} />
+        <OperatingContext model={model} tone="obsidian" />
       </div>
       <div className={s.navPosition}>
         <Navigation model={model} />

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { Dialog } from "radix-ui";
 import { Aperture, ArrowUpRight, Menu, X } from "lucide-react";
 import type { DomainShellModel } from "@/lib/page-models/shell";
@@ -13,10 +14,12 @@ export function Navigation({
   active?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
   const items = [
     ...model.primaryNavigation,
     { label: "Work", href: model.routes.workUrl, segment: "work" },
   ];
+  const activeSegment = active ?? activeSegmentForPath(pathname, model.routes.baseUrl, items.map((item) => item.segment));
   return (
     <div className={s.navigation}>
       <a
@@ -37,8 +40,8 @@ export function Navigation({
         {items.map((item) => (
           <a
             key={item.segment}
-            className={active === item.segment ? s.activeNav : ""}
-            aria-current={active === item.segment ? "page" : undefined}
+            className={activeSegment === item.segment ? s.activeNav : ""}
+            aria-current={activeSegment === item.segment ? "page" : undefined}
             href={item.href}
           >
             {item.label}
@@ -68,7 +71,7 @@ export function Navigation({
                 <a
                   key={item.segment}
                   href={item.href}
-                  aria-current={active === item.segment ? "page" : undefined}
+                  aria-current={activeSegment === item.segment ? "page" : undefined}
                   onClick={() => setOpen(false)}
                 >
                   {item.label}
@@ -103,4 +106,15 @@ export function Navigation({
       </Dialog.Root>
     </div>
   );
+}
+
+function activeSegmentForPath(pathname: string | null, baseUrl: string, segments: string[]) {
+  if (!pathname) return "";
+  const base = baseUrl.replace(/\/$/, "");
+  const relative = pathname === base ? "" : pathname.startsWith(`${base}/`) ? pathname.slice(base.length) : "";
+  if (relative === "" || relative.startsWith("/manage/") || relative === "/manage") return "";
+  for (const segment of segments) {
+    if (segment && (relative === `/${segment}` || relative.startsWith(`/${segment}/`))) return segment;
+  }
+  return "";
 }

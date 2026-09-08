@@ -20,7 +20,9 @@ import { ObsidianLore } from './ObsidianLore'
  */
 
 export function ObsidianHomeView(model: HomePageModel & DesignVariantProps & DesignConfigProps<ObsidianConfigV1>) {
-  return <ObsidianHome model={model} atmosphereImage={model.designConfig.atmosphere?.url ?? null} />
+  const atmosphereImage = model.designConfig.atmosphere?.url ?? '/media/obsidian-coastline.png'
+  const atmosphereCaption = `THE ARCHIVE AT ${model.domain.name.toUpperCase()}`
+  return <ObsidianHome model={model} atmosphereImage={atmosphereImage} atmosphereCaption={atmosphereCaption} />
 }
 
 export function ObsidianAboutView(model: AboutPageModel & DesignVariantProps & DesignConfigProps<ObsidianConfigV1>) {
@@ -31,7 +33,8 @@ export function ObsidianLoreView(model: LorePageModel & DesignVariantProps & Des
   return <ObsidianLore
     model={{
       baseUrl: model.baseUrl,
-      introduction: 'Published pages that belong to this Domain, gathered as a living guide.',
+      domainName: model.domainName,
+      introduction: 'A growing field guide to the places, customs, and tensions that shape life at the edge of the known sea. Start anywhere; each entry is a door into the shared world.',
       entries: model.entries.map((entry) => ({
         title: entry.title,
         slug: entry.slug,

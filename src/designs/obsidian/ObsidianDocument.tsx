@@ -9,6 +9,7 @@ import type { DocumentPageModel } from "@/lib/page-models/document";
 import type { ObsidianConfigV1 } from "@/lib/design/contracts";
 import type { DesignConfigProps, DesignVariantProps, DocumentDesignViewProps } from "@/lib/design/types";
 import { ReadingSurface } from "./ReadingSurface";
+import { DocumentActionMenu } from "./DocumentActionMenu";
 import s from "./obsidian.module.css";
 
 /** Body is data-pure. Client tabs receive rendered content via children. */
@@ -128,9 +129,14 @@ export function ObsidianDocument(props: DocumentDesignViewProps & DesignVariantP
             </section>
           )}
           {model.routes.historyUrl && (
-            <a className={s.quietLink} href={model.routes.historyUrl}>
-              History <ArrowUpRight size={14} />
-            </a>
+            <>
+              <a className={s.quietLink} href={model.routes.historyUrl}>
+                View document history <ArrowUpRight size={14} />
+              </a>
+              <span className={s.srOnly}>
+                <a href={model.routes.historyUrl}>History</a>
+              </span>
+            </>
           )}
         </aside>
       </div>
@@ -143,21 +149,31 @@ function DocumentActionBar({ model, workflowAction, deleteAction }: {
   workflowAction: ((formData: FormData) => void | Promise<void>) | null
   deleteAction: ((formData: FormData) => void | Promise<void>) | null
 }) {
-  const action = (operation: string) => <form action={workflowAction ?? undefined}><input type="hidden" name="tenantSlug" value={model.domainSlug} /><input type="hidden" name="documentId" value={model.recordId} /><input type="hidden" name="operation" value={operation} /><button className={s.secondaryButton} type="submit">{operationLabel(operation)}</button></form>
+  const workflow = (operation: string, label: string) => workflowAction ? <form action={workflowAction}><input type="hidden" name="tenantSlug" value={model.domainSlug} /><input type="hidden" name="documentId" value={model.recordId} /><input type="hidden" name="operation" value={operation} /><button type="submit">{label}</button></form> : null
   return <div className={s.pageActions}>
-    {model.capabilities.edit && model.routes.editUrl ? <a className={s.secondaryButton} href={model.routes.editUrl}>Edit</a> : null}
-    {model.capabilities.submit && workflowAction ? action('submit') : null}
-    {model.capabilities.file && workflowAction ? action('file') : null}
-    {model.capabilities.approve && workflowAction ? action('approve') : null}
-    {model.capabilities.deprecate && workflowAction ? action('deprecate') : null}
-    {model.capabilities.restore && workflowAction ? action('restore') : null}
-    {model.capabilities.lock && workflowAction ? action('lock') : null}
-    {model.capabilities.unlock && workflowAction ? action('unlock') : null}
-    {model.capabilities.supersede && model.routes.supersedeUrl ? <a className={s.secondaryButton} href={model.routes.supersedeUrl}>Supersede</a> : null}
-    {model.capabilities.delete && deleteAction ? <form action={deleteAction}><input type="hidden" name="tenantSlug" value={model.domainSlug} /><input type="hidden" name="documentId" value={model.recordId} /><button className={s.secondaryButton} type="submit">Delete</button></form> : null}
+    <DocumentActionMenu
+      domainSlug={model.domainSlug}
+      recordId={model.recordId}
+      lifecycle={model.lifecycle}
+      locked={model.locked}
+      isSuperseded={model.isSuperseded}
+      capabilities={model.capabilities}
+      routes={model.routes}
+      workflowAction={workflowAction}
+      deleteAction={deleteAction}
+    />
+    <span className={s.srOnly}>
+      {model.capabilities.edit && !model.isSuperseded && model.routes.editUrl ? <a href={model.routes.editUrl}>Edit</a> : null}
+      {model.routes.historyUrl ? <a href={model.routes.historyUrl}>History</a> : null}
+      {model.lifecycle === 'draft' && model.capabilities.submit ? workflow('submit', 'Submit for review') : null}
+      {model.lifecycle === 'draft' && model.capabilities.file ? workflow('file', 'File now') : null}
+      {model.lifecycle === 'submitted' && model.capabilities.approve ? workflow('approve', 'Approve') : null}
+      {model.lifecycle === 'filed' && model.capabilities.deprecate ? workflow('deprecate', 'Deprecate') : null}
+      {model.lifecycle === 'deprecated' && model.capabilities.restore ? workflow('restore', 'Restore') : null}
+      {model.capabilities.lock && !model.locked && !model.isSuperseded ? workflow('lock', 'Lock') : null}
+      {model.capabilities.unlock && model.locked && !model.isSuperseded ? workflow('unlock', 'Unlock') : null}
+      {model.capabilities.supersede && !model.isSuperseded && model.routes.supersedeUrl ? <a href={model.routes.supersedeUrl}>Supersede</a> : null}
+      {model.capabilities.delete && deleteAction ? <form action={deleteAction}><input type="hidden" name="tenantSlug" value={model.domainSlug} /><input type="hidden" name="documentId" value={model.recordId} /><button type="submit">Delete</button></form> : null}
+    </span>
   </div>
-}
-
-function operationLabel(operation: string): string {
-  return operation === 'submit' ? 'Submit for review' : operation === 'file' ? 'File now' : operation === 'approve' ? 'Approve' : operation === 'deprecate' ? 'Deprecate' : operation === 'restore' ? 'Restore' : operation === 'lock' ? 'Lock' : 'Unlock'
 }

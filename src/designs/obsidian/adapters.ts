@@ -1,10 +1,8 @@
 /**
  * Local Obsidian adapters (OBSIDIAN-T10).
  *
- * These types exist only inside the Obsidian Design folder until later tickets
- * wire the components to production Page Models (T14 Lore, T18 management).
- * They are compile-safe local declarations, NOT live contracts: nothing in the
- * route tree or the registry imports them yet.
+ * These types keep the source presentation independent of route and registry
+ * plumbing while the live adapters supply the production Page Models.
  */
 
 /** Presentation adapter for the production Lore model. */
@@ -19,6 +17,7 @@ export type LoreEntryAdapter = {
 
 export type LorePageModelAdapter = {
   baseUrl: string
+  domainName?: string
   introduction: string
   entries: LoreEntryAdapter[]
 }
