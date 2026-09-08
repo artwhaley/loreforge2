@@ -10,20 +10,16 @@ export function ObsidianAbout({ model }: { model: AboutPageModel }) {
           <Sparkles size={14} /> A WORLD TAKING SHAPE
         </p>
         <h1>
-          We came here
+          About this
           <br />
-          <em>to make a home.</em>
+          <em>shared world.</em>
         </h1>
-        <p>
-          Aster Reach is a shared roleplaying world at the far edge of the
-          charted sea: part refuge, part experiment, and wholly shaped by the
-          people who choose to live within it.
-        </p>
+        <p>Canonical information about this Domain, presented through the Obsidian design.</p>
       </section>
       <section className={s.aboutStatement}>
         <div className={s.aboutMark} aria-hidden="true">
           <Compass size={32} strokeWidth={1} />
-          <span>ASTER REACH</span>
+          <span>LOREFORGE DOMAIN</span>
         </div>
         <div className={s.aboutCopy}>
           <div dangerouslySetInnerHTML={{ __html: model.bodyHtml }} />

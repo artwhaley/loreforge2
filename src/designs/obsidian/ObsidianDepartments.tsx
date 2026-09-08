@@ -12,17 +12,14 @@ export function ObsidianDepartments({
       <section className={s.directoryHeading}>
         <p className={s.eyebrow}>THE PEOPLE WHO KEEP THINGS GOING</p>
         <h1>
-          Offices of
+          {model.vocabulary.subdomainPlural} of
           <br />
-          <em>Aster Reach.</em>
+          <em>{model.domainName}.</em>
         </h1>
-        <p>
-          These are the working groups, civic offices, and crews that make the
-          Reach more than a place on a map.
-        </p>
+        <p>These are the working groups that make {model.domainName} more than a place on a map.</p>
       </section>
       <section className={s.departmentGrid} aria-label="Departments">
-        {model.departments.map((department) => (
+        {model.departments.length === 0 ? <p className={s.managementEmpty}>No {model.vocabulary.subdomainPlural.toLowerCase()} have been configured.</p> : model.departments.map((department) => (
           <DepartmentCard key={department.id} department={department} baseUrl={model.baseUrl} />
         ))}
       </section>
@@ -52,7 +49,7 @@ function DepartmentCard({
         <ArrowUpRight size={18} />
       </span>
       <strong>{department.name}</strong>
-      <p>{department.description ?? "A working group of Aster Reach."}</p>
+      <p>{department.description ?? `A ${department.name} working group within this Domain.`}</p>
       <span className={s.departmentFoot}>
         <UsersRound size={14} /> View the office
       </span>

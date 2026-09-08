@@ -25,6 +25,9 @@ export function ObsidianHome({
   atmosphereImage: string | null;
   atmosphereCaption?: string;
 }) {
+  const nameParts = model.domain.name.trim().split(/\s+/).filter(Boolean);
+  const finalName = nameParts.at(-1) ?? model.domain.name;
+  const leadingName = nameParts.slice(0, -1).join(" ");
   return (
     <>
       <section className={s.hero}>
@@ -42,9 +45,8 @@ export function ObsidianHome({
             <span className={s.liveDot} /> THE DOMAIN ARCHIVE
           </p>
           <h1>
-            {model.domain.name.split(" ").slice(0, -1).join(" ")}
-            <br />
-            <em>{model.domain.name.split(" ").at(-1)}</em>
+            {leadingName ? <>{leadingName}<br /></> : null}
+            <em>{finalName}</em>
           </h1>
           <p className={s.heroMotto}>{model.domain.motto}</p>
           <a href={`${model.baseUrl}/records`} className={s.primaryButton}>
