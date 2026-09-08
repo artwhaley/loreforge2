@@ -25,8 +25,8 @@ export default async function LorePage({ params }: Props) {
   const Shell = route.design.Shell
   const Lore = route.design.pages.lore
   return (
-    <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }}>
-      <Lore {...lore} headerLayout={route.headerLayout} documentStyle={route.documentStyle} />
+    <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }} designConfig={route.config as object}>
+      <Lore {...lore} headerLayout={route.headerLayout} documentStyle={route.documentStyle} designConfig={route.config as object} />
     </Shell>
   )
 }

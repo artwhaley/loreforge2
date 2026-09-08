@@ -28,7 +28,7 @@ const THEME = { headerLayout: 'centered', documentStyle: 'classic' }
 describe('Civic shell (T06 owned frame)', () => {
   it('renders operating context once, identity, primary + management nav, Work, children, and dashboard return', () => {
     const { container } = render(
-      <CivicShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: {}, ...THEME }}>
+      <CivicShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: {}, ...THEME }} designConfig={civicDefaults}>
         <p>CIVIC-SHELL-CHILD</p>
       </CivicShell>,
     )
@@ -49,7 +49,7 @@ describe('Civic shell (T06 owned frame)', () => {
 
   it.each(['centered', 'compact', 'banner'] as const)('applies the %s header posture from the resolved Civic config', (header) => {
     const { container } = render(
-      <CivicShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: { '--civic-header': header }, ...THEME }}>
+      <CivicShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: { '--civic-header': header }, ...THEME }} designConfig={civicDefaults}>
         <p>c</p>
       </CivicShell>,
     )
@@ -59,7 +59,7 @@ describe('Civic shell (T06 owned frame)', () => {
 
   it('falls back to the centered posture when no Civic header token is present', () => {
     const { container } = render(
-      <CivicShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: {}, ...THEME }}>
+      <CivicShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: {}, ...THEME }} designConfig={civicDefaults}>
         <p>c</p>
       </CivicShell>,
     )
@@ -84,7 +84,7 @@ describe('Civic responsive + reduced-motion paths', () => {
   it('renders the full nav set under a narrow viewport (responsive smoke)', () => {
     stubMatchMedia('(max-width: 900px)', true)
     const { container } = render(
-      <CivicShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: {}, ...THEME }}>
+      <CivicShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: {}, ...THEME }} designConfig={civicDefaults}>
         <p>responsive-child</p>
       </CivicShell>,
     )
@@ -95,7 +95,7 @@ describe('Civic responsive + reduced-motion paths', () => {
   it('renders cleanly with prefers-reduced-motion active', () => {
     stubMatchMedia('(prefers-reduced-motion: reduce)', true)
     const { container } = render(
-      <CivicShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: {}, ...THEME }}>
+      <CivicShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: {}, ...THEME }} designConfig={civicDefaults}>
         <p>calm-child</p>
       </CivicShell>,
     )

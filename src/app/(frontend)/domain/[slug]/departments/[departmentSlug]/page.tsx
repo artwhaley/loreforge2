@@ -19,8 +19,8 @@ export default async function DepartmentPage({ params }: Props) {
   const Shell = route.design.Shell
   const Department = route.design.pages.department
   return (
-    <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }}>
-      <Department {...department} headerLayout={route.headerLayout} documentStyle={route.documentStyle} />
+    <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }} designConfig={route.config as object}>
+      <Department {...department} headerLayout={route.headerLayout} documentStyle={route.documentStyle} designConfig={route.config as object} />
     </Shell>
   )
 }

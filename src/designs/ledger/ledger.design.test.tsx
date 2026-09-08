@@ -28,7 +28,7 @@ const THEME = { headerLayout: 'centered', documentStyle: 'classic' }
 describe('Ledger shell (T07 owned frame)', () => {
   it('renders a true semantic side rail with identity, primary + management nav, Work, children, and dashboard return', () => {
     const { container } = render(
-      <LedgerShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: {}, ...THEME }}>
+      <LedgerShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: {}, ...THEME }} designConfig={ledgerDefaults}>
         <p>LEDGER-SHELL-CHILD</p>
       </LedgerShell>,
     )
@@ -57,7 +57,7 @@ describe('Ledger shell (T07 owned frame)', () => {
         '--ledger-rail-density': 'compact',
         '--ledger-masthead': 'folio',
         '--ledger-rules': 'heavy',
-      }, ...THEME }}>
+      }, ...THEME }} designConfig={ledgerDefaults}>
         <p>c</p>
       </LedgerShell>,
     )
@@ -70,7 +70,7 @@ describe('Ledger shell (T07 owned frame)', () => {
 
   it('falls back to Ledger defaults when no config tokens are present', () => {
     const { container } = render(
-      <LedgerShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: {}, ...THEME }}>
+      <LedgerShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: {}, ...THEME }} designConfig={ledgerDefaults}>
         <p>c</p>
       </LedgerShell>,
     )
@@ -81,7 +81,7 @@ describe('Ledger shell (T07 owned frame)', () => {
 
   it('renders the masthead image from Ledger design media, not the legacy banner field', () => {
     const { container } = render(
-      <LedgerShell model={{ ...SHELL_PREVIEW_MODEL, domain: { ...SHELL_PREVIEW_MODEL.domain, bannerUrl: '/legacy/banner.png' } }}
+      <LedgerShell model={{ ...SHELL_PREVIEW_MODEL, domain: { ...SHELL_PREVIEW_MODEL.domain, bannerUrl: '/legacy/banner.png' } }} designConfig={ledgerDefaults}
         theme={{ tokens: { '--ledger-masthead-image': '/media/ledger-masthead.png' }, ...THEME }}>
         <p>c</p>
       </LedgerShell>,
@@ -109,7 +109,7 @@ describe('Ledger responsive + reduced-motion paths', () => {
   it('renders the full nav set under a narrow viewport (responsive smoke)', () => {
     stubMatchMedia('(max-width: 900px)', true)
     const { container } = render(
-      <LedgerShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: {}, ...THEME }}>
+      <LedgerShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: {}, ...THEME }} designConfig={ledgerDefaults}>
         <p>responsive-child</p>
       </LedgerShell>,
     )
@@ -120,7 +120,7 @@ describe('Ledger responsive + reduced-motion paths', () => {
   it('renders cleanly with prefers-reduced-motion active', () => {
     stubMatchMedia('(prefers-reduced-motion: reduce)', true)
     const { container } = render(
-      <LedgerShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: {}, ...THEME }}>
+      <LedgerShell model={SHELL_PREVIEW_MODEL} theme={{ tokens: {}, ...THEME }} designConfig={ledgerDefaults}>
         <p>calm-child</p>
       </LedgerShell>,
     )

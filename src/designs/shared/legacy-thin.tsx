@@ -1,5 +1,7 @@
 import type { AboutPageModel, LorePageModel } from '@/lib/page-models/info'
 import type { DepartmentPageModel, DepartmentsPageModel } from '@/lib/page-models/departments'
+import type { PosterConfigV1 } from '@/lib/design/contracts'
+import type { DesignConfigProps } from '@/lib/design/types'
 
 import styles from './legacy-thin.module.scss'
 
@@ -9,7 +11,7 @@ import styles from './legacy-thin.module.scss'
  * still uses these — first-class Designs own their thin pages and must NOT
  * import this module.
  */
-export function LegacyDepartmentsView(model: DepartmentsPageModel) {
+export function LegacyDepartmentsView(model: DepartmentsPageModel & DesignConfigProps<PosterConfigV1>) {
   return (
     <section className={styles.thin}>
       <h1 className={styles.title}>{model.vocabulary.subdomainPlural}</h1>
@@ -28,7 +30,7 @@ export function LegacyDepartmentsView(model: DepartmentsPageModel) {
   )
 }
 
-export function LegacyDepartmentView(model: DepartmentPageModel) {
+export function LegacyDepartmentView(model: DepartmentPageModel & DesignConfigProps<PosterConfigV1>) {
   return (
     <div className={styles.thin}>
       <p className={styles.crumb}><a href={`${model.baseUrl}/departments`}>{model.vocabulary.subdomainPlural}</a> / {model.name}</p>
@@ -45,7 +47,7 @@ export function LegacyDepartmentView(model: DepartmentPageModel) {
   )
 }
 
-export function LegacyAboutView(model: AboutPageModel) {
+export function LegacyAboutView(model: AboutPageModel & DesignConfigProps<PosterConfigV1>) {
   return (
     <article className={styles.thin}>
       {model.editHref ? <p className={styles.manage}><a href={model.editHref}>Edit</a></p> : null}
@@ -54,7 +56,7 @@ export function LegacyAboutView(model: AboutPageModel) {
   )
 }
 
-export function LegacyLoreView(_model: LorePageModel) {
+export function LegacyLoreView(_model: LorePageModel & DesignConfigProps<PosterConfigV1>) {
   return (
     <article className={styles.thin}>
       <h1 className={styles.title}>Lore</h1>

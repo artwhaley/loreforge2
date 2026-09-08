@@ -1,10 +1,12 @@
 import type { AboutPageModel, LorePageModel } from '@/lib/page-models/info'
 import type { DepartmentPageModel, DepartmentsPageModel } from '@/lib/page-models/departments'
+import type { LedgerConfigV1 } from '@/lib/design/contracts'
+import type { DesignConfigProps } from '@/lib/design/types'
 
 import styles from './ledger-thin.module.scss'
 
 /** Ledger thin pages: Departments / Department / About / Lore, Ledger-owned. */
-export function LedgerDepartmentsView(model: DepartmentsPageModel) {
+export function LedgerDepartmentsView(model: DepartmentsPageModel & DesignConfigProps<LedgerConfigV1>) {
   return (
     <section className={styles.thin}>
       <h1 className={styles.title}>{model.vocabulary.subdomainPlural}</h1>
@@ -23,7 +25,7 @@ export function LedgerDepartmentsView(model: DepartmentsPageModel) {
   )
 }
 
-export function LedgerDepartmentView(model: DepartmentPageModel) {
+export function LedgerDepartmentView(model: DepartmentPageModel & DesignConfigProps<LedgerConfigV1>) {
   return (
     <div className={styles.thin}>
       <p className={styles.crumb}><a href={`${model.baseUrl}/departments`}>{model.vocabulary.subdomainPlural}</a> / {model.name}</p>
@@ -40,7 +42,7 @@ export function LedgerDepartmentView(model: DepartmentPageModel) {
   )
 }
 
-export function LedgerAboutView(model: AboutPageModel) {
+export function LedgerAboutView(model: AboutPageModel & DesignConfigProps<LedgerConfigV1>) {
   return (
     <article className={styles.thin}>
       {model.editHref ? <p className={styles.manage}><a href={model.editHref}>Edit</a></p> : null}
@@ -49,7 +51,7 @@ export function LedgerAboutView(model: AboutPageModel) {
   )
 }
 
-export function LedgerLoreView(_model: LorePageModel) {
+export function LedgerLoreView(_model: LorePageModel & DesignConfigProps<LedgerConfigV1>) {
   return (
     <article className={styles.thin}>
       <h1 className={styles.title}>Lore</h1>

@@ -1,12 +1,14 @@
 'use client'
 
 import type { RecordsPageModel } from '@/lib/page-models/records'
+import type { PosterConfigV1 } from '@/lib/design/contracts'
+import type { DesignConfigProps } from '@/lib/design/types'
 import { useRecordsWorkspace } from '@/lib/records/workspace/useRecordsWorkspace'
 
 import styles from './poster-records.module.scss'
 
 /** Poster Records: a card-grid composition over the shared workspace. */
-export function PosterRecords(model: RecordsPageModel) {
+export function PosterRecords(model: RecordsPageModel & DesignConfigProps<PosterConfigV1>) {
   const ws = useRecordsWorkspace(model)
   const flat = ws.results.trees.flatMap(function walk(node): Array<typeof node.record> { return [node.record, ...node.children.flatMap(walk)] })
   return (

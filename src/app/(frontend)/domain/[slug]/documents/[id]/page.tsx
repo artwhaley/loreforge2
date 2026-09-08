@@ -27,13 +27,14 @@ export default async function DocumentViewPage({ params, searchParams }: Props) 
   const Shell = route.design.Shell
   const Document = route.design.pages.document
   return (
-    <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }}>
+    <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }} designConfig={route.config as object}>
       <Document
         {...document}
         workflowAction={documentWorkflowAction}
         deleteAction={softDeleteDocumentAction}
         headerLayout={route.headerLayout}
         documentStyle={route.documentStyle}
+        designConfig={route.config as object}
       />
     </Shell>
   )

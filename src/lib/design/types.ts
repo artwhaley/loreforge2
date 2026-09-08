@@ -109,16 +109,16 @@ export type DesignDefinition<TConfig extends object = object> = {
     Editor: ComponentType<DesignStudioEditorProps<TConfig>>
   }
 
-  Shell: ComponentType<DesignShellProps>
+  Shell: ComponentType<DesignShellProps<TConfig>>
 
   pages: {
-    home: ComponentType<HomePageModel & DesignVariantProps>
-    records: ComponentType<RecordsDesignViewProps>
-    document: ComponentType<DocumentDesignViewProps & DesignVariantProps>
-    departments: ComponentType<DepartmentsPageModel & DesignVariantProps>
-    department: ComponentType<DepartmentPageModel & DesignVariantProps>
-    about: ComponentType<AboutPageModel & DesignVariantProps>
-    lore: ComponentType<LorePageModel & DesignVariantProps>
+    home: ComponentType<HomePageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+    records: ComponentType<RecordsDesignViewProps & DesignConfigProps<TConfig>>
+    document: ComponentType<DocumentDesignViewProps & DesignVariantProps & DesignConfigProps<TConfig>>
+    departments: ComponentType<DepartmentsPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+    department: ComponentType<DepartmentPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+    about: ComponentType<AboutPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+    lore: ComponentType<LorePageModel & DesignVariantProps & DesignConfigProps<TConfig>>
     /**
      * Operational slots (OBSIDIAN-T01). OPTIONAL until T08 flips them to
      * required; see the frozen requiredness ladder in the patch spec §5.1.
@@ -126,16 +126,16 @@ export type DesignDefinition<TConfig extends object = object> = {
      * authorized approvers may use it without being Domain administrators.
      * `members` is a public directory slot (patched packet, OBSIDIAN-T00).
      */
-    work?: ComponentType<WorkPageModel & DesignVariantProps>
-    members?: ComponentType<MembersPageModel & DesignVariantProps>
+    work?: ComponentType<WorkPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+    members?: ComponentType<MembersPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
     management?: {
-      departments?: ComponentType<DepartmentsManagementPageModel & DesignVariantProps>
-      folders?: ComponentType<FolderManagementPageModel & DesignVariantProps>
-      roles?: ComponentType<RoleManagementPageModel & DesignVariantProps>
-      documentTypes?: ComponentType<DocumentTypesManagementPageModel & DesignVariantProps>
-      people?: ComponentType<PeopleManagementPageModel & DesignVariantProps>
-      person?: ComponentType<PersonManagementPageModel & DesignVariantProps>
-      invitations?: ComponentType<InvitationsManagementPageModel & DesignVariantProps>
+      departments?: ComponentType<DepartmentsManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+      folders?: ComponentType<FolderManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+      roles?: ComponentType<RoleManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+      documentTypes?: ComponentType<DocumentTypesManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+      people?: ComponentType<PeopleManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+      person?: ComponentType<PersonManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+      invitations?: ComponentType<InvitationsManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
     }
   }
 
@@ -149,14 +149,26 @@ export type DesignVariantProps = {
   documentStyle: string
 }
 
-/** Shell receives the authorized model plus the resolved theme/variant tokens. */
-export type DesignShellProps = {
+/**
+ * The validated active Design config, propagated generically (OBSIDIAN-T02).
+ * Routes and the Site Studio preview hand the already-validated config to
+ * Shells and page renderers; config erasure stays localized to the registry/
+ * dispatch boundary. The Studio preview passes the DRAFT config so edits
+ * render before Save; saved-config fallback never reaches a renderer invalid.
+ */
+export type DesignConfigProps<TConfig extends object> = {
+  designConfig: TConfig
+}
+
+/** Shell receives the authorized model, resolved theme/variant tokens, and the validated config. */
+export type DesignShellProps<TConfig extends object = object> = {
   model: DomainShellModel
   theme: {
     tokens: Record<string, string>
     headerLayout: string
     documentStyle: string
   }
+  designConfig: TConfig
   children: React.ReactNode
 }
 

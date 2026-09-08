@@ -1,11 +1,12 @@
-import type { DesignVariantProps, DocumentDesignViewProps } from '@/lib/design/types'
+import type { PosterConfigV1 } from '@/lib/design/contracts'
+import type { DesignConfigProps, DesignVariantProps, DocumentDesignViewProps } from '@/lib/design/types'
 import { getDocumentActions } from '@/lib/documents/presentation/actions'
 import type { DocumentPageModel } from '@/lib/page-models/document'
 
 import styles from './poster-document.module.scss'
 
 /** Poster document: oversized opening, off-grid body, stacked footnotes. */
-export function PosterDocument(model: DocumentPageModel & DesignVariantProps & DocumentDesignViewProps) {
+export function PosterDocument(model: DocumentPageModel & DesignVariantProps & DocumentDesignViewProps & DesignConfigProps<PosterConfigV1>) {
   const { workflowAction, deleteAction } = model
   // P08D-T02: the whole permitted action surface comes from the shared helper.
   const actions = getDocumentActions(model, { workflow: Boolean(workflowAction), delete: Boolean(deleteAction) })

@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import Link from 'next/link'
 
+import type { CivicConfigV1 } from '@/lib/design/contracts'
 import type { DesignShellProps } from '@/lib/design/types'
 import { OperatingContext } from '@/components/platform/OperatingContext'
 
@@ -13,7 +14,7 @@ import styles from './CivicShell.module.scss'
  * return) is Civic DOM + SCSS. The header posture comes from the resolved
  * Civic config (`--civic-header`), not from a shared axis list.
  */
-export function CivicShell({ model, theme, children }: DesignShellProps) {
+export function CivicShell({ model, theme, children }: DesignShellProps<CivicConfigV1>) {
   const { domain, primaryNavigation, managementNavigation, routes } = model
   const header = theme.tokens['--civic-header'] ?? 'centered'
   return (

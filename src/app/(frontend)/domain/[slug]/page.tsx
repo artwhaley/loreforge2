@@ -15,8 +15,8 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
   const Shell = route.design.Shell
   const Home = route.design.pages.home
   return (
-    <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }}>
-      <Home {...home} headerLayout={route.headerLayout} documentStyle={route.documentStyle} />
+    <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }} designConfig={route.config as object}>
+      <Home {...home} headerLayout={route.headerLayout} documentStyle={route.documentStyle} designConfig={route.config as object} />
     </Shell>
   )
 }

@@ -18,8 +18,8 @@ export default async function DepartmentsPage({ params }: Props) {
   const Shell = route.design.Shell
   const Departments = route.design.pages.departments
   return (
-    <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }}>
-      <Departments {...departments} headerLayout={route.headerLayout} documentStyle={route.documentStyle} />
+    <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }} designConfig={route.config as object}>
+      <Departments {...departments} headerLayout={route.headerLayout} documentStyle={route.documentStyle} designConfig={route.config as object} />
     </Shell>
   )
 }

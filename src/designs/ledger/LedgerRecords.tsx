@@ -3,6 +3,8 @@
 import { useRecordActions } from '@/components/functional/records/recordActions'
 import type { FolderSummary, RecordSummary } from '@/lib/page-models/common'
 import type { RecordsPageModel } from '@/lib/page-models/records'
+import type { LedgerConfigV1 } from '@/lib/design/contracts'
+import type { DesignConfigProps } from '@/lib/design/types'
 import { folderActionDescriptors, importNotecardHref, newRecordHref, recordActionDescriptors } from '@/lib/records/presentation/operations'
 import { useRecordsWorkspace } from '@/lib/records/workspace/useRecordsWorkspace'
 
@@ -17,7 +19,7 @@ function recordDate(value: string) { return new Date(value).toLocaleDateString('
  * supersession nesting — composed as Ledger's own command strip + index,
  * never as Civic's explorer panes.
  */
-export function LedgerRecords(model: RecordsPageModel) {
+export function LedgerRecords(model: RecordsPageModel & DesignConfigProps<LedgerConfigV1>) {
   const base = model.baseUrl
   const tenantSlug = model.domainSlug
   const { manageFolders: canManageFolders, actOnRecords: canActOnRecords } = model.capabilities

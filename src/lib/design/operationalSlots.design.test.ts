@@ -5,6 +5,10 @@ import { ledger } from '@/designs/ledger'
 import { poster } from '@/designs/poster'
 import type { DesignDefinition } from './types'
 
+// Config-parameterized pages are erased at the fixture boundary, mirroring the
+// registry erasure (OBSIDIAN-T02).
+type Erased = DesignDefinition<object>
+
 /**
  * OBSIDIAN-T01 operational-slot baseline.
  *
@@ -54,9 +58,9 @@ function declaredSlots(design: { pages: DesignDefinition<object>['pages'] }): Op
 }
 
 const ALL_DESIGNS: Array<[string, { pages: DesignDefinition<object>['pages'] }]> = [
-  ['civic', civic],
-  ['ledger', ledger],
-  ['poster', poster],
+  ['civic', civic as unknown as Erased],
+  ['ledger', ledger as unknown as Erased],
+  ['poster', poster as unknown as Erased],
 ]
 
 describe('OBSIDIAN-T01 operational slot baseline', () => {

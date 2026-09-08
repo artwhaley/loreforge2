@@ -1,10 +1,11 @@
 import type { HomePageModel } from '@/lib/page-models/home'
-import type { DesignVariantProps } from '@/lib/design/types'
+import type { CivicConfigV1 } from '@/lib/design/contracts'
+import type { DesignConfigProps, DesignVariantProps } from '@/lib/design/types'
 
 import styles from './home.module.scss'
 
 /** Civic home preserves the current universal composition exactly. */
-export function CivicHome({ baseUrl, domain, welcome, destinations, recentRecords }: HomePageModel & DesignVariantProps) {
+export function CivicHome({ baseUrl, domain, welcome, destinations, recentRecords }: HomePageModel & DesignVariantProps & DesignConfigProps<CivicConfigV1>) {
   return (
     <div className={styles.home}>
       <section className={styles.welcome}>

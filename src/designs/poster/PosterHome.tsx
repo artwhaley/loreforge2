@@ -1,10 +1,11 @@
 import type { HomePageModel } from '@/lib/page-models/home'
-import type { DesignVariantProps } from '@/lib/design/types'
+import type { PosterConfigV1 } from '@/lib/design/contracts'
+import type { DesignConfigProps, DesignVariantProps } from '@/lib/design/types'
 
 import styles from './poster-home.module.scss'
 
 /** Poster home: monumental hero, destination tiles, spotlight record stack. */
-export function PosterHome({ baseUrl, domain, welcome, destinations, recentRecords }: HomePageModel & DesignVariantProps) {
+export function PosterHome({ baseUrl, domain, welcome, destinations, recentRecords }: HomePageModel & DesignVariantProps & DesignConfigProps<PosterConfigV1>) {
   return (
     <div className={styles.posterHome}>
       <section className={styles.hero}>

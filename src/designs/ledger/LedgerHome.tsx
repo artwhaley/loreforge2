@@ -1,10 +1,11 @@
 import type { HomePageModel } from '@/lib/page-models/home'
-import type { DesignVariantProps } from '@/lib/design/types'
+import type { LedgerConfigV1 } from '@/lib/design/contracts'
+import type { DesignConfigProps, DesignVariantProps } from '@/lib/design/types'
 
 import styles from './ledger-home.module.scss'
 
 /** Ledger home: single-column editorial spread with a numbered index and ruled register. */
-export function LedgerHome({ baseUrl, domain, welcome, destinations, recentRecords }: HomePageModel & DesignVariantProps) {
+export function LedgerHome({ baseUrl, domain, welcome, destinations, recentRecords }: HomePageModel & DesignVariantProps & DesignConfigProps<LedgerConfigV1>) {
   return (
     <div className={styles.ledgerHome}>
       <section className={styles.welcome}>

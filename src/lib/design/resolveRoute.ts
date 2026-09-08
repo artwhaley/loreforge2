@@ -8,6 +8,8 @@ import { buildDomainShellModel } from '@/lib/shell/buildDomainShellModel'
 export type DomainRouteShell = {
   design: DesignDefinition
   shell: Awaited<ReturnType<typeof buildDomainShellModel>>
+  /** Validated active Design config (erased at dispatch; OBSIDIAN-T02). */
+  config: unknown
   headerLayout: string
   documentStyle: string
   cssVars: Record<string, string>
@@ -31,6 +33,7 @@ export async function resolveDomainRouteShell(input: {
   return {
     design: resolved.design,
     shell,
+    config: resolved.config,
     headerLayout: resolved.variant.headerLayout,
     documentStyle: resolved.variant.documentStyle,
     cssVars: resolved.cssVars,

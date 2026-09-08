@@ -2,8 +2,13 @@ import { render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { civic } from '@/designs/civic'
+import { civicDefaults } from '@/designs/civic/config'
 import { ledger } from '@/designs/ledger'
+import { ledgerDefaults } from '@/designs/ledger/config'
 import { poster } from '@/designs/poster'
+import { posterDefaults } from '@/designs/poster/config'
+import type { DesignDefinition } from './types'
+
 import {
   ABOUT_PREVIEW_MODEL,
   DEPARTMENT_PREVIEW_MODEL,
@@ -31,6 +36,11 @@ import {
   type RecordsCapability,
 } from '@/lib/design/conformance'
 
+// Config is erased at the fixture boundary (OBSIDIAN-T02); conformance asserts
+// capability representation, not config fields.
+type Erased = DesignDefinition<object>
+const CONFIG = {}
+
 // The shared shell chrome is a client component under Next router hooks;
 // jsdom has no router, so stub the navigation surface for shell conformance.
 vi.mock('next/navigation', () => ({
@@ -44,11 +54,11 @@ vi.mock('next/link', () => ({
   ),
 }))
 
-const ALL_DESIGNS = [
-  ['civic', civic],
-  ['ledger', ledger],
-  ['poster', poster],
-] as const
+const ALL_DESIGNS: Array<['civic' | 'ledger' | 'poster', Erased]> = [
+  ['civic', civic as unknown as Erased],
+  ['ledger', ledger as unknown as Erased],
+  ['poster', poster as unknown as Erased],
+]
 
 const SHELL_THEME = { tokens: {}, headerLayout: 'centered', documentStyle: 'classic' }
 const stubAction = async () => {}
@@ -64,7 +74,7 @@ const VARIANT = { headerLayout: 'centered', documentStyle: 'classic' }
 describe('P08D-T00 shell conformance', () => {
   it.each(ALL_DESIGNS)('%s shell renders the full shared chrome and hosts page children', (_key, Design) => {
     const { container } = render(
-      <Design.Shell model={SHELL_PREVIEW_MODEL} theme={SHELL_THEME}>
+      <Design.Shell model={SHELL_PREVIEW_MODEL} theme={SHELL_THEME} designConfig={CONFIG}>
         <p>CONFORMANCE-SHELL-CHILD</p>
       </Design.Shell>,
     )
@@ -82,17 +92,17 @@ describe('P08D-T00 records conformance', () => {
   }
 
   it.each(ALL_DESIGNS)('%s records represent every fixture record, folder, search, and permitted action', (_key, Design) => {
-    const { container } = render(<Design.pages.records {...RECORDS_CONFORMANCE_MODEL} />)
+    const { container } = render(<Design.pages.records {...RECORDS_CONFORMANCE_MODEL} designConfig={CONFIG} />)
     assertRecordsCapabilities(container, RECORDS_CONFORMANCE_MODEL, { omit: RECORDS_GAPS[_key] })
   })
 
   it.each(ALL_DESIGNS)('%s records render an empty state when nothing is readable', (_key, Design) => {
-    const { container } = render(<Design.pages.records {...EMPTY_RECORDS_CONFORMANCE_MODEL} />)
+    const { container } = render(<Design.pages.records {...EMPTY_RECORDS_CONFORMANCE_MODEL} designConfig={CONFIG} />)
     assertRecordsCapabilities(container, EMPTY_RECORDS_CONFORMANCE_MODEL, { omit: RECORDS_GAPS[_key] })
   })
 
   it('documents the Civic records baseline: full capability set asserted with no omissions', () => {
-    const { container } = render(<civic.pages.records {...RECORDS_CONFORMANCE_MODEL} />)
+    const { container } = render(<civic.pages.records {...RECORDS_CONFORMANCE_MODEL} designConfig={civicDefaults} />)
     assertRecordsCapabilities(container, RECORDS_CONFORMANCE_MODEL)
   })
 })
@@ -120,7 +130,7 @@ describe('P08D-T00 document conformance', () => {
   it.each(ALL_DESIGNS)('%s document represents title, body, credits, tags, concerns, and every permitted action', (_key, Design) => {
     for (const [, fixture] of LIFECYCLE_FIXTURES) {
       const { container } = render(
-        <Design.pages.document {...fixture} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} />,
+        <Design.pages.document {...fixture} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} designConfig={CONFIG} />,
       )
       assertDocumentCapabilities(container, fixture, { omit: DOCUMENT_GAPS[_key], workflowAction: stubAction, deleteAction: stubAction })
     }
@@ -128,14 +138,14 @@ describe('P08D-T00 document conformance', () => {
 
   it.each(ALL_DESIGNS)('%s document surfaces the route status message with role=alert', (_key, Design) => {
     const { container } = render(
-      <Design.pages.document {...STATUS_DOCUMENT_MODEL} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} />,
+      <Design.pages.document {...STATUS_DOCUMENT_MODEL} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} designConfig={CONFIG} />,
     )
     assertDocumentCapabilities(container, STATUS_DOCUMENT_MODEL, { omit: DOCUMENT_GAPS[_key], workflowAction: stubAction, deleteAction: stubAction })
   })
 
   it('civic badges lifecycle state on the record sheet (T06 first-class)', () => {
     const statusTextOf = (model: typeof DRAFT_DOCUMENT_MODEL) => {
-      const { container } = render(<civic.pages.document {...model} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} />)
+      const { container } = render(<civic.pages.document {...model} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} designConfig={civicDefaults} />)
       const badge = container.querySelector('[role="status"]')
       return badge?.textContent ?? ''
     }
@@ -146,7 +156,7 @@ describe('P08D-T00 document conformance', () => {
 
   it('ledger badges lifecycle state on the docket (T07 first-class)', () => {
     const statusTextOf = (model: typeof DRAFT_DOCUMENT_MODEL) => {
-      const { container } = render(<ledger.pages.document {...model} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} />)
+      const { container } = render(<ledger.pages.document {...model} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} designConfig={ledgerDefaults} />)
       const badge = container.querySelector('[role="status"]')
       return badge?.textContent ?? ''
     }
@@ -157,7 +167,7 @@ describe('P08D-T00 document conformance', () => {
 
   it('tripwire: poster does not badge lifecycle states yet (T08 closes this)', () => {
     const { container } = render(
-      <poster.pages.document {...DRAFT_DOCUMENT_MODEL} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} />,
+      <poster.pages.document {...DRAFT_DOCUMENT_MODEL} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} designConfig={posterDefaults} />,
     )
     const text = container.textContent?.toLowerCase().replace(/\s+/g, ' ')
     expect(text).not.toMatch(/\bdraft\b/)
@@ -168,22 +178,22 @@ describe('P08D-T00 document conformance', () => {
 
 describe('P08D-T00 thin-page conformance', () => {
   it.each(ALL_DESIGNS)('%s departments directory lists every department with a working link', (_key, Design) => {
-    const { container } = render(<Design.pages.departments {...DEPARTMENTS_PREVIEW_MODEL} {...VARIANT} />)
+    const { container } = render(<Design.pages.departments {...DEPARTMENTS_PREVIEW_MODEL} {...VARIANT} designConfig={CONFIG} />)
     assertThinPageCapabilities(container, 'departments', DEPARTMENTS_PREVIEW_MODEL)
   })
 
   it.each(ALL_DESIGNS)('%s department detail shows members, folders, and the manage route', (_key, Design) => {
-    const { container } = render(<Design.pages.department {...DEPARTMENT_PREVIEW_MODEL} {...VARIANT} />)
+    const { container } = render(<Design.pages.department {...DEPARTMENT_PREVIEW_MODEL} {...VARIANT} designConfig={CONFIG} />)
     assertThinPageCapabilities(container, 'department', DEPARTMENT_PREVIEW_MODEL)
   })
 
   it.each(ALL_DESIGNS)('%s about renders the body and the edit route', (_key, Design) => {
-    const { container } = render(<Design.pages.about {...ABOUT_PREVIEW_MODEL} {...VARIANT} />)
+    const { container } = render(<Design.pages.about {...ABOUT_PREVIEW_MODEL} {...VARIANT} designConfig={CONFIG} />)
     assertThinPageCapabilities(container, 'about', ABOUT_PREVIEW_MODEL)
   })
 
   it.each(ALL_DESIGNS)('%s lore renders the canonical Lore surface', (_key, Design) => {
-    const { container } = render(<Design.pages.lore {...LORE_PREVIEW_MODEL} {...VARIANT} />)
+    const { container } = render(<Design.pages.lore {...LORE_PREVIEW_MODEL} {...VARIANT} designConfig={CONFIG} />)
     assertThinPageCapabilities(container, 'lore', LORE_PREVIEW_MODEL)
   })
 })

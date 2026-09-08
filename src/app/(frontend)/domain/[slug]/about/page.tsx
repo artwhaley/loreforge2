@@ -25,8 +25,8 @@ export default async function AboutPage({ params }: Props) {
   const Shell = route.design.Shell
   const About = route.design.pages.about
   return (
-    <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }}>
-      <About {...about} headerLayout={route.headerLayout} documentStyle={route.documentStyle} />
+    <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }} designConfig={route.config as object}>
+      <About {...about} headerLayout={route.headerLayout} documentStyle={route.documentStyle} designConfig={route.config as object} />
     </Shell>
   )
 }

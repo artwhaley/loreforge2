@@ -26,9 +26,9 @@ export default async function RecordsPage({ params, searchParams }: Props) {
   const Shell = route.design.Shell
   const Records = route.design.pages.records
   return (
-    <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }}>
+    <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }} designConfig={route.config as object}>
       <RecordActionsProvider deleteAction={softDeleteDocumentAction}>
-        <Records {...records} />
+        <Records {...records} designConfig={route.config as object} />
       </RecordActionsProvider>
     </Shell>
   )

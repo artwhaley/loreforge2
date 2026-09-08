@@ -37,7 +37,7 @@ export async function TenantShell({ tenant, role, switcherTenants, activeCharact
   const resolved = resolveDomainDesign(tenant as unknown as LegacyDomainAppearance)
   const Shell = resolved.design.Shell
   return (
-    <Shell model={shell} theme={{ tokens: resolved.cssVars, headerLayout: resolved.variant.headerLayout, documentStyle: resolved.variant.documentStyle }}>
+    <Shell model={shell} theme={{ tokens: resolved.cssVars, headerLayout: resolved.variant.headerLayout, documentStyle: resolved.variant.documentStyle }} designConfig={resolved.config as object}>
       {children}
     </Shell>
   )

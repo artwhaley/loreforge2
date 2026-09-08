@@ -299,11 +299,13 @@ export function SiteStudio({ tenantSlug, domainIdentity, initialBanks, initialAc
           </div>
         </div>
         <PreviewViewport mobile={mobile}>
-          <Shell model={previewShell} theme={previewTheme}>
-            {surface === 'home' ? <HomeView {...previewHome} headerLayout={previewTheme.headerLayout} documentStyle={previewTheme.documentStyle} />
-              : surface === 'records' ? <RecordsView {...RECORDS_PREVIEW_MODEL} />
-              : surface === 'document' ? <DocumentView {...DOCUMENT_PREVIEW_MODEL} workflowAction={previewNoop} deleteAction={previewNoop} headerLayout={previewTheme.headerLayout} documentStyle={previewTheme.documentStyle} />
-              : <DepartmentsView {...DEPARTMENTS_PREVIEW_MODEL} headerLayout={previewTheme.headerLayout} documentStyle={previewTheme.documentStyle} />}
+          {/* OBSIDIAN-T02: the preview passes the DRAFT config so per-keystroke
+              Studio edits render before Save; saved config is never substituted. */}
+          <Shell model={previewShell} theme={previewTheme} designConfig={draftBank.config as object}>
+            {surface === 'home' ? <HomeView {...previewHome} headerLayout={previewTheme.headerLayout} documentStyle={previewTheme.documentStyle} designConfig={draftBank.config as object} />
+              : surface === 'records' ? <RecordsView {...RECORDS_PREVIEW_MODEL} designConfig={draftBank.config as object} />
+              : surface === 'document' ? <DocumentView {...DOCUMENT_PREVIEW_MODEL} workflowAction={previewNoop} deleteAction={previewNoop} headerLayout={previewTheme.headerLayout} documentStyle={previewTheme.documentStyle} designConfig={draftBank.config as object} />
+              : <DepartmentsView {...DEPARTMENTS_PREVIEW_MODEL} headerLayout={previewTheme.headerLayout} documentStyle={previewTheme.documentStyle} designConfig={draftBank.config as object} />}
           </Shell>
         </PreviewViewport>
       </div>

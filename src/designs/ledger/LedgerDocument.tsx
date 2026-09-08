@@ -1,4 +1,5 @@
-import type { DesignVariantProps, DocumentDesignViewProps } from '@/lib/design/types'
+import type { LedgerConfigV1 } from '@/lib/design/contracts'
+import type { DesignConfigProps, DesignVariantProps, DocumentDesignViewProps } from '@/lib/design/types'
 import { getDocumentActions } from '@/lib/documents/presentation/actions'
 import type { DocumentPageModel } from '@/lib/page-models/document'
 
@@ -25,7 +26,7 @@ function ledgerStatus(model: DocumentPageModel): string {
 }
 
 /** Ledger document: typeset page with a marginalia rail for credits/tags/concerns. */
-export function LedgerDocument(model: DocumentPageModel & DesignVariantProps & DocumentDesignViewProps) {
+export function LedgerDocument(model: DocumentPageModel & DesignVariantProps & DocumentDesignViewProps & DesignConfigProps<LedgerConfigV1>) {
   const { workflowAction, deleteAction } = model
   const actions = getDocumentActions(model, { workflow: Boolean(workflowAction), delete: Boolean(deleteAction) })
   const treatment = ledgerTreatment(model.documentStyle)

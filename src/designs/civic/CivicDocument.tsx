@@ -1,4 +1,5 @@
-import type { DesignVariantProps, DocumentDesignViewProps } from '@/lib/design/types'
+import type { CivicConfigV1 } from '@/lib/design/contracts'
+import type { DesignConfigProps, DesignVariantProps, DocumentDesignViewProps } from '@/lib/design/types'
 import { getDocumentActions } from '@/lib/documents/presentation/actions'
 import type { DocumentPageModel } from '@/lib/page-models/document'
 
@@ -19,7 +20,7 @@ function lifecycleBadgeLabel(model: DocumentPageModel): string {
 }
 
 /** Civic document reading: an official sheet on a surface. */
-export function CivicDocument(model: DocumentPageModel & DesignVariantProps & DocumentDesignViewProps) {
+export function CivicDocument(model: DocumentPageModel & DesignVariantProps & DocumentDesignViewProps & DesignConfigProps<CivicConfigV1>) {
   const { workflowAction, deleteAction } = model
   const base = `${model.baseUrl}/documents/${model.recordId}`
   const actions = getDocumentActions(model, { workflow: Boolean(workflowAction), delete: Boolean(deleteAction) })

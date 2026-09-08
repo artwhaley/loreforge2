@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
 
+import type { LedgerConfigV1 } from '@/lib/design/contracts'
 import type { DesignShellProps } from '@/lib/design/types'
 import { OperatingContext } from '@/components/platform/OperatingContext'
 
@@ -15,7 +16,7 @@ import styles from './LedgerShell.module.scss'
  * image, paper texture) comes from Ledger's own bank — never the legacy
  * global Domain banner/background fields.
  */
-export function LedgerShell({ model, theme, children }: DesignShellProps) {
+export function LedgerShell({ model, theme, children }: DesignShellProps<LedgerConfigV1>) {
   const { domain, primaryNavigation, managementNavigation, routes } = model
   const railWidth = theme.tokens['--ledger-rail-width'] ?? 'standard'
   const density = theme.tokens['--ledger-rail-density'] ?? 'standard'

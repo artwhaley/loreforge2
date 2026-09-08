@@ -1,10 +1,12 @@
 import type { AboutPageModel, LorePageModel } from '@/lib/page-models/info'
 import type { DepartmentPageModel, DepartmentsPageModel } from '@/lib/page-models/departments'
+import type { CivicConfigV1 } from '@/lib/design/contracts'
+import type { DesignConfigProps } from '@/lib/design/types'
 
 import styles from './thin.module.scss'
 
 /** Civic thin pages: Departments / Department / About / Lore, Civic-owned. */
-export function CivicDepartmentsView(model: DepartmentsPageModel) {
+export function CivicDepartmentsView(model: DepartmentsPageModel & DesignConfigProps<CivicConfigV1>) {
   return (
     <section className={styles.thin}>
       <h1 className={styles.title}>{model.vocabulary.subdomainPlural}</h1>
@@ -23,7 +25,7 @@ export function CivicDepartmentsView(model: DepartmentsPageModel) {
   )
 }
 
-export function CivicDepartmentView(model: DepartmentPageModel) {
+export function CivicDepartmentView(model: DepartmentPageModel & DesignConfigProps<CivicConfigV1>) {
   return (
     <div className={styles.thin}>
       <p className={styles.crumb}><a href={`${model.baseUrl}/departments`}>{model.vocabulary.subdomainPlural}</a> / {model.name}</p>
@@ -40,7 +42,7 @@ export function CivicDepartmentView(model: DepartmentPageModel) {
   )
 }
 
-export function CivicAboutView(model: AboutPageModel) {
+export function CivicAboutView(model: AboutPageModel & DesignConfigProps<CivicConfigV1>) {
   return (
     <article className={styles.thin}>
       {model.editHref ? <p className={styles.manage}><a href={model.editHref}>Edit</a></p> : null}
@@ -49,7 +51,7 @@ export function CivicAboutView(model: AboutPageModel) {
   )
 }
 
-export function CivicLoreView(_model: LorePageModel) {
+export function CivicLoreView(_model: LorePageModel & DesignConfigProps<CivicConfigV1>) {
   return (
     <article className={styles.thin}>
       <h1 className={styles.title}>Lore</h1>
