@@ -2473,9 +2473,10 @@
 }
 .orgChartPanel {
   overflow: hidden;
-  border: 1px solid #9fb7bf27;
+  border: 1px solid #bce6d34b;
   border-radius: 16px;
-  background: radial-gradient(ellipse at 50% 15%, #1b33373d, transparent 60%), #101e24c9;
+  background: radial-gradient(ellipse at 50% 15%, #2b4b5138, transparent 60%), #1b2b31;
+  box-shadow: inset 0 1px #c3eedc12, 0 18px 45px #07101445;
 }
 .orgChartHeading {
   display: flex;
@@ -2492,12 +2493,13 @@
 }
 .syncfusionChart {
   cursor: pointer;
+  padding: 8px 12px 14px;
 }
 .syncfusionChart .e-diagram {
-  background: transparent !important;
+  background: #1b2b31 !important;
 }
 .syncfusionChart .e-drawing-surface {
-  background: transparent !important;
+  background: #1b2b31 !important;
 }
 .personDetail {
   display: flex;
@@ -2531,6 +2533,108 @@
   color: #b4dacd;
 }
 
+.characterProfileHero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 30px;
+  margin: 63px 0 70px;
+  padding-bottom: 29px;
+  border-bottom: 1px solid #a7bdc126;
+}
+.characterProfileIdentity {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.characterProfileMark {
+  display: grid;
+  width: 74px;
+  height: 74px;
+  place-items: center;
+  border: 1px solid #bce6d376;
+  border-radius: 50%;
+  color: #c3eedc;
+  background: #1c343a;
+  box-shadow: 0 0 0 8px #bce6d309;
+}
+.characterProfileHero h1 {
+  margin-top: 13px;
+  color: #edf4f0;
+  font-size: clamp(48px, 6vw, 82px);
+  font-weight: 400;
+  line-height: 0.95;
+}
+.characterProfileRole {
+  margin-top: 16px;
+  color: #b8d9cf;
+  font-size: 16px;
+}
+.characterProfileDepartment {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border: 1px solid #9fb7bf2e;
+  border-radius: 999px;
+  color: #9fb9b7;
+  font-size: 12px;
+}
+.characterProfileBody {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.7fr) minmax(0, 1.3fr);
+  gap: clamp(46px, 10vw, 150px);
+  max-width: 960px;
+}
+.characterProfileFacts {
+  padding-top: 5px;
+}
+.characterProfileFacts dl {
+  display: grid;
+  gap: 21px;
+  margin-top: 25px;
+}
+.characterProfileFacts dl > div {
+  display: grid;
+  gap: 5px;
+}
+.characterProfileFacts dt {
+  color: #789399;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.characterProfileFacts dd {
+  color: #c9dad7;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.characterProfileCopy {
+  color: #b8c7c9;
+  font-size: 17px;
+  line-height: 1.88;
+}
+.characterProfileCopy > .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 23px;
+}
+.characterProfileCopy h2 {
+  max-width: 650px;
+  color: #e8f1ed;
+  font-size: clamp(30px, 4vw, 48px);
+  font-weight: 400;
+  line-height: 1.12;
+}
+.characterProfileCopy p + p {
+  margin-top: 21px;
+}
+.characterProfileCopy h2 + p {
+  margin-top: 27px;
+}
+
 @media (max-width: 760px) {
   .treeManager,
   .typeBrowser {
@@ -2550,7 +2654,8 @@
     min-height: auto;
   }
   .departmentDetailHeading,
-  .orgChartHeading {
+  .orgChartHeading,
+  .characterProfileHero {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -2567,6 +2672,24 @@
   .personDetail a {
     width: 100%;
     margin-left: 30px;
+  }
+  .characterProfileHero {
+    margin-top: 44px;
+    margin-bottom: 44px;
+  }
+  .characterProfileIdentity {
+    align-items: flex-start;
+  }
+  .characterProfileMark {
+    width: 54px;
+    height: 54px;
+  }
+  .characterProfileHero h1 {
+    font-size: 47px;
+  }
+  .characterProfileBody {
+    grid-template-columns: 1fr;
+    gap: 42px;
   }
 }
 .mobileFolderList {

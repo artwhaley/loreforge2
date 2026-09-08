@@ -1,15 +1,18 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
+  AnnotationConstraints,
   ConnectorModel,
   DataBinding,
+  DiagramConstraints,
   DiagramComponent,
   HierarchicalTree,
   Inject,
+  NodeConstraints,
   NodeModel,
 } from "@syncfusion/ej2-react-diagrams";
 import { DataManager } from "@syncfusion/ej2-data";
-import { ArrowLeft, ArrowUpRight, ContactRound, Info, UsersRound } from "lucide-react";
+import { ArrowLeft, Info, UsersRound } from "lucide-react";
 import type { DepartmentSummary } from "./contracts/departments";
 import s from "./obsidian.module.css";
 
@@ -28,10 +31,10 @@ export type DepartmentDetailModel = {
 
 function DepartmentChart({
   department,
-  onPersonSelect,
+  onPersonOpen,
 }: {
   department: DepartmentDetailModel;
-  onPersonSelect: (person: OrgChartMember) => void;
+  onPersonOpen: (person: OrgChartMember) => void;
 }) {
   const data = useMemo(() => new DataManager(department.members), [department.members]);
   return (
@@ -40,7 +43,9 @@ function DepartmentChart({
       className={s.syncfusionChart}
       width="100%"
       height="510px"
-      backgroundColor="transparent"
+      backgroundColor="#1b2b31"
+      // Keep pan/zoom and pointer events useful while removing API edits from the canvas.
+      constraints={DiagramConstraints.Default & ~DiagramConstraints.ApiUpdate}
       snapSettings={{ constraints: 0 }}
       layout={{ type: "OrganizationalChart", horizontalSpacing: 34, verticalSpacing: 54 }}
       dataSourceSettings={{ id: "id", parentId: "parentId", dataSource: data }}
@@ -49,10 +54,18 @@ function DepartmentChart({
         node.width = 182;
         node.height = 67;
         node.shape = { type: "Basic", shape: "Rectangle", cornerRadius: 9 };
-        node.style = { fill: "#182a30", strokeColor: "#91b1aa", strokeWidth: 1 };
+        node.constraints =
+          (NodeConstraints.Default | NodeConstraints.ReadOnly) &
+          ~(NodeConstraints.Drag |
+            NodeConstraints.Rotate |
+            NodeConstraints.Resize |
+            NodeConstraints.Delete |
+            NodeConstraints.AllowDrop);
+        node.style = { fill: "#29434a", strokeColor: "#c3eedc", strokeWidth: 2 };
         node.annotations = [
           {
             content: `${person.name}\n${person.role}`,
+            constraints: AnnotationConstraints.InheritReadOnly,
             style: { color: "#e4efeb", fontSize: 12, fontFamily: "Manrope Variable" },
           },
         ];
@@ -68,7 +81,7 @@ function DepartmentChart({
         const selector = args.element;
         const nodeId = "nodes" in selector ? selector.nodes?.[0]?.id : undefined;
         const person = department.members.find((member) => member.id === nodeId);
-        if (person) onPersonSelect(person);
+        if (person) onPersonOpen(person);
       }}
     >
       <Inject services={[DataBinding, HierarchicalTree]} />
@@ -81,14 +94,15 @@ export function ObsidianDepartmentDetail({
   departments,
   selectedSlug,
   details,
+  onPersonOpen,
 }: {
   baseUrl: string;
   departments: DepartmentSummary[];
   selectedSlug: string;
   details: Record<string, DepartmentDetailModel>;
+  onPersonOpen: (person: OrgChartMember) => void;
 }) {
   const department = details[selectedSlug] ?? details[departments[0]?.slug];
-  const [person, setPerson] = useState<OrgChartMember | null>(null);
   if (!department) return null;
   return (
     <div className={s.publicPage}>
@@ -121,17 +135,10 @@ export function ObsidianDepartmentDetail({
             <p className={s.eyebrow}>AT A GLANCE</p>
             <h2>Organization chart</h2>
           </div>
-          <span><Info size={15} /> Select a person for their role details</span>
+          <span><Info size={15} /> Select a person to open their profile</span>
         </div>
-        <DepartmentChart department={department} onPersonSelect={setPerson} />
+        <DepartmentChart department={department} onPersonOpen={onPersonOpen} />
       </section>
-      {person && (
-        <aside className={s.personDetail} aria-live="polite">
-          <ContactRound size={18} />
-          <div><strong>{person.name}</strong><span>{person.role} · {person.detail}</span></div>
-          <a href="#contact">View profile <ArrowUpRight size={14} /></a>
-        </aside>
-      )}
     </div>
   );
 }

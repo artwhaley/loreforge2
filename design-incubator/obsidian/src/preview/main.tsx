@@ -16,6 +16,7 @@ import { ObsidianAbout } from "../ObsidianAbout";
 import { ObsidianLore } from "../ObsidianLore";
 import { ObsidianManagement } from "../ObsidianManagement";
 import { ObsidianDepartments } from "../ObsidianDepartments";
+import { ObsidianCharacterProfile } from "../ObsidianCharacterProfile";
 import { DocumentActions } from "../DocumentActions";
 import { ActionMenu, Modal, type Action } from "../controls";
 import { OBSIDIAN_DEFAULTS } from "../config";
@@ -132,6 +133,7 @@ function App() {
     isAbout = path === `${base}/about`,
     isDepartments = path === `${base}/departments`,
     departmentMatch = path.match(new RegExp(`^${base}/departments/([^/]+)$`)),
+    characterMatch = path.match(new RegExp(`^${base}/characters/([^/]+)$`)),
     loreMatch = path.match(new RegExp(`^${base}/lore(?:/([^/]+))?$`)),
     isLore = Boolean(loreMatch),
     managementMatch = path.match(
@@ -146,7 +148,23 @@ function App() {
     record = match
       ? archive.records.find((r) => r.id === Number(match[1]))
       : null;
-  const active = isRecord || match ? "records" : isAbout ? "about" : isLore ? "lore" : isDepartments ? "departments" : "";
+  const characterProfile = characterMatch
+    ? Object.values(departmentDetails)
+        .map((detail) => ({
+          department: detail,
+          person: detail.members.find((member) => member.id === characterMatch[1]),
+        }))
+        .find((item) => item.person)
+    : undefined;
+  const active = isRecord || match
+    ? "records"
+    : isAbout
+      ? "about"
+      : isLore
+        ? "lore"
+        : isDepartments || Boolean(departmentMatch) || Boolean(characterMatch)
+          ? "departments"
+          : "";
   const currentDoc = record
     ? {
         ...documentFixture,
@@ -307,8 +325,17 @@ function App() {
                 departments={departments.departments}
                 selectedSlug={departmentMatch[1]}
                 details={departmentDetails}
+                onPersonOpen={(person) => navigate(`${base}/characters/${person.id}`)}
               />
             </Suspense>
+          ) : characterProfile?.person ? (
+            <ObsidianCharacterProfile
+              baseUrl={base}
+              department={characterProfile.department}
+              person={characterProfile.person}
+            />
+          ) : characterMatch ? (
+            <div className={s.workspacePage}>Character profile not found.</div>
           ) : managementKey === "folders" ? (
             <Suspense fallback={<div className={s.workspacePage}>Loading folder tree…</div>}>
               <ObsidianFolderManager
