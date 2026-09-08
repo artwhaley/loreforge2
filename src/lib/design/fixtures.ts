@@ -5,6 +5,11 @@ import type { DocumentPageModel } from '@/lib/page-models/document'
 import type { AboutPageModel, LorePageModel } from '@/lib/page-models/info'
 import type { DepartmentPageModel, DepartmentsPageModel } from '@/lib/page-models/departments'
 import type { NavigationItem } from '@/lib/page-models/common'
+import type { MembersPageModel } from '@/lib/page-models/members'
+import type { DepartmentsManagementPageModel } from '@/lib/page-models/management/departments'
+import type { FolderManagementPageModel } from '@/lib/page-models/management/folders'
+import type { InvitationsManagementPageModel } from '@/lib/page-models/management/invitations'
+import type { WorkPageModel } from '@/lib/page-models/management/work'
 
 /** Deterministic, safe, representative fixtures for the Theme Studio preview. No DB query. */
 const PREVIEW_BASE = '/domain/preview-domain'
@@ -294,4 +299,114 @@ export const ABOUT_PREVIEW_MODEL: AboutPageModel = {
 export const LORE_PREVIEW_MODEL: LorePageModel = {
   baseUrl: PREVIEW_BASE,
   destinations: [],
+}
+// ---------------------------------------------------------------------------
+// OBSIDIAN-T09 operational conformance fixtures (deterministic, no DB).
+// ---------------------------------------------------------------------------
+
+export const OPERATIONAL_BASE = PREVIEW_BASE
+
+export const FOLDERS_MANAGEMENT_MODEL: FolderManagementPageModel = {
+  baseUrl: OPERATIONAL_BASE,
+  domainSlug: 'preview-domain',
+  domainName: 'Preview Domain',
+  domainId: 42,
+  rootManageable: true,
+  status: null,
+  nodes: [
+    { id: 1, name: 'Hall of Coin', createdAt: '2026-01-01T00:00:00.000Z', systemManaged: false, canManage: true, children: [] },
+    { id: 2, name: 'Sealed Vault', createdAt: '2026-01-02T00:00:00.000Z', systemManaged: false, canManage: false, children: [] },
+  ],
+}
+
+export const FOLDERS_MANAGEMENT_DENIED_MODEL: FolderManagementPageModel = {
+  ...FOLDERS_MANAGEMENT_MODEL,
+  rootManageable: false,
+  nodes: [
+    { id: 1, name: 'Hall of Coin', createdAt: '2026-01-01T00:00:00.000Z', systemManaged: false, canManage: false, children: [] },
+  ],
+}
+
+export const WORK_MANAGEMENT_MODEL: WorkPageModel = {
+  baseUrl: OPERATIONAL_BASE,
+  domainSlug: 'preview-domain',
+  domainName: 'Preview Domain',
+  domainId: 42,
+  authorized: true,
+  domainAdmin: true,
+  status: null,
+  entries: [
+    { kind: 'document', id: 11, title: 'Incident Report 2026-014', summary: 'Submitted', href: `${OPERATIONAL_BASE}/documents/11`, requestedAt: '2026-09-01T00:00:00.000Z', domainId: 42, folderName: 'Reports' },
+    { kind: 'join', id: 12, title: 'Domain join · New User', summary: 'Character', href: `${OPERATIONAL_BASE}/manage/invitations`, requestedAt: '2026-09-01T00:00:00.000Z', domainId: 42 },
+  ],
+}
+
+export const WORK_MANAGEMENT_EMPTY_MODEL: WorkPageModel = {
+  baseUrl: OPERATIONAL_BASE,
+  domainSlug: 'preview-domain',
+  domainName: 'Preview Domain',
+  domainId: 42,
+  authorized: true,
+  domainAdmin: false,
+  status: null,
+  entries: [],
+}
+
+export const MEMBERS_MANAGEMENT_MODEL: MembersPageModel = {
+  baseUrl: OPERATIONAL_BASE,
+  domainSlug: 'preview-domain',
+  domainName: 'Preview Domain',
+  domainId: 42,
+  canSearch: true,
+  searchResults: [],
+  query: '',
+  status: null,
+  rows: [
+    { membershipId: 101, characterId: 201, name: 'Elias Vane', localDisplayName: 'Eli', controllingUserName: 'eli@example.com', membershipStatus: 'active', departments: ['Harbor Commission'], roles: ['Dockmaster'] },
+  ],
+  vocabulary: { domainSingular: 'Domain', memberPlural: 'Members', subdomainSingular: 'Department', subdomainPlural: 'Departments', rolePlural: 'Roles' },
+}
+
+export const MEMBERS_MANAGEMENT_VIEWER_MODEL: MembersPageModel = {
+  ...MEMBERS_MANAGEMENT_MODEL,
+  canSearch: false,
+}
+
+export const DEPARTMENTS_MANAGEMENT_MODEL: DepartmentsManagementPageModel = {
+  baseUrl: OPERATIONAL_BASE,
+  domainSlug: 'preview-domain',
+  domainName: 'Preview Domain',
+  domainId: 42,
+  canCreate: true,
+  status: null,
+  departments: [
+    { id: 1, name: 'Harbor Commission', slug: 'harbor-commission', archived: false, canArchive: true, canRestore: false },
+  ],
+  vocabulary: { subdomainSingular: 'Department', subdomainPlural: 'Departments', roleSingular: 'Role' },
+}
+
+export const DEPARTMENTS_MANAGEMENT_VIEWER_MODEL: DepartmentsManagementPageModel = {
+  ...DEPARTMENTS_MANAGEMENT_MODEL,
+  canCreate: false,
+  departments: [
+    { id: 1, name: 'Harbor Commission', slug: 'harbor-commission', archived: true, canArchive: false, canRestore: true },
+  ],
+}
+
+export const INVITATIONS_MANAGEMENT_MODEL: InvitationsManagementPageModel = {
+  baseUrl: OPERATIONAL_BASE,
+  domainSlug: 'preview-domain',
+  domainName: 'Preview Domain',
+  domainId: 42,
+  canManage: true,
+  status: null,
+  invitations: [
+    { id: 301, purpose: 'Domain join', targetLabel: '—', issuedByLabel: 'Mira Sable', expiresLabel: 'Never', useLabel: '0', statusLabel: 'Active', canRevoke: true },
+    { id: 302, purpose: 'Character claim', targetLabel: 'Elias Vane', issuedByLabel: 'Mira Sable', expiresLabel: 'Never', useLabel: '1 / 1', statusLabel: 'Exhausted', canRevoke: false },
+  ],
+  pendingJoins: [
+    { id: 401, applicantLabel: 'new@example.com', characterLabel: 'New Character: Fern', requestedAt: '2026-09-01T00:00:00.000Z' },
+  ],
+  pendingClaims: [],
+  claimTargets: [],
 }

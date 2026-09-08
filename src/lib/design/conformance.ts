@@ -5,6 +5,11 @@ import type { DocumentPageModel } from '@/lib/page-models/document'
 import type { AboutPageModel, LorePageModel } from '@/lib/page-models/info'
 import type { RecordsPageModel } from '@/lib/page-models/records'
 import type { DomainShellModel } from '@/lib/page-models/shell'
+import type { MembersPageModel } from '@/lib/page-models/members'
+import type { DepartmentsManagementPageModel } from '@/lib/page-models/management/departments'
+import type { FolderManagementPageModel } from '@/lib/page-models/management/folders'
+import type { InvitationsManagementPageModel } from '@/lib/page-models/management/invitations'
+import type { WorkPageModel } from '@/lib/page-models/management/work'
 
 /**
  * P08D-T00 shared semantic conformance helpers.
@@ -474,5 +479,84 @@ export function assertThinPageCapabilities(
     case 'lore':
       assertRendersText(container, 'Lore', `${label}: heading`)
       break
+  }
+}
+// ---------------------------------------------------------------------------
+// OBSIDIAN-T09 operational conformance
+// ---------------------------------------------------------------------------
+
+/**
+ * Assert the deterministic operational surface renders its model facts and
+ * that capability-absent models produce no actionable control. Capability is
+ * derived from the model only — the renderer must never invent authority.
+ * Interactive surfaces (folders/roles/documentTypes/people/person) load their
+ * trees asynchronously; their shared workspace suites own deep behavior, so
+ * this gate asserts surface facts and the presence/absence of the surface's
+ * actionable entry points that render synchronously.
+ */
+export function assertOperationalCapabilities(
+  container: HTMLElement,
+  slot: 'work' | 'members' | 'management.departments' | 'management.invitations' | 'management.folders',
+  model: WorkPageModel | MembersPageModel | DepartmentsManagementPageModel | InvitationsManagementPageModel | FolderManagementPageModel,
+  opts: { capabilityPresent: boolean } = { capabilityPresent: true },
+): void {
+  const label = `operational:${slot}`
+  switch (slot) {
+    case 'work': {
+      const page = model as WorkPageModel
+      assertRendersText(container, 'Work', `${label}: heading`)
+      if (page.entries.some((entry) => entry.kind === 'document') && opts.capabilityPresent) {
+        assertRendersText(container, 'Approve and file', `${label}: approve action`)
+        assertRendersText(container, 'Return to Draft', `${label}: reject action`)
+      } else {
+        assert.ok(!hasText(container, 'Approve and file'), `${label}: no approve action without authorized entries`)
+      }
+      break
+    }
+    case 'members': {
+      const page = model as MembersPageModel
+      assertRendersText(container, page.vocabulary.memberPlural, `${label}: heading`)
+      for (const row of page.rows) assertRendersText(container, row.name, `${label}: member "${row.name}"`)
+      const searchInput = container.querySelector<HTMLInputElement>('input[aria-label="Search Characters to add"]')
+      if (opts.capabilityPresent && page.canSearch) {
+        assert.ok(searchInput, `${label}: admin search input present`)
+      } else {
+        assert.ok(!searchInput, `${label}: no admin search input without capability`)
+      }
+      break
+    }
+    case 'management.departments': {
+      const page = model as DepartmentsManagementPageModel
+      assertRendersText(container, `Manage ${page.vocabulary.subdomainPlural}`, `${label}: heading`)
+      for (const department of page.departments) assertRendersText(container, department.name, `${label}: department "${department.name}"`)
+      if (opts.capabilityPresent && page.departments.some((department) => department.canArchive)) {
+        assertRendersText(container, 'Archive', `${label}: archive action`)
+      } else {
+        assert.ok(!hasText(container, 'Archive'), `${label}: no archive action without capability`)
+      }
+      break
+    }
+    case 'management.invitations': {
+      const page = model as InvitationsManagementPageModel
+      assertRendersText(container, 'Invitations', `${label}: heading`)
+      if (opts.capabilityPresent && page.invitations.some((invitation) => invitation.canRevoke)) {
+        assertRendersText(container, 'Revoke', `${label}: revoke action`)
+      } else {
+        assert.ok(!hasText(container, 'Revoke'), `${label}: no revoke action without capability`)
+      }
+      break
+    }
+    case 'management.folders': {
+      const page = model as FolderManagementPageModel
+      assertRendersText(container, 'Folders', `${label}: heading`)
+      const createButton = [...container.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.trim() === 'New folder')
+      if (opts.capabilityPresent && page.rootManageable) {
+        assert.ok(createButton, `${label}: root create affordance present`)
+        assert.ok(!createButton?.disabled, `${label}: root create affordance enabled with capability`)
+      } else {
+        assert.ok(createButton?.disabled, `${label}: root create affordance disabled without capability`)
+      }
+      break
+    }
   }
 }

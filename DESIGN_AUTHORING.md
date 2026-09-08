@@ -645,11 +645,15 @@ Core owns semantics and behavior for all of these:
   `usePeopleManagementWorkspace`), so two Designs never implement a second
   search/selection/mutation state machine.
 
-Requiredness ladder (frozen): the operational slots are declared **optional** in
-`DesignDefinition` during contract remediation, become **required in the type**
-when every Design implements them, and are **enforced by the conformance gate**
-for first-class status. Poster may satisfy them through explicitly marked
-compatibility renderers without lowering the first-class standard.
+Requiredness ladder (authoritative as of OBSIDIAN-T08/T09): the operational
+slots are **required in the type** — every `DesignDefinition` must declare
+`work`, `members`, and all seven `management.*` bodies to compile — and the
+**conformance gate enforces** the full declared set for first-class status
+(`operationalSlots.design.test.ts` + `managementGate.design.test.tsx`). Poster
+satisfies them through explicitly marked compatibility renderers
+(`poster/operational.tsx`, `status: 'compatibility'`) without lowering the
+first-class standard. The ladder is closed: optional-declaration machinery from
+T01 has been removed.
 
 Genuinely shared editors remain shared: Templates, Forms, document
 create/edit/import flows, page editors, the review queue, and Site Studio render

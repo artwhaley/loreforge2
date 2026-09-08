@@ -72,13 +72,19 @@ describe('P08D-T09 first-class isolation scan', () => {
     '../shared/legacy-thin',
   ]
 
+  // OBSIDIAN-T09: first-class Designs must never import server-action modules.
+  // Work action bridges arrive as props (WorkDesignViewProps); management
+  // mutations live behind the shared workspace/endpoints. A first-class
+  // Design importing an action module would bypass the action-bridge seam.
+  const FORBIDDEN_ACTIONS = ['@/lib/actions/']
+
   it('first-class Design production files import none of the forbidden modules', () => {
     for (const dir of FIRST_CLASS_DIRS) {
       for (const file of walk(path.join(SRC, 'designs', dir))) {
         if (file.includes('.design.test.')) continue
         const content = read(file)
         const relative = rel(file)
-        for (const forbidden of FORBIDDEN) {
+        for (const forbidden of [...FORBIDDEN, ...FORBIDDEN_ACTIONS]) {
           expect(content, `${relative} must not import ${forbidden}`).not.toContain(forbidden)
         }
       }
