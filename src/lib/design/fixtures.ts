@@ -299,6 +299,7 @@ export const ABOUT_PREVIEW_MODEL: AboutPageModel = {
 export const LORE_PREVIEW_MODEL: LorePageModel = {
   baseUrl: PREVIEW_BASE,
   destinations: [],
+  entries: [],
 }
 // ---------------------------------------------------------------------------
 // OBSIDIAN-T09 operational conformance fixtures (deterministic, no DB).

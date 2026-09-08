@@ -51,10 +51,11 @@ export function CivicAboutView(model: AboutPageModel & DesignConfigProps<CivicCo
   )
 }
 
-export function CivicLoreView(_model: LorePageModel & DesignConfigProps<CivicConfigV1>) {
+export function CivicLoreView(model: LorePageModel & DesignConfigProps<CivicConfigV1>) {
   return (
     <article className={styles.thin}>
       <h1 className={styles.title}>Lore</h1>
+      {model.entries.length === 0 ? <p className={styles.empty}>No published lore pages are available.</p> : <ul className={styles.list}>{model.entries.map((entry) => <li key={entry.slug}><a href={entry.href}>{entry.title}</a></li>)}</ul>}
     </article>
   )
 }

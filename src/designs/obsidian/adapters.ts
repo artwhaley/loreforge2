@@ -7,14 +7,13 @@
  * route tree or the registry imports them yet.
  */
 
-/** Adapter for `ObsidianLore` until T14 expands the production Lore model. */
+/** Presentation adapter for the production Lore model. */
 export type LoreEntryAdapter = {
-  id: number
   title: string
   slug: string
-  group: string
-  summary: string
-  updatedLabel: string
+  group?: string | null
+  summary?: string | null
+  updatedLabel?: string | null
   bodyHtml: string
 }
 

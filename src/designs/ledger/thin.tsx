@@ -51,10 +51,11 @@ export function LedgerAboutView(model: AboutPageModel & DesignConfigProps<Ledger
   )
 }
 
-export function LedgerLoreView(_model: LorePageModel & DesignConfigProps<LedgerConfigV1>) {
+export function LedgerLoreView(model: LorePageModel & DesignConfigProps<LedgerConfigV1>) {
   return (
     <article className={styles.thin}>
       <h1 className={styles.title}>Lore</h1>
+      {model.entries.length === 0 ? <p className={styles.empty}>No published lore pages are available.</p> : <ul className={styles.list}>{model.entries.map((entry) => <li key={entry.slug}><a href={entry.href}>{entry.title}</a></li>)}</ul>}
     </article>
   )
 }

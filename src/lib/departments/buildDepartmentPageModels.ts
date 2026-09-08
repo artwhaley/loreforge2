@@ -4,6 +4,7 @@ import type { AboutPageModel, LorePageModel } from '@/lib/page-models/info'
 import type { DepartmentPageModel, DepartmentsPageModel } from '@/lib/page-models/departments'
 import { getDepartmentParticipants, getSubdomainBySlug, getSubdomainsForDomain } from '@/lib/domains/queries'
 import { getFoldersForTenant, getPageForTenant } from '@/lib/tenant/queries'
+import { getLorePayload } from '@/lib/payload'
 import { renderMarkdown } from '@/lib/markdown/render'
 import { PLATFORM_NOUNS as vocab } from '@/lib/theme/nouns'
 
@@ -78,6 +79,42 @@ export async function buildAboutPageModel(input: {
   }
 }
 
+/**
+ * Lore is currently backed by the existing Pages collection. Because that
+ * schema has no page-type field, the reserved-slug convention is deliberately
+ * narrow: exact `home` and `about` pages are excluded; every other published
+ * Domain page is a Lore entry. We do not guess at additional reserved slugs.
+ */
+export const LORE_RESERVED_SLUGS = ['home', 'about'] as const
+
 export async function buildLorePageModel(input: { tenant: Domain | Tenant }): Promise<LorePageModel> {
-  return { baseUrl: `/domain/${input.tenant.slug}`, destinations: [] }
+  const payload = await getLorePayload()
+  const result = await payload.find({
+    collection: 'pages',
+    where: {
+      and: [
+        { domain: { equals: input.tenant.id } },
+        { published: { equals: true } },
+        { slug: { not_in: [...LORE_RESERVED_SLUGS] } },
+      ],
+    },
+    depth: 0,
+    limit: 0,
+    pagination: false,
+    sort: 'title',
+  })
+  const baseUrl = `/domain/${input.tenant.slug}`
+  return {
+    baseUrl,
+    destinations: [],
+    entries: result.docs.map((page) => ({
+      slug: page.slug,
+      href: `${baseUrl}/lore#${encodeURIComponent(page.slug)}`,
+      title: page.title,
+      bodyHtml: renderMarkdown(page.body),
+      group: null,
+      summary: null,
+      revisionLabel: null,
+    })),
+  }
 }

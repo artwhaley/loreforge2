@@ -15,13 +15,13 @@ function LoreIndex({
   const entries = useMemo(
     () =>
       model.entries.filter((entry) =>
-        `${entry.title} ${entry.group} ${entry.summary}`
+        `${entry.title} ${entry.group ?? ""} ${entry.summary ?? ""}`
           .toLowerCase()
           .includes(query.toLowerCase()),
       ),
     [model.entries, query],
   );
-  const groups = [...new Set(entries.map((entry) => entry.group))];
+  const groups = [...new Set(entries.map((entry) => entry.group || "Lore"))];
   return (
     <aside className={s.loreIndex} aria-label="Lore index">
       <div className={s.loreIndexHeading}>
@@ -54,7 +54,7 @@ function LoreIndex({
           <div key={group} className={s.loreGroup}>
             <p>{group}</p>
             {entries
-              .filter((entry) => entry.group === group)
+              .filter((entry) => (entry.group || "Lore") === group)
               .map((entry) => (
                 <a
                   key={entry.slug}
@@ -88,7 +88,7 @@ export function ObsidianLore({
 }
 
 function LoreOverview({ model }: { model: LorePageModelAdapter }) {
-  const groups = [...new Set(model.entries.map((entry) => entry.group))];
+  const groups = [...new Set(model.entries.map((entry) => entry.group || "Lore"))];
   return (
     <section className={s.loreOverview}>
       <p className={s.eyebrow}>WORLD GUIDE</p>
@@ -100,7 +100,7 @@ function LoreOverview({ model }: { model: LorePageModelAdapter }) {
       <p className={s.loreIntroduction}>{model.introduction}</p>
       <div className={s.loreShelf}>
         {groups.map((group, index) => {
-          const entries = model.entries.filter((entry) => entry.group === group);
+          const entries = model.entries.filter((entry) => (entry.group || "Lore") === group);
           return (
             <section key={group}>
               <div className={s.shelfHeading}>
@@ -111,9 +111,9 @@ function LoreOverview({ model }: { model: LorePageModelAdapter }) {
               <div className={s.loreCards}>
                 {entries.map((entry) => (
                   <a key={entry.slug} href={`${model.baseUrl}/lore/${entry.slug}`}>
-                    <span>{entry.updatedLabel}</span>
+                    {entry.updatedLabel ? <span>{entry.updatedLabel}</span> : null}
                     <h3>{entry.title}</h3>
-                    <p>{entry.summary}</p>
+                    {entry.summary ? <p>{entry.summary}</p> : null}
                     <ArrowRight size={17} />
                   </a>
                 ))}
@@ -129,9 +129,9 @@ function LoreOverview({ model }: { model: LorePageModelAdapter }) {
 function LoreArticle({ entry }: { entry: LoreEntryAdapter }) {
   return (
     <article className={s.loreArticle}>
-      <p className={s.eyebrow}>{entry.group}</p>
+      <p className={s.eyebrow}>{entry.group || "Lore"}</p>
       <h1>{entry.title}</h1>
-      <p className={s.loreArticleMeta}>Last revised {entry.updatedLabel}</p>
+      {entry.updatedLabel ? <p className={s.loreArticleMeta}>Last revised {entry.updatedLabel}</p> : null}
       <div dangerouslySetInnerHTML={{ __html: entry.bodyHtml }} />
     </article>
   );

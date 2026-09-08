@@ -2,7 +2,6 @@ import type { AboutPageModel, LorePageModel } from '@/lib/page-models/info'
 import type { DepartmentPageModel, DepartmentsPageModel } from '@/lib/page-models/departments'
 import type { HomePageModel } from '@/lib/page-models/home'
 import type { DocumentDesignViewProps, DesignVariantProps } from '@/lib/design/types'
-import type { RecordsPageModel } from '@/lib/page-models/records'
 import type { ObsidianConfigV1 } from '@/lib/design/contracts'
 import type { DesignConfigProps } from '@/lib/design/types'
 
@@ -10,6 +9,7 @@ import { ObsidianHome } from './ObsidianHome'
 import { ObsidianAbout } from './ObsidianAbout'
 import { ObsidianDepartments } from './ObsidianDepartments'
 import { ObsidianDepartmentDetail } from './ObsidianDepartmentDetail'
+import { ObsidianLore } from './ObsidianLore'
 
 /**
  * Obsidian thin-page adapters (OBSIDIAN-T11). The ported components keep
@@ -20,21 +20,28 @@ import { ObsidianDepartmentDetail } from './ObsidianDepartmentDetail'
  */
 
 export function ObsidianHomeView(model: HomePageModel & DesignVariantProps & DesignConfigProps<ObsidianConfigV1>) {
-  return <ObsidianHome model={model} atmosphereImage={null} />
+  return <ObsidianHome model={model} atmosphereImage={model.designConfig.atmosphere?.url ?? null} />
 }
 
 export function ObsidianAboutView(model: AboutPageModel & DesignVariantProps & DesignConfigProps<ObsidianConfigV1>) {
   return <ObsidianAbout model={model} />
 }
 
-export function ObsidianLoreView(_model: LorePageModel & DesignVariantProps & DesignConfigProps<ObsidianConfigV1>) {
-  // The production Lore model has no entries yet (T14 expands it); render the
-  // About composition's public-page frame with the canonical Lore heading.
-  return (
-    <div>
-      <h1>Lore</h1>
-    </div>
-  )
+export function ObsidianLoreView(model: LorePageModel & DesignVariantProps & DesignConfigProps<ObsidianConfigV1>) {
+  return <ObsidianLore
+    model={{
+      baseUrl: model.baseUrl,
+      introduction: 'Published pages that belong to this Domain, gathered as a living guide.',
+      entries: model.entries.map((entry) => ({
+        title: entry.title,
+        slug: entry.slug,
+        group: entry.group,
+        summary: entry.summary,
+        updatedLabel: entry.revisionLabel,
+        bodyHtml: entry.bodyHtml,
+      })),
+    }}
+  />
 }
 
 export function ObsidianDepartmentsView(model: DepartmentsPageModel & DesignVariantProps & DesignConfigProps<ObsidianConfigV1>) {
