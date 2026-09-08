@@ -1,64 +1,45 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-
-import type { LifecycleStageRowShape } from '@/lib/documents/lifecycleStages'
-import type { Lifecycle } from '@/lib/documents/lifecycle'
-import type { InspectorFolderNode, InspectorRole, TypeTreeData } from '@/lib/documents/typeTree'
+import type { DocumentTypesManagementPageModel } from '@/lib/page-models/management/documentTypes'
+import { useDocumentTypesManagementWorkspace } from '@/components/functional/document-types/useDocumentTypesManagementWorkspace'
 
 import { TypeTree } from './TypeTree'
 import { TypeInspector } from './TypeInspector'
 
-type TypeFolderOption = { id: number; name: string; departmentId: number | null; depth: number }
-
-function flattenTypeFolders(nodes: TypeTreeData['roots'], depth = 0): TypeFolderOption[] {
-  return nodes.flatMap((node) => {
-    if (node.kind !== 'folder') return []
-    return [{ id: Number(node.id.slice('fld-'.length)), name: node.name, departmentId: node.departmentId ?? null, depth }, ...flattenTypeFolders(node.children, depth + 1)]
-  })
-}
-
 /**
- * P08X-T03/T04: the tree is the first-order surface; selecting a Type (or
- * Create new) opens the shared inspector beneath it. All data is resolved
- * server-side — the client only holds the selection.
+ * Civic Document Types browser (OBSIDIAN-T05). Presentation-only: the
+ * authorized Page Model carries the resolved tree/inspector, and the shared
+ * workspace owns the selection state. All data is resolved server-side —
+ * Unassigned semantics, Department roots, manual type folders, and Type nodes
+ * stay exactly as `resolveTypeTree` produces them.
  */
-export function DocumentTypesBrowser({ domainSlug, data, canManage, roles, folders, stagesByType }: {
-  domainSlug: string
-  data: TypeTreeData
-  canManage: boolean
-  roles: InspectorRole[]
-  folders: InspectorFolderNode[]
-  stagesByType: Record<number, Record<Lifecycle, LifecycleStageRowShape | null>>
-}) {
-  const [selectedTypeId, setSelectedTypeId] = useState<number | null>(null)
-  const [creating, setCreating] = useState(false)
-  const selectedLeaf = useMemo(() => data.types.find((type) => type.id === selectedTypeId) ?? null, [data.types, selectedTypeId])
-  const typeFolders = useMemo(() => flattenTypeFolders(data.roots), [data.roots])
+export function DocumentTypesBrowser({ model }: { model: DocumentTypesManagementPageModel }) {
+  const workspace = useDocumentTypesManagementWorkspace(model)
+  const { domainSlug, tree, canManage, inspector } = model
 
   return <div style={{ display: 'grid', gap: '1.1rem' }}>
     <TypeTree
       domainSlug={domainSlug}
-      data={data}
+      data={tree}
       canManage={canManage}
-      selectedTypeId={selectedTypeId}
-      onSelectType={(id) => { setSelectedTypeId(id); setCreating(false) }}
-      onCreateNew={canManage ? () => { setSelectedTypeId(null); setCreating(true) } : undefined}
+      selectedTypeId={workspace.selectedTypeId}
+      onSelectType={workspace.selectType}
+      onCreateNew={canManage ? workspace.beginCreate : undefined}
     />
-    {canManage && (creating || selectedLeaf) ? <TypeInspector
-      key={creating ? 'create' : `type-${selectedLeaf!.id}`}
-      mode={creating ? 'create' : 'edit'}
+    {canManage && (workspace.creating || workspace.selectedLeaf) ? <TypeInspector
+      key={workspace.creating ? 'create' : `type-${workspace.selectedLeaf!.id}`}
+      mode={workspace.creating ? 'create' : 'edit'}
       domainSlug={domainSlug}
-      leaf={selectedLeaf}
-      departments={data.departments}
-      typeFolders={typeFolders}
-      roles={roles}
-      folders={folders}
-      stages={creating || !selectedLeaf ? null : (stagesByType[selectedLeaf.id] ?? null)}
-      defaultDepartmentId={selectedLeaf?.departmentId ?? null}
-      onCreated={(typeId) => { setCreating(false); setSelectedTypeId(typeId) }}
-      onDuplicate={(typeId) => { setSelectedTypeId(typeId) }}
-      onCancel={creating ? () => setCreating(false) : undefined}
+      leaf={workspace.selectedLeaf}
+      departments={tree.departments}
+      typeFolders={workspace.typeFolders}
+      roles={inspector.roles}
+      folders={inspector.folders}
+      stages={workspace.creating || !workspace.selectedLeaf ? null : (inspector.stagesByType[workspace.selectedLeaf.id] ?? null)}
+      defaultDepartmentId={workspace.selectedLeaf?.departmentId ?? null}
+      onCreated={workspace.finishCreate}
+      onDuplicate={workspace.selectType}
+      onCancel={workspace.creating ? workspace.cancelCreate : undefined}
     /> : null}
   </div>
 }
