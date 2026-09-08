@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Collapsible, ToggleGroup } from "radix-ui";
 import {
   ArrowUpRight,
@@ -22,6 +23,10 @@ import {
 } from "lucide-react";
 import type { RecordsPageModel } from "@/lib/page-models/records";
 import type { FolderSummary, RecordSummary } from "@/lib/page-models/common";
+import type { ObsidianConfigV1 } from "@/lib/design/contracts";
+import type { DesignConfigProps } from "@/lib/design/types";
+import { useRecordsWorkspace } from "@/lib/records/workspace/useRecordsWorkspace";
+import { useRecordActions } from "@/components/functional/records/recordActions";
 import { ActionMenu, ChoiceMenu, Modal, type Action } from "./controls";
 import s from "./obsidian.module.css";
 
@@ -52,13 +57,62 @@ export type RecordsViewState = {
   folderActions: Action[];
   onAction(action: Action, target?: RecordSummary): void;
 };
-export function ObsidianRecords({
-  model,
-  workspace: ws,
-}: {
-  model: RecordsPageModel;
-  workspace: RecordsViewState;
-}) {
+export function ObsidianRecords(props: RecordsPageModel & DesignConfigProps<ObsidianConfigV1>) {
+  const model = props;
+  const { designConfig } = props;
+  const [view, setView] = useState<RecordsViewState["view"]>(designConfig.records.defaultView);
+  const [sort, setSort] = useState<RecordsViewState["sort"]>("newest");
+  const [pageSize, setPageSize] = useState<number>(designConfig.records.defaultView === "cards" ? designConfig.records.cardPageSize : designConfig.records.listPageSize);
+  const [page, setPage] = useState(1);
+  const router = useRouter();
+  const core = useRecordsWorkspace(model, { pageSize: boundedPageSize(pageSize), sort: serverSort(sort) });
+  const { deleteAction } = useRecordActions();
+  const records = useMemo(() => {
+    const sorted = [...core.results.records].sort((a, b) => {
+      if (sort === "title-asc") return a.title.localeCompare(b.title);
+      if (sort === "title-desc") return b.title.localeCompare(a.title);
+      const order = String(a.updatedAt).localeCompare(String(b.updatedAt));
+      return sort === "oldest" ? order : -order;
+    });
+    const count = Math.max(1, Math.ceil(sorted.length / pageSize));
+    return { rows: sorted.slice((page - 1) * pageSize, page * pageSize), count };
+  }, [core.results.records, page, pageSize, sort]);
+  const ws: RecordsViewState = {
+    search: core.search.value,
+    setSearch: (value) => { core.search.setValue(value); setPage(1); },
+    selectedFolder: core.folders.selectedId,
+    selectFolder: (id) => { core.folders.select(id); setPage(1); },
+    expandedFolders: core.folders.expandedIds,
+    toggleFolder: core.folders.toggleExpanded,
+    includeSubfolders: core.search.subfolders,
+    setIncludeSubfolders: core.search.setSubfolders,
+    type: core.exposure.typeId === null ? "all" : String(core.exposure.typeId),
+    setType: (value) => { core.exposure.apply(value === "all" ? "" : value); setPage(1); },
+    view,
+    setView: (value) => { setView(value); setPageSize(value === "cards" ? designConfig.records.cardPageSize : designConfig.records.listPageSize); setPage(1); },
+    sort,
+    setSort: (value) => { setSort(value); setPage(1); },
+    pageSize,
+    setPageSize: (value) => { setPageSize(value); setPage(1); },
+    page,
+    pageCount: records.count,
+    setPage: (value) => setPage(Math.max(1, Math.min(records.count, value))),
+    records: records.rows,
+    resultCount: core.results.records.length,
+    actions: Object.fromEntries(core.results.records.map((record) => [record.id, recordActions(model, record, deleteAction)])),
+    folderActions: [{ key: "manage-folders", label: "Manage folders", href: `${model.baseUrl}/manage/folders` }],
+    onAction: (action, target) => {
+      if (action.href) router.push(action.href);
+      if (action.key === "delete" && target && deleteAction) {
+        const form = new FormData();
+        form.set("tenantSlug", model.domainSlug);
+        form.set("documentId", String(target.id));
+        void deleteAction(form);
+      }
+      if (action.key === "new") router.push(`${model.baseUrl}/records/new`);
+      if (action.key === "import") router.push(`${model.baseUrl}/import`);
+    },
+  };
   const [foldersOpen, setFoldersOpen] = useState(false);
   function findFolder(folders: FolderSummary[]): FolderSummary | undefined {
     for (const folder of folders) {
@@ -460,4 +514,20 @@ export function ObsidianRecords({
       </div>
     </div>
   );
+}
+
+function recordActions(model: RecordsPageModel, record: RecordSummary, deleteAction: ((formData: FormData) => void | Promise<void>) | null): Action[] {
+  const actions: Action[] = [{ key: "view", label: "View record", href: `${model.baseUrl}/documents/${record.id}` }];
+  if (record.capabilities.edit) actions.push({ key: "edit", label: "Edit record", href: `${model.baseUrl}/documents/${record.id}/edit` });
+  if (record.capabilities.supersede) actions.push({ key: "supersede", label: "Supersede", href: `${model.baseUrl}/records/new?supersedes=${record.id}` });
+  if (record.capabilities.delete && deleteAction) actions.push({ key: "delete", label: "Delete record", danger: true });
+  return actions;
+}
+
+function boundedPageSize(value: number): 6 | 12 | 24 | 25 | 50 | 100 {
+  return ([6, 12, 24, 25, 50, 100] as const).includes(value as 6 | 12 | 24 | 25 | 50 | 100) ? value as 6 | 12 | 24 | 25 | 50 | 100 : 50;
+}
+
+function serverSort(value: RecordsViewState["sort"]): '-updatedAt' | 'updatedAt' | 'title' | '-title' {
+  return value === "oldest" ? "updatedAt" : value === "title-asc" ? "title" : value === "title-desc" ? "-title" : "-updatedAt";
 }

@@ -28,13 +28,18 @@ type SearchRow = {
   capabilities: RecordSummary['capabilities']
 }
 
+export type RecordsWorkspaceOptions = {
+  pageSize?: 6 | 12 | 24 | 25 | 50 | 100
+  sort?: '-updatedAt' | 'updatedAt' | 'title' | '-title'
+}
+
 /**
  * Shared Records interactive behavior (spec §13/Stage G). Owns search,
  * cursor pagination, folder workspace, supersession derivation, selection,
  * and dialog/menu state over an already-authorized RecordsPageModel.
  * No authorization is inferred here; the server endpoints enforce it.
  */
-export function useRecordsWorkspace(model: RecordsPageModel) {
+export function useRecordsWorkspace(model: RecordsPageModel, options: RecordsWorkspaceOptions = {}) {
   const { folders, records, documentTypes, supersessionEdges, query, capabilities } = model
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(query.folderId)
   // Raw selection intent; the EFFECTIVE selection is derived below so a
@@ -77,7 +82,9 @@ export function useRecordsWorkspace(model: RecordsPageModel) {
   const searchTrimmed = search.trim()
   const searchActive = searchTrimmed.length > 0
   useEffect(() => {
-    const searchKey = JSON.stringify([model.domainSlug, searchTrimmed, searchSubfolders, selectedFolderId, exposedTypeId])
+    const pageSize = options.pageSize ?? 50
+    const sort = options.sort ?? '-updatedAt'
+    const searchKey = JSON.stringify([model.domainSlug, searchTrimmed, searchSubfolders, selectedFolderId, exposedTypeId, pageSize, sort])
     searchKeyRef.current = searchKey
     searchRequestRef.current?.abort()
     if (!searchActive) return
@@ -86,7 +93,7 @@ export function useRecordsWorkspace(model: RecordsPageModel) {
     const timer = setTimeout(async () => {
       setSearching(true)
       try {
-        const params = new URLSearchParams({ domainSlug: model.domainSlug, q: searchTrimmed, subfolders: String(searchSubfolders) })
+        const params = new URLSearchParams({ domainSlug: model.domainSlug, q: searchTrimmed, subfolders: String(searchSubfolders), pageSize: String(pageSize), sort })
         if (selectedFolderId !== null) params.set('folder', String(selectedFolderId))
         if (exposedTypeId !== null) params.set('type', String(exposedTypeId))
         const response = await fetch(`/api/records-search?${params}`, { signal: controller.signal })
@@ -104,7 +111,7 @@ export function useRecordsWorkspace(model: RecordsPageModel) {
       }
     }, 200)
     return () => { clearTimeout(timer); controller.abort(); if (searchRequestRef.current === controller) searchRequestRef.current = null }
-  }, [searchActive, searchTrimmed, searchSubfolders, selectedFolderId, exposedTypeId, model.domainSlug])
+  }, [searchActive, searchTrimmed, searchSubfolders, selectedFolderId, exposedTypeId, model.domainSlug, options.pageSize, options.sort])
 
   const loadMore = async () => {
     if (!searchActive || !searchHasMore || !searchCursor || loadingMore) return
@@ -114,7 +121,7 @@ export function useRecordsWorkspace(model: RecordsPageModel) {
     searchRequestRef.current = controller
     setLoadingMore(true)
     try {
-      const params = new URLSearchParams({ domainSlug: model.domainSlug, q: searchTrimmed, subfolders: String(searchSubfolders), cursor: searchCursor })
+    const params = new URLSearchParams({ domainSlug: model.domainSlug, q: searchTrimmed, subfolders: String(searchSubfolders), cursor: searchCursor, pageSize: String(options.pageSize ?? 50), sort: options.sort ?? '-updatedAt' })
       if (selectedFolderId !== null) params.set('folder', String(selectedFolderId))
       if (exposedTypeId !== null) params.set('type', String(exposedTypeId))
       const response = await fetch(`/api/records-search?${params}`, { signal: controller.signal })

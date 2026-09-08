@@ -30,6 +30,11 @@ export async function GET(request: Request) {
   const typeRaw = url.searchParams.get('type')
   const subfolders = url.searchParams.get('subfolders') !== 'false'
   const cursorRaw = url.searchParams.get('cursor')
+  const allowedPageSizes = [6, 12, 24, 25, 50, 100] as const
+  const requestedPageSize = Number(url.searchParams.get('pageSize') ?? 50)
+  const pageSize = (allowedPageSizes as readonly number[]).includes(requestedPageSize) ? requestedPageSize : 50
+  const requestedSort = url.searchParams.get('sort') ?? '-updatedAt'
+  const sort = (['-updatedAt', 'updatedAt', 'title', '-title'] as const).includes(requestedSort as never) ? requestedSort as '-updatedAt' | 'updatedAt' | 'title' | '-title' : '-updatedAt'
   if (!domainSlug) return NextResponse.json({ results: [] }, { status: 403 })
   const domainResult = await payload.find({ collection: 'domains', where: { slug: { equals: domainSlug } }, depth: 0, limit: 1 })
   const domain = domainResult.docs[0]
@@ -161,29 +166,40 @@ export async function GET(request: Request) {
     }
     return current
   }
-  const groups = new Map<number, { updatedAt: string; id: number }>()
+  const groups = new Map<number, { updatedAt: string; id: number; title: string }>()
   for (const document of matchingDocuments) {
     const id = Number(document.id)
     const root = rootFor(id)
-    const candidate = { updatedAt: String(document.updatedAt), id }
+    const candidate = { updatedAt: String(document.updatedAt), id, title: String(document.title) }
     const current = groups.get(root)
     if (!current || candidate.updatedAt > current.updatedAt || (candidate.updatedAt === current.updatedAt && candidate.id > current.id)) groups.set(root, candidate)
   }
-  const orderedGroups = [...groups.entries()].sort(([, a], [, b]) => b.updatedAt.localeCompare(a.updatedAt) || b.id - a.id)
-  let cursor: { updatedAt: string; id: number } | null = null
+  const orderedGroups = [...groups.entries()].sort(([, a], [, b]) => {
+    if (sort === 'title' || sort === '-title') {
+      const titleOrder = a.title.localeCompare(b.title)
+      return sort === 'title' ? titleOrder || a.id - b.id : -titleOrder || b.id - a.id
+    }
+    const updatedOrder = a.updatedAt.localeCompare(b.updatedAt)
+    return sort === 'updatedAt' ? updatedOrder || a.id - b.id : -updatedOrder || b.id - a.id
+  })
+  const sortValue = (value: { updatedAt: string; title: string }) => sort === 'title' || sort === '-title' ? value.title : value.updatedAt
+  let cursor: { value: string; id: number } | null = null
   if (cursorRaw) {
     try {
-      const decoded = JSON.parse(Buffer.from(cursorRaw, 'base64url').toString('utf8')) as { updatedAt?: unknown; id?: unknown }
-      if (typeof decoded.updatedAt === 'string' && Number.isInteger(decoded.id)) cursor = { updatedAt: decoded.updatedAt, id: Number(decoded.id) }
+      const decoded = JSON.parse(Buffer.from(cursorRaw, 'base64url').toString('utf8')) as { value?: unknown; updatedAt?: unknown; id?: unknown }
+      const value = typeof decoded.value === 'string' ? decoded.value : typeof decoded.updatedAt === 'string' ? decoded.updatedAt : null
+      if (value !== null && Number.isInteger(decoded.id)) cursor = { value, id: Number(decoded.id) }
     } catch { /* malformed cursors fail closed to the first page */ }
   }
-  const afterCursor = cursor
-    ? orderedGroups.filter(([, key]) => key.updatedAt < cursor!.updatedAt || (key.updatedAt === cursor!.updatedAt && key.id < cursor!.id))
-    : orderedGroups
-  const pageGroups = afterCursor.slice(0, 50)
+  const afterCursor = cursor ? orderedGroups.filter(([, key]) => {
+    const currentValue = sortValue(key)
+    if (sort === 'updatedAt' || sort === 'title') return currentValue > cursor!.value || (currentValue === cursor!.value && key.id > cursor!.id)
+    return currentValue < cursor!.value || (currentValue === cursor!.value && key.id < cursor!.id)
+  }) : orderedGroups
+  const pageGroups = afterCursor.slice(0, pageSize)
   const hasMore = afterCursor.length > pageGroups.length
   const nextCursor = hasMore && pageGroups.length > 0
-    ? Buffer.from(JSON.stringify(pageGroups[pageGroups.length - 1][1])).toString('base64url')
+    ? Buffer.from(JSON.stringify({ value: sortValue(pageGroups[pageGroups.length - 1][1]), id: pageGroups[pageGroups.length - 1][1].id })).toString('base64url')
     : null
   const selectedIds = new Set<number>()
   const addChain = (id: number, visited = new Set<number>()) => {
