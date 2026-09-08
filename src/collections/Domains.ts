@@ -50,7 +50,7 @@ export const Domains: CollectionConfig = {
     { name: 'logo', type: 'upload', relationTo: 'media', label: 'Seal / logo' },
     { name: 'banner', type: 'upload', relationTo: 'media', label: 'Banner image' },
     // ---- Design template + contracted layout/document/background tokens ----
-    { name: 'designTemplate', type: 'select', label: 'Design template', options: [{ label: 'Civic (classic community)', value: 'civic' }, { label: 'Ledger (Loreforge print)', value: 'ledger' }, { label: 'Poster (bold modern)', value: 'poster' }], defaultValue: 'civic' },
+    { name: 'designTemplate', type: 'select', label: 'Design template', options: [{ label: 'Civic (classic community)', value: 'civic' }, { label: 'Ledger (Loreforge print)', value: 'ledger' }, { label: 'Poster (bold modern)', value: 'poster' }, { label: 'Obsidian (night harbour)', value: 'obsidian' }], defaultValue: 'civic' },
     { name: 'contentWidth', type: 'select', label: 'Content width', options: [{ label: 'Narrow (focused reading)', value: 'narrow' }, { label: 'Standard', value: 'standard' }, { label: 'Wide', value: 'wide' }], defaultValue: 'standard' },
     { name: 'headerLayout', type: 'select', label: 'Header layout', options: [{ label: 'Centered masthead', value: 'centered' }, { label: 'Compact bar', value: 'left-aligned' }, { label: 'Banner hero', value: 'banner-forward' }], defaultValue: 'centered' },
     { name: 'documentStyle', type: 'select', label: 'Document reading style', options: [{ label: 'Classic (serif record sheet)', value: 'classic' }, { label: 'Modern (clean reading)', value: 'modern' }], defaultValue: 'classic' },

@@ -141,6 +141,7 @@ export const Tenants: CollectionConfig = {
         { label: 'Civic (classic community)', value: 'civic' },
         { label: 'Ledger (Loreforge print)', value: 'ledger' },
         { label: 'Poster (bold modern)', value: 'poster' },
+        { label: 'Obsidian (night harbour)', value: 'obsidian' },
       ],
       defaultValue: 'civic',
     },

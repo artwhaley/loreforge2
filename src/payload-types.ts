@@ -276,7 +276,7 @@ export interface Domain {
   bodyFontKey: 'verdana' | 'georgia' | 'trebuchet' | 'tahoma' | 'lato' | 'newsreader';
   logo?: (number | null) | Media;
   banner?: (number | null) | Media;
-  designTemplate?: ('civic' | 'ledger' | 'poster') | null;
+  designTemplate?: ('civic' | 'ledger' | 'poster' | 'obsidian') | null;
   contentWidth?: ('narrow' | 'standard' | 'wide') | null;
   headerLayout?: ('centered' | 'left-aligned' | 'banner-forward') | null;
   documentStyle?: ('classic' | 'modern') | null;
@@ -383,7 +383,7 @@ export interface Tenant {
    * Optional header banner (image).
    */
   banner?: (number | null) | Media;
-  designTemplate?: ('civic' | 'ledger' | 'poster') | null;
+  designTemplate?: ('civic' | 'ledger' | 'poster' | 'obsidian') | null;
   contentWidth?: ('narrow' | 'standard' | 'wide') | null;
   headerLayout?: ('centered' | 'left-aligned' | 'banner-forward') | null;
   documentStyle?: ('classic' | 'modern') | null;
