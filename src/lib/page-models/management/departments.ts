@@ -20,4 +20,6 @@ export type DepartmentsManagementPageModel = ManagementRouteFacts & {
   departments: DepartmentsManagementRow[]
   canCreate: boolean
   status: ManagementStatusDescriptor
+  /** Platform vocabulary so a Design never hard-codes civic nouns. */
+  vocabulary: { subdomainSingular: string; subdomainPlural: string; roleSingular: string }
 }
