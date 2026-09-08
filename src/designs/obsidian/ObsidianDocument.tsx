@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -7,17 +6,15 @@ import {
   FileText,
 } from "lucide-react";
 import type { DocumentPageModel } from "@/lib/page-models/document";
+import type { ObsidianConfigV1 } from "@/lib/design/contracts";
+import type { DesignConfigProps, DesignVariantProps, DocumentDesignViewProps } from "@/lib/design/types";
 import { ReadingSurface } from "./ReadingSurface";
 import s from "./obsidian.module.css";
 
 /** Body is data-pure. Client tabs receive rendered content via children. */
-export function ObsidianDocument({
-  model,
-  actions,
-}: {
-  model: DocumentPageModel;
-  actions: ReactNode;
-}) {
+export function ObsidianDocument(props: DocumentDesignViewProps & DesignVariantProps & DesignConfigProps<ObsidianConfigV1>) {
+  const model = props;
+  const { workflowAction, deleteAction } = props;
   return (
     <div className={s.documentPage}>
       <div className={s.documentBreadcrumb}>
@@ -42,10 +39,10 @@ export function ObsidianDocument({
             {model.locked && <LockKeyhole size={15} aria-label="Locked" />}
           </p>
         </div>
-        {actions}
+        <DocumentActionBar model={model} workflowAction={workflowAction ?? null} deleteAction={deleteAction ?? null} />
       </div>
       {model.statusMessage && (
-        <div role="status" className={s.notice}>
+        <div role="alert" className={s.notice}>
           {model.statusMessage.text}
         </div>
       )}
@@ -139,4 +136,28 @@ export function ObsidianDocument({
       </div>
     </div>
   );
+}
+
+function DocumentActionBar({ model, workflowAction, deleteAction }: {
+  model: DocumentPageModel
+  workflowAction: ((formData: FormData) => void | Promise<void>) | null
+  deleteAction: ((formData: FormData) => void | Promise<void>) | null
+}) {
+  const action = (operation: string) => <form action={workflowAction ?? undefined}><input type="hidden" name="tenantSlug" value={model.domainSlug} /><input type="hidden" name="documentId" value={model.recordId} /><input type="hidden" name="operation" value={operation} /><button className={s.secondaryButton} type="submit">{operationLabel(operation)}</button></form>
+  return <div className={s.pageActions}>
+    {model.capabilities.edit && model.routes.editUrl ? <a className={s.secondaryButton} href={model.routes.editUrl}>Edit</a> : null}
+    {model.capabilities.submit && workflowAction ? action('submit') : null}
+    {model.capabilities.file && workflowAction ? action('file') : null}
+    {model.capabilities.approve && workflowAction ? action('approve') : null}
+    {model.capabilities.deprecate && workflowAction ? action('deprecate') : null}
+    {model.capabilities.restore && workflowAction ? action('restore') : null}
+    {model.capabilities.lock && workflowAction ? action('lock') : null}
+    {model.capabilities.unlock && workflowAction ? action('unlock') : null}
+    {model.capabilities.supersede && model.routes.supersedeUrl ? <a className={s.secondaryButton} href={model.routes.supersedeUrl}>Supersede</a> : null}
+    {model.capabilities.delete && deleteAction ? <form action={deleteAction}><input type="hidden" name="tenantSlug" value={model.domainSlug} /><input type="hidden" name="documentId" value={model.recordId} /><button className={s.secondaryButton} type="submit">Delete</button></form> : null}
+  </div>
+}
+
+function operationLabel(operation: string): string {
+  return operation === 'submit' ? 'Submit for review' : operation === 'file' ? 'File now' : operation === 'approve' ? 'Approve' : operation === 'deprecate' ? 'Deprecate' : operation === 'restore' ? 'Restore' : operation === 'lock' ? 'Lock' : 'Unlock'
 }
