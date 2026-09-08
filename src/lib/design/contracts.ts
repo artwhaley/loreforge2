@@ -158,6 +158,36 @@ export type LedgerConfigV1 = {
 }
 
 // ---------------------------------------------------------------------------
+// Obsidian config v1 (night-harbour Design — ported from the incubation
+// vocabulary, production-validated). OBSIDIAN-T11.
+// ---------------------------------------------------------------------------
+
+export type ObsidianConfigV1 = {
+  palette: {
+    background: string
+    surface: string
+    text: string
+    muted: string
+    accent: string
+  }
+  geometry: {
+    /** Content max width in px, bounded. */
+    contentMax: number
+    /** Page gutter in px, bounded. */
+    pageGutter: number
+    /** Surface corner radius in px, bounded. */
+    surfaceRadius: number
+  }
+  records: {
+    defaultView: 'cards' | 'list'
+    cardPageSize: 6 | 12 | 24
+    listPageSize: 25 | 50 | 100
+  }
+  /** Persisted local media reference; null renders the CSS/gradient fallback. */
+  atmosphere: DesignAssetRef | null
+}
+
+// ---------------------------------------------------------------------------
 // Poster config v1 (compatibility Design — deliberately small vocabulary)
 // ---------------------------------------------------------------------------
 

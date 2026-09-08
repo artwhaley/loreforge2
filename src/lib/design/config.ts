@@ -38,7 +38,7 @@ export type DomainDesignConfig = {
   design: Record<string, unknown>
 }
 
-const DESIGN_KEYS = ['civic', 'ledger', 'poster'] as const
+const DESIGN_KEYS = ['civic', 'ledger', 'poster', 'obsidian'] as const
 
 /** Pick a supported design key from persisted raw value, defaulting to Civic. */
 export function pickDesignKey(value: unknown): DesignKey {
@@ -124,7 +124,7 @@ export function validateDomainDesignConfig(value: unknown): DomainDesignConfig |
 }
 
 function isDesignKeyLike(value: unknown): value is DomainDesignConfig['designKey'] {
-  return value === 'civic' || value === 'ledger' || value === 'poster'
+  return value === 'civic' || value === 'ledger' || value === 'poster' || value === 'obsidian'
 }
 
 /**

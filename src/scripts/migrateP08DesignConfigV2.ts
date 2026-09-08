@@ -20,6 +20,7 @@ import type { LegacyDomainAppearance } from '../lib/design/contracts.js'
 import { civicDefaults, civicFromLegacy, migrateCivicConfig, validateCivicConfig } from '../designs/civic/config.js'
 import { ledgerDefaults, ledgerFromLegacy, migrateLedgerConfig, validateLedgerConfig } from '../designs/ledger/config.js'
 import { posterDefaults, posterFromLegacy, migratePosterConfig, validatePosterConfig } from '../designs/poster/config.js'
+import { obsidianDefaults, obsidianFromLegacy, migrateObsidianConfig, validateObsidianConfig } from '../designs/obsidian/config.js'
 
 const MODE = process.argv.includes('--apply') ? 'apply' : process.argv.includes('--dry-run') ? 'dry-run' : null
 if (!MODE) {
@@ -41,6 +42,7 @@ const CONFIG_BY_KEY = {
   civic: { defaults: civicDefaults, fromLegacy: civicFromLegacy, validate: validateCivicConfig, migrate: migrateCivicConfig },
   ledger: { defaults: ledgerDefaults, fromLegacy: ledgerFromLegacy, validate: validateLedgerConfig, migrate: migrateLedgerConfig },
   poster: { defaults: posterDefaults, fromLegacy: posterFromLegacy, validate: validatePosterConfig, migrate: migratePosterConfig },
+  obsidian: { defaults: obsidianDefaults, fromLegacy: obsidianFromLegacy, validate: validateObsidianConfig, migrate: migrateObsidianConfig },
 } as const
 
 type DomainRow = {

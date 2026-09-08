@@ -35,6 +35,13 @@ export const DESIGN_CATALOG: readonly DesignCatalogEntry[] = [
     description: 'A cultural publication: monumental type, asymmetric compositions, graphic destination tiles.',
     thumbnail: '/designs/poster.svg',
   },
+  {
+    key: 'obsidian',
+    status: 'compatibility',
+    name: 'Obsidian',
+    description: 'A night-harbour world: dark atmospheric surfaces, luminous accents, cinematic records.',
+    thumbnail: '/designs/obsidian.svg',
+  },
 ] as const
 
 export const DESIGN_CATALOG_KEYS: readonly DesignKey[] = DESIGN_CATALOG.map((entry) => entry.key)

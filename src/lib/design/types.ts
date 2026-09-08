@@ -22,7 +22,7 @@ import type {
   ValidationResult,
 } from './contracts'
 
-export type DesignKey = 'civic' | 'ledger' | 'poster'
+export type DesignKey = 'civic' | 'ledger' | 'poster' | 'obsidian'
 
 /** A curated presentational option on a legacy visual axis (transition only). */
 export type DesignOption = {
@@ -203,5 +203,5 @@ export type DocumentDesignViewProps = DocumentPageModel & {
 }
 
 export function isDesignKey(value: unknown): value is DesignKey {
-  return value === 'civic' || value === 'ledger' || value === 'poster'
+  return value === 'civic' || value === 'ledger' || value === 'poster' || value === 'obsidian'
 }

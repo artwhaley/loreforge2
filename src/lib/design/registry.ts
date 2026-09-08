@@ -1,6 +1,7 @@
 import { civic } from '@/designs/civic'
 import { ledger } from '@/designs/ledger'
 import { poster } from '@/designs/poster'
+import { obsidian } from '@/designs/obsidian'
 import type { DesignDefinition, DesignKey } from './types'
 import { DESIGN_CATALOG, type DesignCatalogEntry } from './catalog'
 
@@ -25,6 +26,7 @@ export const DESIGNS: Record<DesignKey, DesignDefinition> = {
   civic: eraseConfig(civic),
   ledger: eraseConfig(ledger),
   poster: eraseConfig(poster),
+  obsidian: eraseConfig(obsidian),
 }
 
 /**
@@ -32,10 +34,10 @@ export const DESIGNS: Record<DesignKey, DesignDefinition> = {
  * the default (Civic) safely (spec §32 error handling).
  */
 export function resolveDesign(key: unknown): DesignDefinition {
-  return key === 'civic' || key === 'ledger' || key === 'poster' ? DESIGNS[key] : DESIGNS.civic
+  return key === 'civic' || key === 'ledger' || key === 'poster' || key === 'obsidian' ? DESIGNS[key] : DESIGNS.civic
 }
 
-export const DESIGN_KEYS: DesignKey[] = ['civic', 'ledger', 'poster']
+export const DESIGN_KEYS: DesignKey[] = ['civic', 'ledger', 'poster', 'obsidian']
 
 /** Basic metadata comes from the pure catalog — never re-declared per module. */
 export const DESIGN_METADATA: DesignCatalogEntry[] = DESIGN_KEYS.map((key) => {
