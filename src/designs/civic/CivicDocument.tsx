@@ -1,4 +1,4 @@
-import type { CivicConfigV1 } from '@/lib/design/contracts'
+import type { CivicConfigV1 } from './config'
 import type { DesignConfigProps, DesignVariantProps, DocumentDesignViewProps } from '@/lib/design/types'
 import { getDocumentActions } from '@/lib/documents/presentation/actions'
 import type { DocumentPageModel } from '@/lib/page-models/document'

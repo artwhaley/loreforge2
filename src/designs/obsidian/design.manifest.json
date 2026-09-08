@@ -1,0 +1,11 @@
+{
+  "manifestVersion": 1,
+  "designContractVersion": 1,
+  "key": "obsidian",
+  "sortOrder": 40,
+  "name": "Obsidian",
+  "status": "first-class",
+  "description": "A night-harbour world: dark atmospheric surfaces, luminous accents, cinematic records.",
+  "entry": "./index.ts",
+  "preview": { "thumbnail": "assets/thumbnail.svg" }
+}

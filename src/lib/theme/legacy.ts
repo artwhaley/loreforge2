@@ -8,27 +8,17 @@
 // DESIGN_TEMPLATES / HEADER_LAYOUTS / DOCUMENT_STYLES are re-exported by
 // src/lib/theme/fonts.ts for compatibility with existing importers.
 
-/**
- * First-class design templates (owner decision 2026-09-05): three complete,
- * distinct top-level site designs. Every template consumes the same palette
- * and typography tokens, so each remains fully themeable.
- */
-export const DESIGN_TEMPLATES = {
-  civic: {
-    label: 'Civic (classic community)',
-    description: 'An institutional portal: composed masthead, a clear directory, and a structured record grid.',
-  },
-  ledger: {
-    label: 'Ledger (Loreforge print)',
-    description: 'An editorial archive: a persistent side index, generous reading column, and a ruled register.',
-  },
-  poster: {
-    label: 'Poster (bold modern)',
-    description: 'A cultural publication: monumental type, asymmetric compositions, and graphic destination tiles.',
-  },
-} as const
+import { DESIGN_CATALOG } from '@/lib/design/catalog'
+import type { DesignKey } from '@/lib/design/types'
 
-export type DesignTemplateKey = keyof typeof DESIGN_TEMPLATES
+type DesignTemplate = { label: string; description: string }
+
+/** Legacy template metadata is projected from the generated Design catalog. */
+export const DESIGN_TEMPLATES = Object.fromEntries(
+  DESIGN_CATALOG.map((entry) => [entry.key, { label: entry.name, description: entry.description }]),
+) as { [K in DesignKey]: DesignTemplate }
+
+export type DesignTemplateKey = DesignKey
 
 export const DESIGN_TEMPLATE_OPTIONS = (Object.entries(DESIGN_TEMPLATES) as Array<[DesignTemplateKey, { label: string }]>).map(([value, v]) => ({ value, label: v.label }))
 

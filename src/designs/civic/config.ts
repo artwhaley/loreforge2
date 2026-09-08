@@ -4,8 +4,35 @@
 // concepts are Civic's, and Ledger speaks a different language.
 import { CONTENT_WIDTHS, resolveFontStack } from '@/lib/theme/fonts'
 import { mixColors, readableTextColor } from '@/lib/theme/color'
-import type { CivicConfigV1, DesignAssetRef, LegacyDomainAppearance, ValidationResult } from '@/lib/design/contracts'
-import { fail, isDesignAssetRef, isFontKey, isHexColor, isNullOrAssetRef, ok, pickUnion } from '@/lib/design/validate'
+import type { DesignAssetRef, FontKey, LegacyDomainAppearance, ValidationResult } from '@/lib/design/contracts'
+import { fail, isFontKey, isHexColor, isNullOrDesignAssetRef, ok, pickUnion } from '@/lib/design/validate'
+
+export type CivicConfigV1 = {
+  palette: {
+    primary: string
+    secondary: string
+    accent: string
+    page: string
+  }
+  typography: {
+    headingFontKey: FontKey
+    bodyFontKey: FontKey
+  }
+  layout: {
+    width: 'narrow' | 'standard' | 'wide'
+    header: 'centered' | 'compact' | 'banner'
+  }
+  document: {
+    treatment: 'classic' | 'modern'
+  }
+  background: {
+    treatment: 'plain' | 'washes' | 'soft' | 'vignette'
+    image: DesignAssetRef | null
+  }
+  banner: {
+    image: DesignAssetRef | null
+  }
+}
 
 const WIDTHS = ['narrow', 'standard', 'wide'] as const
 const HEADERS = ['centered', 'compact', 'banner'] as const
@@ -60,11 +87,11 @@ export function validateCivicConfig(raw: unknown): ValidationResult<CivicConfigV
   if (!background || typeof background !== 'object') errors.push('background is required.')
   else {
     if (!BACKGROUNDS.includes(background.treatment as never)) errors.push('background.treatment must be plain|washes|soft|vignette.')
-    if (!isNullOrAssetRef(background.image)) errors.push('background.image must be null or a /media/ asset reference.')
+    if (!isNullOrDesignAssetRef(background.image, 'civic')) errors.push('background.image must be null or a local asset reference.')
   }
   const banner = value.banner as Record<string, unknown> | undefined
   if (!banner || typeof banner !== 'object') errors.push('banner is required.')
-  else if (!isNullOrAssetRef(banner.image)) errors.push('banner.image must be null or a /media/ asset reference.')
+  else if (!isNullOrDesignAssetRef(banner.image, 'civic')) errors.push('banner.image must be null or a local asset reference.')
 
   if (errors.length > 0) return fail(errors)
   // Every group pushed an error when missing, so all are present here.

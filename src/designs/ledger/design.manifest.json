@@ -1,0 +1,11 @@
+{
+  "manifestVersion": 1,
+  "designContractVersion": 1,
+  "key": "ledger",
+  "sortOrder": 20,
+  "name": "Ledger",
+  "status": "first-class",
+  "description": "An editorial archive: persistent side index, generous reading column, ruled register.",
+  "entry": "./index.ts",
+  "preview": { "thumbnail": "assets/thumbnail.svg" }
+}

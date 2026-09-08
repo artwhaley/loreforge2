@@ -1,5 +1,5 @@
 import type { DesignDefinition } from '@/lib/design/types'
-import type { ObsidianConfigV1 } from '@/lib/design/contracts'
+import type { ObsidianConfigV1 } from './config'
 import { ObsidianShell } from './ObsidianShell'
 import { ObsidianRecords } from './ObsidianRecords'
 import { ObsidianDocument } from './ObsidianDocument'
@@ -18,7 +18,7 @@ export const obsidian: DesignDefinition<ObsidianConfigV1> = {
   status: 'first-class',
   name: 'Obsidian',
   description: 'A night-harbour world: dark atmospheric surfaces, luminous accents, cinematic records.',
-  preview: { thumbnail: '/designs/obsidian.svg' },
+  preview: { thumbnail: '/design-assets/obsidian/thumbnail.svg' },
   config: {
     version: 1,
     defaults: obsidianDefaults,
@@ -50,3 +50,5 @@ export const obsidian: DesignDefinition<ObsidianConfigV1> = {
     },
   },
 }
+
+export default obsidian

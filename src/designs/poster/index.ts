@@ -1,5 +1,5 @@
 import type { DesignDefinition } from '@/lib/design/types'
-import type { PosterConfigV1 } from '@/lib/design/contracts'
+import type { PosterConfigV1 } from './config'
 import { HEADER_LAYOUTS, DOCUMENT_STYLES, THEME_PRESETS } from '@/lib/theme/fonts'
 import { LegacyAboutView, LegacyDepartmentView, LegacyDepartmentsView, LegacyLoreView } from '../shared/legacy-thin'
 import { PosterShell } from './PosterShell'
@@ -17,7 +17,7 @@ export const poster: DesignDefinition<PosterConfigV1> = {
   status: 'compatibility',
   name: 'Poster',
   description: 'A cultural publication: monumental type, asymmetric compositions, graphic destination tiles.',
-  preview: { thumbnail: '/designs/poster.svg' },
+  preview: { thumbnail: '/design-assets/poster/thumbnail.svg' },
   config: {
     version: 1,
     defaults: posterDefaults,
@@ -65,3 +65,5 @@ export const poster: DesignDefinition<PosterConfigV1> = {
     validate: () => ({}),
   },
 }
+
+export default poster

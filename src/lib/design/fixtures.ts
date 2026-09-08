@@ -10,6 +10,11 @@ import type { DepartmentsManagementPageModel } from '@/lib/page-models/managemen
 import type { FolderManagementPageModel } from '@/lib/page-models/management/folders'
 import type { InvitationsManagementPageModel } from '@/lib/page-models/management/invitations'
 import type { WorkPageModel } from '@/lib/page-models/management/work'
+import type { RoleManagementPageModel } from '@/lib/page-models/management/roles'
+import type { DocumentTypesManagementPageModel } from '@/lib/page-models/management/documentTypes'
+import type { PeopleManagementPageModel, PersonManagementPageModel } from '@/lib/page-models/management/people'
+import type { FolderTreeNode, RoleDepartment } from '@/components/people/PersonAccessTrees'
+import type { TypeTreeData, TypeTreeLeaf, TypeTreeNode, InspectorFolderNode } from '@/lib/documents/typeTree'
 
 /** Deterministic, safe, representative fixtures for the Theme Studio preview. No DB query. */
 const PREVIEW_BASE = '/domain/preview-domain'
@@ -36,10 +41,12 @@ export const SHELL_PREVIEW_MODEL: DomainShellModel = {
   ],
   managementNavigation: [
     { label: 'People', segment: 'manage/people', href: `${PREVIEW_BASE}/manage/people` },
+    { label: 'Members', segment: 'members', href: `${PREVIEW_BASE}/members` },
     { label: 'Roles', segment: 'roles', href: `${PREVIEW_BASE}/roles` },
     { label: 'Folders', segment: 'manage/folders', href: `${PREVIEW_BASE}/manage/folders` },
     { label: 'Departments', segment: 'manage/departments', href: `${PREVIEW_BASE}/manage/departments` },
     { label: 'Document Types', segment: 'document-types', href: `${PREVIEW_BASE}/document-types` },
+    { label: 'Invitations', segment: 'manage/invitations', href: `${PREVIEW_BASE}/manage/invitations` },
     { label: 'Customize', segment: 'customize', href: `${PREVIEW_BASE}/customize` },
   ],
   operatingContext: {
@@ -410,4 +417,119 @@ export const INVITATIONS_MANAGEMENT_MODEL: InvitationsManagementPageModel = {
   ],
   pendingClaims: [],
   claimTargets: [],
+}
+
+// ---------------------------------------------------------------------------
+// Full-host parity fixtures (P2-T05 / P2-T12).
+//
+// Site Studio historically needed only the four fixtures above. The Lab's
+// required render set is broader, so these additional deterministic models
+// make the production checkout the oracle for every Class A surface as well.
+// They are intentionally boring data: the parity harness is measuring host
+// and Design rendering, not a live database snapshot.
+// ---------------------------------------------------------------------------
+
+const PARITY_ROLE_DEPARTMENTS: RoleDepartment[] = [
+  {
+    id: 1,
+    name: 'Harbor Commission',
+    roles: [{ id: 1, name: 'Dockmaster', held: true, assignable: true, children: [] }],
+  },
+]
+
+const PARITY_FOLDER_NODES: FolderTreeNode[] = [
+  { id: 1, name: 'Dock Ledgers', systemManaged: false, readState: 'grant', writeState: 'grant', children: [] },
+]
+
+const PARITY_TYPES: TypeTreeLeaf[] = [
+  {
+    id: 1,
+    name: 'Harbor report',
+    description: 'A report filed by the Harbor Commission.',
+    active: true,
+    departmentId: 1,
+    typeFolderId: null,
+    templateSelection: 'markdown',
+    templateId: null,
+    templateName: null,
+    templateKind: null,
+    constructedTemplates: { markdown: null, form: null },
+  },
+]
+
+const PARITY_TYPE_NODE: TypeTreeNode = {
+  id: 'type-1',
+  kind: 'type',
+  name: 'Harbor report',
+  leaf: PARITY_TYPES[0],
+  children: [],
+}
+
+const PARITY_TYPE_TREE: TypeTreeData = {
+  roots: [{ id: 'dept-1', kind: 'department', name: 'Harbor Commission', children: [PARITY_TYPE_NODE] }],
+  hasUnassigned: false,
+  departments: [{ id: 1, name: 'Harbor Commission', archived: false }],
+  types: PARITY_TYPES,
+}
+
+const PARITY_INSPECTOR_FOLDERS: InspectorFolderNode[] = [
+  { id: 1, name: 'Dock Ledgers', children: [] },
+]
+
+export const ROLES_MANAGEMENT_MODEL: RoleManagementPageModel = {
+  baseUrl: OPERATIONAL_BASE,
+  domainSlug: 'preview-domain',
+  domainName: 'Preview Domain',
+  domainId: 42,
+  departments: PARITY_ROLE_DEPARTMENTS,
+  roleRecords: [{ id: 1, name: 'Dockmaster', departmentId: 1, parentRoleId: null }],
+  holdersByRole: { '1': [{ id: 101, name: 'Elias Vane' }] },
+  folderNodes: PARITY_FOLDER_NODES,
+  folderStatesByRole: { '1': { '1': { readState: 'grant', writeState: 'grant' } } },
+  types: [{ id: 1, name: 'Harbor report' }],
+  typeStatesByRole: { '1': { '1': { read: 'grant', create_document: 'grant', edit_document: 'grant' } } },
+  manageableDepartmentIds: [1],
+  assignableRoleIds: [1],
+  initialRoleId: 1,
+  status: null,
+}
+
+export const DOCUMENT_TYPES_MANAGEMENT_MODEL: DocumentTypesManagementPageModel = {
+  baseUrl: OPERATIONAL_BASE,
+  domainSlug: 'preview-domain',
+  domainName: 'Preview Domain',
+  domainId: 42,
+  tree: PARITY_TYPE_TREE,
+  inspector: {
+    roles: [{ id: 1, name: 'Dockmaster', active: true }],
+    folders: PARITY_INSPECTOR_FOLDERS,
+    stagesByType: { 1: { draft: null, submitted: null, filed: null, deprecated: null } },
+  },
+  canManage: true,
+  status: null,
+}
+
+export const PEOPLE_MANAGEMENT_MODEL: PeopleManagementPageModel = {
+  baseUrl: OPERATIONAL_BASE,
+  domainSlug: 'preview-domain',
+  domainName: 'Preview Domain',
+  domainId: 42,
+  canOpenPeople: true,
+  status: null,
+}
+
+export const PERSON_MANAGEMENT_MODEL: PersonManagementPageModel = {
+  baseUrl: OPERATIONAL_BASE,
+  domainSlug: 'preview-domain',
+  domainName: 'Preview Domain',
+  domainId: 42,
+  character: { id: 101, name: 'Elias Vane', kind: 'player', status: 'active' },
+  controller: { id: 201, name: 'Elias', email: 'elias@example.test' },
+  localDisplayName: 'Eli',
+  roleDepartments: PARITY_ROLE_DEPARTMENTS,
+  folderNodes: PARITY_FOLDER_NODES,
+  typeAccess: [{ id: 1, name: 'Harbor report', read: { allowed: true, source: 'Role-derived' }, create: { allowed: true, source: 'Role-derived' }, edit: { allowed: true, source: 'Role-derived' } }],
+  canManageMembers: true,
+  roleFilter: 'held',
+  status: null,
 }

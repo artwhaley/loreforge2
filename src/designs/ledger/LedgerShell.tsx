@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
 
-import type { LedgerConfigV1 } from '@/lib/design/contracts'
+import type { LedgerConfigV1 } from './config'
 import type { DesignShellProps } from '@/lib/design/types'
 import { OperatingContext } from '@/components/platform/OperatingContext'
 

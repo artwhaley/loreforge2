@@ -1,5 +1,5 @@
 import type { DesignDefinition } from '@/lib/design/types'
-import type { LedgerConfigV1 } from '@/lib/design/contracts'
+import type { LedgerConfigV1 } from './config'
 import { THEME_PRESETS } from '@/lib/theme/fonts'
 import { LedgerAboutView, LedgerDepartmentView, LedgerDepartmentsView, LedgerLoreView } from './thin'
 import { LedgerShell } from './LedgerShell'
@@ -17,7 +17,7 @@ export const ledger: DesignDefinition<LedgerConfigV1> = {
   status: 'first-class',
   name: 'Ledger',
   description: 'An editorial archive: persistent side index, generous reading column, ruled register.',
-  preview: { thumbnail: '/designs/ledger.svg' },
+  preview: { thumbnail: '/design-assets/ledger/thumbnail.svg' },
   config: {
     version: 1,
     defaults: ledgerDefaults,
@@ -67,3 +67,5 @@ export const ledger: DesignDefinition<LedgerConfigV1> = {
     validate: () => ({}),
   },
 }
+
+export default ledger

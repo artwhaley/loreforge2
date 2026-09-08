@@ -1,7 +1,7 @@
 'use client'
 
 import type { DesignStudioEditorProps } from '@/lib/design/contracts'
-import type { PosterConfigV1 } from '@/lib/design/contracts'
+import type { PosterConfigV1 } from '../config'
 import { ColorField, SectionTitle, SelectField } from '../../shared/studio/fields'
 
 const MASTHEADS = [

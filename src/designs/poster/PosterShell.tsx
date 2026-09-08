@@ -1,4 +1,4 @@
-import type { PosterConfigV1 } from '@/lib/design/contracts'
+import type { PosterConfigV1 } from './config'
 import type { DesignShellProps } from '@/lib/design/types'
 import { LegacyShellFrame } from '../shared/legacy-frame'
 

@@ -12,7 +12,7 @@ import type { InvitationsManagementPageModel } from '@/lib/page-models/managemen
 import type { PeopleManagementPageModel, PersonManagementPageModel } from '@/lib/page-models/management/people'
 import type { RoleManagementPageModel } from '@/lib/page-models/management/roles'
 import type { WorkDesignViewProps } from '@/lib/design/types'
-import { issueObsidianInvitationAction, type IssueInvitationState } from '@/components/invitations/ObsidianActions'
+import { issueInvitationAction, type IssueInvitationState } from '@/lib/design/hostActionBridges'
 
 import { ActionMenu, ChoiceMenu, Modal, type Action } from './controls'
 import s from './obsidian.module.css'
@@ -370,7 +370,7 @@ export function ObsidianWork(props: WorkDesignViewProps) {
 export function ObsidianInvitationsManagement({ model }: { model: InvitationsManagementPageModel }) {
   const router = useRouter()
   const [purpose, setPurpose] = useState<'domain_join' | 'character_claim'>('domain_join')
-  const [issueState, issueAction] = useActionState<IssueInvitationState, FormData>(issueObsidianInvitationAction, { ok: false })
+  const [issueState, issueAction] = useActionState<IssueInvitationState, FormData>(issueInvitationAction, { ok: false })
   const invitationRows = model.invitations.map((invitation) => ({
     id: invitation.id,
     primary: invitation.purpose,

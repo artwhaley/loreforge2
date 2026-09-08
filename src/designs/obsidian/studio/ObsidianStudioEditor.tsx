@@ -1,6 +1,7 @@
 'use client'
 
-import type { DesignStudioEditorProps, ObsidianConfigV1 } from '@/lib/design/contracts'
+import type { DesignStudioEditorProps } from '@/lib/design/contracts'
+import type { ObsidianConfigV1 } from '../config'
 import { ColorField, ImageField, RangeField, SectionTitle, SelectField } from '../../shared/studio/fields'
 
 const VIEWS = [

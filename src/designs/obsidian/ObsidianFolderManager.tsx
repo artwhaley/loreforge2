@@ -22,7 +22,7 @@ type Sort = 'name-asc' | 'name-desc' | 'newest' | 'oldest'
 
 function createdLabel(value: string): string {
   const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function mapFolders(nodes: FolderManagementNode[]): ManagedFolderNode[] {

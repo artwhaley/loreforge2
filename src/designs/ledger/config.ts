@@ -6,8 +6,36 @@
 // unfinished.
 import { resolveFontStack } from '@/lib/theme/fonts'
 import { mixColors, readableTextColor } from '@/lib/theme/color'
-import type { DesignAssetRef, LedgerConfigV1, LegacyDomainAppearance, ValidationResult } from '@/lib/design/contracts'
-import { fail, isDesignAssetRef, isFontKey, isHexColor, isNullOrAssetRef, ok, pickUnion } from '@/lib/design/validate'
+import type { DesignAssetRef, FontKey, LegacyDomainAppearance, ValidationResult } from '@/lib/design/contracts'
+import { fail, isFontKey, isHexColor, isNullOrDesignAssetRef, ok, pickUnion } from '@/lib/design/validate'
+
+export type LedgerConfigV1 = {
+  palette: {
+    ink: string
+    secondaryInk: string
+    accent: string
+    paper: string
+  }
+  typography: {
+    displayFontKey: FontKey
+    bodyFontKey: FontKey
+  }
+  rail: {
+    width: 'narrow' | 'standard' | 'wide'
+    density: 'airy' | 'standard' | 'compact'
+  }
+  masthead: {
+    treatment: 'formal' | 'compact' | 'folio'
+    image: DesignAssetRef | null
+  }
+  rules: {
+    strength: 'hairline' | 'standard' | 'heavy'
+  }
+  document: {
+    treatment: 'register' | 'docket'
+  }
+  paperTexture: DesignAssetRef | null
+}
 
 const RAIL_WIDTHS = ['narrow', 'standard', 'wide'] as const
 const DENSITIES = ['airy', 'standard', 'compact'] as const
@@ -53,7 +81,7 @@ export function validateLedgerConfig(raw: unknown): ValidationResult<LedgerConfi
   if (!masthead || typeof masthead !== 'object') errors.push('masthead is required.')
   else {
     if (!MASTHEADS.includes(masthead.treatment as never)) errors.push('masthead.treatment must be formal|compact|folio.')
-    if (!isNullOrAssetRef(masthead.image)) errors.push('masthead.image must be null or a /media/ asset reference.')
+    if (!isNullOrDesignAssetRef(masthead.image, 'ledger')) errors.push('masthead.image must be null or a local asset reference.')
   }
   const rules = value.rules as Record<string, unknown> | undefined
   if (!rules || typeof rules !== 'object') errors.push('rules is required.')
@@ -61,7 +89,7 @@ export function validateLedgerConfig(raw: unknown): ValidationResult<LedgerConfi
   const document = value.document as Record<string, unknown> | undefined
   if (!document || typeof document !== 'object') errors.push('document is required.')
   else if (!DOC_TREATMENTS.includes(document.treatment as never)) errors.push('document.treatment must be register|docket.')
-  if (!isNullOrAssetRef(value.paperTexture)) errors.push('paperTexture must be null or a /media/ asset reference.')
+  if (!isNullOrDesignAssetRef(value.paperTexture, 'ledger')) errors.push('paperTexture must be null or a local asset reference.')
 
   if (errors.length > 0) return fail(errors)
   // Every group pushed an error when missing, so all are present here.

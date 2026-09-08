@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { resolveDomainDesign } from '@/lib/design/resolveDomainDesign'
 import { buildV2Envelope, mergeDesignBanks, parseV2Envelope, validateSubmittedBanks } from '@/lib/design/v2'
 import { DESIGNS } from '@/lib/design/registry'
-import type { LegacyDomainAppearance, ObsidianConfigV1 } from '@/lib/design/contracts'
+import type { LegacyDomainAppearance } from '@/lib/design/contracts'
+import type { ObsidianConfigV1 } from '@/designs/obsidian/config'
 
 const LEGACY_SCALARS = {
   designTemplate: 'civic',

@@ -6,8 +6,30 @@ import type { CSSProperties } from 'react'
 
 import { resolveFontStack } from '@/lib/theme/fonts'
 import { readableTextColor } from '@/lib/theme/color'
-import type { DesignAssetRef, LegacyDomainAppearance, ObsidianConfigV1, ValidationResult } from '@/lib/design/contracts'
-import { fail, isHexColor, isNullOrAssetRef, ok } from '@/lib/design/validate'
+import { bundledDesignAssetUrl } from '@/lib/design/assets'
+import type { DesignAssetRef, LegacyDomainAppearance, ValidationResult } from '@/lib/design/contracts'
+import { fail, isHexColor, isNullOrDesignAssetRef, ok } from '@/lib/design/validate'
+
+export type ObsidianConfigV1 = {
+  palette: {
+    background: string
+    surface: string
+    text: string
+    muted: string
+    accent: string
+  }
+  geometry: {
+    contentMax: number
+    pageGutter: number
+    surfaceRadius: number
+  }
+  records: {
+    defaultView: 'cards' | 'list'
+    cardPageSize: 6 | 12 | 24
+    listPageSize: 25 | 50 | 100
+  }
+  atmosphere: DesignAssetRef | null
+}
 
 const VIEWS = ['cards', 'list'] as const
 const CARD_PAGE_SIZES = [6, 12, 24] as const
@@ -27,7 +49,7 @@ export const obsidianDefaults: ObsidianConfigV1 = {
   records: { defaultView: 'cards', cardPageSize: 6, listPageSize: 50 },
   // The incubator's original coastline/fortress artwork is part of Obsidian's
   // visual identity, not an optional content decoration.
-  atmosphere: { url: '/media/obsidian-coastline.png' },
+  atmosphere: { url: bundledDesignAssetUrl('obsidian', 'assets/atmosphere.png') },
 }
 
 /** Compatibility name retained for the frozen incubation imports. */
@@ -75,7 +97,7 @@ export function validateObsidianConfig(raw: unknown): ValidationResult<ObsidianC
     if (!LIST_PAGE_SIZES.includes(records.listPageSize as never)) errors.push('records.listPageSize must be 25|50|100.')
   }
 
-  if (!isNullOrAssetRef(value.atmosphere)) errors.push('atmosphere must be null or a /media/ asset reference.')
+  if (!isNullOrDesignAssetRef(value.atmosphere, 'obsidian')) errors.push('atmosphere must be null or a local asset reference.')
   else if (value.atmosphere && Object.keys(value.atmosphere as object).some((key) => key !== 'url')) errors.push('atmosphere contains an unsupported field.')
   hasOnlyKeys(value, ['palette', 'geometry', 'records', 'atmosphere'], 'config', errors)
 

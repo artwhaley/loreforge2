@@ -1,0 +1,11 @@
+{
+  "manifestVersion": 1,
+  "designContractVersion": 1,
+  "key": "civic",
+  "sortOrder": 10,
+  "name": "Civic",
+  "status": "first-class",
+  "description": "A classic institutional portal: composed masthead, clear directory, structured record grid.",
+  "entry": "./index.ts",
+  "preview": { "thumbnail": "assets/thumbnail.svg" }
+}

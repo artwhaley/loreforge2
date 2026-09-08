@@ -7,7 +7,7 @@ import { ActionMenu } from "./controls";
 import {
   resolveObsidianTokens,
 } from "./config";
-import type { ObsidianConfigV1 } from "@/lib/design/contracts";
+import type { ObsidianConfigV1 } from "./config";
 import s from "./obsidian.module.css";
 
 /** OperatingContext is a required slot; integration mounts the core component once. */

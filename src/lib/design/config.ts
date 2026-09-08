@@ -1,4 +1,4 @@
-import type { DesignKey, DesignThemeDefaults, LegacyDesignTheme } from './types'
+import { isDesignKey, type DesignKey, type DesignThemeDefaults, type LegacyDesignTheme } from './types'
 import type { LegacyDomainAppearance } from './contracts'
 
 /**
@@ -38,11 +38,9 @@ export type DomainDesignConfig = {
   design: Record<string, unknown>
 }
 
-const DESIGN_KEYS = ['civic', 'ledger', 'poster', 'obsidian'] as const
-
 /** Pick a supported design key from persisted raw value, defaulting to Civic. */
 export function pickDesignKey(value: unknown): DesignKey {
-  return DESIGN_KEYS.includes(value as DesignKey) ? (value as DesignKey) : 'civic'
+  return isDesignKey(value) ? value : 'civic'
 }
 
 /** Fallback legacy block for Definitions that no longer declare legacy axes. */
@@ -86,7 +84,7 @@ export function validateDomainDesignConfig(value: unknown): DomainDesignConfig |
   if (!value || typeof value !== 'object') return null
   const raw = value as Record<string, unknown>
   if (raw.schemaVersion !== 1) return null
-  if (!isDesignKeyLike(raw.designKey)) return null
+  if (!isDesignKey(raw.designKey)) return null
   const common = raw.common
   if (!common || typeof common !== 'object') return null
   const palette = common as Record<string, unknown>
@@ -121,10 +119,6 @@ export function validateDomainDesignConfig(value: unknown): DomainDesignConfig |
     },
     design: (raw.design ?? {}) as Record<string, unknown>,
   }
-}
-
-function isDesignKeyLike(value: unknown): value is DomainDesignConfig['designKey'] {
-  return value === 'civic' || value === 'ledger' || value === 'poster' || value === 'obsidian'
 }
 
 /**

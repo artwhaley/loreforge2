@@ -1,5 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
+import { DESIGN_TEMPLATE_OPTIONS } from '@/lib/theme/fonts'
+
 // Legacy compatibility only (P05R-T06 D). New product code must not depend on
 // this model — Domains are the canonical unit. Removal is P10 work (DEF-TENANT-01).
 export const Tenants: CollectionConfig = {
@@ -137,12 +139,7 @@ export const Tenants: CollectionConfig = {
       name: 'designTemplate',
       type: 'select',
       label: 'Design template',
-      options: [
-        { label: 'Civic (classic community)', value: 'civic' },
-        { label: 'Ledger (Loreforge print)', value: 'ledger' },
-        { label: 'Poster (bold modern)', value: 'poster' },
-        { label: 'Obsidian (night harbour)', value: 'obsidian' },
-      ],
+      options: DESIGN_TEMPLATE_OPTIONS,
       defaultValue: 'civic',
     },
     {

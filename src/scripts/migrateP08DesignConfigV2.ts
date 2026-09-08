@@ -38,7 +38,14 @@ function databasePath(uri: string): string {
 const dbPath = databasePath(process.env.DATABASE_URI ?? '')
 console.log(`[P08D-T04] mode=${MODE} db=${dbPath}`)
 
-const CONFIG_BY_KEY = {
+type HistoricalConfigModule = {
+  defaults: unknown
+  fromLegacy?: (legacy: LegacyDomainAppearance) => unknown
+  validate: (raw: unknown) => { ok: boolean; value?: unknown }
+  migrate: (fromVersion: number, raw: unknown) => { ok: boolean; value?: unknown }
+}
+
+const CONFIG_BY_KEY: Record<string, HistoricalConfigModule> = {
   civic: { defaults: civicDefaults, fromLegacy: civicFromLegacy, validate: validateCivicConfig, migrate: migrateCivicConfig },
   ledger: { defaults: ledgerDefaults, fromLegacy: ledgerFromLegacy, validate: validateLedgerConfig, migrate: migrateLedgerConfig },
   poster: { defaults: posterDefaults, fromLegacy: posterFromLegacy, validate: validatePosterConfig, migrate: migratePosterConfig },
@@ -88,7 +95,10 @@ function planFor(row: DomainRow): { action: 'noop' | 'write'; envelope?: unknown
   if (parseV2Envelope(stored)) return { action: 'noop' }
   const storedV1 = validateDomainDesignConfig(stored)
   const designKey = storedV1 ? pickDesignKey(storedV1.designKey) : pickDesignKey(row.design_template)
-  const configModule = CONFIG_BY_KEY[designKey]
+  // This migration owns only the designs that existed when V2 persistence was
+  // introduced. A later drop-in Design is still a valid runtime key; it gets
+  // an empty legacy bank and is allowed to resolve its own defaults on read.
+  const configModule = CONFIG_BY_KEY[designKey] ?? CONFIG_BY_KEY.civic
   const appearance = rowToAppearance(row)
   const legacyContext: LegacyDomainAppearance = {
     ...appearance,

@@ -141,25 +141,73 @@ Your presentation CSS belongs in this folder.
 
 ---
 
-# 4. Registration Files You Are Allowed to Touch
+# 4. Portable Package Contract and Registration
 
-A normal new Design should require changes outside its own folder only in these documented places (verified by the T10-E dry run — this list is exhaustive; if you find yourself editing anything else, determine why before proceeding):
+The current compile-time contract is folder-driven. A Design package must
+contain a manifest and its complete bundled defaults:
 
-1. `src/lib/design/catalog.ts`
-   - add key/name/description/status metadata as required by the current catalog contract;
-2. `src/lib/design/registry.ts`
-   - import the Design definition, add it to `DESIGNS`, `DESIGN_KEYS`, and the `resolveDesign` key check;
-3. `src/lib/design/types.ts`
-   - add the key to the `DesignKey` union and to `isDesignKey`;
-4. `src/lib/design/config.ts`
-   - add the key to the local `DESIGN_KEYS` list and to `isDesignKeyLike` (legacy/V1 active-key picking);
-5. `src/scripts/migrateP08DesignConfigV2.ts`
-   - import the Design's config module and add it to `CONFIG_BY_KEY`;
-6. `eslint.config.mjs`
-   - add the new folder to the first-class `no-restricted-imports` restriction set (T09);
-7. `public/designs/<key>.*`
-   - add the real picker thumbnail;
-8. design/conformance tests if registration requires updating a fixture list (registry/contracts key lists, conformance design list).
+```text
+src/designs/<key>/
+├─ design.manifest.json
+├─ index.ts
+├─ assets/
+│  └─ ...
+└─ presentation/config/studio files
+```
+
+The manifest is pure data and must contain:
+
+```json
+{
+  "manifestVersion": 1,
+  "designContractVersion": 1,
+  "key": "my-design",
+  "name": "My Design",
+  "status": "first-class",
+  "description": "...",
+  "entry": "./index.ts",
+  "preview": { "thumbnail": "assets/thumbnail.svg" }
+}
+```
+
+`src/designs/<key>/assets/**` is authoritative. Discovery materializes it to
+`public/design-assets/<key>/**`; do not hand-edit that generated tree. Bundled
+references use `/design-assets/<key>/...`. Site Studio uploads remain
+`/media/...` overrides and never modify the package.
+
+Discovery generates the key set, pure catalog, and static registry. Do not add
+keys to `src/lib/design/catalog.ts`, `registry.ts`, `types.ts`, legacy theme
+maps, Payload collections, or route dispatch code. A new package must compile
+without a core key-list edit. The historical V2 migration adapter only knows
+the designs present when that migration was authored; a later package resolves
+its own defaults when read.
+
+Run the package checks from the repository root:
+
+```bash
+npm run design:discover
+npm run design:audit
+npm run test:design-dropin
+```
+
+The boundary audit permits generic host imports and reports them for Lab
+emulation, but fails cross-Design imports, source-folder escapes, unsanctioned
+asset references, and manifest/entry mismatches. A Design cannot add an npm
+dependency merely by containing a `package.json`; dependencies remain root
+application dependencies and require the normal install/review path.
+
+The exact install workflow is:
+
+```text
+copy folder -> src/designs/<key>/
+npm install (only if root package dependencies changed)
+npm run build
+select the Design in Site Studio
+```
+
+For a normal new Design, no registration files outside its folder should need
+editing. Generated files and the checked-in host-dependency report change when
+discovery/audit runs.
 
 You should **not** need to modify:
 
@@ -998,17 +1046,20 @@ Do not add a generic visual framework to core LoreForge merely for one Design.
 
 # 34. Thumbnail
 
-Add a real Design thumbnail:
+Add a real Design thumbnail inside the package:
 
 ```text
-public/designs/<key>.<supported-extension>
+src/designs/<key>/assets/thumbnail.svg
 ```
 
-Register its URL under:
+The manifest points to it with:
 
 ```ts
-preview.thumbnail
+preview: { thumbnail: 'assets/thumbnail.svg' }
 ```
+
+The generated catalog/registry expose the public URL under
+`/design-assets/<key>/thumbnail.svg`.
 
 The image should show the actual visual language.
 
@@ -1060,35 +1111,18 @@ After your folder is complete:
 
 ### Step 1
 
-Add your Design metadata/key to the current `src/lib/design/catalog.ts` contract.
+Add `design.manifest.json`, `index.ts`, the full Design contract, and all
+Design-owned defaults under `src/designs/<key>/`.
 
 ### Step 2
 
-Register your definition in `src/lib/design/registry.ts` (import + `DESIGNS` + `DESIGN_KEYS` + the `resolveDesign` key check).
+Run `npm run design:discover` and `npm run design:audit`. Discovery owns the
+generated keys/catalog/registry; the audit owns the host dependency report.
 
 ### Step 3
 
-Extend `src/lib/design/types.ts` (`DesignKey` + `isDesignKey`) and `src/lib/design/config.ts` (local `DESIGN_KEYS` + `isDesignKeyLike`).
-
-### Step 4
-
-Add the config module to `src/scripts/migrateP08DesignConfigV2.ts` `CONFIG_BY_KEY` and add your folder to the first-class restriction set in `eslint.config.mjs`.
-
-### Step 5
-
-Add thumbnail under:
-
-```text
-public/designs/
-```
-
-### Step 6
-
-Add/enable first-class conformance tests and update registration fixture lists (registry/contracts/conformance).
-
-### Step 7
-
-Run all required checks.
+Run `npm run test:design-dropin`, then the full checks in §41. Select the Design
+through Site Studio after the build completes.
 
 Do not add your key to global header/document/theme maps. Those are legacy concepts.
 
@@ -1123,7 +1157,7 @@ export const myDesign: DesignDefinition<MyDesignConfigV1> = {
   description: 'A concise description of its visual identity.',
 
   preview: {
-    thumbnail: '/designs/my-design.webp',
+    thumbnail: '/design-assets/my-design/thumbnail.svg',
   },
 
   config: myDesignConfig,
@@ -1300,6 +1334,8 @@ npm test
 npm run test:security
 npm run test:p07x-t11
 npm run test:design
+npm run design:audit:check
+npm run test:design-dropin
 npx tsc --noEmit
 npm run lint
 npm run build

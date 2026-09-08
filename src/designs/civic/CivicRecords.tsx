@@ -1,7 +1,7 @@
 'use client'
 
 import type { RecordsPageModel } from '@/lib/page-models/records'
-import type { CivicConfigV1 } from '@/lib/design/contracts'
+import type { CivicConfigV1 } from './config'
 import type { DesignConfigProps } from '@/lib/design/types'
 import { ExplorerBody } from './ExplorerBody'
 

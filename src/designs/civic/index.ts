@@ -1,5 +1,5 @@
 import type { DesignDefinition } from '@/lib/design/types'
-import type { CivicConfigV1 } from '@/lib/design/contracts'
+import type { CivicConfigV1 } from './config'
 import { THEME_PRESETS } from '@/lib/theme/fonts'
 import { CivicAboutView, CivicDepartmentView, CivicDepartmentsView, CivicLoreView } from './thin'
 import { CivicShell } from './CivicShell'
@@ -17,7 +17,7 @@ export const civic: DesignDefinition<CivicConfigV1> = {
   status: 'first-class',
   name: 'Civic',
   description: 'A classic institutional portal: composed masthead, clear directory, structured record grid.',
-  preview: { thumbnail: '/designs/civic.svg' },
+  preview: { thumbnail: '/design-assets/civic/thumbnail.svg' },
   config: {
     version: 1,
     defaults: civicDefaults,
@@ -67,3 +67,5 @@ export const civic: DesignDefinition<CivicConfigV1> = {
     validate: () => ({}),
   },
 }
+
+export default civic

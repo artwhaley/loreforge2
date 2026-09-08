@@ -1,5 +1,5 @@
 import type { HomePageModel } from '@/lib/page-models/home'
-import type { LedgerConfigV1 } from '@/lib/design/contracts'
+import type { LedgerConfigV1 } from './config'
 import type { DesignConfigProps, DesignVariantProps } from '@/lib/design/types'
 
 import styles from './ledger-home.module.scss'

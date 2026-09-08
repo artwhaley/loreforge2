@@ -1,7 +1,7 @@
 'use client'
 
 import type { DesignStudioEditorProps } from '@/lib/design/contracts'
-import type { LedgerConfigV1 } from '@/lib/design/contracts'
+import type { LedgerConfigV1 } from '../config'
 import { ColorField, ImageField, SectionTitle, SelectField } from '../../shared/studio/fields'
 
 const RAIL_WIDTHS = [

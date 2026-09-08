@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { SHELL_PREVIEW_MODEL } from '@/lib/design/fixtures'
-import type { LedgerConfigV1 } from '@/lib/design/contracts'
+import type { LedgerConfigV1 } from './config'
 
 import { LedgerShell } from './LedgerShell'
 import { LedgerStudioEditor } from './studio/LedgerStudioEditor'

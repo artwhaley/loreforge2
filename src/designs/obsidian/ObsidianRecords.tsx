@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import type { RecordsPageModel } from "@/lib/page-models/records";
 import type { FolderSummary, RecordSummary } from "@/lib/page-models/common";
-import type { ObsidianConfigV1 } from "@/lib/design/contracts";
+import type { ObsidianConfigV1 } from "./config";
 import type { DesignConfigProps } from "@/lib/design/types";
 import { useRecordsWorkspace } from "@/lib/records/workspace/useRecordsWorkspace";
 import { useRecordActions } from "@/components/functional/records/recordActions";

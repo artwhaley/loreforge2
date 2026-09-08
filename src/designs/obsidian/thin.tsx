@@ -2,7 +2,8 @@ import type { AboutPageModel, LorePageModel } from '@/lib/page-models/info'
 import type { DepartmentPageModel, DepartmentsPageModel } from '@/lib/page-models/departments'
 import type { HomePageModel } from '@/lib/page-models/home'
 import type { DocumentDesignViewProps, DesignVariantProps } from '@/lib/design/types'
-import type { ObsidianConfigV1 } from '@/lib/design/contracts'
+import type { ObsidianConfigV1 } from './config'
+import { bundledDesignAssetUrl } from '@/lib/design/assets'
 import type { DesignConfigProps } from '@/lib/design/types'
 
 import { ObsidianHome } from './ObsidianHome'
@@ -20,7 +21,7 @@ import { ObsidianLore } from './ObsidianLore'
  */
 
 export function ObsidianHomeView(model: HomePageModel & DesignVariantProps & DesignConfigProps<ObsidianConfigV1>) {
-  const atmosphereImage = model.designConfig.atmosphere?.url ?? '/media/obsidian-coastline.png'
+  const atmosphereImage = model.designConfig.atmosphere?.url ?? bundledDesignAssetUrl('obsidian', 'assets/atmosphere.png')
   const atmosphereCaption = `THE ARCHIVE AT ${model.domain.name.toUpperCase()}`
   return <ObsidianHome model={model} atmosphereImage={atmosphereImage} atmosphereCaption={atmosphereCaption} />
 }

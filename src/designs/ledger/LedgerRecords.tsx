@@ -3,7 +3,7 @@
 import { useRecordActions } from '@/components/functional/records/recordActions'
 import type { FolderSummary, RecordSummary } from '@/lib/page-models/common'
 import type { RecordsPageModel } from '@/lib/page-models/records'
-import type { LedgerConfigV1 } from '@/lib/design/contracts'
+import type { LedgerConfigV1 } from './config'
 import type { DesignConfigProps } from '@/lib/design/types'
 import { folderActionDescriptors, importNotecardHref, newRecordHref, recordActionDescriptors } from '@/lib/records/presentation/operations'
 import { useRecordsWorkspace } from '@/lib/records/workspace/useRecordsWorkspace'

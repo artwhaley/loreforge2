@@ -6,7 +6,7 @@ import {
   FileText,
 } from "lucide-react";
 import type { DocumentPageModel } from "@/lib/page-models/document";
-import type { ObsidianConfigV1 } from "@/lib/design/contracts";
+import type { ObsidianConfigV1 } from "./config";
 import type { DesignConfigProps, DesignVariantProps, DocumentDesignViewProps } from "@/lib/design/types";
 import { ReadingSurface } from "./ReadingSurface";
 import { DocumentActionMenu } from "./DocumentActionMenu";

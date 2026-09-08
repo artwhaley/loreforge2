@@ -22,7 +22,9 @@ import type {
   ValidationResult,
 } from './contracts'
 
-export type DesignKey = 'civic' | 'ledger' | 'poster' | 'obsidian'
+export { DESIGN_KEYS, isDesignKey } from './generated/designKeys'
+export type { DesignKey } from './generated/designKeys'
+import type { DesignKey } from './generated/designKeys'
 
 /** A curated presentational option on a legacy visual axis (transition only). */
 export type DesignOption = {
@@ -200,8 +202,4 @@ export type RecordsDesignViewProps = RecordsPageModel
 export type DocumentDesignViewProps = DocumentPageModel & {
   workflowAction?: ((formData: FormData) => void | Promise<void>) | null
   deleteAction?: ((formData: FormData) => void | Promise<void>) | null
-}
-
-export function isDesignKey(value: unknown): value is DesignKey {
-  return value === 'civic' || value === 'ledger' || value === 'poster' || value === 'obsidian'
 }

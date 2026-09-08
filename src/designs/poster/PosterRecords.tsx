@@ -1,7 +1,7 @@
 'use client'
 
 import type { RecordsPageModel } from '@/lib/page-models/records'
-import type { PosterConfigV1 } from '@/lib/design/contracts'
+import type { PosterConfigV1 } from './config'
 import type { DesignConfigProps } from '@/lib/design/types'
 import { useRecordsWorkspace } from '@/lib/records/workspace/useRecordsWorkspace'
 

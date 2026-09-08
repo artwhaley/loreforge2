@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { SHELL_PREVIEW_MODEL } from '@/lib/design/fixtures'
-import type { CivicConfigV1 } from '@/lib/design/contracts'
+import type { CivicConfigV1 } from './config'
 
 import { CivicShell } from './CivicShell'
 import { CivicStudioEditor } from './studio/CivicStudioEditor'

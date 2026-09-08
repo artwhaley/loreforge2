@@ -35,26 +35,15 @@ export type ResolvedDomainDesign = {
  * to the dispatcher (P08D-T03-D): per-Design vocabulary → legacy axis strings.
  * T06/T07 replace these props with config-driven rendering.
  */
-export function legacyVariantProjection(design: DesignDefinition, config: unknown): { headerLayout: string; documentStyle: string } {
+export function legacyVariantProjection(_design: DesignDefinition, config: unknown): { headerLayout: string; documentStyle: string } {
   const shaped = config as { layout?: { header?: unknown }; document?: { treatment?: unknown }; masthead?: { treatment?: unknown } }
-  const documentStyle = shaped?.document?.treatment
-  switch (design.key) {
-    case 'civic': {
-      const header = shaped?.layout?.header
-      const headerLayout = header === 'compact' ? 'left-aligned' : header === 'banner' ? 'banner-forward' : 'centered'
-      return { headerLayout, documentStyle: documentStyle === 'modern' ? 'modern' : 'classic' }
-    }
-    case 'ledger':
-      // Ledger's own rail/masthead vocabulary becomes real presentation in
-      // T07; until then the legacy frame keeps its default header posture.
-      return { headerLayout: 'centered', documentStyle: documentStyle === 'docket' ? 'modern' : 'classic' }
-    case 'poster':
-      return { headerLayout: 'centered', documentStyle: documentStyle === 'brief' ? 'modern' : 'classic' }
-    default:
-      // Total by construction: a Design with no legacy projection (e.g. a
-      // test-only foreign Design) still previews on the neutral posture.
-      return { headerLayout: 'centered', documentStyle: 'classic' }
-  }
+  const header = shaped?.layout?.header ?? shaped?.masthead?.treatment
+  const headerLayout = header === 'compact' ? 'left-aligned' : header === 'banner' ? 'banner-forward' : 'centered'
+  const documentTreatment = shaped?.document?.treatment
+  const documentStyle = documentTreatment === 'modern' || documentTreatment === 'docket' || documentTreatment === 'brief' ? 'modern' : 'classic'
+  // This projection is deliberately structural. A newly dropped-in Design
+  // can participate in the transitional shell without a key-specific branch.
+  return { headerLayout, documentStyle }
 }
 
 function finalize(design: DesignDefinition, config: unknown, configVersion: number, diagnostic: string | null): ResolvedDomainDesign {

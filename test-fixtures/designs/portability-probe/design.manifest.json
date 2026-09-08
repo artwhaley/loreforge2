@@ -1,0 +1,13 @@
+{
+  "manifestVersion": 1,
+  "designContractVersion": 1,
+  "key": "portability-probe",
+  "sortOrder": 9000,
+  "name": "Portability Probe",
+  "status": "compatibility",
+  "description": "A minimal compile-time fixture for the portable Design folder contract.",
+  "entry": "./index.ts",
+  "preview": {
+    "thumbnail": "assets/thumbnail.svg"
+  }
+}

@@ -12,16 +12,13 @@ import { obsidian } from '@/designs/obsidian'
 
 /** Stage C smoke: the registry resolves, falls back safely, and every Design is complete. */
 describe('design registry', () => {
-  it('registers exactly civic, ledger, poster, and obsidian', () => {
-    expect(DESIGN_KEYS).toEqual(['civic', 'ledger', 'poster', 'obsidian'])
+  it('registers the generated Design key set', () => {
+    expect(DESIGN_KEYS).toEqual(DESIGN_CATALOG.map((entry) => entry.key))
     expect(DESIGN_METADATA.map((entry) => entry.key)).toEqual(DESIGN_KEYS)
   })
 
   it('resolves known keys and falls back to Civic for unknown/stale keys', () => {
-    expect(resolveDesign('civic').key).toBe('civic')
-    expect(resolveDesign('ledger').key).toBe('ledger')
-    expect(resolveDesign('poster').key).toBe('poster')
-    expect(resolveDesign('obsidian').key).toBe('obsidian')
+    for (const key of DESIGN_KEYS) expect(resolveDesign(key).key).toBe(key)
     expect(resolveDesign(undefined).key).toBe('civic')
     expect(resolveDesign(null).key).toBe('civic')
   })
@@ -47,12 +44,8 @@ describe('design registry', () => {
   it('the pure catalog matches the registry and the status contract', () => {
     expect(DESIGN_CATALOG.map((entry) => entry.key)).toEqual(DESIGN_KEYS)
     expect(DESIGN_METADATA.map((entry) => entry.status)).toEqual(DESIGN_CATALOG.map((entry) => entry.status))
-    // T06/T07/T19: Civic, Ledger, and Obsidian are first-class; Poster stays compatibility.
-    expect(FIRST_CLASS_DESIGNS).toEqual(['civic', 'ledger', 'obsidian'])
-    expect(DESIGNS.civic.status).toBe('first-class')
-    expect(DESIGNS.ledger.status).toBe('first-class')
-    expect(DESIGNS.poster.status).toBe('compatibility')
-    expect(DESIGNS.obsidian.status).toBe('first-class')
+    expect(FIRST_CLASS_DESIGNS).toEqual(DESIGN_CATALOG.filter((entry) => entry.status === 'first-class').map((entry) => entry.key))
+    for (const entry of DESIGN_CATALOG) expect(DESIGNS[entry.key].status).toBe(entry.status)
   })
 
   it('T09-B first-class contract: every registered first-class Design is complete and self-validating', () => {
@@ -95,9 +88,8 @@ describe('design registry', () => {
     expect(obsidian.config.defaults.records.defaultView).toBe('cards')
   })
 
-  it('isDesignKey narrows only the four registered keys', () => {
-    expect(isDesignKey('civic')).toBe(true)
-    expect(isDesignKey('obsidian')).toBe(true)
+  it('isDesignKey narrows only the generated registered keys', () => {
+    for (const key of DESIGN_KEYS) expect(isDesignKey(key)).toBe(true)
     expect(isDesignKey('gazette')).toBe(false)
   })
 })

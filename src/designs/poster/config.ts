@@ -3,8 +3,26 @@
 // first-class proof layer; T08 owns its legacy cleanup.
 import { resolveFontStack } from '@/lib/theme/fonts'
 import { mixColors, readableTextColor } from '@/lib/theme/color'
-import type { LegacyDomainAppearance, PosterConfigV1, ValidationResult } from '@/lib/design/contracts'
+import type { DesignAssetRef, FontKey, LegacyDomainAppearance, ValidationResult } from '@/lib/design/contracts'
 import { fail, isFontKey, isHexColor, ok, pickUnion } from '@/lib/design/validate'
+
+export type PosterConfigV1 = {
+  palette: {
+    primary: string
+    accent: string
+    page: string
+  }
+  typography: {
+    displayFontKey: FontKey
+    bodyFontKey: FontKey
+  }
+  masthead: {
+    treatment: 'bold' | 'stacked'
+  }
+  document: {
+    treatment: 'feature' | 'brief'
+  }
+}
 
 const MASTHEADS = ['bold', 'stacked'] as const
 const DOC_TREATMENTS = ['feature', 'brief'] as const

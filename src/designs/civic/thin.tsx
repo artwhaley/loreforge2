@@ -1,6 +1,6 @@
 import type { AboutPageModel, LorePageModel } from '@/lib/page-models/info'
 import type { DepartmentPageModel, DepartmentsPageModel } from '@/lib/page-models/departments'
-import type { CivicConfigV1 } from '@/lib/design/contracts'
+import type { CivicConfigV1 } from './config'
 import type { DesignConfigProps } from '@/lib/design/types'
 
 import styles from './thin.module.scss'

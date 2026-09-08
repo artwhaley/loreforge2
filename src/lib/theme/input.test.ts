@@ -3,6 +3,7 @@ import test from 'node:test'
 
 import { DESIGN_TEMPLATES, THEME_PRESETS } from './fonts'
 import { isValidThemeInput } from './input'
+import { DESIGN_CATALOG } from '../design/catalog'
 
 const valid = {
   preset: 'heritage' as const,
@@ -42,10 +43,9 @@ test('rejects unknown design templates and non-boolean image flags', () => {
   assert.equal(isValidThemeInput(withVocabulary), true)
 })
 
-test('the three design templates are contracted and distinct', () => {
-  assert.deepEqual(Object.keys(DESIGN_TEMPLATES), ['civic', 'ledger', 'poster'])
-  assert.notEqual(DESIGN_TEMPLATES.civic.label, DESIGN_TEMPLATES.ledger.label)
-  assert.notEqual(DESIGN_TEMPLATES.ledger.label, DESIGN_TEMPLATES.poster.label)
+test('the generated design catalog drives legacy template metadata', () => {
+  assert.deepEqual(Object.keys(DESIGN_TEMPLATES), DESIGN_CATALOG.map((entry) => entry.key))
+  assert.equal(new Set(Object.values(DESIGN_TEMPLATES).map((entry) => entry.label)).size, DESIGN_CATALOG.length)
 })
 
 test('the six palettes are intentionally visibly different', () => {

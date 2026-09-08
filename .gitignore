@@ -7,12 +7,14 @@
 
 # local database
 *.db
+*.db.*
 *.db-journal
 *.db-wal
 *.db-shm
 
 # local media/uploads
 /public/media
+/public/design-assets
 /media
 
 # environment / secrets

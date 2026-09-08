@@ -146,9 +146,11 @@ for migration compatibility and are marked "Legacy compatibility only" at their 
 
 ## Site Design architecture (P08D)
 
-LoreForge renders each Domain through an isolated, source-controlled **Design** — a complete presentation layer (Shell, Home, Records, Document, Departments/Department/About/Lore, config vocabulary, Studio editor, thumbnail) over the authorized semantic Page Models. First-class Designs (Civic, Ledger) own their DOM/SCSS and config banks; Poster remains a compatibility Design on the legacy frame. See `DESIGN_AUTHORING.md` (repo root) before creating or materially changing a Design — any agent touching `src/designs/**` must read it first (AGENTS.md).
+LoreForge renders each Domain through an isolated, source-controlled **Design** — a complete presentation layer (Shell, Home, Records, Document, Departments/Department/About/Lore, config vocabulary, Studio editor, thumbnail) over the authorized semantic Page Models. First-class Designs (Civic, Ledger, Obsidian) own their DOM/CSS and config banks; Poster remains a compatibility Design on the legacy frame. See `DESIGN_AUTHORING.md` (repo root) before creating or materially changing a Design — any agent touching `src/designs/**` must read it first (AGENTS.md).
 
 - Design registry/resolution: `src/lib/design/` — `registry.ts`, `catalog.ts`, `resolveDomainDesign.ts` (V2 banked config is the live read authority).
+- Design packages are discovered from `src/designs/<key>/design.manifest.json`; generated keys/catalog/registry are written under `src/lib/design/generated/` and bundled defaults are materialized under `public/design-assets/<key>/`.
+- Design portability checks: `npm run design:audit:check` and `npm run test:design-dropin` (the latter installs a hyphenated fixture temporarily, typechecks it, and cleans it up even after failure).
 - Design tests: `npm run test:design` (vitest conformance + registry contract + Site Studio genericity).
 - V2 migration (legacy scalar/V1 → banked per-Design config): `node --import tsx src/scripts/migrateP08DesignConfigV2.ts --dry-run` (add `--apply` to write; always backs up and is idempotent).
 - Full checks before shipping a Design: `npm test`, `npm run test:security`, `npm run test:design`, `npx tsc --noEmit`, `npm run lint`, `npm run build`.

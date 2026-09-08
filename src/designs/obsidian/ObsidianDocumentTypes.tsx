@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Tree, type NodeRendererProps, type TreeApi } from 'react-arborist'
 import { ChevronRight, Copy, FileText, Folder, MoreHorizontal, Plus, Search, ShieldCheck } from 'lucide-react'
 
-import { duplicateObsidianTypeAction, setObsidianTypeActiveAction } from '@/components/documentTypes/ObsidianActions'
+import { duplicateTypeAction, setActiveTypeAction } from '@/lib/design/hostActionBridges'
 import type { TypeTreeData, TypeTreeLeaf, TypeTreeNode } from '@/lib/documents/typeTree'
 import type { DocumentTypesManagementPageModel } from '@/lib/page-models/management/documentTypes'
 import { useDocumentTypesManagementWorkspace } from '@/components/functional/document-types/useDocumentTypesManagementWorkspace'
@@ -165,9 +165,9 @@ export function ObsidianDocumentTypes({ model }: { model: DocumentTypesManagemen
                     label={`Actions for ${selected.name}`}
                     trigger={<MoreHorizontal size={19} />}
                     onAction={(action) => {
-                      if (action.key === 'duplicate') void refreshAfter(duplicateObsidianTypeAction({ domainSlug: model.domainSlug, typeId: selected.id }))
-                      if (action.key === 'deactivate') void refreshAfter(setObsidianTypeActiveAction({ domainSlug: model.domainSlug, typeId: selected.id, active: false }))
-                      if (action.key === 'activate') void refreshAfter(setObsidianTypeActiveAction({ domainSlug: model.domainSlug, typeId: selected.id, active: true }))
+                      if (action.key === 'duplicate') void refreshAfter(duplicateTypeAction({ domainSlug: model.domainSlug, typeId: selected.id }))
+                      if (action.key === 'deactivate') void refreshAfter(setActiveTypeAction({ domainSlug: model.domainSlug, typeId: selected.id, active: false }))
+                      if (action.key === 'activate') void refreshAfter(setActiveTypeAction({ domainSlug: model.domainSlug, typeId: selected.id, active: true }))
                     }}
                     items={[{ key: selected.active ? 'deactivate' : 'activate', label: selected.active ? 'Deactivate' : 'Activate' }, { key: 'duplicate', label: 'Duplicate' }]}
                   />
@@ -181,7 +181,7 @@ export function ObsidianDocumentTypes({ model }: { model: DocumentTypesManagemen
                 </dl>
                 {model.canManage ? <>
                   <button className={s.secondaryButton} type="button" onClick={() => setEditOpen(true)}><ShieldCheck size={15} /> Configure type</button>
-                  <button className={s.quietButton} type="button" onClick={() => void refreshAfter(duplicateObsidianTypeAction({ domainSlug: model.domainSlug, typeId: selected.id }))}><Copy size={14} /> Duplicate with independent template</button>
+                  <button className={s.quietButton} type="button" onClick={() => void refreshAfter(duplicateTypeAction({ domainSlug: model.domainSlug, typeId: selected.id }))}><Copy size={14} /> Duplicate with independent template</button>
                 </> : null}
               </>
             ) : (
