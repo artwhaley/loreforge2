@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import styles from './document.module.scss'
+import styles from './document.module.css'
 
 /** Civic-owned record sheet: the official paper surface for one Document. */
 export function DocumentPaper({ title, meta, html, source, before, children }: {

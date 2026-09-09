@@ -112,7 +112,7 @@ await applyLifecycleStageConfig(payload, {
   documentTypeId: typeAId,
   domainId,
   stages: [
-    { stage: 'draft', enabled: true, allowOnCreation: true, folderId: draftFolderId, privateDraftsAllowed: true },
+    { stage: 'draft', enabled: true, allowOnCreation: true, folderId: draftFolderId },
     { stage: 'submitted', enabled: true, allowOnCreation: false, folderId: draftFolderId },
     { stage: 'filed', enabled: true, allowOnCreation: true, folderId: filedFolderId },
     { stage: 'deprecated', enabled: true, allowOnCreation: false, folderId: deprecatedFolderId },
@@ -153,7 +153,7 @@ await applyLifecycleStageConfig(payload, {
   documentTypeId: typeAId,
   domainId,
   stages: [
-    { stage: 'draft', enabled: true, allowOnCreation: true, folderId: draftFolderId, privateDraftsAllowed: true, writeRoleIds: [scribeRoleId] },
+    { stage: 'draft', enabled: true, allowOnCreation: true, folderId: draftFolderId, writeRoleIds: [scribeRoleId] },
     { stage: 'submitted', enabled: true, allowOnCreation: false, folderId: draftFolderId },
     { stage: 'filed', enabled: true, allowOnCreation: true, folderId: filedFolderId, writeRoleIds: [scribeRoleId] },
     { stage: 'deprecated', enabled: true, allowOnCreation: false, folderId: deprecatedFolderId },

@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { DEFAULT_DESIGN_KEY } from '@/lib/design/types'
 import { DESIGN_TEMPLATE_OPTIONS } from '@/lib/theme/fonts'
 
 // Legacy compatibility only (P05R-T06 D). New product code must not depend on
@@ -140,7 +141,7 @@ export const Tenants: CollectionConfig = {
       type: 'select',
       label: 'Design template',
       options: DESIGN_TEMPLATE_OPTIONS,
-      defaultValue: 'civic',
+      defaultValue: DEFAULT_DESIGN_KEY,
     },
     {
       name: 'contentWidth',

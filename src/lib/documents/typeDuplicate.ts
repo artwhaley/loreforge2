@@ -121,7 +121,6 @@ export async function duplicateDocumentType(payload: Payload, args: { typeId: nu
         stage: String(row.stage ?? ''),
         enabled: row.enabled !== false,
         allowOnCreation: Boolean(row.allowOnCreation),
-        privateDraftsAllowed: row.privateDraftsAllowed !== false,
         folder: relationId(row.folder) ?? undefined,
         readRoles: roleIds(row.readRoles),
         writeRoles: roleIds(row.writeRoles),

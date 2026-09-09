@@ -6,7 +6,7 @@ import type { RecordsPageModel } from '@/lib/page-models/records'
 import { folderActionDescriptors, importNotecardHref, newRecordHref, recordActionDescriptors } from '@/lib/records/presentation/operations'
 import { useRecordsWorkspace } from '@/lib/records/workspace/useRecordsWorkspace'
 
-import styles from './explorer.module.scss'
+import styles from './explorer.module.css'
 
 function recordDate(value: string) { return new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }
 

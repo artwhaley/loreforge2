@@ -400,11 +400,11 @@ export async function createDocumentFromEditorAction(_previousState: DocumentEdi
   const createAndRelate = async (transactionID: number | string | null) => {
     if (transactionID == null) throw new Error('Document creation requires a real database transaction.')
     const req = { transactionID }
-    // P08X-T06: private drafts exist only for Draft-stage creations when the
-    // Draft stage allows them (default private); every other initial stage
-    // creates a public record. The creator Character is the private-draft
-    // visibility boundary. T07 adds the explicit create-screen choice.
-    const privateDraft = lifecycle === 'draft' && plan?.privateDraftsAllowed
+    // Private drafts are always allowed: Draft-stage creations honor the
+    // create screen's private/public choice (default private); every other
+    // initial stage creates a public record. The creator Character is the
+    // private-draft visibility boundary.
+    const privateDraft = lifecycle === 'draft'
       ? String(formData.get('privateDraft') ?? 'true') !== 'false'
       : false
     const created = await ctx.payload.create({ collection: 'documents', req, context: activeCharacterId && !administrativeActor ? { preparedByCharacterId: activeCharacterId, actorUserId: ctx.user.id } : { allowUserCreate: true, actorUserId: ctx.user.id }, data: { domain: ctx.tenant.id, ...(ctx.legacyTenantId ? { tenant: ctx.legacyTenantId } : {}), title, body: renderedBody, origin: selectedTemplate?.kind === 'form' ? 'form' : 'web-editor', sourceKind: selectedTemplate?.kind === 'form' ? 'form' : 'web', documentType: Number(selectedType.id), lifecycle, privateDraft, creatorCharacter: activeCharacterId ?? undefined, publicAccess: 'inherit', createdBy: ctx.user.id, folder } })

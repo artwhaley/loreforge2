@@ -24,7 +24,6 @@ export type LifecycleStageRowShape = {
   enabled?: unknown
   allowOnCreation?: unknown
   folder?: unknown
-  privateDraftsAllowed?: unknown
   readRoles?: unknown
   writeRoles?: unknown
   editOthersRoles?: unknown
@@ -34,8 +33,8 @@ export type LifecycleStageRowShape = {
 /**
  * Default stage configuration for a brand-new Document Type (P08X-T02 §7):
  * all four stage rows exist; Filed is enabled by default; Draft is enabled
- * with allowOnCreation + privateDraftsAllowed; Submitted and Deprecated exist
- * but start disabled. Idempotent — existing rows are never overwritten.
+ * with allowOnCreation; Submitted and Deprecated exist but start disabled.
+ * Idempotent — existing rows are never overwritten.
  */
 export async function ensureLifecycleStageRows(payload: Payload, documentTypeId: number | string): Promise<void> {
   const typeId = Number(documentTypeId)
@@ -59,7 +58,6 @@ export async function ensureLifecycleStageRows(payload: Payload, documentTypeId:
         stage,
         enabled,
         allowOnCreation,
-        privateDraftsAllowed: stage === 'draft',
       },
     })
   }
@@ -70,7 +68,6 @@ export type LifecycleStageConfigInput = {
   enabled?: boolean
   allowOnCreation?: boolean
   folderId?: number | null
-  privateDraftsAllowed?: boolean
   readRoleIds?: number[]
   writeRoleIds?: number[]
   editOthersRoleIds?: number[]
@@ -125,7 +122,6 @@ export async function applyLifecycleStageConfig(payload: Payload, args: { docume
     // partial updates (move a Folder, flip one switch) never clobber the rest.
     if (config.enabled !== undefined) data.enabled = Boolean(config.enabled)
     if (config.allowOnCreation !== undefined) data.allowOnCreation = Boolean(config.allowOnCreation)
-    if (config.privateDraftsAllowed !== undefined) data.privateDraftsAllowed = Boolean(config.privateDraftsAllowed)
     if (config.folderId !== undefined) data.folder = config.folderId ? Number(config.folderId) : null
     if (config.readRoleIds !== undefined) data.readRoles = config.readRoleIds.map(Number)
     if (config.writeRoleIds !== undefined) data.writeRoles = config.writeRoleIds.map(Number)

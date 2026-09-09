@@ -7,10 +7,7 @@ import { createDocumentTemplateAction, updateDocumentTemplateAction, type Templa
 
 export type DocumentTemplateInitial = {
   name: string
-  documentTypeId: number | '' | null
-  scopeFolderId: number | '' | null
   baseTemplateId: number | '' | null
-  titleTemplate: string
   bodyTemplate: string
 }
 
@@ -20,47 +17,33 @@ type Props = {
   mode: 'create' | 'edit'
   templateId?: number
   domainSlug: string
-  types: Option[]
-  folders: Option[]
+  /** The Document Type this template belongs to. The Type owns its template, so it arrives fixed — never re-selected here. */
+  documentType: Option
   baseTemplates: Option[]
   initial?: DocumentTemplateInitial
 }
 
 /**
- * Customer authoring surface for Markdown Document Templates: a plain-text
- * title template plus WYSIWYG/source Markdown body. Availability Folder,
- * Document Type, and optional base composition reuse the model Form Studio
- * already validates server-side. {{content}} is the only supported token.
+ * Customer authoring surface for Markdown Document Templates. The template is
+ * reached from the Document Type that owns it: placement (folders) and
+ * permissions live on the Type, so the form carries the Type as read-only
+ * context. The Name is the record title — there is no separate title field.
+ * {{content}} is the only supported token.
  */
-export function DocumentTemplateForm({ mode, templateId, domainSlug, types, folders, baseTemplates, initial }: Props) {
+export function DocumentTemplateForm({ mode, templateId, domainSlug, documentType, baseTemplates, initial }: Props) {
   const action = mode === 'edit' ? updateDocumentTemplateAction : createDocumentTemplateAction
   const [state, formAction, pending] = useActionState<TemplateActionState, FormData>(action, {})
 
   return (
     <form action={formAction} style={{ display: 'grid', gap: '1rem', maxWidth: '52rem' }}>
       <input type="hidden" name="domainSlug" value={domainSlug} />
+      <input type="hidden" name="documentTypeId" value={documentType.id} />
       {mode === 'edit' && templateId != null ? <input type="hidden" name="templateId" value={templateId} /> : null}
       {state.error ? <p role="alert">{state.error}</p> : null}
 
       <label style={{ display: 'grid', gap: '.3rem' }}>
         Name
-        <input name="name" required defaultValue={initial?.name ?? ''} placeholder="Incident Report Template" />
-      </label>
-
-      <label style={{ display: 'grid', gap: '.3rem' }}>
-        Document Type
-        <select name="documentTypeId" required defaultValue={initial?.documentTypeId ?? ''}>
-          <option value="">Choose a Document Type</option>
-          {types.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
-        </select>
-      </label>
-
-      <label style={{ display: 'grid', gap: '.3rem' }}>
-        Available from Folder
-        <select name="scopeFolderId" required defaultValue={initial?.scopeFolderId ?? ''}>
-          <option value="">Choose an availability Folder</option>
-          {folders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
-        </select>
+        <input name="name" required defaultValue={initial?.name ?? ''} placeholder={`${documentType.name} Template`} title="The template's name — records start with this as their title. There is no separate title field." />
       </label>
 
       <label style={{ display: 'grid', gap: '.3rem' }}>
@@ -71,16 +54,12 @@ export function DocumentTemplateForm({ mode, templateId, domainSlug, types, fold
         </select>
       </label>
 
-      <label style={{ display: 'grid', gap: '.3rem' }}>
-        Title
-        <input name="titleTemplate" required defaultValue={initial?.titleTemplate ?? ''} placeholder="Incident Report" />
-      </label>
-
       <MarkdownSectionEditor
         name="bodyTemplate"
         label="Body"
-        description="Markdown for the new record. Use {{content}} where the author's writing goes."
-        initialValue={initial?.bodyTemplate ?? '# Incident Report\n\n{{content}}'}
+        description="Markdown for the new record. Use {{content}} where the author's writing goes. The record title comes from the Name above."
+        initialValue={initial?.bodyTemplate || `# ${documentType.name}\n\n{{content}}`}
+        aspectSquare
       />
 
       <div>

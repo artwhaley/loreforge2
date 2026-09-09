@@ -2,7 +2,7 @@
 
 import type { DesignStudioEditorProps } from '@/lib/design/contracts'
 import type { CivicConfigV1 } from '../config'
-import { ColorField, ImageField, SectionTitle, SelectField } from '../../shared/studio/fields'
+import { ColorField, ImageField, SectionTitle, SelectField } from './fields'
 
 const WIDTHS = [
   { value: 'narrow', label: 'Narrow (focused reading)' },

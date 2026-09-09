@@ -5,7 +5,7 @@ import type { CivicConfigV1 } from './config'
 import type { DesignShellProps } from '@/lib/design/types'
 import { OperatingContext } from '@/components/platform/OperatingContext'
 
-import styles from './CivicShell.module.scss'
+import styles from './CivicShell.module.css'
 
 /**
  * Civic shell (P08D-T06): the classic institutional portal composition, owned

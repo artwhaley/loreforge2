@@ -276,7 +276,7 @@ export interface Domain {
   bodyFontKey: 'verdana' | 'georgia' | 'trebuchet' | 'tahoma' | 'lato' | 'newsreader';
   logo?: (number | null) | Media;
   banner?: (number | null) | Media;
-  designTemplate?: ('civic' | 'ledger' | 'poster' | 'obsidian' | 'atelier') | null;
+  designTemplate?: ('civic' | 'obsidian' | 'atelier') | null;
   contentWidth?: ('narrow' | 'standard' | 'wide') | null;
   headerLayout?: ('centered' | 'left-aligned' | 'banner-forward') | null;
   documentStyle?: ('classic' | 'modern') | null;
@@ -383,7 +383,7 @@ export interface Tenant {
    * Optional header banner (image).
    */
   banner?: (number | null) | Media;
-  designTemplate?: ('civic' | 'ledger' | 'poster' | 'obsidian' | 'atelier') | null;
+  designTemplate?: ('civic' | 'obsidian' | 'atelier') | null;
   contentWidth?: ('narrow' | 'standard' | 'wide') | null;
   headerLayout?: ('centered' | 'left-aligned' | 'banner-forward') | null;
   documentStyle?: ('classic' | 'modern') | null;
@@ -811,10 +811,6 @@ export interface LifecycleStage {
    * Documents in this stage live in this Folder; stage transitions relocate records here.
    */
   folder?: (number | null) | Folder;
-  /**
-   * Draft row only: when enabled, creators choose private or public draft. Private drafts are visible only to the creating Character.
-   */
-  privateDraftsAllowed?: boolean | null;
   /**
    * Roles that may view documents at this stage.
    */
@@ -1760,7 +1756,6 @@ export interface LifecycleStagesSelect<T extends boolean = true> {
   enabled?: T;
   allowOnCreation?: T;
   folder?: T;
-  privateDraftsAllowed?: T;
   readRoles?: T;
   writeRoles?: T;
   editOthersRoles?: T;

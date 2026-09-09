@@ -12,6 +12,7 @@
     "/api/character-claims",
     "/api/invitations/revoke",
     "/api/invitations/join-decision",
+    "/api/domain-memberships",
     "/api/records-search"
   ],
   "packages": [
@@ -142,6 +143,11 @@
         {
           "file": "src/designs/atelier/workspaces.tsx",
           "specifier": "@/lib/page-models/common",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/workspaces.tsx",
+          "specifier": "@/lib/records/presentation/operations",
           "kind": "generic-host-import"
         }
       ],
@@ -280,8 +286,43 @@
           "kind": "generic-host-import"
         },
         {
-          "file": "src/designs/civic/index.ts",
-          "specifier": "@/lib/theme/fonts",
+          "file": "src/designs/civic/operational.tsx",
+          "specifier": "@/components/functional/folders/useFolderManagementWorkspace",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "specifier": "@/components/functional/people/usePeopleManagementWorkspace",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "specifier": "@/components/functional/roles/useRoleManagementWorkspace",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "specifier": "@/components/functional/document-types/useDocumentTypesManagementWorkspace",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "specifier": "@/components/people/PersonAccessTrees",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "specifier": "@/components/documentTypes/TypeInspector",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "specifier": "@/lib/design/hostActionBridges",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "specifier": "@/lib/design/types",
           "kind": "generic-host-import"
         },
         {
@@ -321,11 +362,16 @@
         },
         {
           "file": "src/designs/civic/operational.tsx",
-          "specifier": "@/lib/design/types",
+          "specifier": "@/lib/documents/typeTree",
           "kind": "generic-host-import"
         },
         {
           "file": "src/designs/civic/studio/CivicStudioEditor.tsx",
+          "specifier": "@/lib/design/contracts",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/civic/studio/fields.tsx",
           "specifier": "@/lib/design/contracts",
           "kind": "generic-host-import"
         },
@@ -345,18 +391,7 @@
           "kind": "generic-host-import"
         }
       ],
-      "genericHostImports": [
-        {
-          "file": "src/designs/civic/operational.tsx",
-          "specifier": "../shared/operational/bodies",
-          "kind": "shared-host-support"
-        },
-        {
-          "file": "src/designs/civic/studio/CivicStudioEditor.tsx",
-          "specifier": "../../shared/studio/fields",
-          "kind": "shared-host-support"
-        }
-      ],
+      "genericHostImports": [],
       "npmImports": [
         {
           "file": "src/designs/civic/CivicShell.tsx",
@@ -369,6 +404,26 @@
         {
           "file": "src/designs/civic/DocumentPaper.tsx",
           "specifier": "react"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "specifier": "next/link"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "specifier": "react"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "specifier": "next/navigation"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "specifier": "lucide-react"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "specifier": "react-arborist"
         }
       ],
       "crossDesignImports": [],
@@ -386,222 +441,58 @@
         {
           "file": "src/designs/civic/ExplorerBody.tsx",
           "endpoint": "/api/folders"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "endpoint": "/api/domain-memberships"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "endpoint": "/api/domain-memberships"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "endpoint": "/api/departments"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "endpoint": "/api/departments"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "endpoint": "/api/departments"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "endpoint": "/api/domain-memberships"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "endpoint": "/api/invitations/join-decision"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "endpoint": "/api/invitations/join-decision"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "endpoint": "/api/character-claims"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "endpoint": "/api/character-claims"
+        },
+        {
+          "file": "src/designs/civic/operational.tsx",
+          "endpoint": "/api/invitations/revoke"
         }
       ],
       "testFilesExcluded": [
         "src/designs/civic/civic.design.test.tsx",
+        "src/designs/civic/config.design.test.ts",
         "src/designs/civic/document.design.test.tsx",
         "src/designs/civic/home.design.test.tsx",
         "src/designs/civic/records.design.test.tsx"
-      ],
-      "errors": []
-    },
-    {
-      "key": "ledger",
-      "manifest": {
-        "manifestVersion": 1,
-        "designContractVersion": 1,
-        "entry": "./index.ts",
-        "status": "first-class"
-      },
-      "importsOutsideFolder": [
-        {
-          "file": "src/designs/ledger/LedgerDocument.tsx",
-          "specifier": "@/lib/design/types",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/LedgerDocument.tsx",
-          "specifier": "@/lib/documents/presentation/actions",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/LedgerDocument.tsx",
-          "specifier": "@/lib/page-models/document",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/LedgerHome.tsx",
-          "specifier": "@/lib/page-models/home",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/LedgerHome.tsx",
-          "specifier": "@/lib/design/types",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/LedgerRecords.tsx",
-          "specifier": "@/components/functional/records/recordActions",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/LedgerRecords.tsx",
-          "specifier": "@/lib/page-models/common",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/LedgerRecords.tsx",
-          "specifier": "@/lib/page-models/records",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/LedgerRecords.tsx",
-          "specifier": "@/lib/design/types",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/LedgerRecords.tsx",
-          "specifier": "@/lib/records/presentation/operations",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/LedgerRecords.tsx",
-          "specifier": "@/lib/records/workspace/useRecordsWorkspace",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/LedgerShell.tsx",
-          "specifier": "@/lib/design/types",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/LedgerShell.tsx",
-          "specifier": "@/components/platform/OperatingContext",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/config.ts",
-          "specifier": "@/lib/theme/fonts",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/config.ts",
-          "specifier": "@/lib/theme/color",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/config.ts",
-          "specifier": "@/lib/design/contracts",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/config.ts",
-          "specifier": "@/lib/design/validate",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/index.ts",
-          "specifier": "@/lib/design/types",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/index.ts",
-          "specifier": "@/lib/theme/fonts",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/operational.tsx",
-          "specifier": "@/lib/page-models/members",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/operational.tsx",
-          "specifier": "@/lib/page-models/management/folders",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/operational.tsx",
-          "specifier": "@/lib/page-models/management/roles",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/operational.tsx",
-          "specifier": "@/lib/page-models/management/documentTypes",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/operational.tsx",
-          "specifier": "@/lib/page-models/management/people",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/operational.tsx",
-          "specifier": "@/lib/page-models/management/invitations",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/operational.tsx",
-          "specifier": "@/lib/page-models/management/departments",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/operational.tsx",
-          "specifier": "@/lib/design/types",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/studio/LedgerStudioEditor.tsx",
-          "specifier": "@/lib/design/contracts",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/thin.tsx",
-          "specifier": "@/lib/page-models/info",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/thin.tsx",
-          "specifier": "@/lib/page-models/departments",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/ledger/thin.tsx",
-          "specifier": "@/lib/design/types",
-          "kind": "generic-host-import"
-        }
-      ],
-      "genericHostImports": [
-        {
-          "file": "src/designs/ledger/operational.tsx",
-          "specifier": "../shared/operational/bodies",
-          "kind": "shared-host-support"
-        },
-        {
-          "file": "src/designs/ledger/studio/LedgerStudioEditor.tsx",
-          "specifier": "../../shared/studio/fields",
-          "kind": "shared-host-support"
-        }
-      ],
-      "npmImports": [
-        {
-          "file": "src/designs/ledger/LedgerShell.tsx",
-          "specifier": "react"
-        },
-        {
-          "file": "src/designs/ledger/LedgerShell.tsx",
-          "specifier": "next/link"
-        }
-      ],
-      "crossDesignImports": [],
-      "boundaryEscapes": [],
-      "assetRefsOutsideSanctionedNamespaces": [],
-      "staticApiEndpoints": [
-        {
-          "file": "src/designs/ledger/LedgerRecords.tsx",
-          "endpoint": "/api/folders"
-        },
-        {
-          "file": "src/designs/ledger/LedgerRecords.tsx",
-          "endpoint": "/api/folders"
-        },
-        {
-          "file": "src/designs/ledger/LedgerRecords.tsx",
-          "endpoint": "/api/folders"
-        }
-      ],
-      "testFilesExcluded": [
-        "src/designs/ledger/ledger.design.test.tsx"
       ],
       "errors": []
     },
@@ -1097,166 +988,6 @@
       "testFilesExcluded": [
         "src/designs/obsidian/config.design.test.ts"
       ],
-      "errors": []
-    },
-    {
-      "key": "poster",
-      "manifest": {
-        "manifestVersion": 1,
-        "designContractVersion": 1,
-        "entry": "./index.ts",
-        "status": "compatibility"
-      },
-      "importsOutsideFolder": [
-        {
-          "file": "src/designs/poster/PosterDocument.tsx",
-          "specifier": "@/lib/design/types",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/PosterDocument.tsx",
-          "specifier": "@/lib/documents/presentation/actions",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/PosterDocument.tsx",
-          "specifier": "@/lib/page-models/document",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/PosterHome.tsx",
-          "specifier": "@/lib/page-models/home",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/PosterHome.tsx",
-          "specifier": "@/lib/design/types",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/PosterRecords.tsx",
-          "specifier": "@/lib/page-models/records",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/PosterRecords.tsx",
-          "specifier": "@/lib/design/types",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/PosterRecords.tsx",
-          "specifier": "@/lib/records/workspace/useRecordsWorkspace",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/PosterShell.tsx",
-          "specifier": "@/lib/design/types",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/config.ts",
-          "specifier": "@/lib/theme/fonts",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/config.ts",
-          "specifier": "@/lib/theme/color",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/config.ts",
-          "specifier": "@/lib/design/contracts",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/config.ts",
-          "specifier": "@/lib/design/validate",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/index.ts",
-          "specifier": "@/lib/design/types",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/index.ts",
-          "specifier": "@/lib/theme/fonts",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/operational.tsx",
-          "specifier": "@/lib/page-models/members",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/operational.tsx",
-          "specifier": "@/lib/page-models/management/folders",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/operational.tsx",
-          "specifier": "@/lib/page-models/management/roles",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/operational.tsx",
-          "specifier": "@/lib/page-models/management/documentTypes",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/operational.tsx",
-          "specifier": "@/lib/page-models/management/people",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/operational.tsx",
-          "specifier": "@/lib/page-models/management/invitations",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/operational.tsx",
-          "specifier": "@/lib/page-models/management/departments",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/operational.tsx",
-          "specifier": "@/lib/design/types",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/poster/studio/PosterStudioEditor.tsx",
-          "specifier": "@/lib/design/contracts",
-          "kind": "generic-host-import"
-        }
-      ],
-      "genericHostImports": [
-        {
-          "file": "src/designs/poster/PosterShell.tsx",
-          "specifier": "../shared/legacy-frame",
-          "kind": "shared-host-support"
-        },
-        {
-          "file": "src/designs/poster/index.ts",
-          "specifier": "../shared/legacy-thin",
-          "kind": "shared-host-support"
-        },
-        {
-          "file": "src/designs/poster/operational.tsx",
-          "specifier": "../shared/operational/bodies",
-          "kind": "shared-host-support"
-        },
-        {
-          "file": "src/designs/poster/studio/PosterStudioEditor.tsx",
-          "specifier": "../../shared/studio/fields",
-          "kind": "shared-host-support"
-        }
-      ],
-      "npmImports": [],
-      "crossDesignImports": [],
-      "boundaryEscapes": [],
-      "assetRefsOutsideSanctionedNamespaces": [],
-      "staticApiEndpoints": [],
-      "testFilesExcluded": [],
       "errors": []
     }
   ],

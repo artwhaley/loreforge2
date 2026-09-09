@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useReducer, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useActionState } from 'react'
 import { DndContext, PointerSensor, closestCenter, KeyboardSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates, arrayMove } from '@dnd-kit/sortable'
@@ -16,14 +16,9 @@ import { RecordPreview } from './recordPreview'
 import { MarkdownSectionEditor } from './MarkdownSectionEditor'
 import { FIELD_TYPE_LABELS, Toolbox } from './toolbox'
 
-export type FolderOption = { id: number; name: string; parentId?: number | null }
-export type TypeOption = { id: number; name: string }
-export type BaseTemplateOption = { id: number; name: string; scopeFolderId: number; availableToDescendants: boolean }
+export type BaseTemplateOption = { id: number; name: string }
 export type StudioFormInitial = {
   name: string
-  documentTypeId: number | string
-  scopeFolderId: number | string
-  destinationFolderId: number | string
   baseTemplateId: number | string
   recordNameKey: string | null
   fields: LoreForgeFormField[]
@@ -33,8 +28,8 @@ export type StudioFormInitial = {
 
 type FormStudioProps = {
   domainSlug: string
-  folders: FolderOption[]
-  types: TypeOption[]
+  /** The Document Type this Form belongs to. The Type owns the Form, so it arrives fixed — never re-selected here. */
+  documentType: { id: number; name: string }
   baseTemplates?: BaseTemplateOption[]
   mode: 'create' | 'edit'
   templateId?: number
@@ -53,20 +48,11 @@ function newField(type: FormFieldType, taken: ReadonlySet<string>): LoreForgeFor
   }
 }
 
-function initialDetails(initial?: StudioFormInitial) {
-  return {
-    name: initial?.name ?? '',
-    documentTypeId: String(initial?.documentTypeId ?? ''),
-    scopeFolderId: String(initial?.scopeFolderId ?? ''),
-    destinationFolderId: String(initial?.destinationFolderId ?? ''),
-    baseTemplateId: String(initial?.baseTemplateId ?? ''),
-  }
-}
-
-export function FormStudio({ domainSlug, folders, types, baseTemplates = [], mode, templateId, initial }: FormStudioProps) {
+export function FormStudio({ domainSlug, documentType, baseTemplates = [], mode, templateId, initial }: FormStudioProps) {
   const action = mode === 'edit' ? updateFormTemplateAction : createFormTemplateAction
   const [state, formAction, pending] = useActionState<TemplateActionState, FormData>(action, {})
-  const [details, setDetails] = useState(() => initialDetails(initial))
+  const [name, setName] = useState(() => initial?.name ?? '')
+  const [baseTemplateId, setBaseTemplateId] = useState(() => String(initial?.baseTemplateId ?? ''))
   const [fields, setFields] = useState<LoreForgeFormField[]>(() => initial?.fields ?? [])
   const [recordNameKey, setRecordNameKey] = useState<string | null>(initial?.recordNameKey ?? null)
   const [headerMarkdown, setHeaderMarkdown] = useState(() => initial?.headerMarkdown ?? '')
@@ -79,11 +65,6 @@ export function FormStudio({ domainSlug, folders, types, baseTemplates = [], mod
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
-
-  const setDetail = (key: keyof ReturnType<typeof initialDetails>, value: string) => {
-    setDetails((current) => ({ ...current, [key]: value }))
-    setDirty(true)
-  }
 
   const patch = (key: string, patchValue: Partial<LoreForgeFormField>) => {
     setFields((current) => current.map((field) => field.key === key ? { ...field, ...patchValue } : field))
@@ -124,7 +105,7 @@ export function FormStudio({ domainSlug, folders, types, baseTemplates = [], mod
   const removeField = (key: string) => {
     const field = fields.find((item) => item.key === key)
     const title = field?.label?.trim() || (field ? FIELD_TYPE_LABELS[field.type] : '')
-    if (field && isRecordNamer(field.key) && !window.confirm(`“${title}” currently names each record made from this form. Removing it means the next short/long/date/choice question names records instead. Remove it anyway?`)) return
+    if (field && isRecordNamer(key) && !window.confirm(`“${title}” currently names each record made from this form. Removing it means the next short/long/date/choice question names records instead. Remove it anyway?`)) return
     setFields((current) => current.filter((item) => item.key !== key))
     setSelectedKey((current) => current === key ? null : current)
     setDirty(true)
@@ -176,40 +157,20 @@ export function FormStudio({ domainSlug, folders, types, baseTemplates = [], mod
     }
   }
 
-  // Availability of base templates mirrors the collection rule: a base must
-  // apply at the chosen availability folder (or a descendant of its scope).
-  const availableBaseTemplates = useMemo(() => {
-    const selected = Number(details.scopeFolderId)
-    if (!selected) return []
-    const byId = new Map(folders.map((folder) => [folder.id, folder]))
-    return baseTemplates.filter((template) => {
-      if (template.scopeFolderId === selected) return true
-      if (!template.availableToDescendants) return false
-      const seen = new Set<number>()
-      let cursor = byId.get(selected)
-      while (cursor?.parentId != null && !seen.has(cursor.id)) {
-        seen.add(cursor.id)
-        if (cursor.parentId === template.scopeFolderId) return true
-        cursor = byId.get(cursor.parentId)
-      }
-      return false
-    })
-  }, [baseTemplates, folders, details.scopeFolderId])
-
-  const effectiveBaseTemplateId = availableBaseTemplates.some((template) => String(template.id) === details.baseTemplateId) ? details.baseTemplateId : ''
-
   const schema: LoreForgeFormSchema = useMemo(() => ({ version: 1, fields }), [fields])
   const missingLabels = fields.filter((field) => !field.label.trim()).length
   const canSave = !pending && fields.length > 0 && missingLabels === 0
-  const saveLabel = pending ? (mode === 'edit' ? 'Saving…' : 'Saving…') : mode === 'edit' ? 'Save changes' : 'Save form'
+  const saveLabel = pending ? 'Saving…' : mode === 'edit' ? 'Save changes' : 'Save form'
   const selectedField = fields.find((field) => field.key === selectedKey) ?? null
-  const baseName = availableBaseTemplates.find((template) => String(template.id) === details.baseTemplateId)?.name ?? null
+  const baseName = baseTemplates.find((template) => String(template.id) === baseTemplateId)?.name ?? null
 
   return (
     <form action={formAction} className={styles.studio} data-mode={mode}>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <input type="hidden" name="domainSlug" value={domainSlug} />
       {mode === 'edit' && templateId ? <input type="hidden" name="templateId" value={templateId} /> : null}
+      {/* The Type is fixed context — submitted read-only, never chosen here. */}
+      <input type="hidden" name="documentTypeId" value={documentType.id} />
       <input type="hidden" name="formSchema" value={JSON.stringify(schema)} />
       <input type="hidden" name="recordNameFieldKey" value={recordNameKey ?? ''} />
 
@@ -218,39 +179,31 @@ export function FormStudio({ domainSlug, folders, types, baseTemplates = [], mod
       <section className={styles.details} aria-label="Form details">
         <div className={styles.detailField}>
           <label className={styles.groupLabel} htmlFor="form-name">Form name</label>
-          <input id="form-name" name="name" className={styles.input} required placeholder="e.g. General Incident Report" value={details.name} onChange={(event) => setDetail('name', event.target.value)} />
+          <input id="form-name" name="name" className={styles.input} required placeholder={`e.g. ${documentType.name} Report`} value={name} onChange={(event) => { setName(event.target.value); setDirty(true) }} />
         </div>
         <div className={styles.detailField}>
-          <label className={styles.groupLabel} htmlFor="doc-type">Document Type</label>
-          <select id="doc-type" name="documentTypeId" className={styles.select} required value={details.documentTypeId} onChange={(event) => setDetail('documentTypeId', event.target.value)}>
-            <option value="">Choose a type</option>
-            {types.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
-          </select>
+          <span className={styles.groupLabel}>Document Type</span>
+          <p className={styles.muted} title="The Type owns this Form: its Folders and permissions apply. Change it on the Document Types page.">{documentType.name} (fixed)</p>
         </div>
         <div className={styles.detailField}>
-          <label className={styles.groupLabel} htmlFor="available-from">Available from</label>
-          <select id="available-from" name="scopeFolderId" className={styles.select} required value={details.scopeFolderId} onChange={(event) => setDetail('scopeFolderId', event.target.value)}>
-            <option value="">Choose a Folder</option>
-            {folders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
-          </select>
+          <span className={styles.groupLabel}>Available from</span>
+          <p className={styles.muted} title="Availability comes from the Type's lifecycle Folders — it is not chosen on the Form.">From the Document Type</p>
         </div>
         <div className={styles.detailField}>
           <span className={styles.groupLabel}>Initial Folder</span>
-          <p className={styles.muted}>The selected Document Type routes new records through its lifecycle Folders. Forms no longer choose a destination Folder.</p>
-          <input type="hidden" name="destinationFolderId" value="" />
+          <p className={styles.muted}>The Document Type routes new records through its lifecycle Folders. Forms no longer choose a destination Folder.</p>
         </div>
         <div className={styles.detailField}>
           <label className={styles.groupLabel} htmlFor="base-template">Base template <span className={styles.optional}>(optional)</span></label>
-          <select id="base-template" name="baseTemplateId" className={styles.select} value={effectiveBaseTemplateId} onChange={(event) => setDetail('baseTemplateId', event.target.value)}>
+          <select id="base-template" name="baseTemplateId" className={styles.select} value={baseTemplateId} onChange={(event) => { setBaseTemplateId(event.target.value); setDirty(true) }}>
             <option value="">No base template</option>
-            {availableBaseTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
+            {baseTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
           </select>
-          <p className={styles.muted}>{details.scopeFolderId ? 'Only Templates available in the chosen Folder are listed.' : 'Choose an availability Folder first.'}</p>
         </div>
         <div className={styles.detailField}>
           <label className={styles.groupLabel} htmlFor="record-name">Name each record by the answer to</label>
           {namingCandidates.length > 0 ? (
-            <select id="record-name" className={styles.select} value={namingCandidates.some((field) => field.key === recordNameKey) ? recordNameKey ?? '' : ''} onChange={(event) => setRecordNameKey(event.target.value || null)}>
+            <select id="record-name" className={styles.select} value={namingCandidates.some((field) => field.key === recordNameKey) ? recordNameKey ?? '' : ''} onChange={(event) => { setRecordNameKey(event.target.value || null); setDirty(true) }}>
               <option value="">Automatic — first naming question</option>
               {namingCandidates.map((field) => <option key={field.key} value={field.key}>{field.label?.trim() || `Question (${FIELD_TYPE_LABELS[field.type].toLowerCase()})`}</option>)}
             </select>
@@ -294,12 +247,12 @@ export function FormStudio({ domainSlug, folders, types, baseTemplates = [], mod
           />
         </div>
       ) : (
-        <RecordPreview name={details.name.trim() || 'Untitled form'} fields={fields} recordNameKey={recordNameKey} baseTemplateName={baseName} headerMarkdown={headerMarkdown} footerMarkdown={footerMarkdown} />
+        <RecordPreview name={name.trim() || 'Untitled form'} fields={fields} recordNameKey={recordNameKey} baseTemplateName={baseName} headerMarkdown={headerMarkdown} footerMarkdown={footerMarkdown} />
       )}
 
       <div className={styles.saveRow}>
         <button type="submit" className={styles.saveButton} disabled={!canSave}>{saveLabel}</button>
-        <a href={`/domain/${domainSlug}/forms`} className={styles.cancelLink}>Cancel</a>
+        <a href={`/domain/${domainSlug}/document-types`} className={styles.cancelLink}>Cancel</a>
       </div>
       </DndContext>
     </form>

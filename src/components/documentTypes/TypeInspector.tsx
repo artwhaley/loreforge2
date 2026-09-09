@@ -20,13 +20,6 @@ const KIND_DESCRIPTIONS: Record<TemplateSelection, string> = {
   form: 'Form Template — authors fill the structured form built in the Form Studio.',
 }
 
-const STAGE_DESCRIPTIONS: Record<Lifecycle, string> = {
-  draft: 'Draft — work in progress. Writers create and edit their own drafts; with permission, others review them.',
-  submitted: 'Submitted — awaits review before filing.',
-  filed: 'Filed — the live record of the archive.',
-  deprecated: 'Deprecated — superseded or retired; kept for provenance, not in active use.',
-}
-
 const ROLE_DEFINITIONS: Array<{ key: 'readRoleIds' | 'writeRoleIds' | 'editOthersRoleIds' | 'manageRoleIds'; label: string; title: string }> = [
   { key: 'readRoleIds', label: 'Read', title: 'View documents at this stage.' },
   { key: 'writeRoleIds', label: 'Write', title: 'Create documents at this stage and edit my own at this stage.' },
@@ -38,14 +31,13 @@ type StageDraft = {
   enabled: boolean
   allowOnCreation: boolean
   folderId: number | null
-  privateDraftsAllowed: boolean
   readRoleIds: number[]
   writeRoleIds: number[]
   editOthersRoleIds: number[]
   manageRoleIds: number[]
 }
 
-const emptyStage = (): StageDraft => ({ enabled: false, allowOnCreation: false, folderId: null, privateDraftsAllowed: false, readRoleIds: [], writeRoleIds: [], editOthersRoleIds: [], manageRoleIds: [] })
+const emptyStage = (): StageDraft => ({ enabled: false, allowOnCreation: false, folderId: null, readRoleIds: [], writeRoleIds: [], editOthersRoleIds: [], manageRoleIds: [] })
 
 /** Matches the T02 seed defaults so an unconfigured row round-trips stably. */
 function seedStage(stage: Lifecycle): StageDraft {
@@ -53,7 +45,6 @@ function seedStage(stage: Lifecycle): StageDraft {
     enabled: stage === 'draft' || stage === 'filed',
     allowOnCreation: stage === 'draft',
     folderId: null,
-    privateDraftsAllowed: stage === 'draft',
     readRoleIds: [], writeRoleIds: [], editOthersRoleIds: [], manageRoleIds: [],
   }
 }
@@ -64,7 +55,6 @@ function rowToDraft(row: LifecycleStageRowShape | null | undefined, stage: Lifec
     enabled: Boolean(row.enabled),
     allowOnCreation: Boolean(row.allowOnCreation),
     folderId: stageFolderId(row),
-    privateDraftsAllowed: Boolean(row.privateDraftsAllowed),
     readRoleIds: stageRoleIds(row, 'readRoles'),
     writeRoleIds: stageRoleIds(row, 'writeRoles'),
     editOthersRoleIds: stageRoleIds(row, 'editOthersRoles'),
@@ -143,7 +133,6 @@ export function TypeInspector({ domainSlug, mode, leaf, departments, typeFolders
       enabled: draft.enabled,
       allowOnCreation: draft.allowOnCreation,
       folderId: draft.folderId,
-      privateDraftsAllowed: draft.privateDraftsAllowed,
       readRoleIds: draft.readRoleIds,
       writeRoleIds: draft.writeRoleIds,
       editOthersRoleIds: draft.editOthersRoleIds,
@@ -207,11 +196,6 @@ export function TypeInspector({ domainSlug, mode, leaf, departments, typeFolders
         Active
         <small>— inactive Types stay editable but aren\u2019t offered for new documents.</small>
       </label>
-    </div>
-
-    <div className={styles.inspectorSection}>
-      <h3>Placement</h3>
-      <p>Which Department this Type belongs to, and the optional manual subfolder beneath it. Unassigned is never a choice — it only collects Types whose Department was archived.</p>
       <div className={styles.field}>
         <label>Department</label>
         <select
@@ -266,39 +250,38 @@ export function TypeInspector({ domainSlug, mode, leaf, departments, typeFolders
 
     <div className={styles.inspectorSection}>
       <h3>Lifecycle</h3>
-      <p>Each row is one stage of a document\u2019s life. Check a stage to make it part of this Type\u2019s lifecycle; the rest of the row then configures it. Some Types file straight into their home folder (only Filed enabled); others walk the full path.</p>
       <div style={{ overflowX: 'auto' }}>
-        <div className={styles.lifecycleTable}>
+        <div className={styles.lifecycleTable} role="table" aria-label="Lifecycle stages">
+          <div className={styles.stageHeader} role="row">
+            <span className={styles.stageHeadCell} role="columnheader">Stage</span>
+            <span role="columnheader" title="When on, the create-document screen can start a record in this stage (subject to the actor\u2019s stage permission). If several stages allow creation, the creator gets a dropdown defaulting to the latest stage they may set.">On creation</span>
+            <span role="columnheader" title="The folder documents at this stage live in. Click to open the folder navigator; transitions into this stage move records here automatically.">Folder</span>
+            {ROLE_DEFINITIONS.map((roleDef) => <span key={roleDef.key} role="columnheader" title={roleDef.title}>{roleDef.label}</span>)}
+          </div>
           {LIFECYCLE_STAGES.map((stage) => {
             const draft = stageDrafts[stage]
-            return <div key={stage} className={draft.enabled ? styles.stageRow : `${styles.stageRow} ${styles.stageRowDisabled}`} data-stage={stage}>
-              <div className={styles.stageHead}>
-                <label className={styles.checkRow} title={`${STAGE_DESCRIPTIONS[stage]} Check to make ${LIFECYCLE_STAGE_LABELS[stage]} part of this Type\u2019s lifecycle; unchecking disables the rest of this row.`}>
+            return <div key={stage} className={draft.enabled ? styles.stageRow : `${styles.stageRow} ${styles.stageRowDisabled}`} data-stage={stage} role="row">
+              <div className={styles.stageHeadCell} role="rowheader">
+                <label className={styles.checkRow} title={`Check to make ${LIFECYCLE_STAGE_LABELS[stage]} part of this Type\u2019s lifecycle; unchecking disables the rest of this row.`}>
                   <input type="checkbox" checked={draft.enabled} disabled={busy} onChange={(event) => setStage(stage, { enabled: event.target.checked })} />
                   <span className={styles.stageTitle}>{LIFECYCLE_STAGE_LABELS[stage]}</span>
                 </label>
-                {stage === 'draft' ? <label className={styles.checkRow} title="When on, creators choose private or public draft at creation. Private drafts are visible only to the creating Character; public drafts are visible to anyone with read permission over the Type.">
-                  <input type="checkbox" checked={draft.privateDraftsAllowed} disabled={busy || !draft.enabled} onChange={(event) => setStage(stage, { privateDraftsAllowed: event.target.checked })} />
-                  <small>Private drafts allowed</small>
-                </label> : null}
-                <span className={styles.stageDesc}>{STAGE_DESCRIPTIONS[stage]}</span>
               </div>
               <div className={styles.stageCell}>
-                <span>Allow on creation</span>
                 <label className={styles.checkRow} title="When on, the create-document screen can start a record in this stage (subject to the actor\u2019s stage permission). If several stages allow creation, the creator gets a dropdown defaulting to the latest stage they may set.">
                   <input type="checkbox" checked={draft.allowOnCreation} disabled={busy || !draft.enabled} onChange={(event) => setStage(stage, { allowOnCreation: event.target.checked })} />
+                  <span className={styles.srOnly}>Allow on creation</span>
                 </label>
               </div>
               <div className={styles.stageCell}>
-                <span>Stage folder</span>
                 <button type="button" className={draft.folderId == null ? `${styles.folderButton} ${styles.folderButtonEmpty}` : styles.folderButton} disabled={busy || !draft.enabled} title="The folder documents at this stage live in. Click to open the folder navigator; transitions into this stage move records here automatically." onClick={() => setFolderPickerStage(stage)}>
                   {folderNameOf(folders, draft.folderId) ?? '\u2014 none \u2014'}
                 </button>
               </div>
               {ROLE_DEFINITIONS.map((roleDef) => (
                 <div className={styles.stageCell} key={roleDef.key}>
-                  <span title={roleDef.title}>{roleDef.label}</span>
                   <RoleListEditor
+                    labelHidden
                     label=""
                     title={roleDef.title}
                     roles={roles}

@@ -3,7 +3,7 @@ import type { DepartmentPageModel, DepartmentsPageModel } from '@/lib/page-model
 import type { CivicConfigV1 } from './config'
 import type { DesignConfigProps } from '@/lib/design/types'
 
-import styles from './thin.module.scss'
+import styles from './thin.module.css'
 
 /** Civic thin pages: Departments / Department / About / Lore, Civic-owned. */
 export function CivicDepartmentsView(model: DepartmentsPageModel & DesignConfigProps<CivicConfigV1>) {

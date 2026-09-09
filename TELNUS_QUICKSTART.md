@@ -93,14 +93,11 @@ Two sibling pages with subnav **Forms · Templates · Document Types**, plus **C
 
 ### 5a. Markdown Document Template
 
-`Templates → Create template` (`/templates/new`):
+`Document Types → (choose a Type) → Create Markdown Template` (`/templates/new?type=<typeId>`) — templates hang off a Document Type, so the Type comes first:
 
-1. **Name** — `Ledger — Daily Entry`.
-2. **Document Type** — `Ledger`.
-3. **Available from Folder** — the folder where this template is offered (e.g. `Ledgers`). Required.
-4. **Base Template (optional)** — for header/footer composition reuse.
-5. **Title** — a title template, e.g. `Daily Ledger — {{content}}`.
-6. **Body** — Markdown with `{{content}}` where the author's text goes, e.g.:
+1. **Name** — `Ledger — Daily Entry`. The Name is the record title; there is no separate title field.
+2. **Base Template (optional)** — for header/footer composition reuse.
+3. **Body** — Markdown with `{{content}}` where the author's text goes, e.g.:
    ```md
    # Daily Ledger
 
@@ -108,15 +105,17 @@ Two sibling pages with subnav **Forms · Templates · Document Types**, plus **C
    ## Entries
    (record the day's coin)
    ```
-7. **Create template**.
+4. **Create template**.
+
+The availability Folder, destination routing, and permissions come from the owning Document Type — they are not chosen on the template.
 
 On the Templates list you can **Edit** / **Duplicate** / **Deactivate** each item.
 
 ### 5b. Form (form-feeding-Markdown)
 
-`Templates & Forms → Forms → Create form` (`/forms/new`) — the Form Studio:
+`Document Types` → choose the Type → **Create Form Template** (`/forms/new?type=…`) — the Form Studio:
 
-1. **Details row:** Form name (`Tax Assessment`), Document Type (`Tax Assessment`), **Available from** folder, **Base template** (optional — only templates available in the chosen folder are listed).
+1. **Details row:** Form name (`Tax Assessment`) and **Base template** (optional). The Document Type is fixed context — the Type owns the Form. The availability Folder, destination routing, and permissions come from the Type; they are not chosen on the form.
 2. **Name each record by the answer to** — pick which question auto-names records.
 3. **Document framing** — optional fixed Markdown **Header** / **Footer** around the generated answer sections (no answer tokens allowed in these).
 4. **Toolbox → Canvas:** drag or click to add questions — Short answer, Long answer, Date, Time, Choice list, Checkbox, Pick a Character, Pick Characters. Click a question to edit its label/choices/required in the **Inspector** (right). Reorder by drag or arrow buttons; duplicate/delete from the row menu.

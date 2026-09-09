@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, type CSSProperties } from 'react'
 import type { MDXEditorMethods } from '@mdxeditor/editor'
 
 import { canonicalizeMarkdown } from '@/lib/markdown/canonical'
@@ -13,16 +13,21 @@ type Props = {
   label: string
   description: string
   initialValue?: string | null
+  /** Keep the editor at least as tall as it is wide, even when empty. */
+  aspectSquare?: boolean
   onDirty?: () => void
   onValueChange?: (value: string) => void
 }
+
+/** At least as tall as wide, even when empty; the 360px floor wins on narrow viewports. */
+const squareAspect: CSSProperties = { aspectRatio: '1 / 1', minHeight: 360 }
 
 /**
  * A small, safe Markdown surface for fixed Form framing. The WYSIWYG toolbar
  * is the same supported Archive dialect as the ordinary Document editor; the
  * Source tab is intentionally a lossless textarea for advanced authors.
  */
-export function MarkdownSectionEditor({ name, label, description, initialValue = '', onDirty, onValueChange }: Props) {
+export function MarkdownSectionEditor({ name, label, description, initialValue = '', aspectSquare = false, onDirty, onValueChange }: Props) {
   const editorRef = useRef<MDXEditorMethods>(null)
   const initial = canonicalizeMarkdown(initialValue ?? '')
   const [markdown, setMarkdown] = useState(initial)
@@ -61,17 +66,29 @@ export function MarkdownSectionEditor({ name, label, description, initialValue =
       <button type="button" className={styles.viewButton} aria-pressed={mode === 'edit'} onClick={() => switchMode('edit')}>Edit</button>
       <button type="button" className={styles.viewButton} aria-pressed={mode === 'source'} onClick={() => switchMode('source')}>Source (advanced)</button>
     </div>
-    <div style={{ display: mode === 'edit' ? 'block' : 'none', border: '1px solid var(--tenant-border, #ddd)', borderRadius: 4, minHeight: 140 }} aria-hidden={mode !== 'edit'}>
+    <div
+      className={aspectSquare ? 'mdxeditor-square' : undefined}
+      style={{
+        display: mode === 'edit' ? (aspectSquare ? 'flex' : 'block') : 'none',
+        flexDirection: 'column',
+        border: '1px solid var(--tenant-border, #ddd)',
+        borderRadius: 4,
+        minHeight: 140,
+        ...(aspectSquare ? squareAspect : {}),
+      }}
+      aria-hidden={mode !== 'edit'}
+    >
       <ForwardRefEditor
         markdown={markdown}
         ref={editorRef}
         onChange={update}
         contentEditableClassName="mdx-editor-content"
+        className={aspectSquare ? 'mdxeditor-full-height' : undefined}
       />
     </div>
     <textarea
       className={styles.textarea}
-      style={{ display: mode === 'source' ? 'block' : 'none', minHeight: 140 }}
+      style={{ display: mode === 'source' ? 'block' : 'none', minHeight: 140, ...(aspectSquare ? squareAspect : {}) }}
       value={sourceText}
       onChange={(event) => update(event.target.value)}
       spellCheck={false}

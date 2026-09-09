@@ -4,3 +4,23 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+
+/* Square-aspect Markdown section editor (template Body): the editor root
+   stretches to fill its aspect-ratio container, with the toolbar on top and
+   the content area taking the remaining height, scrolling when long. */
+.mdxeditor-square > .mdxeditor {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.mdxeditor-square .mdxeditor-toolbar {
+  flex-shrink: 0;
+}
+
+.mdxeditor-square .mdxeditor-root-contenteditable {
+  flex-grow: 1;
+  min-height: 0;
+  overflow: auto;
+}

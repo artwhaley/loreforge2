@@ -709,13 +709,11 @@ Requiredness ladder (authoritative as of OBSIDIAN-T08/T09): the operational
 slots are **required in the type** — every `DesignDefinition` must declare
 `work`, `members`, and all seven `management.*` bodies to compile — and the
 **conformance gate enforces** the full declared set for first-class status
-(`operationalSlots.design.test.ts` + `managementGate.design.test.tsx`). Poster
-satisfies them through explicitly marked compatibility renderers
-(`poster/operational.tsx`, `status: 'compatibility'`) without lowering the
-first-class standard. The ladder is closed: optional-declaration machinery from
-T01 has been removed, with ONE exception — `pages.characterProfile` is a
-genuinely optional surface (a Design that omits it receives the route's
-design-neutral fallback, and requiredness is unaffected).
+(`operationalSlots.design.test.ts` + `managementGate.design.test.tsx`). The
+ladder is closed: optional-declaration machinery from T01 has been removed,
+with ONE exception — `pages.characterProfile` is a genuinely optional surface
+(a Design that omits it receives the route's design-neutral fallback, and
+requiredness is unaffected).
 
 Genuinely shared editors remain shared: Templates, Forms, document
 create/edit/import flows, page editors, and Site Studio render inside the
@@ -1537,17 +1535,17 @@ Use the completed first-class Designs as examples for **contract**, not as templ
 
 ```text
 src/designs/civic
-src/designs/ledger
 src/designs/obsidian
+src/designs/atelier
 ```
 
 Civic demonstrates an institutional masthead/portal.
 
-Ledger demonstrates a structurally different editorial rail/register.
-
 Obsidian demonstrates an atmospheric night-harbour treatment while consuming
 the same authorized Page Models, operational contracts, and shared mutation
 workspaces.
+
+Atelier demonstrates a warm editorial working archive with a navigation rail.
 
 A new Design should not become “Civic with different colors” merely because Civic is easy to copy.
 

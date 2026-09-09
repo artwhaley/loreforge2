@@ -58,7 +58,7 @@ describe('P08D-T01 records presentation ownership', () => {
 })
 
 describe('P08D-T09 first-class isolation scan', () => {
-  const FIRST_CLASS_DIRS = ['civic', 'ledger', 'obsidian']
+  const FIRST_CLASS_DIRS = ['civic', 'obsidian', 'atelier']
   const FORBIDDEN = [
     '@/app/',
     '@/components/theme/',
@@ -66,8 +66,8 @@ describe('P08D-T09 first-class isolation scan', () => {
     '@/collections/',
     '@/lib/authz/',
     '@/designs/civic',
-    '@/designs/ledger',
-    '@/designs/poster',
+    '@/designs/obsidian',
+    '@/designs/atelier',
     '../shared/legacy-frame',
     '../shared/legacy-thin',
   ]
@@ -113,12 +113,15 @@ describe('P08D-T02 document presentation ownership', () => {
   })
 
   it('Document views take the action bridge as props — never client action context', () => {
-    for (const file of ['src/designs/civic/CivicDocument.tsx', 'src/designs/ledger/LedgerDocument.tsx', 'src/designs/poster/PosterDocument.tsx']) {
+    for (const file of ['src/designs/civic/CivicDocument.tsx', 'src/designs/obsidian/ObsidianDocument.tsx', 'src/designs/atelier/public.tsx']) {
       const content = read(path.join(SRC, file.replace(/^src\//, '')))
       const relative = file
       expect(content, `${relative} must not consume the client action context hook`).not.toContain('useRecordActions')
       expect(content, `${relative} receives the bridge via DocumentDesignViewProps`).toContain('workflowAction')
-      expect(content, `${relative} consumes the shared action descriptor helper`).toContain('getDocumentActions')
     }
+    // Civic and Atelier consume the shared action descriptor helper directly;
+    // Obsidian delegates rendering to its own bar over the same props seam.
+    expect(read(path.join(SRC, 'designs/civic/CivicDocument.tsx')), 'civic consumes the shared action descriptor helper').toContain('getDocumentActions')
+    expect(read(path.join(SRC, 'designs/atelier/public.tsx')), 'atelier consumes the shared action descriptor helper').toContain('getDocumentActions')
   })
 })

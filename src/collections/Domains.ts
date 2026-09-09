@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { assertDomainOwnership } from '@/lib/domains/invariants'
+import { DEFAULT_DESIGN_KEY } from '@/lib/design/types'
 import { DESIGN_TEMPLATE_OPTIONS } from '@/lib/theme/fonts'
 
 const ownerInvariant = ({ data, originalDoc }: { data: Record<string, unknown>; originalDoc?: Record<string, unknown> }) => {
@@ -51,7 +52,7 @@ export const Domains: CollectionConfig = {
     { name: 'logo', type: 'upload', relationTo: 'media', label: 'Seal / logo' },
     { name: 'banner', type: 'upload', relationTo: 'media', label: 'Banner image' },
     // ---- Design template + contracted layout/document/background tokens ----
-    { name: 'designTemplate', type: 'select', label: 'Design template', options: DESIGN_TEMPLATE_OPTIONS, defaultValue: 'civic' },
+    { name: 'designTemplate', type: 'select', label: 'Design template', options: DESIGN_TEMPLATE_OPTIONS, defaultValue: DEFAULT_DESIGN_KEY },
     { name: 'contentWidth', type: 'select', label: 'Content width', options: [{ label: 'Narrow (focused reading)', value: 'narrow' }, { label: 'Standard', value: 'standard' }, { label: 'Wide', value: 'wide' }], defaultValue: 'standard' },
     { name: 'headerLayout', type: 'select', label: 'Header layout', options: [{ label: 'Centered masthead', value: 'centered' }, { label: 'Compact bar', value: 'left-aligned' }, { label: 'Banner hero', value: 'banner-forward' }], defaultValue: 'centered' },
     { name: 'documentStyle', type: 'select', label: 'Document reading style', options: [{ label: 'Classic (serif record sheet)', value: 'classic' }, { label: 'Modern (clean reading)', value: 'modern' }], defaultValue: 'classic' },
@@ -60,7 +61,7 @@ export const Domains: CollectionConfig = {
     // ---- Structured Design configuration (spec §20/§21): versioned JSON.
     // Legacy scalar appearance fields above remain authoritative until the
     // compatibility migration proves the JSON path (Step 5); the resolver
-    // prefers valid JSON and falls back to scalars (see resolveEffectiveDomainDesign).
+    // prefers valid JSON and falls back to scalars (validateDomainDesignConfig).
     { name: 'designConfig', type: 'json', label: 'Design configuration', admin: { description: 'Versioned structured Design config (schemaVersion 1). Validated at the save boundary; never hand-edit.' } },
     { name: 'publicEnabled', type: 'checkbox', defaultValue: false },
     { name: 'installedPackKey', type: 'text', admin: { readOnly: true } },

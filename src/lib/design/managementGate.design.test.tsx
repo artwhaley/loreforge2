@@ -15,8 +15,6 @@ vi.mock('next/navigation', () => ({
 
 import { civic } from '@/designs/civic'
 import { civicDefaults } from '@/designs/civic/config'
-import { ledger } from '@/designs/ledger'
-import { ledgerDefaults } from '@/designs/ledger/config'
 import { obsidian } from '@/designs/obsidian'
 import { obsidianDefaults } from '@/designs/obsidian/config'
 import { resolveDomainDesign } from './resolveDomainDesign'
@@ -52,11 +50,10 @@ const stubAction = async () => {}
 describe('OBSIDIAN-T09 management conformance gate', () => {
   const pairs: Array<[Erased, object]> = [
     [civic as unknown as Erased, civicDefaults],
-    [ledger as unknown as Erased, ledgerDefaults],
     [obsidian as unknown as Erased, obsidianDefaults],
   ]
 
-  it('Civic and Ledger render the same work model with the same actionable approve/reject surface', () => {
+  it('renders the same work model with the same actionable approve/reject surface', () => {
     for (const [Design, config] of pairs) {
       const { container } = render(
         <Design.pages.work {...WORK_MANAGEMENT_MODEL} approveAction={stubAction} rejectAction={stubAction} {...VARIANT} designConfig={config} />,
@@ -148,7 +145,7 @@ describe('OBSIDIAN-T09 management conformance gate', () => {
       [(design) => design.pages.management.people, (c) => expect(c.textContent).toContain('People')],
       [(design) => design.pages.management.invitations, (c) => expect(c.textContent).toContain('Invitations')],
     ]
-    for (const Design of [civic, ledger] as Erased[]) {
+    for (const [Design] of pairs) {
       for (const [slot, assert] of slotPairs) {
         expect(slot(Design), `required slot must be declared on ${(Design as { key: string }).key}`).toBeTruthy()
       }

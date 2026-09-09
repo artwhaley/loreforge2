@@ -4,18 +4,14 @@ import { describe, expect, it } from 'vitest'
 import { DOCUMENT_PREVIEW_MODEL } from '@/lib/design/fixtures'
 import type { DesignDefinition } from '@/lib/design/types'
 import { civic } from '@/designs/civic'
-import { ledger } from '@/designs/ledger'
-import { poster } from '@/designs/poster'
 
 const variant = { headerLayout: 'centered', documentStyle: 'classic' }
 const stubAction = async () => {}
 // Config is erased at the fixture boundary (OBSIDIAN-T02).
 type Erased = DesignDefinition<object>
 const CONFIG = {}
-const ERASED: Array<['civic' | 'ledger' | 'poster', Erased]> = [
+const ERASED: Array<['civic', Erased]> = [
   ['civic', civic as unknown as Erased],
-  ['ledger', ledger as unknown as Erased],
-  ['poster', poster as unknown as Erased],
 ]
 
 /**
@@ -35,7 +31,7 @@ describe.each(ERASED.map(([key, design]) => [key, design.pages.document] as cons
     // Permitted actions are represented, not silently dropped.
     expect(screen.getByText('Edit')).toBeTruthy()
     expect(screen.getByText('History')).toBeTruthy()
-    // Civic labels the supersede action explicitly; Ledger/Poster use "Supersede".
+    // Civic labels the supersede action explicitly.
     const supersede = screen.queryByText('Supersede') ?? screen.getByText('Create superseding document')
     expect(supersede).toBeTruthy()
     expect(screen.getByText('Deprecate')).toBeTruthy()

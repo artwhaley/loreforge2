@@ -9,10 +9,13 @@ import styles from './TypeTree.module.scss'
 /**
  * P08X-T04: one cell of the lifecycle table — a role list with chips and an
  * add-role popover. `title` carries the human-readable definition of the
- * permission column for hovertext.
+ * permission column for hovertext. `labelHidden` suppresses the visible
+ * label when the table header already names the column (still screen-reader
+ * accessible through the header cell).
  */
-export function RoleListEditor({ label, title, roles, selected, onChange }: {
+export function RoleListEditor({ label, labelHidden, title, roles, selected, onChange }: {
   label: string
+  labelHidden?: boolean
   title: string
   roles: InspectorRole[]
   selected: number[]
@@ -43,7 +46,7 @@ export function RoleListEditor({ label, title, roles, selected, onChange }: {
 
   return <>
     <div className={styles.roleEditor}>
-      <span title={title}>{label}</span>
+      {labelHidden ? null : <span title={title}>{label}</span>}
       <div className={styles.roleChips}>
         {selected.map((id) => {
           const role = byId.get(id)

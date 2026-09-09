@@ -14,7 +14,7 @@ describe('Obsidian config v1', () => {
   it('accepts only local Design asset references', () => {
     expect(validateObsidianConfig({ ...obsidianDefaults, atmosphere: { url: '/media/harbour.webp' } }).ok).toBe(true)
     expect(validateObsidianConfig({ ...obsidianDefaults, atmosphere: { url: '/design-assets/obsidian/atmosphere.png' } }).ok).toBe(true)
-    expect(validateObsidianConfig({ ...obsidianDefaults, atmosphere: { url: '/design-assets/ledger/thumbnail.svg' } }).ok).toBe(false)
+    expect(validateObsidianConfig({ ...obsidianDefaults, atmosphere: { url: '/design-assets/atelier/thumbnail.svg' } }).ok).toBe(false)
     expect(validateObsidianConfig({ ...obsidianDefaults, atmosphere: { url: 'https://example.test/harbour.webp' } }).ok).toBe(false)
   })
 

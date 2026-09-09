@@ -6,9 +6,9 @@ const relationId = (value: unknown): number | null => value && typeof value === 
 
 /**
  * P08X-T02: one row per (Document Type, lifecycle stage) carrying the
- * intentional per-stage configuration — enabled/allow-on-creation, the stage's
- * assigned Folder, the private-drafts switch (Draft row), and the four role
- * lists (read / write / edit others / manage).
+ * intentional per-stage configuration — enabled/allow-on-creation, the
+ * stage's assigned Folder, and the four role lists (read / write / edit
+ * others / manage).
  *
  * Access is closed; mutations flow exclusively through the Document Type
  * inspector server action (P08X-T04). The DB unique (documentType, stage)
@@ -85,7 +85,6 @@ export const LifecycleStages: CollectionConfig = {
     { name: 'enabled', type: 'checkbox', defaultValue: true, label: 'Part of this Document Type\u2019s lifecycle', admin: { description: 'When unchecked the stage is not part of the Type\u2019s lifecycle and the rest of the row is inert.' } },
     { name: 'allowOnCreation', type: 'checkbox', defaultValue: false, label: 'Allow on creation', admin: { description: 'Lets the create-document screen start a record in this stage (subject to the actor\u2019s stage permissions).' } },
     { name: 'folder', type: 'relationship', relationTo: 'folders', label: 'Stage folder', index: true, admin: { description: 'Documents in this stage live in this Folder; stage transitions relocate records here.' } },
-    { name: 'privateDraftsAllowed', type: 'checkbox', defaultValue: true, label: 'Private drafts allowed', admin: { description: 'Draft row only: when enabled, creators choose private or public draft. Private drafts are visible only to the creating Character.' } },
     { name: 'readRoles', type: 'relationship', relationTo: 'roles', hasMany: true, label: 'Read roles', admin: { description: 'Roles that may view documents at this stage.' } },
     { name: 'writeRoles', type: 'relationship', relationTo: 'roles', hasMany: true, label: 'Write roles', admin: { description: 'Roles that may create documents at this stage and edit their own at this stage.' } },
     { name: 'editOthersRoles', type: 'relationship', relationTo: 'roles', hasMany: true, label: 'Edit others roles', admin: { description: 'Roles that may edit other people\u2019s documents at this stage directly.' } },

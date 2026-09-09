@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import { civic } from '@/designs/civic'
-import { ledger } from '@/designs/ledger'
-import { poster } from '@/designs/poster'
+import { obsidian } from '@/designs/obsidian'
+import { atelierDesign } from '@/designs/atelier'
 import type { DesignDefinition } from './types'
 
 // Config-parameterized pages are erased at the fixture boundary, mirroring the
@@ -54,8 +54,8 @@ function declaredSlots(design: { pages: DesignDefinition<object>['pages'] }): Op
 
 const ALL_DESIGNS: Array<[string, { pages: DesignDefinition<object>['pages'] }]> = [
   ['civic', civic as unknown as Erased],
-  ['ledger', ledger as unknown as Erased],
-  ['poster', poster as unknown as Erased],
+  ['obsidian', obsidian as unknown as Erased],
+  ['atelier', atelierDesign as unknown as Erased],
 ]
 
 const FULL_OPERATIONAL_SET: OperationalSlot[] = [...OPERATIONAL_SLOTS]
@@ -89,9 +89,9 @@ describe('OBSIDIAN-T08 operational slot baseline', () => {
     ])
   })
 
-  it('Poster carries the compatibility status marker (T09 gates first-class off it)', () => {
-    expect((poster as Erased).status).toBe('compatibility')
-    expect((civic as Erased).status).toBe('first-class')
-    expect((ledger as Erased).status).toBe('first-class')
+  it('every registered Design carries the first-class status marker', () => {
+    for (const [key, design] of ALL_DESIGNS) {
+      expect((design as Erased).status, `${key} must be first-class`).toBe('first-class')
+    }
   })
 })

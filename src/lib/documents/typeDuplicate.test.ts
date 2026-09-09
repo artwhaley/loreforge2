@@ -99,7 +99,7 @@ await applyLifecycleStageConfig(payload, {
   documentTypeId: sourceTypeId,
   domainId,
   stages: [
-    { stage: 'draft', enabled: true, allowOnCreation: true, folderId: draftFolderId, privateDraftsAllowed: true, readRoleIds: [headScribeRoleId, clerkRoleId], writeRoleIds: [clerkRoleId], editOthersRoleIds: [headScribeRoleId], manageRoleIds: [headScribeRoleId] },
+    { stage: 'draft', enabled: true, allowOnCreation: true, folderId: draftFolderId, readRoleIds: [headScribeRoleId, clerkRoleId], writeRoleIds: [clerkRoleId], editOthersRoleIds: [headScribeRoleId], manageRoleIds: [headScribeRoleId] },
     { stage: 'submitted', enabled: true, allowOnCreation: true, folderId: draftFolderId, readRoleIds: [headScribeRoleId], writeRoleIds: [], editOthersRoleIds: [], manageRoleIds: [headScribeRoleId] },
     { stage: 'filed', enabled: true, allowOnCreation: true, folderId: filedFolderId, readRoleIds: [headScribeRoleId, clerkRoleId], writeRoleIds: [], editOthersRoleIds: [], manageRoleIds: [headScribeRoleId] },
     { stage: 'deprecated', enabled: false, allowOnCreation: false, folderId: filedFolderId, readRoleIds: [headScribeRoleId], writeRoleIds: [], editOthersRoleIds: [], manageRoleIds: [headScribeRoleId] },
@@ -128,7 +128,6 @@ test('T05 the copy carries its own copied stage configuration wholesale', async 
   for (const stage of ['draft', 'submitted', 'filed', 'deprecated'] as const) {
     assert.equal(Boolean(copyRows[stage]!.enabled), Boolean(sourceRows[stage]!.enabled), `${stage} enabled`)
     assert.equal(Boolean(copyRows[stage]!.allowOnCreation), Boolean(sourceRows[stage]!.allowOnCreation), `${stage} allowOnCreation`)
-    assert.equal(Boolean(copyRows[stage]!.privateDraftsAllowed), Boolean(sourceRows[stage]!.privateDraftsAllowed), `${stage} privateDrafts`)
     assert.equal(stageFolderId(copyRows[stage]), stageFolderId(sourceRows[stage]), `${stage} folder`)
     for (const field of ['readRoles', 'writeRoles', 'editOthersRoles', 'manageRoles'] as const) {
       assert.deepEqual(stageRoleIds(copyRows[stage], field), stageRoleIds(sourceRows[stage], field), `${stage} ${field}`)
@@ -165,7 +164,7 @@ test('T05 the magic-pops-up scenario: form → markdown → duplicate → switch
     documentTypeId: magicId,
     domainId,
     stages: [
-      { stage: 'draft', enabled: true, allowOnCreation: true, folderId: draftFolderId, privateDraftsAllowed: true, readRoleIds: [headScribeRoleId, clerkRoleId], writeRoleIds: [clerkRoleId], editOthersRoleIds: [headScribeRoleId], manageRoleIds: [headScribeRoleId] },
+      { stage: 'draft', enabled: true, allowOnCreation: true, folderId: draftFolderId, readRoleIds: [headScribeRoleId, clerkRoleId], writeRoleIds: [clerkRoleId], editOthersRoleIds: [headScribeRoleId], manageRoleIds: [headScribeRoleId] },
       { stage: 'submitted', enabled: true, allowOnCreation: true, folderId: draftFolderId, readRoleIds: [headScribeRoleId], writeRoleIds: [], editOthersRoleIds: [], manageRoleIds: [headScribeRoleId] },
       { stage: 'filed', enabled: true, allowOnCreation: true, folderId: filedFolderId, readRoleIds: [headScribeRoleId, clerkRoleId], writeRoleIds: [], editOthersRoleIds: [], manageRoleIds: [headScribeRoleId] },
       { stage: 'deprecated', enabled: false, allowOnCreation: false, folderId: filedFolderId, readRoleIds: [headScribeRoleId], writeRoleIds: [], editOthersRoleIds: [], manageRoleIds: [headScribeRoleId] },

@@ -25,6 +25,7 @@ const DESIGN_API_SEAM = [
   '/api/character-claims',
   '/api/invitations/revoke',
   '/api/invitations/join-decision',
+  '/api/domain-memberships',
   '/api/records-search',
 ]
 

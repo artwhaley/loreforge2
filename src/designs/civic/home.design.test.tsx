@@ -5,10 +5,6 @@ import { HOME_PREVIEW_MODEL } from '@/lib/design/fixtures'
 import type { DesignDefinition } from '@/lib/design/types'
 import { civic } from '@/designs/civic'
 import { civicDefaults } from '@/designs/civic/config'
-import { ledger } from '@/designs/ledger'
-import { ledgerDefaults } from '@/designs/ledger/config'
-import { poster } from '@/designs/poster'
-import { posterDefaults } from '@/designs/poster/config'
 
 const variant = { headerLayout: 'centered', documentStyle: 'classic' }
 // The page components are config-parameterized; the fixture erases config the
@@ -16,10 +12,8 @@ const variant = { headerLayout: 'centered', documentStyle: 'classic' }
 // composition, not config fields.
 type Erased = DesignDefinition<object>
 const CONFIG = {}
-const ERASED: Array<['civic' | 'ledger' | 'poster', Erased]> = [
+const ERASED: Array<['civic', Erased]> = [
   ['civic', civic as unknown as Erased],
-  ['ledger', ledger as unknown as Erased],
-  ['poster', poster as unknown as Erased],
 ]
 
 /**
@@ -53,13 +47,8 @@ describe.each(ERASED.map(([key, design]) => [key, design.pages.home] as const))(
   })
 })
 
-describe('home structural divergence', () => {
-  it('ledger uses an index composition and poster uses tiles', () => {
-    const { container: ledgerDom } = render(<ledger.pages.home {...HOME_PREVIEW_MODEL} {...variant} designConfig={ledgerDefaults} />)
-    expect(ledgerDom.textContent).toContain('Index')
-    const { container: posterDom } = render(<poster.pages.home {...HOME_PREVIEW_MODEL} {...variant} designConfig={posterDefaults} />)
-    expect(posterDom.querySelectorAll('ul').length).toBeGreaterThanOrEqual(1)
-    // Civic keeps the ordinal quick-link composition.
+describe('home structural composition', () => {
+  it('civic keeps the ordinal quick-link composition', () => {
     const { container: civicDom } = render(<civic.pages.home {...HOME_PREVIEW_MODEL} {...variant} designConfig={civicDefaults} />)
     expect(civicDom.textContent).toContain('Welcome to')
   })

@@ -13,6 +13,7 @@ import { isAllowed } from '@/lib/authz/evaluate'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
 import { isTemplateAvailableAt } from '@/lib/templates/resolve'
 import { initialRouteFolder } from '@/lib/documents/creation'
+import { lifecycleStageRowsForType, stageFolderId } from '@/lib/documents/lifecycleStages'
 
 export type TemplateActionState = { error?: string; ok?: boolean }
 
@@ -45,30 +46,54 @@ function deriveOutputTemplates(schema: LoreForgeFormSchema, name: string, record
   return { titleTemplate, bodyTemplate: autoBodyTemplate(schema.fields) }
 }
 
-function readFormPlacement(formData: FormData) {
-  const scopeFolder = Number(formData.get('scopeFolderId') ?? '')
-  // P07X-T06: destinationFolder is retained in the storage model only for
-  // migration compatibility. Customer Forms never choose it; assertPlacement
-  // derives it from the selected Document Type's lifecycle routing.
-  const destinationFolder = 0
-  const documentType = Number(formData.get('documentTypeId') ?? '')
-  const baseTemplateId = Number(formData.get('baseTemplateId') ?? '')
-  return { scopeFolder, destinationFolder, documentType, baseTemplateId }
+const relationId = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === '') return null
+  if (typeof value === 'object' && value !== null && 'id' in value) return Number((value as { id: number | string }).id)
+  return Number(value)
 }
 
-/** Shared create/update checks: same-Domain folders/types/base availability. */
-async function assertPlacement(ctx: { payload: ManagerPayload; domain: { id: number } }, placement: { scopeFolder: number; destinationFolder: number; documentType: number; baseTemplateId: number }) {
-  const { scopeFolder, documentType, baseTemplateId } = placement
-  if (!scopeFolder || !documentType) throw new Error('Document Type and availability Folder are required.')
-  const [typeResult, scopeResult, baseResult] = await Promise.all([
+/** The Type-only placement the Type-first editors submit (never a Folder). */
+function readTemplatePlacement(formData: FormData) {
+  const documentType = Number(formData.get('documentTypeId') ?? '')
+  const baseTemplateId = Number(formData.get('baseTemplateId') ?? '')
+  return { documentType, baseTemplateId }
+}
+
+/**
+ * Placement is owned by the Document Type: a template's availability scope is
+ * the first available of the Type's lifecycle-stage Folders, the Type's
+ * draft/default Folder, or the Domain root. documentTypes.ts carries a private
+ * copy for scaffolding — keep the two chains identical when either changes.
+ */
+async function resolveTypeScopeFolder(payload: ManagerPayload, documentType: number, domainId: number) {
+  const stages = await lifecycleStageRowsForType(payload, documentType)
+  const fromStages = [stages.draft, stages.submitted, stages.filed].map(stageFolderId).find((id): id is number => id != null)
+  if (fromStages) return (await payload.find({ collection: 'folders', where: { and: [{ id: { equals: fromStages } }, { domain: { equals: domainId } }] }, depth: 0, limit: 1, overrideAccess: true })).docs[0]
+  const type = await payload.findByID({ collection: 'document-types', id: documentType, depth: 0, overrideAccess: true }).catch(() => null) as { draftFolder?: unknown; defaultFolder?: unknown } | null
+  const fromType = relationId(type?.draftFolder) ?? relationId(type?.defaultFolder)
+  if (fromType) return (await payload.find({ collection: 'folders', where: { and: [{ id: { equals: fromType } }, { domain: { equals: domainId } }] }, depth: 0, limit: 1, overrideAccess: true })).docs[0]
+  const roots = await payload.find({ collection: 'folders', where: { and: [{ domain: { equals: domainId } }, { systemManaged: { equals: true } }, { parent: { equals: null } }] }, depth: 0, limit: 1, overrideAccess: true })
+  const root = roots.docs[0]
+  if (!root) throw new Error('The Document Type has no lifecycle route and the Domain has no root Folder.')
+  return root
+}
+
+/**
+ * Shared create/update checks: the owning Type is active in this Domain and
+ * every Folder (scope and destination) is derived from it. Callers never
+ * supply a Folder — the document sets the template, not the other way around.
+ */
+async function assertPlacement(ctx: { payload: ManagerPayload; domain: { id: number } }, placement: { documentType: number; baseTemplateId: number }) {
+  const { documentType, baseTemplateId } = placement
+  if (!documentType) throw new Error('Document Type is required.')
+  const [typeResult, baseResult] = await Promise.all([
     ctx.payload.find({ collection: 'document-types', where: { and: [{ id: { equals: documentType } }, { domain: { equals: ctx.domain.id } }, { active: { equals: true } }] }, depth: 0, limit: 1, overrideAccess: true }),
-    ctx.payload.find({ collection: 'folders', where: { and: [{ id: { equals: scopeFolder } }, { domain: { equals: ctx.domain.id } }] }, depth: 0, limit: 1, overrideAccess: true }),
     baseTemplateId ? ctx.payload.find({ collection: 'templates', where: { and: [{ id: { equals: baseTemplateId } }, { domain: { equals: ctx.domain.id } }, { active: { equals: true } }] }, depth: 0, limit: 1, overrideAccess: true }) : { docs: [] },
   ])
   if (!typeResult.docs[0]) throw new Error('Choose an active Document Type from this Domain.')
-  const scope = scopeResult.docs[0]
-  if (!scope) throw new Error('Choose an availability Folder from this Domain.')
   const type = typeResult.docs[0]
+  const scope = await resolveTypeScopeFolder(ctx.payload, documentType, ctx.domain.id)
+  if (!scope) throw new Error('The Document Type has no lifecycle Folder to scope availability.')
   const routedId = initialRouteFolder(type, 'draft', null)
   const destinationResult = routedId
     ? await ctx.payload.find({ collection: 'folders', where: { and: [{ id: { equals: routedId } }, { domain: { equals: ctx.domain.id } }] }, depth: 0, limit: 1, overrideAccess: true })
@@ -77,8 +102,8 @@ async function assertPlacement(ctx: { payload: ManagerPayload; domain: { id: num
   if (!destination) throw new Error('The selected Document Type has no lifecycle route or Domain root Folder.')
   const base = baseResult.docs[0]
   if (baseTemplateId && !base) throw new Error('The base Template is not available.')
-  if (base && !isTemplateAvailableAt(base as never, scope as never, (await ctx.payload.find({ collection: 'folders', where: { domain: { equals: ctx.domain.id } }, depth: 0, limit: 10000, overrideAccess: true })).docs as never)) throw new Error('The base Template is not available at the selected Folder.')
-  return { scopeFolder, destinationFolder: Number(destination.id), documentType, baseTemplateId }
+  if (base && !isTemplateAvailableAt(base as never, scope as never, (await ctx.payload.find({ collection: 'folders', where: { domain: { equals: ctx.domain.id } }, depth: 0, limit: 10000, overrideAccess: true })).docs as never)) throw new Error('The base Template is not available within the Document Type\'s Folder scope.')
+  return { scopeFolder: Number(scope.id), destinationFolder: Number(destination.id), documentType, baseTemplateId }
 }
 
 function revalidateForms(domainSlug: string) {
@@ -98,7 +123,7 @@ export async function createFormTemplateAction(_previous: TemplateActionState, f
   try { schema = assertFormSchema(parseJson(formData.get('formSchema'))) } catch (error) { return { error: error instanceof Error ? error.message : 'The form fields are invalid.' } }
   if (schema.fields.length === 0) return { error: 'Add at least one question to the form.' }
   try {
-    const placement = await assertPlacement(ctx, readFormPlacement(formData))
+    const placement = await assertPlacement(ctx, readTemplatePlacement(formData))
     const { titleTemplate, bodyTemplate } = deriveOutputTemplates(schema, name, recordNameKey)
     await ctx.payload.create({
       collection: 'templates',
@@ -148,7 +173,7 @@ export async function updateFormTemplateAction(_previous: TemplateActionState, f
   try { schema = assertFormSchema(parseJson(formData.get('formSchema'))) } catch (error) { return { error: error instanceof Error ? error.message : 'The form fields are invalid.' } }
   if (schema.fields.length === 0) return { error: 'Add at least one question to the form.' }
   try {
-    const placement = await assertPlacement(ctx, readFormPlacement(formData))
+    const placement = await assertPlacement(ctx, readTemplatePlacement(formData))
     const { titleTemplate, bodyTemplate } = deriveOutputTemplates(schema, name, recordNameKey)
     await ctx.payload.update({
       collection: 'templates',
@@ -174,36 +199,24 @@ export async function updateFormTemplateAction(_previous: TemplateActionState, f
   redirect(`/domain/${domainSlug}/forms`)
 }
 
-function readDocumentPlacement(formData: FormData) {
-  const scopeFolder = Number(formData.get('scopeFolderId') ?? '')
-  const documentType = Number(formData.get('documentTypeId') ?? '')
-  const baseTemplateId = Number(formData.get('baseTemplateId') ?? '')
-  return { scopeFolder, destinationFolder: 0, documentType, baseTemplateId }
-}
-
-function readDocumentContent(formData: FormData) {
-  const name = String(formData.get('name') ?? '').trim()
-  const titleTemplate = String(formData.get('titleTemplate') ?? '').trim()
-  const bodyTemplate = canonicalizeMarkdown(String(formData.get('bodyTemplate') ?? '')).trim()
-  return { name, titleTemplate, bodyTemplate }
-}
-
 /**
- * Document Template create seam: the author supplies a plain-text title
- * template and Markdown body directly ({{content}} is the only supported
- * token). Availability, base composition, and Type routing reuse the same
- * placement checks as Form Studio.
+ * Document Template create seam: reached from the Type that owns the template
+ * (the Type carries placement and permissions), so the Type is submitted
+ * read-only and everything Folder-related is derived from it — the document
+ * sets the template, not the other way around. The Name is the record title.
  */
 export async function createDocumentTemplateAction(_previous: TemplateActionState, formData: FormData): Promise<TemplateActionState> {
   const domainSlug = String(formData.get('domainSlug') ?? '')
   const ctx = await managerContext(domainSlug)
   if (ctx.error || !ctx.domain || !ctx.user) return { error: ctx.error ?? 'Not authorized.' }
-  const { name, titleTemplate, bodyTemplate } = readDocumentContent(formData)
+  const name = String(formData.get('name') ?? '').trim()
   if (!name) return { error: 'Give the template a name.' }
-  if (!titleTemplate) return { error: 'Give the template a title.' }
+  const bodyTemplate = canonicalizeMarkdown(String(formData.get('bodyTemplate') ?? '')).trim()
   if (!bodyTemplate) return { error: 'Write the template body in Markdown.' }
   try {
-    const placement = await assertPlacement(ctx, readDocumentPlacement(formData))
+    const documentType = Number(formData.get('documentTypeId') ?? '')
+    if (!documentType) return { error: 'Choose a Document Type from this Domain.' }
+    const placement = await assertPlacement(ctx, { documentType, baseTemplateId: Number(formData.get('baseTemplateId') ?? '') })
     await ctx.payload.create({
       collection: 'templates',
       overrideAccess: true,
@@ -217,7 +230,7 @@ export async function createDocumentTemplateAction(_previous: TemplateActionStat
         ...(placement.baseTemplateId ? { baseTemplate: placement.baseTemplateId } : {}),
         allowDestinationOverride: false,
         availableToDescendants: true,
-        titleTemplate,
+        titleTemplate: name,
         bodyTemplate,
         formSchema: null,
         lifecyclePolicy: 'inherit',
@@ -232,7 +245,7 @@ export async function createDocumentTemplateAction(_previous: TemplateActionStat
   redirect(`/domain/${domainSlug}/templates`)
 }
 
-/** Document Template edit seam: saves the next version and re-activates. */
+/** Document Template edit seam: reached from the owning Type; the Name is the record title. */
 export async function updateDocumentTemplateAction(_previous: TemplateActionState, formData: FormData): Promise<TemplateActionState> {
   const domainSlug = String(formData.get('domainSlug') ?? '')
   const templateId = Number(formData.get('templateId') ?? '')
@@ -241,12 +254,14 @@ export async function updateDocumentTemplateAction(_previous: TemplateActionStat
   const found = await ctx.payload.find({ collection: 'templates', where: { and: [{ id: { equals: templateId } }, { domain: { equals: ctx.domain.id } }, { kind: { equals: 'document' } }] }, depth: 0, limit: 1, overrideAccess: true })
   const existing = found.docs[0]
   if (!existing) return { error: 'Template not found.' }
-  const { name, titleTemplate, bodyTemplate } = readDocumentContent(formData)
+  const name = String(formData.get('name') ?? '').trim()
   if (!name) return { error: 'Give the template a name.' }
-  if (!titleTemplate) return { error: 'Give the template a title.' }
+  const bodyTemplate = canonicalizeMarkdown(String(formData.get('bodyTemplate') ?? '')).trim()
   if (!bodyTemplate) return { error: 'Write the template body in Markdown.' }
   try {
-    const placement = await assertPlacement(ctx, readDocumentPlacement(formData))
+    const documentType = Number(formData.get('documentTypeId') ?? '')
+    if (!documentType) return { error: 'Choose a Document Type from this Domain.' }
+    const placement = await assertPlacement(ctx, { documentType, baseTemplateId: Number(formData.get('baseTemplateId') ?? '') })
     await ctx.payload.update({
       collection: 'templates',
       id: templateId,
@@ -257,7 +272,7 @@ export async function updateDocumentTemplateAction(_previous: TemplateActionStat
         scopeFolder: placement.scopeFolder,
         destinationFolder: placement.destinationFolder,
         ...(placement.baseTemplateId ? { baseTemplate: placement.baseTemplateId } : { baseTemplate: null }),
-        titleTemplate,
+        titleTemplate: name,
         bodyTemplate,
         active: true,
         version: Number(existing.version ?? 1) + 1,

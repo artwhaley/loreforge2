@@ -87,8 +87,6 @@ export type PreparedDocumentCreation = {
   lifecycle: Lifecycle
   folderId: number
   typeRow: Record<string, unknown>
-  /** P08X-T06: whether the draft stage allows the private-draft choice at creation. */
-  privateDraftsAllowed: boolean
   /** P08X-T07: stages the actor may start a record at (enabled + allowOnCreation + writable). */
   availableCreationStages: Lifecycle[]
 }
@@ -171,12 +169,6 @@ export async function prepareDocumentCreation(args: PrepareArgs): Promise<Prepar
   }
   if (folderId == null) throw new Error('folder')
   if (folderNarrowingDeny(session, 'create_document', folderId)) throw new Error('folder-narrowed')
-  // P08X-T06: the private-draft choice is only offered when the Draft stage's
-  // privateDraftsAllowed is on; other initial stages never create private
-  // records. T07 builds the create-screen dropdown on top of this flag.
-  const privateDraftsAllowed = initialLifecycle === 'draft'
-    ? (session.stageLists.get(typeId)?.get('draft')?.privateDraftsAllowed ?? true)
-    : false
   // P08X-T07: expose the writable creation stages so the create screen can
   // offer (or hide) the starting-phase dropdown and default to the latest one.
   const availableCreationStages = session.stageLists.get(typeId) && session.stageLists.get(typeId)!.size > 0
@@ -186,5 +178,5 @@ export async function prepareDocumentCreation(args: PrepareArgs): Promise<Prepar
       return session.authority != null || canCreateAtStage(session, typeId, stage as Lifecycle)
     }) as Lifecycle[]
     : []
-  return { typeId, method, lifecycle: initialLifecycle, folderId, typeRow, privateDraftsAllowed, availableCreationStages }
+  return { typeId, method, lifecycle: initialLifecycle, folderId, typeRow, availableCreationStages }
 }

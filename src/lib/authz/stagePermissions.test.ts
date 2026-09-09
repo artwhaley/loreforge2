@@ -9,7 +9,6 @@ import { canCreateAtStage, decideInSession, decideOne, loadAuthorizationSession,
 import type { Lifecycle } from '@/lib/documents/lifecycle'
 import { transitionDocument } from '@/lib/documents/workflow'
 import { applyLifecycleStageConfig } from '@/lib/documents/lifecycleStages'
-import { prepareDocumentCreation } from '@/lib/documents/creation'
 import type { Capability } from '@/lib/permissions/capabilities'
 
 if (!/^file:.*p08x-t06-/.test(process.env.DATABASE_URI ?? '')) throw new Error('Use a fresh p08x-t06-*.db; never the working DB.')
@@ -109,7 +108,7 @@ await assignment(scribeCharId, clerkRoleId, ownerId)
 await assignment(readerCharId, scribeRoleId, ownerId)
 
 const configStages = [
-  { stage: 'draft' as const, enabled: true, allowOnCreation: true, folderId: draftFolderId, privateDraftsAllowed: true, readRoleIds: [scribeRoleId], writeRoleIds: [clerkRoleId], editOthersRoleIds: [scribeRoleId], manageRoleIds: [scribeRoleId] },
+  { stage: 'draft' as const, enabled: true, allowOnCreation: true, folderId: draftFolderId, readRoleIds: [scribeRoleId], writeRoleIds: [clerkRoleId], editOthersRoleIds: [scribeRoleId], manageRoleIds: [scribeRoleId] },
   { stage: 'submitted' as const, enabled: true, allowOnCreation: false, folderId: draftFolderId, readRoleIds: [scribeRoleId], writeRoleIds: [], editOthersRoleIds: [], manageRoleIds: [scribeRoleId] },
   { stage: 'filed' as const, enabled: true, allowOnCreation: true, folderId: filedFolderId, readRoleIds: [scribeRoleId, clerkRoleId], writeRoleIds: [], editOthersRoleIds: [], manageRoleIds: [scribeRoleId] },
   { stage: 'deprecated' as const, enabled: false, allowOnCreation: false, folderId: filedFolderId, readRoleIds: [scribeRoleId], writeRoleIds: [], editOthersRoleIds: [], manageRoleIds: [scribeRoleId] },
@@ -243,16 +242,6 @@ test('T06 a stage move out of Draft clears the private flag; transitions honor m
   assert.equal(after.lifecycle, 'submitted')
   assert.equal(Boolean(after.privateDraft), false)
   void scribe
-})
-
-test('T06 privateDraftsAllowed=false removes the private option from the creation plan', async () => {
-  await rule({ domainId, principalType: 'Character', principal: scribeCharId, resourceType: 'DocumentType', resource: typeId, capability: 'create_document', effect: 'grant', actorUser: ownerId })
-  const plan = await prepareDocumentCreation({ payload, actor: { userId: aliceUserId, activeCharacterId: scribeCharId }, domainId, documentTypeId: typeId, method: 'blank', lifecycle: 'draft' })
-  assert.equal(plan.privateDraftsAllowed, true)
-  // Flip the Draft row's switch off -> the option disappears.
-  await applyLifecycleStageConfig(payload, { documentTypeId: typeId, domainId, stages: [{ stage: 'draft', enabled: true, privateDraftsAllowed: false }] })
-  const planAfter = await prepareDocumentCreation({ payload, actor: { userId: aliceUserId, activeCharacterId: scribeCharId }, domainId, documentTypeId: typeId, method: 'blank', lifecycle: 'draft' })
-  assert.equal(planAfter.privateDraftsAllowed, false)
 })
 
 test('T06 lifecycle-stages writes bump the Domain authorization epoch', async () => {

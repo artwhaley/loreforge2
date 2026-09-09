@@ -1,5 +1,6 @@
 import type { Tenant } from '@/payload-types'
 
+import { DEFAULT_DESIGN_KEY } from '@/lib/design/types'
 import { mixColors, readableTextColor } from './color'
 
 /**
@@ -153,7 +154,7 @@ export const CONTENT_WIDTH_OPTIONS = (Object.entries(CONTENT_WIDTHS) as Array<[C
 export const BACKGROUND_TREATMENT_OPTIONS = (Object.entries(BACKGROUND_TREATMENTS) as Array<[BackgroundTreatmentKey, { label: string; requiresImage?: boolean }]>).map(([value, v]) => ({ value, label: v.label, requiresImage: Boolean(v.requiresImage) }))
 
 const DEFAULTS = {
-  designTemplate: 'civic',
+  designTemplate: DEFAULT_DESIGN_KEY,
   contentWidth: 'standard',
   headerLayout: 'centered',
   documentStyle: 'classic',

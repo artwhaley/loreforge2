@@ -4,6 +4,7 @@ import { resolveDomainDesign } from '@/lib/design/resolveDomainDesign'
 import { buildV2Envelope, mergeDesignBanks, parseV2Envelope, validateSubmittedBanks } from '@/lib/design/v2'
 import { DESIGNS } from '@/lib/design/registry'
 import type { LegacyDomainAppearance } from '@/lib/design/contracts'
+import type { AtelierConfigV1 } from '@/designs/atelier/config'
 import type { ObsidianConfigV1 } from '@/designs/obsidian/config'
 
 const LEGACY_SCALARS = {
@@ -19,34 +20,21 @@ const LEGACY_SCALARS = {
   contentWidth: 'wide',
 } as const
 
-const LEDGER_REGISTER_CONFIG = {
+const ATELIER_MUTATED_BANK = {
   version: 1,
-  config: {
-    palette: { ink: '#111111', secondaryInk: '#222222', accent: '#333333', paper: '#F5F1E9' },
-    typography: { displayFontKey: 'newsreader', bodyFontKey: 'lato' },
-    rail: { width: 'wide', density: 'compact' },
-    masthead: { treatment: 'folio', image: null },
-    rules: { strength: 'heavy' },
-    document: { treatment: 'register' },
-    paperTexture: null,
-  },
+  config: { ...(DESIGNS.atelier.config.defaults as AtelierConfigV1), accent: '#1f6f54', density: 'compact' as const },
 } as const
 
 describe('P08D-T04 JSON authority', () => {
-  it('V2 says Ledger/register and legacy says Civic/classic — V2 wins everywhere', () => {
-    const v2 = buildV2Envelope('ledger', { ledger: LEDGER_REGISTER_CONFIG })
+  it('V2 bank wins over legacy scalars everywhere', () => {
+    const v2 = buildV2Envelope('atelier', { atelier: ATELIER_MUTATED_BANK })
     const resolved = resolveDomainDesign({ ...LEGACY_SCALARS, designConfig: v2 })
-    expect(resolved.design.key).toBe('ledger')
-    const config = resolved.config as { document: { treatment: string } }
-    expect(config.document.treatment).toBe('register')
-    // The legacy axes are DERIVED from the resolved config (G8): register→classic.
-    expect(resolved.variant.documentStyle).toBe('classic')
-    // Ledger-namespaced vars carry the resolved vocabulary.
-    expect(resolved.cssVars['--ledger-document']).toBe('register')
-    expect(resolved.cssVars['--ledger-rail-width']).toBe('wide')
-    // The universal bridge reflects the Ledger ink/paper palette.
-    expect(resolved.cssVars['--tenant-primary']).toBe('#111111')
-    expect(resolved.cssVars['--tenant-page-bg']).toBe('#F5F1E9')
+    expect(resolved.design.key).toBe('atelier')
+    const config = resolved.config as AtelierConfigV1
+    expect(config.accent).toBe('#1f6f54')
+    // The namespaced vars carry the resolved vocabulary.
+    expect(resolved.cssVars['--atelier-accent']).toBe('#1f6f54')
+    expect(resolved.cssVars['--atelier-row']).toBe('12px')
   })
 
   it('unknown active key resolves to Civic defaults safely', () => {
@@ -58,11 +46,11 @@ describe('P08D-T04 JSON authority', () => {
 
 describe('P08D-T04 bank behavior', () => {
   it('missing bank produces the active Design defaults', () => {
-    const v2 = buildV2Envelope('ledger', {}) // no ledger bank
+    const v2 = buildV2Envelope('obsidian', {}) // no obsidian bank
     const resolved = resolveDomainDesign({ designConfig: v2 })
-    expect(resolved.design.key).toBe('ledger')
+    expect(resolved.design.key).toBe('obsidian')
     expect(resolved.diagnostic).toBeNull()
-    expect(resolved.config).toEqual(DESIGNS.ledger.config.defaults)
+    expect(resolved.config).toEqual(DESIGNS.obsidian.config.defaults)
   })
 
   it('invalid active bank falls back to Design defaults without executing raw values', () => {
@@ -82,9 +70,9 @@ describe('P08D-T04 bank behavior', () => {
     expect(resolved.diagnostic).toMatch(/migration/)
   })
 
-  it('T19 switching restores distinct Civic, Ledger, and Obsidian banks', () => {
+  it('T19 switching restores distinct Civic, Obsidian, and Atelier banks', () => {
     const civicBank = { version: 1, config: DESIGNS.civic.config.defaults }
-    const ledgerBank = { version: 1, config: { ...DESIGNS.ledger.config.defaults, rules: { strength: 'heavy' as const } } }
+    const atelierBank = ATELIER_MUTATED_BANK
     const obsidianDefaults = DESIGNS.obsidian.config.defaults as ObsidianConfigV1
     const obsidianBank = {
       version: 1,
@@ -94,8 +82,8 @@ describe('P08D-T04 bank behavior', () => {
         records: { ...obsidianDefaults.records, defaultView: 'list' as const, listPageSize: 100 as const },
       },
     }
-    let stored = buildV2Envelope('civic', { civic: civicBank, ledger: ledgerBank, obsidian: obsidianBank })
-    for (const activeDesign of ['obsidian', 'ledger', 'obsidian', 'civic']) {
+    let stored = buildV2Envelope('civic', { civic: civicBank, atelier: atelierBank, obsidian: obsidianBank })
+    for (const activeDesign of ['obsidian', 'atelier', 'obsidian', 'civic']) {
       stored = mergeDesignBanks(parseV2Envelope(stored), {}, activeDesign)
       const resolved = resolveDomainDesign({ designConfig: stored })
       expect(resolved.design.key).toBe(activeDesign)
@@ -105,7 +93,7 @@ describe('P08D-T04 bank behavior', () => {
       }
     }
     expect(stored.settingsByDesign.civic).toEqual(civicBank)
-    expect(stored.settingsByDesign.ledger).toEqual(ledgerBank)
+    expect(stored.settingsByDesign.atelier).toEqual(atelierBank)
     expect(stored.settingsByDesign.obsidian).toEqual(obsidianBank)
   })
 })
@@ -143,23 +131,23 @@ describe('P08D-T04 V1/legacy fallback', () => {
 })
 
 describe('P08D-T04 bank merge and validation (save contract)', () => {
-  it('saving Civic preserves the Ledger bank and unknown banks', () => {
-    const stored = buildV2Envelope('ledger', {
-      ledger: LEDGER_REGISTER_CONFIG,
+  it('saving Civic preserves the Obsidian bank and unknown banks', () => {
+    const stored = buildV2Envelope('obsidian', {
+      obsidian: { version: 1, config: (DESIGNS.obsidian.config.defaults as ObsidianConfigV1) },
       future_design: { version: 1, config: { anything: 'preserved' } },
     })
     const merged = mergeDesignBanks(parseV2Envelope(stored), { civic: { version: 1, config: DESIGNS.civic.config.defaults } }, 'civic')
     expect(merged.activeDesign).toBe('civic')
-    expect(merged.settingsByDesign.ledger).toEqual(LEDGER_REGISTER_CONFIG)
+    expect(merged.settingsByDesign.obsidian).toBeDefined()
     expect(merged.settingsByDesign.future_design).toEqual({ version: 1, config: { anything: 'preserved' } })
     expect(merged.settingsByDesign.civic.config).toEqual(DESIGNS.civic.config.defaults)
   })
 
-  it('saving Civic alone never deletes the Ledger bank (G7)', () => {
-    const stored = buildV2Envelope('ledger', { ledger: LEDGER_REGISTER_CONFIG })
+  it('saving Civic alone never deletes another Design bank (G7)', () => {
+    const stored = buildV2Envelope('obsidian', { obsidian: { version: 1, config: (DESIGNS.obsidian.config.defaults as ObsidianConfigV1) } })
     const merged = mergeDesignBanks(parseV2Envelope(stored), { civic: { version: 1, config: DESIGNS.civic.config.defaults } }, 'civic')
-    const serialized = JSON.stringify(merged.settingsByDesign.ledger)
-    expect(serialized).toBe(JSON.stringify(LEDGER_REGISTER_CONFIG))
+    const serialized = JSON.stringify(merged.settingsByDesign.obsidian)
+    expect(serialized).toBe(JSON.stringify({ version: 1, config: DESIGNS.obsidian.config.defaults }))
   })
 
   it('validateSubmittedBanks rejects unknown keys and validates known banks', () => {

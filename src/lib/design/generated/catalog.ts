@@ -20,20 +20,6 @@ export const DESIGN_CATALOG: readonly DesignCatalogEntry[] = [
     thumbnail: "/design-assets/civic/thumbnail.svg",
   },
   {
-    key: "ledger",
-    status: "first-class",
-    name: "Ledger",
-    description: "An editorial archive: persistent side index, generous reading column, ruled register.",
-    thumbnail: "/design-assets/ledger/thumbnail.svg",
-  },
-  {
-    key: "poster",
-    status: "compatibility",
-    name: "Poster",
-    description: "A cultural publication: monumental type, asymmetric compositions, graphic destination tiles.",
-    thumbnail: "/design-assets/poster/thumbnail.svg",
-  },
-  {
     key: "obsidian",
     status: "first-class",
     name: "Obsidian",
@@ -53,7 +39,6 @@ export const DESIGN_CATALOG_KEYS: readonly DesignKey[] = DESIGN_CATALOG.map((ent
 
 export const FIRST_CLASS_DESIGNS: readonly DesignKey[] = [
   "civic",
-  "ledger",
   "obsidian",
   "atelier",
 ]

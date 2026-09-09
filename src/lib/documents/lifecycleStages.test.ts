@@ -101,7 +101,6 @@ test('T04 fresh Type seeds all four stage rows with the T02 defaults', async () 
   for (const stage of LIFECYCLE_STAGES) assert.ok(rows[stage], `${stage} row exists`)
   assert.equal(Boolean(rows.draft!.enabled), true)
   assert.equal(Boolean(rows.draft!.allowOnCreation), true)
-  assert.equal(Boolean(rows.draft!.privateDraftsAllowed), true)
   assert.equal(Boolean(rows.filed!.enabled), true)
   assert.equal(Boolean(rows.filed!.allowOnCreation), false)
   assert.equal(Boolean(rows.submitted!.enabled), false)
@@ -114,7 +113,7 @@ test('T04 lifecycle table save/load round trip incl. role lists and folders', as
     documentTypeId: typeId,
     domainId,
     stages: [
-      { stage: 'draft', enabled: true, allowOnCreation: true, folderId: draftFolderId, privateDraftsAllowed: true, readRoleIds: [headScribeRoleId, clerkRoleId], writeRoleIds: [clerkRoleId], editOthersRoleIds: [headScribeRoleId], manageRoleIds: [headScribeRoleId] },
+      { stage: 'draft', enabled: true, allowOnCreation: true, folderId: draftFolderId, readRoleIds: [headScribeRoleId, clerkRoleId], writeRoleIds: [clerkRoleId], editOthersRoleIds: [headScribeRoleId], manageRoleIds: [headScribeRoleId] },
       { stage: 'submitted', enabled: true, allowOnCreation: true, folderId: draftFolderId, readRoleIds: [headScribeRoleId], writeRoleIds: [], editOthersRoleIds: [], manageRoleIds: [headScribeRoleId] },
       { stage: 'filed', enabled: true, allowOnCreation: true, folderId: filedFolderId, readRoleIds: [headScribeRoleId, clerkRoleId], writeRoleIds: [], editOthersRoleIds: [], manageRoleIds: [headScribeRoleId] },
       { stage: 'deprecated', enabled: false, allowOnCreation: false, folderId: filedFolderId, readRoleIds: [headScribeRoleId], writeRoleIds: [], editOthersRoleIds: [], manageRoleIds: [headScribeRoleId] },

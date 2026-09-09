@@ -17,9 +17,8 @@ import { resolve } from 'node:path'
 import { pickDesignKey, validateDomainDesignConfig } from '../lib/design/config.js'
 import { buildV2Envelope, parseV2Envelope, type StoredDesignBank } from '../lib/design/v2.js'
 import type { LegacyDomainAppearance } from '../lib/design/contracts.js'
+import { DEFAULT_DESIGN_KEY } from '../lib/design/types.js'
 import { civicDefaults, civicFromLegacy, migrateCivicConfig, validateCivicConfig } from '../designs/civic/config.js'
-import { ledgerDefaults, ledgerFromLegacy, migrateLedgerConfig, validateLedgerConfig } from '../designs/ledger/config.js'
-import { posterDefaults, posterFromLegacy, migratePosterConfig, validatePosterConfig } from '../designs/poster/config.js'
 import { obsidianDefaults, obsidianFromLegacy, migrateObsidianConfig, validateObsidianConfig } from '../designs/obsidian/config.js'
 
 const MODE = process.argv.includes('--apply') ? 'apply' : process.argv.includes('--dry-run') ? 'dry-run' : null
@@ -47,8 +46,6 @@ type HistoricalConfigModule = {
 
 const CONFIG_BY_KEY: Record<string, HistoricalConfigModule> = {
   civic: { defaults: civicDefaults, fromLegacy: civicFromLegacy, validate: validateCivicConfig, migrate: migrateCivicConfig },
-  ledger: { defaults: ledgerDefaults, fromLegacy: ledgerFromLegacy, validate: validateLedgerConfig, migrate: migrateLedgerConfig },
-  poster: { defaults: posterDefaults, fromLegacy: posterFromLegacy, validate: validatePosterConfig, migrate: migratePosterConfig },
   obsidian: { defaults: obsidianDefaults, fromLegacy: obsidianFromLegacy, validate: validateObsidianConfig, migrate: migrateObsidianConfig },
 } as const
 
@@ -98,7 +95,9 @@ function planFor(row: DomainRow): { action: 'noop' | 'write'; envelope?: unknown
   // This migration owns only the designs that existed when V2 persistence was
   // introduced. A later drop-in Design is still a valid runtime key; it gets
   // an empty legacy bank and is allowed to resolve its own defaults on read.
-  const configModule = CONFIG_BY_KEY[designKey] ?? CONFIG_BY_KEY.civic
+  // Retired designs (ledger, poster) resolve through pickDesignKey's default
+  // fallback, matching the runtime's treatment of unknown keys.
+  const configModule = CONFIG_BY_KEY[designKey] ?? CONFIG_BY_KEY[DEFAULT_DESIGN_KEY]
   const appearance = rowToAppearance(row)
   const legacyContext: LegacyDomainAppearance = {
     ...appearance,

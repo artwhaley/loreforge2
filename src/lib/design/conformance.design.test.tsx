@@ -1,15 +1,8 @@
 import { render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { civic } from '@/designs/civic'
-import { civicDefaults } from '@/designs/civic/config'
-import { ledger } from '@/designs/ledger'
-import { ledgerDefaults } from '@/designs/ledger/config'
-import { poster } from '@/designs/poster'
-import { posterDefaults } from '@/designs/poster/config'
-import { obsidian } from '@/designs/obsidian'
-import { obsidianDefaults } from '@/designs/obsidian/config'
-import type { DesignDefinition } from './types'
+import { DESIGNS } from './registry'
+import type { DesignDefinition, DesignKey } from './types'
 
 import {
   ABOUT_PREVIEW_MODEL,
@@ -34,15 +27,12 @@ import {
   assertRecordsCapabilities,
   assertShellCapabilities,
   assertThinPageCapabilities,
-  type DocumentCapability,
-  type RecordsCapability,
 } from '@/lib/design/conformance'
 
 // Config is erased at the registry boundary; conformance runs each renderer
 // with its real validated defaults so config-dependent production surfaces are
 // exercised rather than hidden behind an empty fixture object.
 type Erased = DesignDefinition<object>
-type DesignKey = 'civic' | 'ledger' | 'poster' | 'obsidian'
 
 // The shared shell chrome is a client component under Next router hooks;
 // jsdom has no router, so stub the navigation surface for shell conformance.
@@ -57,19 +47,17 @@ vi.mock('next/link', () => ({
   ),
 }))
 
-const ALL_DESIGNS: Array<[DesignKey, Erased]> = [
-  ['civic', civic as unknown as Erased],
-  ['ledger', ledger as unknown as Erased],
-  ['poster', poster as unknown as Erased],
-  ['obsidian', obsidian as unknown as Erased],
-]
+// The roster is DERIVED from the registry: every discovered Design is held to
+// the full first-class contract with zero per-design bookkeeping. A Design
+// that cannot meet a capability fails loudly here instead of being listed in
+// an omit ledger that silently rots.
+const ALL_DESIGNS: Array<[DesignKey, Erased]> = Object.values(DESIGNS).map(
+  (design) => [design.key, design as unknown as Erased],
+)
 
-const DESIGN_CONFIGS: Record<DesignKey, object> = {
-  civic: civicDefaults,
-  ledger: ledgerDefaults,
-  poster: posterDefaults,
-  obsidian: obsidianDefaults,
-}
+const DESIGN_CONFIGS: Record<string, object> = Object.fromEntries(
+  Object.values(DESIGNS).map((design) => [design.key, design.config.defaults]),
+)
 
 const SHELL_THEME = { tokens: {}, headerLayout: 'centered', documentStyle: 'classic' }
 const stubAction = async () => {}
@@ -92,39 +80,23 @@ describe('P08D-T00 shell conformance', () => {
 })
 
 describe('P08D-T00 records conformance', () => {
-  // Poster remains compatibility. All first-class Designs carry the full set.
-  const RECORDS_GAPS: Record<string, readonly RecordsCapability[]> = {
-    civic: [],
-    ledger: [],
-    obsidian: [],
-    poster: ['searchSubfolders', 'typeFilter', 'import', 'supersedeRecord', 'deleteRecord', 'createFolder', 'renameFolder', 'deleteFolder', 'supersessionRepresentation'],
-  }
-
+  // Every registered Design is first-class: the complete capability set is
+  // asserted with no omissions. A future compatibility Design must either
+  // meet the contract or reintroduce an explicit, reviewed gap ledger.
   it.each(ALL_DESIGNS)('%s records represent every fixture record, folder, search, and permitted action', (_key, Design) => {
     const { container } = render(<Design.pages.records {...RECORDS_CONFORMANCE_MODEL} designConfig={DESIGN_CONFIGS[_key]} />)
-    assertRecordsCapabilities(container, RECORDS_CONFORMANCE_MODEL, { omit: RECORDS_GAPS[_key] })
+    assertRecordsCapabilities(container, RECORDS_CONFORMANCE_MODEL)
   })
 
   it.each(ALL_DESIGNS)('%s records render an empty state when nothing is readable', (_key, Design) => {
     const { container } = render(<Design.pages.records {...EMPTY_RECORDS_CONFORMANCE_MODEL} designConfig={DESIGN_CONFIGS[_key]} />)
-    assertRecordsCapabilities(container, EMPTY_RECORDS_CONFORMANCE_MODEL, { omit: RECORDS_GAPS[_key] })
-  })
-
-  it('documents the Civic records baseline: full capability set asserted with no omissions', () => {
-    const { container } = render(<civic.pages.records {...RECORDS_CONFORMANCE_MODEL} designConfig={civicDefaults} />)
-    assertRecordsCapabilities(container, RECORDS_CONFORMANCE_MODEL)
+    assertRecordsCapabilities(container, EMPTY_RECORDS_CONFORMANCE_MODEL)
   })
 })
 
 describe('P08D-T00 document conformance', () => {
-  // First-class Designs badge lifecycle state and render raw source plus
-  // predecessor links; Poster remains compatibility.
-  const DOCUMENT_GAPS: Record<string, readonly DocumentCapability[]> = {
-    civic: [],
-    ledger: [],
-    obsidian: [],
-    poster: ['bodySource', 'lifecycleRepresentation', 'predecessorLink'],
-  }
+  // Every registered Design badges lifecycle state and renders raw source
+  // plus predecessor links — the complete document contract, no omissions.
 
   const LIFECYCLE_FIXTURES = [
     ['draft', DRAFT_DOCUMENT_MODEL],
@@ -142,7 +114,7 @@ describe('P08D-T00 document conformance', () => {
       const { container } = render(
         <Design.pages.document {...fixture} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} designConfig={DESIGN_CONFIGS[_key]} />,
       )
-      assertDocumentCapabilities(container, fixture, { omit: DOCUMENT_GAPS[_key], workflowAction: stubAction, deleteAction: stubAction })
+      assertDocumentCapabilities(container, fixture, { workflowAction: stubAction, deleteAction: stubAction })
     }
   })
 
@@ -150,39 +122,7 @@ describe('P08D-T00 document conformance', () => {
     const { container } = render(
       <Design.pages.document {...STATUS_DOCUMENT_MODEL} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} designConfig={DESIGN_CONFIGS[_key]} />,
     )
-    assertDocumentCapabilities(container, STATUS_DOCUMENT_MODEL, { omit: DOCUMENT_GAPS[_key], workflowAction: stubAction, deleteAction: stubAction })
-  })
-
-  it('civic badges lifecycle state on the record sheet (T06 first-class)', () => {
-    const statusTextOf = (model: typeof DRAFT_DOCUMENT_MODEL) => {
-      const { container } = render(<civic.pages.document {...model} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} designConfig={civicDefaults} />)
-      const badge = container.querySelector('[role="status"]')
-      return badge?.textContent ?? ''
-    }
-    expect(statusTextOf(DRAFT_DOCUMENT_MODEL)).toMatch(/draft/i)
-    expect(statusTextOf(FILED_DOCUMENT_MODEL)).toMatch(/filed/i)
-    expect(statusTextOf(LOCKED_DOCUMENT_MODEL)).toMatch(/locked/i)
-  })
-
-  it('ledger badges lifecycle state on the docket (T07 first-class)', () => {
-    const statusTextOf = (model: typeof DRAFT_DOCUMENT_MODEL) => {
-      const { container } = render(<ledger.pages.document {...model} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} designConfig={ledgerDefaults} />)
-      const badge = container.querySelector('[role="status"]')
-      return badge?.textContent ?? ''
-    }
-    expect(statusTextOf(DRAFT_DOCUMENT_MODEL)).toMatch(/draft/i)
-    expect(statusTextOf(FILED_DOCUMENT_MODEL)).toMatch(/filed/i)
-    expect(statusTextOf(LOCKED_DOCUMENT_MODEL)).toMatch(/locked/i)
-  })
-
-  it('tripwire: poster does not badge lifecycle states yet (T08 closes this)', () => {
-    const { container } = render(
-      <poster.pages.document {...DRAFT_DOCUMENT_MODEL} {...VARIANT} workflowAction={stubAction} deleteAction={stubAction} designConfig={posterDefaults} />,
-    )
-    const text = container.textContent?.toLowerCase().replace(/\s+/g, ' ')
-    expect(text).not.toMatch(/\bdraft\b/)
-    expect(text).not.toMatch(/\bfiled\b/)
-    expect(text).not.toMatch(/\blocked\b/)
+    assertDocumentCapabilities(container, STATUS_DOCUMENT_MODEL, { workflowAction: stubAction, deleteAction: stubAction })
   })
 })
 

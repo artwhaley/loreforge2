@@ -1,6 +1,8 @@
 import { DatabaseSync } from 'node:sqlite'
 import { resolve } from 'node:path'
 
+import { DEFAULT_DESIGN_KEY } from '../lib/design/types.js'
+
 function databasePath(uri: string): string {
   if (!uri.startsWith('file:')) throw new Error('P08 schema migration requires a local file: DATABASE_URI.')
   const raw = decodeURIComponent(uri.slice('file:'.length).split('?')[0])
@@ -24,7 +26,7 @@ try {
   for (const table of ['domains', 'tenants']) {
     const columns = new Set((db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map((row) => row.name))
     if (columns.size === 0) continue
-    if (!columns.has('design_template')) db.exec(`ALTER TABLE ${table} ADD COLUMN design_template text DEFAULT 'civic' NOT NULL`)
+    if (!columns.has('design_template')) db.exec(`ALTER TABLE ${table} ADD COLUMN design_template text DEFAULT '${DEFAULT_DESIGN_KEY}' NOT NULL`)
     // Vocabulary removal: blank any stored values, then drop the column.
     if (columns.has('vocabulary')) {
       db.exec(`UPDATE ${table} SET vocabulary = NULL WHERE vocabulary IS NOT NULL`)

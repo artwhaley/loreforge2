@@ -23,50 +23,9 @@ import type {
   ValidationResult,
 } from './contracts'
 
-export { DESIGN_KEYS, isDesignKey } from './generated/designKeys'
+export { DEFAULT_DESIGN_KEY, DESIGN_KEYS, isDesignKey } from './generated/designKeys'
 export type { DesignKey } from './generated/designKeys'
 import type { DesignKey } from './generated/designKeys'
-
-/** A curated presentational option on a legacy visual axis (transition only). */
-export type DesignOption = {
-  key: string
-  label: string
-  description?: string
-}
-
-/** Theme Studio control descriptor — legacy schema era (transition only). */
-export type ThemeControlDefinition =
-  | { kind: 'select'; key: string; label: string; options: DesignOption[]; defaultValue: string }
-  | { kind: 'toggle'; key: string; label: string; defaultValue: boolean }
-  | { kind: 'text'; key: string; label: string; defaultValue: string }
-
-/** Curated values meaningful across nearly all Designs (legacy token contract). */
-export type DesignThemeDefaults = {
-  primary: string
-  secondary: string
-  accent: string
-  background: string
-  headingFontKey: string
-  bodyFontKey: string
-  contentWidth?: string
-}
-
-/**
- * Legacy universal theme-axes block (03_TARGET_CONTRACTS: "theme terminology"
- * section). Kept ONLY for the transition so the current studio/resolver still
- * renders before T04/V2 resolution and T06/T07 isolation land. First-class
- * Designs own their vocabulary in `config`; a new Design must not declare
- * these axes to earn status.
- */
-export type LegacyDesignTheme = {
-  defaults: DesignThemeDefaults
-  headerLayouts: readonly DesignOption[]
-  defaultHeaderLayout: string
-  documentStyles: readonly DesignOption[]
-  defaultDocumentStyle: string
-  controls: readonly ThemeControlDefinition[]
-  validate(config: unknown): unknown
-}
 
 /**
  * A source-controlled first-party LoreForge Design. Static, no plugin loader,
@@ -151,8 +110,6 @@ export type DesignDefinition<TConfig extends object = object> = {
     }
   }
 
-  /** Transitional legacy visual-axes block; replaced by `config` (T04+). */
-  legacyTheme?: LegacyDesignTheme
 }
 
 /** Design-owned visual-axes options supplied by the resolver (legacy transition). */

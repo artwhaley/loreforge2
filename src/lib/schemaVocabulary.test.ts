@@ -83,7 +83,7 @@ test('P08X-T02: type-folders is the navigation tree and lifecycle-stages is per 
   const typeFolderNames = new Set((TypeFolders.fields as Array<{ name?: string }>).map((field) => field.name))
   for (const name of ['domain', 'department', 'name', 'parent', 'systemManaged']) assert.ok(typeFolderNames.has(name), `${name} exists on TypeFolders`)
   const stageNames = new Set((LifecycleStages.fields as Array<{ name?: string }>).map((field) => field.name))
-  for (const name of ['documentType', 'stage', 'enabled', 'allowOnCreation', 'folder', 'privateDraftsAllowed', 'readRoles', 'writeRoles', 'editOthersRoles', 'manageRoles']) assert.ok(stageNames.has(name), `${name} exists on LifecycleStages`)
+  for (const name of ['documentType', 'stage', 'enabled', 'allowOnCreation', 'folder', 'readRoles', 'writeRoles', 'editOthersRoles', 'manageRoles']) assert.ok(stageNames.has(name), `${name} exists on LifecycleStages`)
   assert.deepEqual(optionValues(LifecycleStages, 'stage'), ['draft', 'submitted', 'filed', 'deprecated'])
   assert.deepEqual(LifecycleStages.indexes, [{ unique: true, fields: ['documentType', 'stage'] }], 'unique (documentType, stage) backs one row per stage')
 })

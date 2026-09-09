@@ -103,7 +103,7 @@ describe('Civic responsive + reduced-motion paths', () => {
   })
 
   it('owns responsive and reduced-motion rules in its own stylesheet (no shared template styling)', () => {
-    const source = readFileSync(path.join(__dirname, 'CivicShell.module.scss'), 'utf8')
+    const source = readFileSync(path.join(__dirname, 'CivicShell.module.css'), 'utf8')
     expect(source).toMatch(/@media \(max-width: 900px\)/)
     expect(source).toMatch(/prefers-reduced-motion: reduce/)
   })

@@ -1,12 +1,5 @@
-import { isDesignKey, type DesignKey, type DesignThemeDefaults, type LegacyDesignTheme } from './types'
+import { DEFAULT_DESIGN_KEY, isDesignKey, type DesignKey } from './types'
 import type { LegacyDomainAppearance } from './contracts'
-
-/**
- * Structural view of a Definition the compatibility helpers need. The legacy
- * helpers must accept ANY Design (config generics erased), so they take the
- * minimal shape rather than the full invariant generic (P08D-T03-D).
- */
-export type DesignLike = { legacyTheme?: LegacyDesignTheme }
 
 /**
  * Versioned, structured Domain design configuration. Long-term persistence
@@ -38,38 +31,9 @@ export type DomainDesignConfig = {
   design: Record<string, unknown>
 }
 
-/** Pick a supported design key from persisted raw value, defaulting to Civic. */
+/** Pick a supported design key from persisted raw value, defaulting to the host default Design. */
 export function pickDesignKey(value: unknown): DesignKey {
-  return isDesignKey(value) ? value : 'civic'
-}
-
-/** Fallback legacy block for Definitions that no longer declare legacy axes. */
-const EMPTY_LEGACY_THEME: LegacyDesignTheme = {
-  defaults: { primary: '#243145', secondary: '#8A6A3C', accent: '#B9975B', background: '#F3EFE6', headingFontKey: 'georgia', bodyFontKey: 'verdana' },
-  headerLayouts: [],
-  defaultHeaderLayout: 'centered',
-  documentStyles: [],
-  defaultDocumentStyle: 'classic',
-  controls: [],
-  validate: () => ({}),
-}
-
-/**
- * P08D-T03-F: explicit legacy ownership bridge. The universal visual axes are
- * no longer the runtime contract — first-class Designs own their vocabulary in
- * `config`. This reads the transitional `legacyTheme` block so the current
- * studio/resolver keep working until T04 resolution and T06/T07 isolation.
- */
-export function legacyThemeOf(design: DesignLike): LegacyDesignTheme {
-  return design.legacyTheme ?? EMPTY_LEGACY_THEME
-}
-
-/** Pick a supported option from a Design's own list, defaulting to its default. */
-export function pickDesignOption(design: DesignLike, axis: 'headerLayout' | 'documentStyle', value: unknown): string {
-  const legacy = legacyThemeOf(design)
-  const options = axis === 'headerLayout' ? legacy.headerLayouts : legacy.documentStyles
-  const defaultValue = axis === 'headerLayout' ? legacy.defaultHeaderLayout : legacy.defaultDocumentStyle
-  return typeof value === 'string' && options.some((option) => option.key === value) ? value : defaultValue
+  return isDesignKey(value) ? value : DEFAULT_DESIGN_KEY
 }
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i
@@ -122,53 +86,16 @@ export function validateDomainDesignConfig(value: unknown): DomainDesignConfig |
 }
 
 /**
- * Compatibility resolver (spec §21 Step 1): construct the effective structured
- * Design config. Order: valid persisted JSON config first, legacy scalar
- * fields second, Design defaults last. No behavior change for existing
- * Domains: pre-migration rows carry no JSON and resolve exactly as before.
+ * Effective option value for a Design axis, with safe default fallback. The
+ * universal legacy axes are derived projections of the resolved config
+ * (`legacyVariantProjection` in the resolver); persisted legacy scalars are
+ * adapted by each Design's own `fromLegacy`. Unknown stored values fall back
+ * to the structural projection defaults.
  */
-export function resolveEffectiveDomainDesign(
-  design: DesignLike,
-  domain: LegacyDomainAppearance,
-): DomainDesignConfig {
-  const legacy = legacyThemeOf(design)
-  const stored = validateDomainDesignConfig(domain.designConfig)
-  const storedKey = stored ? pickDesignKey(stored.designKey) : null
-  // A stored config names its own Design; the passed Design is the resolved
-  // one, so axis options validate against it either way.
-  const designKey = storedKey ?? pickDesignKey(domain.designTemplate)
-  const headerLayout = pickDesignOption(design, 'headerLayout', stored?.options.headerLayout ?? domain.headerLayout)
-  const documentStyle = pickDesignOption(design, 'documentStyle', stored?.options.documentStyle ?? domain.documentStyle)
-  const common = stored?.common
-  return {
-    schemaVersion: 1,
-    designKey,
-    common: {
-      primaryColor: common?.primaryColor ?? (typeof domain.primaryColor === 'string' ? domain.primaryColor : legacy.defaults.primary),
-      secondaryColor: common?.secondaryColor ?? (typeof domain.secondaryColor === 'string' ? domain.secondaryColor : legacy.defaults.secondary),
-      accentColor: common?.accentColor ?? (typeof domain.accentColor === 'string' ? domain.accentColor : legacy.defaults.accent),
-      backgroundColor: common?.backgroundColor ?? (typeof domain.backgroundColor === 'string' ? domain.backgroundColor : legacy.defaults.background),
-      headingFontKey: common?.headingFontKey ?? (typeof domain.headingFontKey === 'string' ? domain.headingFontKey : legacy.defaults.headingFontKey),
-      bodyFontKey: common?.bodyFontKey ?? (typeof domain.bodyFontKey === 'string' ? domain.bodyFontKey : legacy.defaults.bodyFontKey),
-      ...((common?.contentWidth ?? (typeof domain.contentWidth === 'string' ? domain.contentWidth : undefined)) !== undefined
-        ? { contentWidth: (common?.contentWidth ?? domain.contentWidth) as string }
-        : {}),
-    },
-    options: { headerLayout, documentStyle },
-    design: stored?.design ?? {},
-  }
+export function resolveHeaderLayout(_design: unknown, domain: LegacyDomainAppearance): string {
+  return domain.headerLayout === 'banner-forward' ? 'banner-forward' : domain.headerLayout === 'left-aligned' ? 'left-aligned' : 'centered'
 }
 
-/** Effective option value for a Design axis, with safe default fallback. */
-export function resolveHeaderLayout(design: DesignLike, domain: LegacyDomainAppearance): string {
-  return pickDesignOption(design, 'headerLayout', domain.headerLayout)
-}
-
-export function resolveDocumentStyle(design: DesignLike, domain: LegacyDomainAppearance): string {
-  return pickDesignOption(design, 'documentStyle', domain.documentStyle)
-}
-
-/** Theme Studio needs the Design's curated defaults for a pristine configuration. */
-export function designThemeDefaults(design: DesignLike): DesignThemeDefaults {
-  return { ...legacyThemeOf(design).defaults }
+export function resolveDocumentStyle(_design: unknown, domain: LegacyDomainAppearance): string {
+  return domain.documentStyle === 'modern' ? 'modern' : 'classic'
 }

@@ -4,7 +4,7 @@ import { getDocumentActions } from '@/lib/documents/presentation/actions'
 import type { DocumentPageModel } from '@/lib/page-models/document'
 
 import { DocumentPaper } from './DocumentPaper'
-import styles from './document.module.scss'
+import styles from './document.module.css'
 
 /** Official status label for the record sheet (Civic's own vocabulary). */
 function lifecycleBadgeLabel(model: DocumentPageModel): string {

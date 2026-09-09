@@ -5,10 +5,6 @@ import { describe, expect, it } from 'vitest'
 import { DESIGN_KEYS, DESIGN_METADATA, DESIGNS, resolveDesign } from '@/lib/design/registry'
 import { isDesignKey } from '@/lib/design/types'
 import { DESIGN_CATALOG, FIRST_CLASS_DESIGNS } from '@/lib/design/catalog'
-import { civic } from '@/designs/civic'
-import { ledger } from '@/designs/ledger'
-import { poster } from '@/designs/poster'
-import { obsidian } from '@/designs/obsidian'
 
 /** Stage C smoke: the registry resolves, falls back safely, and every Design is complete. */
 describe('design registry', () => {
@@ -71,21 +67,13 @@ describe('design registry', () => {
     }
   })
 
-  it('Civic and Ledger speak different config vocabularies — no shared HEADER_LAYOUTS validator', () => {
-    const civicConfig = civic.config.defaults
-    const ledgerConfig = ledger.config.defaults
-    // Civic vocabulary:
-    expect(civicConfig.layout.header).toBe('centered')
-    expect(civicConfig.document.treatment).toBe('classic')
-    // Ledger vocabulary — rail, rules, register/docket; no layout.header at all.
-    expect(ledgerConfig.rail.width).toBe('standard')
-    expect(ledgerConfig.rules.strength).toBe('standard')
-    expect(ledgerConfig.document.treatment).toBe('register')
-    expect('layout' in ledgerConfig).toBe(false)
-    expect('headerLayout' in ledgerConfig).toBe(false)
-    // Poster remains compatibility; Obsidian has its production vocabulary.
-    expect(poster.config.defaults.masthead.treatment).toBe('bold')
-    expect(obsidian.config.defaults.records.defaultView).toBe('cards')
+  it('each Design speaks its own config vocabulary — no cross-Design vocabulary leakage', () => {
+    // Per-Design vocabulary ownership is asserted inside each Design folder
+    // (`src/designs/<key>/config.design.test.ts`); this registry-level check
+    // only asserts that vocabularies are distinct OBJECTS, not shared ones.
+    const configs = DESIGN_KEYS.map((key) => DESIGNS[key].config.defaults as Record<string, unknown>)
+    const serialized = new Set(configs.map((config) => JSON.stringify(Object.keys(config).sort())))
+    expect(serialized.size).toBeGreaterThan(1)
   })
 
   it('isDesignKey narrows only the generated registered keys', () => {

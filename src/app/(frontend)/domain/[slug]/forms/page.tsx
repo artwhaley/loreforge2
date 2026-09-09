@@ -39,7 +39,7 @@ export default async function FormsPage({ params }: Props) {
       switcherTenants={myTenants}
     >
       <section className={styles.panel}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}><h1 className={styles.title}>Forms</h1>{canManageTemplates ? <Link href={`${base}/forms/new`}>Create form</Link> : null}</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}><h1 className={styles.title}>Forms</h1>{canManageTemplates ? <Link href={`${base}/document-types`} title="Forms hang off a Document Type — choose the Type first">Create form</Link> : null}</div>
         <p className={styles.intro}>
           Build and fill structured forms that generate ordinary archive records.
         </p>

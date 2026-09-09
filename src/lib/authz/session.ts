@@ -70,7 +70,6 @@ type RuleRow = {
 export type StageListFacts = {
   enabled: boolean
   allowOnCreation: boolean
-  privateDraftsAllowed: boolean
   folderId: number | null
   readRoleIds: number[]
   writeRoleIds: number[]
@@ -233,7 +232,6 @@ async function loadFacts(payload: Payload, actor: AuthzActor, domainId: number, 
     bucket.set(stage, {
       enabled: raw.enabled !== false,
       allowOnCreation: Boolean(raw.allowOnCreation),
-      privateDraftsAllowed: raw.privateDraftsAllowed !== false,
       folderId: idOf(raw.folder),
       readRoleIds: roleIdsOf(raw.readRoles),
       writeRoleIds: roleIdsOf(raw.writeRoles),

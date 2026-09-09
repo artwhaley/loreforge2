@@ -15,7 +15,7 @@ export function AtelierShell({ model, theme, designConfig, children }: DesignShe
     <OperatingContext model={model} />
     <div className={s.layout}>
       <aside className={s.rail}>
-        <a className={s.identity} href={model.routes.baseUrl}>
+        <a className={s.identity} href={model.routes.baseUrl} aria-label={`${model.domain.name} Domain home`}>
           {model.domain.logoUrl ? <img src={model.domain.logoUrl} alt="" /> : <span className={s.monogram} aria-hidden="true">{model.domain.name.slice(0, 1)}</span>}
           <span>{model.domain.name}</span>
         </a>
