@@ -1,0 +1,5 @@
+{
+ "manifestVersion":1,"designContractVersion":1,"key":"atelier","sortOrder":50,"name":"Atelier","status":"first-class",
+ "description":"Warm editorial modernism: ivory paper, charcoal navigation, copper accents, and a considered working archive.",
+ "entry":"./index.ts","preview":{"thumbnail":"assets/thumbnail.svg"}
+}

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { getActiveTenant } from '@/lib/tenant/activeTenant'
 import { getLorePayload } from '@/lib/payload'
 import { resolveDomainRouteShell } from '@/lib/design/resolveRoute'
-import { ObsidianPublicCharacterProfile } from '@/designs/obsidian/ObsidianPublicCharacterProfile'
+import type { CharacterProfilePageModel } from '@/lib/page-models/characterProfile'
 
 type Props = { params: Promise<{ slug: string; id: string }> }
 
@@ -61,26 +61,38 @@ export default async function DomainCharacterProfilePage({ params }: Props) {
   const department = assignedRole && typeof assignedRole.subdomain === 'object' ? assignedRole.subdomain : null
   const departmentName = department?.name ?? 'Domain members'
   const departmentHref = department ? `/domain/${tenant.slug}/departments/${department.slug}` : `/domain/${tenant.slug}/members`
+  const departmentDescription = department?.description ?? null
   const roleName = assignedRole?.name ?? 'Member'
   const localNote = localContexts.docs[0]?.localNote ?? ''
   const focus = localNote || character.bio || 'the shared work of the Domain'
 
+  const model: CharacterProfilePageModel = {
+    baseUrl: `/domain/${tenant.slug}`,
+    domainSlug: tenant.slug,
+    character: {
+      id: characterId,
+      name: character.name ?? 'Unnamed character',
+      kind: character.kind ?? 'character',
+      status: character.status ?? 'active',
+    },
+    departmentName,
+    departmentHref,
+    departmentDescription,
+    roleName,
+    focus,
+    backHref: `/domain/${tenant.slug}/members`,
+  }
+
   const Shell = route.design.Shell
+  const CharacterProfile = route.design.pages.characterProfile
   return (
     <Shell model={route.shell} theme={{ tokens: route.cssVars, headerLayout: route.headerLayout, documentStyle: route.documentStyle }} designConfig={route.config as object}>
-      {route.design.key === 'obsidian' ? (
-        <ObsidianPublicCharacterProfile
-          departmentHref={departmentHref}
-          departmentName={departmentName}
-          name={character.name}
-          role={roleName}
-          focus={focus}
-          description={department?.description ?? null}
-        />
+      {CharacterProfile ? (
+        <CharacterProfile {...model} designConfig={route.config as object} headerLayout={route.headerLayout} documentStyle={route.documentStyle} />
       ) : (
         <main>
-          <a href={`/domain/${tenant.slug}/members`}>Back to members</a>
-          <h1>{character.name}</h1>
+          <a href={model.backHref}>Back to members</a>
+          <h1>{model.character.name}</h1>
           <p>{character.bio || 'No public profile has been written yet.'}</p>
         </main>
       )}

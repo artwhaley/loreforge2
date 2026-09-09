@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -106,7 +106,9 @@ describe('Poster config v1 (compatibility)', () => {
 
 describe('design catalog purity', () => {
   it('exposes exactly the registered keys with basic metadata', () => {
-    expect(DESIGN_CATALOG_KEYS).toEqual(['civic', 'ledger', 'poster', 'obsidian'])
+    const root = path.join(process.cwd(), 'src/designs')
+    const keys = readdirSync(root).filter(key => existsSync(path.join(root, key, 'design.manifest.json')))
+    expect([...DESIGN_CATALOG_KEYS].sort()).toEqual(keys.sort())
   })
 
   it('the catalog module imports no React/Design bundles (payload-safe)', () => {
@@ -117,6 +119,10 @@ describe('design catalog purity', () => {
   })
 
   it('catalog status: Civic, Ledger, and Obsidian are first-class; Poster stays compatibility', () => {
-    expect(DESIGN_CATALOG.map((entry) => entry.status)).toEqual(['first-class', 'first-class', 'compatibility', 'first-class'])
+    for (const entry of DESIGN_CATALOG) {
+      const manifest = JSON.parse(readFileSync(path.join(process.cwd(), 'src/designs', entry.key, 'design.manifest.json'), 'utf8'))
+      expect(entry.status).toBe(manifest.status)
+    }
+    expect(DESIGN_CATALOG.find(entry => entry.key === 'poster')?.status).toBe('compatibility')
   })
 })

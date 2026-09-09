@@ -21,6 +21,7 @@ It owns:
 - About composition;
 - Lore composition;
 - Members directory composition (OBSIDIAN-T01);
+- Optional public character-profile surface (`pages.characterProfile`, `/domain/[slug]/characters/[id]`) with a design-neutral fallback;
 - Work composition (OBSIDIAN-T01);
 - Domain-local operational/management surfaces: Department management, Folder management, Role management, Document Type management, People search, the individual person/Character workspace, and Invitations (OBSIDIAN-T01);
 - its visual styles;
@@ -143,6 +144,12 @@ Your presentation CSS belongs in this folder.
 
 # 4. Portable Package Contract and Registration
 
+Host-specific scratch may be kept under `<key>/.design-local/<host>/`; both
+hosts ignore it for compilation, Design tests, and boundary audits. It must
+never be imported or required for rendering. Generated registries/assets stay
+outside the portable folder. Explicit sort priorities may tie; discovery sorts
+ties by key. Functional installation does not require matching source hashes.
+
 The current compile-time contract is folder-driven. A Design package must
 contain a manifest and its complete bundled defaults:
 
@@ -174,6 +181,11 @@ The manifest is pure data and must contain:
 `public/design-assets/<key>/**`; do not hand-edit that generated tree. Bundled
 references use `/design-assets/<key>/...`. Site Studio uploads remain
 `/media/...` overrides and never modify the package.
+
+If `design.manifest.json` is absent, discovery CONSTRUCTS it from the
+Design's own `DesignDefinition` (`key`, `name`, `description`, thumbnail)
+before validating — a new folder is discoverable the moment it exists, with
+no hand-written manifest, registry, route map, or host edit.
 
 Discovery generates the key set, pure catalog, and static registry. Do not add
 keys to `src/lib/design/catalog.ts`, `registry.ts`, `types.ts`, legacy theme
@@ -701,12 +713,17 @@ slots are **required in the type** — every `DesignDefinition` must declare
 satisfies them through explicitly marked compatibility renderers
 (`poster/operational.tsx`, `status: 'compatibility'`) without lowering the
 first-class standard. The ladder is closed: optional-declaration machinery from
-T01 has been removed.
+T01 has been removed, with ONE exception — `pages.characterProfile` is a
+genuinely optional surface (a Design that omits it receives the route's
+design-neutral fallback, and requiredness is unaffected).
 
 Genuinely shared editors remain shared: Templates, Forms, document
-create/edit/import flows, page editors, the review queue, and Site Studio render
-inside the selected Design's Shell via the design-aware `TenantShell`
-compatibility wrapper and stay usable under every Design.
+create/edit/import flows, page editors, and Site Studio render inside the
+selected Design's Shell via the design-aware `TenantShell` compatibility
+wrapper and stay usable under every Design. The legacy `/review` queue is a
+compatibility route that now redirects to the Work surface (the single
+authorized projection of submitted-record review); a Design never sees a
+second review contract.
 
 Do not reach into shared editor internals with fragile global selectors.
 

@@ -1,3 +1,4 @@
+import type { CharacterProfilePageModel } from '@/lib/page-models/characterProfile'
 import type { DomainShellModel } from '@/lib/page-models/shell'
 import type { HomePageModel } from '@/lib/page-models/home'
 import type { RecordsPageModel } from '@/lib/page-models/records'
@@ -532,4 +533,16 @@ export const PERSON_MANAGEMENT_MODEL: PersonManagementPageModel = {
   canManageMembers: true,
   roleFilter: 'held',
   status: null,
+}
+
+export const CHARACTER_PROFILE_PREVIEW_MODEL: CharacterProfilePageModel = {
+  baseUrl: PREVIEW_BASE,
+  domainSlug: 'preview-domain',
+  character: { id: 201, name: 'Elias Vane', kind: 'player', status: 'active' },
+  departmentName: 'Harbor Commission',
+  departmentHref: `${PREVIEW_BASE}/departments/harbor-commission`,
+  departmentDescription: 'Ships, wharves, and the ledger of arrivals.',
+  roleName: 'Dockmaster',
+  focus: 'keeping the tide tables honest',
+  backHref: `${PREVIEW_BASE}/members`,
 }

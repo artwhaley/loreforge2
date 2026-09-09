@@ -36,5 +36,6 @@
   "exclude": [
     "node_modules",
     "test-fixtures"
+    ,"src/designs/*/.design-local/**"
   ]
 }

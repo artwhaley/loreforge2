@@ -729,7 +729,8 @@ The route inventory in the repository should be checked whenever a Design is add
 | `/domain/[slug]/lore` | A | `pages.lore` |
 | `/domain/[slug]/members` | A | `pages.members` |
 | `/domain/[slug]/work` | A | `pages.work` |
-| `/domain/[slug]/review` | compatibility | resolve/delegate to Work semantics, no separate visual contract |
+| `/domain/[slug]/review` | compatibility | redirects to Work; no separate visual contract |
+| `/domain/[slug]/characters/[id]` | A (optional) | `pages.characterProfile` when present, else design-neutral fallback |
 | `/domain/[slug]/manage/departments` | A | `pages.management.departments` |
 | `/domain/[slug]/manage/folders` | A | `pages.management.folders` |
 | `/domain/[slug]/roles` | A | `pages.management.roles` |
@@ -748,13 +749,17 @@ The route inventory in the repository should be checked whenever a Design is add
 
 Any newly added Domain-local route must be classified deliberately. It must not silently become an unthemed fourth category.
 
-The current Class A catalog has no `pages.member` slot. A Domain character
-profile/deep-link route is not a portable Design slot in this baseline, and a
-new Design must not invent a canonical member-detail route or assume that a
-global Character-management route is the public Domain profile. If that route
-becomes a first-class Design surface later, add it to the contract, route
-catalog, fixtures, and parity matrix together; do not document it as present
-before then.
+The current Class A catalog has no `pages.member` slot and never will: a
+member directory is a collection surface (`pages.members`), and an individual
+person workspace is the management surface (`pages.management.person`).
+
+`pages.characterProfile` is the one OPTIONAL Class-A surface: a Design that
+implements it owns `/domain/[slug]/characters/[id]`; a Design that omits it
+receives the route's design-neutral fallback. The route never branches on
+which Design is active (no per-Design key checks in host code), and the
+optional slot never affects requiredness — the required set stays the 16
+Class A surfaces above. A new Design may implement `characterProfile` without
+any host edit; the route, fixture, and parity matrix already cover it.
 
 ---
 

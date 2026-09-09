@@ -4,6 +4,7 @@ import design_0 from '@/designs/civic'
 import design_1 from '@/designs/ledger'
 import design_2 from '@/designs/poster'
 import design_3 from '@/designs/obsidian'
+import design_4 from '@/designs/atelier'
 import type { DesignDefinition, DesignKey } from '../types'
 import { isDesignKey } from './designKeys'
 import { DESIGN_CATALOG, type DesignCatalogEntry } from './catalog'
@@ -18,12 +19,21 @@ export const DESIGNS: Record<DesignKey, DesignDefinition> = {
   "ledger": eraseConfig(design_1),
   "poster": eraseConfig(design_2),
   "obsidian": eraseConfig(design_3),
+  "atelier": eraseConfig(design_4),
 }
 
 export const DESIGN_KEYS = GENERATED_DESIGN_KEYS
 
 export function resolveDesign(key: unknown): DesignDefinition {
-  return isDesignKey(key) ? DESIGNS[key] : DESIGNS.civic
+  return isDesignKey(key) ? DESIGNS[key] : DESIGNS[GENERATED_DESIGN_KEYS[0]]
+}
+
+export function getDesignDefinitions(): DesignDefinition[] {
+  return DESIGN_KEYS.map((key) => DESIGNS[key])
+}
+
+export function getDesignDefinition(key: string): DesignDefinition | undefined {
+  return isDesignKey(key) ? DESIGNS[key] : undefined
 }
 
 export const DESIGN_METADATA: DesignCatalogEntry[] = DESIGN_KEYS.map((key) => {

@@ -7,6 +7,7 @@ import { ObsidianStudioEditor } from './studio/ObsidianStudioEditor'
 import { ObsidianAboutView, ObsidianDepartmentView, ObsidianDepartmentsView, ObsidianHomeView, ObsidianLoreView } from './thin'
 import { ObsidianDepartments as ObsidianDepartmentsManagement, ObsidianDocumentTypes, ObsidianFolders, ObsidianInvitations, ObsidianMembers, ObsidianPeople, ObsidianPerson, ObsidianRoles, ObsidianWork } from './operational'
 import { migrateObsidianConfig, obsidianDefaults, obsidianFromLegacy, resolveObsidianTheme, validateObsidianConfig } from './config'
+import { ObsidianPublicCharacterProfile } from './ObsidianPublicCharacterProfile'
 
 /**
  * Obsidian Design definition. It is a first-class production renderer: the
@@ -39,6 +40,7 @@ export const obsidian: DesignDefinition<ObsidianConfigV1> = {
     lore: ObsidianLoreView,
     work: ObsidianWork,
     members: ObsidianMembers,
+    characterProfile: ObsidianPublicCharacterProfile,
     management: {
       departments: ObsidianDepartmentsManagement,
       folders: ObsidianFolders,

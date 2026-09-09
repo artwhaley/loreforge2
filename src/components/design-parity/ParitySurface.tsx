@@ -1,5 +1,8 @@
 'use client'
 
+import { useSearchParams } from 'next/navigation'
+
+import type { CharacterProfilePageModel } from '@/lib/page-models/characterProfile'
 import type { AboutPageModel, LorePageModel } from '@/lib/page-models/info'
 import type { DepartmentPageModel, DepartmentsPageModel } from '@/lib/page-models/departments'
 import type { DocumentPageModel } from '@/lib/page-models/document'
@@ -17,6 +20,7 @@ import { resolveDesign } from '@/lib/design/registry'
 import { designPreviewTheme } from '@/lib/design/previewTheme'
 import {
   ABOUT_PREVIEW_MODEL,
+  CHARACTER_PROFILE_PREVIEW_MODEL,
   DEPARTMENT_PREVIEW_MODEL,
   DEPARTMENTS_MANAGEMENT_MODEL,
   DEPARTMENTS_PREVIEW_MODEL,
@@ -45,6 +49,7 @@ type Surface =
   | 'lore'
   | 'members'
   | 'work'
+  | 'character-profile'
   | 'management-departments'
   | 'management-folders'
   | 'management-roles'
@@ -71,6 +76,7 @@ function pageModel(surface: Surface) {
     case 'lore': return productionParityModel(LORE_PREVIEW_MODEL) as LorePageModel
     case 'members': return productionParityModel(MEMBERS_MANAGEMENT_MODEL) as MembersPageModel
     case 'work': return productionParityModel(WORK_MANAGEMENT_MODEL) as WorkPageModel
+    case 'character-profile': return productionParityModel(CHARACTER_PROFILE_PREVIEW_MODEL) as CharacterProfilePageModel
     case 'management-departments': return productionParityModel(DEPARTMENTS_MANAGEMENT_MODEL) as DepartmentsManagementPageModel
     case 'management-folders': return productionParityModel(FOLDERS_MANAGEMENT_MODEL) as FolderManagementPageModel
     case 'management-roles': return productionParityModel(ROLES_MANAGEMENT_MODEL) as RoleManagementPageModel
@@ -86,10 +92,11 @@ function parityPath(surface: Surface): string {
 }
 
 export function ParitySurface({ surface }: { surface: string }) {
+  const searchParams = useSearchParams()
   if (!isSurface(surface)) return <p data-parity-error>Unknown parity surface: {surface}</p>
 
-  const design = resolveDesign('obsidian')
-  const theme = designPreviewTheme('obsidian', design.config.defaults)
+  const design = resolveDesign(searchParams.get('design') ?? 'obsidian')
+  const theme = designPreviewTheme(design.key, design.config.defaults)
   const config = design.config.defaults
   const shell = productionParityModel(SHELL_PREVIEW_MODEL)
   const model = pageModel(surface)
@@ -105,6 +112,9 @@ export function ParitySurface({ surface }: { surface: string }) {
       case 'lore': return <design.pages.lore {...model as LorePageModel} designConfig={config} headerLayout={theme.headerLayout} documentStyle={theme.documentStyle} />
       case 'members': return <design.pages.members {...model as MembersPageModel} designConfig={config} headerLayout={theme.headerLayout} documentStyle={theme.documentStyle} />
       case 'work': return <design.pages.work {...model as WorkPageModel} designConfig={config} headerLayout={theme.headerLayout} documentStyle={theme.documentStyle} approveAction={noop} rejectAction={noop} />
+      case 'character-profile': return design.pages.characterProfile
+        ? <design.pages.characterProfile {...model as CharacterProfilePageModel} designConfig={config} headerLayout={theme.headerLayout} documentStyle={theme.documentStyle} />
+        : <main><a href={PARITY_BASE + '/members'}>Back to members</a><h1>{(model as CharacterProfilePageModel).character.name}</h1></main>
       case 'management-departments': return <design.pages.management.departments {...model as DepartmentsManagementPageModel} designConfig={config} headerLayout={theme.headerLayout} documentStyle={theme.documentStyle} />
       case 'management-folders': return <design.pages.management.folders {...model as FolderManagementPageModel} designConfig={config} headerLayout={theme.headerLayout} documentStyle={theme.documentStyle} />
       case 'management-roles': return <design.pages.management.roles {...model as RoleManagementPageModel} designConfig={config} headerLayout={theme.headerLayout} documentStyle={theme.documentStyle} />
@@ -139,7 +149,7 @@ function canonicalSurfaceKey(surface: Surface): string {
 
 function isSurface(value: string): value is Surface {
   return [
-    'home', 'records', 'document', 'departments', 'department', 'about', 'lore', 'members', 'work',
+    'home', 'records', 'document', 'departments', 'department', 'about', 'lore', 'members', 'work', 'character-profile',
     'management-departments', 'management-folders', 'management-roles', 'management-document-types',
     'management-people', 'management-person', 'management-invitations',
   ].includes(value)

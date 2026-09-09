@@ -41,10 +41,97 @@ function safeRelativePath(value, field) {
   return value
 }
 
+/**
+ * Compile-time manifest construction: the DesignDefinition exported from the
+ * folder's index.ts is the single source of truth for installable metadata.
+ * A folder dropped in without a manifest is constructed automatically; an
+ * existing manifest is validated and cross-checked against the definition.
+ */
+function extractDefinitionMetadata(indexSource, folderName) {
+  const marker = indexSource.match(/export\s+const\s+[A-Za-z0-9_$]+\s*:\s*DesignDefinition[^=]*=\s*\{/)
+  if (!marker || marker.index === undefined) {
+    // No named `export const <name>: DesignDefinition` in the entry. That is
+    // tolerated ONLY when a manifest already exists (the manifest carries the
+    // installable metadata); automatic construction requires the const so the
+    // definition can be read at compile time.
+    return null
+  }
+  const start = marker.index + marker[0].length - 1
+  let depth = 0
+  let inString = null
+  let escaped = false
+  let end = -1
+  for (let index = start; index < indexSource.length; index += 1) {
+    const ch = indexSource[index]
+    if (inString) {
+      if (escaped) escaped = false
+      else if (ch === '\\') escaped = true
+      else if (ch === inString) inString = null
+      continue
+    }
+    if (ch === '"' || ch === "'" || ch === '`') { inString = ch; continue }
+    if (ch === '{') depth += 1
+    else if (ch === '}') { depth -= 1; if (depth === 0) { end = index; break } }
+  }
+  if (end === -1) fail(`${folderName}: cannot find the end of the exported DesignDefinition object`)
+  const body = indexSource.slice(start + 1, end)
+  const grab = (key) => {
+    const match = body.match(new RegExp(`\\b${key}\\s*:\\s*(["'])((?:\\\\.|(?!\\1).)*)\\1`))
+    return match ? match[2] : undefined
+  }
+  const thumbnailMatch = body.match(/preview\s*:\s*\{\s*thumbnail\s*:\s*(["'])((?:\\\\.|(?!\\1).)*)\1/)
+  const thumbnail = thumbnailMatch ? thumbnailMatch[2] : undefined
+  const metadata = { key: grab('key'), status: grab('status'), name: grab('name'), description: grab('description'), thumbnail }
+  if (!metadata.key || !KEY_PATTERN.test(metadata.key)) fail(`${folderName}: DesignDefinition must declare a valid lowercase-hyphen key`)
+  if (metadata.key !== folderName) fail(`${folderName}: DesignDefinition key ${metadata.key} does not match folder ${folderName}`)
+  if (metadata.status !== 'first-class' && metadata.status !== 'compatibility') fail(`${folderName}: DesignDefinition has an invalid status`)
+  if (!metadata.name || metadata.name.trim() === '') fail(`${folderName}: DesignDefinition name must be non-empty`)
+  if (!metadata.description || metadata.description.trim() === '') fail(`${folderName}: DesignDefinition description must be non-empty`)
+  const expectedUrl = `/design-assets/${folderName}/`
+  if (!metadata.thumbnail || !metadata.thumbnail.startsWith(expectedUrl)) {
+    fail(`${folderName}: DesignDefinition preview.thumbnail must use the generated URL ${expectedUrl}<relative-path>`)
+  }
+  metadata.thumbnail = `assets/${metadata.thumbnail.slice(expectedUrl.length)}`
+  if (!metadata.thumbnail.endsWith('.svg') && !metadata.thumbnail.endsWith('.png')) fail(`${folderName}: preview.thumbnail must be a bundled svg/png asset`)
+  return metadata
+}
+
+function constructedManifest(folderName, metadata, sortOrder) {
+  return {
+    manifestVersion: MANIFEST_VERSION,
+    designContractVersion: DESIGN_CONTRACT_VERSION,
+    key: folderName,
+    ...(sortOrder === undefined ? {} : { sortOrder }),
+    name: metadata.name,
+    status: metadata.status,
+    description: metadata.description,
+    entry: './index.ts',
+    preview: { thumbnail: metadata.thumbnail },
+  }
+}
+
 function readManifest(designRoot, folderName) {
   const designDir = path.join(designRoot, folderName)
   const manifestPath = path.join(designDir, 'design.manifest.json')
-  if (!existsSync(manifestPath)) fail(`${folderName} is missing design.manifest.json`)
+  const indexPath = path.join(designDir, 'index.ts')
+  if (!existsSync(indexPath)) fail(`${folderName} is missing index.ts (the Design entrypoint)`)
+  const metadata = extractDefinitionMetadata(readFileSync(indexPath, 'utf8'), folderName)
+  const designDirReal = realpathSync(designDir)
+  const designRootReal = realpathSync(designRoot)
+  if (path.dirname(designDirReal) !== designRootReal) fail(`${designDir} is a symlink escaping the Design root`)
+  for (const relativePath of ['index.ts', ...(metadata ? [`assets/${metadata.thumbnail.slice('assets/'.length)}`] : [])]) {
+    const resolved = path.resolve(designDirReal, relativePath)
+    if (!resolved.startsWith(`${designDirReal}${path.sep}`)) fail(`${manifestPath} path escapes its Design folder`)
+    if (!existsSync(resolved)) fail(`${manifestPath} references missing ${relativePath}`)
+  }
+  if (!existsSync(manifestPath)) {
+    // Automatic compile-time manifest construction: a folder dropped in with
+    // only its index.ts + assets gets its manifest derived from the definition.
+    if (!metadata) {
+      fail(`${folderName}: automatic manifest construction requires index.ts to export \`export const <name>: DesignDefinition<...> = { ... }\` (a manifest already exists and carries the metadata)`)
+    }
+    return { manifest: constructedManifest(folderName, metadata, undefined), constructed: true }
+  }
   let raw
   try {
     raw = JSON.parse(readFileSync(manifestPath, 'utf8'))
@@ -64,15 +151,21 @@ function readManifest(designRoot, folderName) {
   if (!raw.preview || typeof raw.preview !== 'object' || Array.isArray(raw.preview)) fail(`${manifestPath} preview must be an object`)
   const thumbnail = safeRelativePath(raw.preview.thumbnail, `${manifestPath} preview.thumbnail`)
   if (!thumbnail.startsWith('assets/')) fail(`${manifestPath} preview.thumbnail must point into the Design assets folder`)
-  const designDirReal = realpathSync(designDir)
-  const designRootReal = realpathSync(designRoot)
-  if (path.dirname(designDirReal) !== designRootReal) fail(`${designDir} is a symlink escaping the Design root`)
-  for (const relativePath of ['index.ts', thumbnail]) {
-    const resolved = path.resolve(designDirReal, relativePath)
-    if (!resolved.startsWith(`${designDirReal}${path.sep}`)) fail(`${manifestPath} path escapes its Design folder`)
-    if (!existsSync(resolved)) fail(`${manifestPath} references missing ${relativePath}`)
+  if (!existsSync(path.resolve(designDirReal, thumbnail))) fail(`${manifestPath} references missing ${thumbnail}`)
+  // The DesignDefinition is the source of truth: every installable metadata
+  // field must agree with it. Auto-heal drift in write mode; fail in --check.
+  // When the entry does not export a named const, the manifest is authoritative.
+  if (metadata) {
+    const expected = constructedManifest(folderName, metadata, raw.sortOrder)
+    const fieldMismatch = (field) => JSON.stringify(raw[field]) !== JSON.stringify(expected[field])
+    const drifted = ['key', 'status', 'name', 'description', 'preview'].some(fieldMismatch)
+    if (drifted) {
+      if (process.argv.includes('--check')) fail(`${manifestPath} metadata disagrees with its DesignDefinition (run discovery to heal)`)
+      console.warn(`[design discovery] ${manifestPath} drifted from its DesignDefinition; rewriting`)
+      return { manifest: constructedManifest(folderName, metadata, raw.sortOrder), constructed: false, heal: true }
+    }
   }
-  return { manifestVersion: MANIFEST_VERSION, designContractVersion: DESIGN_CONTRACT_VERSION, key: raw.key, ...(raw.sortOrder === undefined ? {} : { sortOrder: raw.sortOrder }), name: raw.name, status: raw.status, description: raw.description, entry: './index.ts', preview: { thumbnail } }
+  return { manifest: { ...raw, entry: './index.ts' }, constructed: false }
 }
 
 function expectedSource(keys) {
@@ -89,7 +182,7 @@ function expectedCatalog(manifests) {
 function expectedRegistry(manifests) {
   const imports = manifests.map((manifest, index) => `import design_${index} from '@/designs/${manifest.key}'`).join('\n')
   const entries = manifests.map((manifest, index) => `  ${JSON.stringify(manifest.key)}: eraseConfig(design_${index}),`).join('\n')
-  return `// AUTO-GENERATED by scripts/discover-designs.mjs. Do not edit.\n\n${imports}\nimport type { DesignDefinition, DesignKey } from '../types'\nimport { isDesignKey } from './designKeys'\nimport { DESIGN_CATALOG, type DesignCatalogEntry } from './catalog'\nimport { DESIGN_KEYS as GENERATED_DESIGN_KEYS } from './designKeys'\n\nfunction eraseConfig<TConfig extends object>(definition: DesignDefinition<TConfig>): DesignDefinition {\n  return definition as unknown as DesignDefinition\n}\n\nexport const DESIGNS: Record<DesignKey, DesignDefinition> = {\n${entries}\n}\n\nexport const DESIGN_KEYS = GENERATED_DESIGN_KEYS\n\nexport function resolveDesign(key: unknown): DesignDefinition {\n  return isDesignKey(key) ? DESIGNS[key] : DESIGNS.civic\n}\n\nexport const DESIGN_METADATA: DesignCatalogEntry[] = DESIGN_KEYS.map((key) => {\n  const entry = DESIGN_CATALOG.find((candidate) => candidate.key === key)\n  if (!entry) throw new Error(\`catalog missing metadata for \${key}\`)\n  return { ...entry }\n})\n`
+  return `// AUTO-GENERATED by scripts/discover-designs.mjs. Do not edit.\n\n${imports}\nimport type { DesignDefinition, DesignKey } from '../types'\nimport { isDesignKey } from './designKeys'\nimport { DESIGN_CATALOG, type DesignCatalogEntry } from './catalog'\nimport { DESIGN_KEYS as GENERATED_DESIGN_KEYS } from './designKeys'\n\nfunction eraseConfig<TConfig extends object>(definition: DesignDefinition<TConfig>): DesignDefinition {\n  return definition as unknown as DesignDefinition\n}\n\nexport const DESIGNS: Record<DesignKey, DesignDefinition> = {\n${entries}\n}\n\nexport const DESIGN_KEYS = GENERATED_DESIGN_KEYS\n\nexport function resolveDesign(key: unknown): DesignDefinition {\n  return isDesignKey(key) ? DESIGNS[key] : DESIGNS[GENERATED_DESIGN_KEYS[0]]\n}\n\nexport function getDesignDefinitions(): DesignDefinition[] {\n  return DESIGN_KEYS.map((key) => DESIGNS[key])\n}\n\nexport function getDesignDefinition(key: string): DesignDefinition | undefined {\n  return isDesignKey(key) ? DESIGNS[key] : undefined\n}\n\nexport const DESIGN_METADATA: DesignCatalogEntry[] = DESIGN_KEYS.map((key) => {\n  const entry = DESIGN_CATALOG.find((candidate) => candidate.key === key)\n  if (!entry) throw new Error(\`catalog missing metadata for \${key}\`)\n  return { ...entry }\n})\n`
 }
 
 function expectedRegistryGuard() {
@@ -174,13 +267,23 @@ export function discoverDesigns({ designRoot, outputFile, publicRoot, check = fa
   const resolvedOutputFile = path.resolve(outputFile ?? path.join(REPO_ROOT, 'src', 'lib', 'design', 'generated', 'designKeys.ts'))
   if (!existsSync(resolvedDesignRoot) || !lstatSync(resolvedDesignRoot).isDirectory()) fail(`Design root does not exist: ${resolvedDesignRoot}`)
   const folders = readdirSync(resolvedDesignRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory() && !NON_DESIGN_FOLDERS.has(entry.name)).map((entry) => entry.name).sort((left, right) => left.localeCompare(right, 'en'))
-  const manifests = folders.map((folderName) => readManifest(resolvedDesignRoot, folderName)).sort((left, right) => {
+  // A directory under the Design root only becomes a Design when it contains
+  // an entrypoint or a manifest. Scaffolds mid-creation (neither marker yet)
+  // are skipped with a note instead of failing the whole tree.
+  const designFolders = folders.filter((folderName) => {
+    const dir = path.join(resolvedDesignRoot, folderName)
+    const isDesign = existsSync(path.join(dir, 'index.ts')) || existsSync(path.join(dir, 'design.manifest.json'))
+    if (!isDesign) console.warn(`[design discovery] skipping ${folderName}: not a Design (no index.ts and no design.manifest.json)`)
+    return isDesign
+  })
+  const loaded = designFolders.map((folderName) => readManifest(resolvedDesignRoot, folderName))
+  const manifests = loaded.map((entry) => entry.manifest).sort((left, right) => {
     const leftOrder = left.sortOrder ?? Number.MAX_SAFE_INTEGER
     const rightOrder = right.sortOrder ?? Number.MAX_SAFE_INTEGER
     return leftOrder - rightOrder || left.key.localeCompare(right.key, 'en')
   })
-  const explicitOrders = manifests.filter((manifest) => manifest.sortOrder !== undefined).map((manifest) => manifest.sortOrder)
-  if (new Set(explicitOrders).size !== explicitOrders.length) fail('duplicate Design manifest sortOrder values discovered')
+  // Ordering is a presentation preference, not a globally allocated package ID.
+  // Independently authored folders may share a priority; the key breaks ties.
   const keys = manifests.map((manifest) => manifest.key)
   if (new Set(keys).size !== keys.length) fail('duplicate Design keys discovered')
   const contents = {
@@ -201,16 +304,22 @@ export function discoverDesigns({ designRoot, outputFile, publicRoot, check = fa
     }
   } else {
     for (const name of Object.keys(outputFiles)) writeAtomically(outputFiles[name], contents[name])
+    for (const entry of loaded) {
+      if (entry.constructed || entry.heal) {
+        const manifestPath = path.join(resolvedDesignRoot, entry.manifest.key, 'design.manifest.json')
+        writeFileSync(manifestPath, `${JSON.stringify(entry.manifest, null, 2)}\n`, 'utf8')
+      }
+    }
   }
   const assets = materializeDesignAssets({ designRoot: resolvedDesignRoot, manifests, publicRoot: publicRoot ?? path.join(REPO_ROOT, 'public'), check })
-  return { designRoot: resolvedDesignRoot, outputFile: resolvedOutputFile, outputFiles, keys, manifests, contents, assets }
+  return { designRoot: resolvedDesignRoot, outputFile: resolvedOutputFile, outputFiles, keys, manifests, contents, assets, constructed: loaded.filter((entry) => entry.constructed).map((entry) => entry.manifest.key) }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const args = parseArgs(process.argv.slice(2))
     const result = discoverDesigns(args)
-    console.log(`${args.check ? 'checked' : 'discovered'} ${result.keys.length} Designs: ${result.keys.join(', ')}`)
+    console.log(`${args.check ? 'checked' : 'discovered'} ${result.keys.length} Designs: ${result.keys.join(', ')}${result.constructed.length ? ` (manifest constructed for ${result.constructed.join(', ')})` : ''}`)
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error))
     process.exitCode = 1

@@ -14,7 +14,7 @@ const legacyPresentationMessage =
 
 export default defineConfig([
   ...nextVitals,
-  globalIgnores(['.next/**', 'node_modules/**', 'src/payload-types.ts', 'src/app/(payload)/**']),
+  globalIgnores(['.next/**', 'node_modules/**', 'src/payload-types.ts', 'src/app/(payload)/**', 'src/designs/*/.design-local/**']),
   {
     files: ['src/designs/**/*.ts', 'src/designs/**/*.tsx'],
     rules: {

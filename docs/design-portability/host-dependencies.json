@@ -1,11 +1,180 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "sourceRoot": "src/designs",
   "sanctionedAssetNamespaces": [
     "/media/<stored-file>",
     "/design-assets/<key>/<relative-path>"
   ],
+  "authorizedApiSeam": [
+    "/api/folders",
+    "/api/departments",
+    "/api/role-assignments",
+    "/api/character-claims",
+    "/api/invitations/revoke",
+    "/api/invitations/join-decision",
+    "/api/records-search"
+  ],
   "packages": [
+    {
+      "key": "atelier",
+      "manifest": {
+        "manifestVersion": 1,
+        "designContractVersion": 1,
+        "entry": "./index.ts",
+        "status": "first-class"
+      },
+      "importsOutsideFolder": [
+        {
+          "file": "src/designs/atelier/AtelierShell.tsx",
+          "specifier": "@/components/platform/OperatingContext",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/AtelierShell.tsx",
+          "specifier": "@/lib/design/types",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/AtelierStudio.tsx",
+          "specifier": "@/lib/design/contracts",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/config.ts",
+          "specifier": "@/lib/design/types",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/config.ts",
+          "specifier": "@/lib/design/contracts",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/config.ts",
+          "specifier": "@/lib/design/validate",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/config.ts",
+          "specifier": "@/lib/theme/fonts",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/index.ts",
+          "specifier": "@/lib/design/types",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/public.tsx",
+          "specifier": "@/lib/page-models/home",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/public.tsx",
+          "specifier": "@/lib/page-models/info",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/public.tsx",
+          "specifier": "@/lib/page-models/departments",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/public.tsx",
+          "specifier": "@/lib/page-models/characterProfile",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/public.tsx",
+          "specifier": "@/lib/design/types",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/public.tsx",
+          "specifier": "@/lib/documents/presentation/actions",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/workspaces.tsx",
+          "specifier": "@/lib/page-models/records",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/workspaces.tsx",
+          "specifier": "@/lib/page-models/members",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/workspaces.tsx",
+          "specifier": "@/lib/page-models/management/departments",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/workspaces.tsx",
+          "specifier": "@/lib/page-models/management/folders",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/workspaces.tsx",
+          "specifier": "@/lib/page-models/management/roles",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/workspaces.tsx",
+          "specifier": "@/lib/page-models/management/documentTypes",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/workspaces.tsx",
+          "specifier": "@/lib/page-models/management/people",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/workspaces.tsx",
+          "specifier": "@/lib/page-models/management/invitations",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/workspaces.tsx",
+          "specifier": "@/lib/design/types",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/workspaces.tsx",
+          "specifier": "@/lib/page-models/common",
+          "kind": "generic-host-import"
+        }
+      ],
+      "genericHostImports": [],
+      "npmImports": [
+        {
+          "file": "src/designs/atelier/AtelierShell.tsx",
+          "specifier": "react"
+        },
+        {
+          "file": "src/designs/atelier/AtelierShell.tsx",
+          "specifier": "next/navigation"
+        },
+        {
+          "file": "src/designs/atelier/AtelierShell.tsx",
+          "specifier": "next/link"
+        },
+        {
+          "file": "src/designs/atelier/primitives.tsx",
+          "specifier": "react"
+        },
+        {
+          "file": "src/designs/atelier/workspaces.tsx",
+          "specifier": "react"
+        }
+      ],
+      "crossDesignImports": [],
+      "boundaryEscapes": [],
+      "assetRefsOutsideSanctionedNamespaces": [],
+      "staticApiEndpoints": [],
+      "testFilesExcluded": [],
+      "errors": []
+    },
     {
       "key": "civic",
       "manifest": {
@@ -573,6 +742,16 @@
         {
           "file": "src/designs/obsidian/ObsidianOperationalSurfaces.tsx",
           "specifier": "@/lib/design/hostActionBridges",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/obsidian/ObsidianPublicCharacterProfile.tsx",
+          "specifier": "@/lib/page-models/characterProfile",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/obsidian/ObsidianPublicCharacterProfile.tsx",
+          "specifier": "@/lib/design/types",
           "kind": "generic-host-import"
         },
         {

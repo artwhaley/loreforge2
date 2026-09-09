@@ -12,7 +12,7 @@ const validate = (raw: unknown): ValidationResult<PortabilityProbeConfig> =>
     ? { ok: true, value: defaults }
     : { ok: false, errors: ['tone must be quiet'] }
 
-const probe: DesignDefinition<PortabilityProbeConfig> = {
+export const probe: DesignDefinition<PortabilityProbeConfig> = {
   key: 'portability-probe',
   status: 'compatibility',
   name: 'Portability Probe',
@@ -63,5 +63,4 @@ const probe: DesignDefinition<PortabilityProbeConfig> = {
   },
 }
 
-export { probe }
 export default probe

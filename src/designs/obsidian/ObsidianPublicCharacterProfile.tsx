@@ -1,29 +1,19 @@
 import { ArrowLeft, Building2, Focus, UserRound } from "lucide-react";
+import type { CharacterProfilePageModel } from "@/lib/page-models/characterProfile";
+import type { ObsidianConfigV1 } from "./config";
+import type { DesignConfigProps, DesignVariantProps } from "@/lib/design/types";
 import s from "./obsidian.module.css";
 
-export type ObsidianPublicCharacterProfileProps = {
-  departmentHref: string;
-  departmentName: string;
-  name: string;
-  role: string;
-  focus: string;
-  description: string | null;
-};
-
-/** Public character surface ported from the incubator profile composition. */
-export function ObsidianPublicCharacterProfile({
-  departmentHref,
-  departmentName,
-  name,
-  role,
-  focus,
-  description,
-}: ObsidianPublicCharacterProfileProps) {
+/** Public character surface — the Design-owned implementation of the optional `characterProfile` slot. */
+export function ObsidianPublicCharacterProfile(
+  props: CharacterProfilePageModel & DesignVariantProps & DesignConfigProps<ObsidianConfigV1>,
+) {
+  const { character, departmentHref, departmentName, departmentDescription, roleName, focus, backHref } = props;
   const normalizedFocus = focus.trim() || "the shared work of the Domain";
   return (
     <div className={s.publicPage}>
-      <a href={departmentHref} className={s.backLink}>
-        <ArrowLeft size={15} /> Back to {departmentName}
+      <a href={backHref} className={s.backLink}>
+        <ArrowLeft size={15} /> Back to members
       </a>
       <section className={s.characterProfileHero}>
         <div className={s.characterProfileIdentity}>
@@ -32,8 +22,8 @@ export function ObsidianPublicCharacterProfile({
           </span>
           <div>
             <p className={s.eyebrow}>CHARACTER PROFILE</p>
-            <h1>{name}</h1>
-            <p className={s.characterProfileRole}>{role}</p>
+            <h1>{character.name}</h1>
+            <p className={s.characterProfileRole}>{roleName}</p>
           </div>
         </div>
         <span className={s.characterProfileDepartment}>
@@ -46,11 +36,11 @@ export function ObsidianPublicCharacterProfile({
           <dl>
             <div>
               <dt>Role</dt>
-              <dd>{role}</dd>
+              <dd>{roleName}</dd>
             </div>
             <div>
               <dt>Department</dt>
-              <dd>{departmentName}</dd>
+              <dd><a href={departmentHref}>{departmentName}</a></dd>
             </div>
             <div>
               <dt>Focus</dt>
@@ -60,10 +50,10 @@ export function ObsidianPublicCharacterProfile({
         </aside>
         <article className={s.characterProfileCopy}>
           <p className={s.eyebrow}><Focus size={14} /> IN THE REACH</p>
-          <h2>{name} keeps {normalizedFocus.toLowerCase()} in motion.</h2>
+          <h2>{character.name} keeps {normalizedFocus.toLowerCase()} in motion.</h2>
           <p>
-            As {role.toLowerCase()} within {departmentName}, {name} helps
-            shape the work described by the department: {description?.toLowerCase() ?? "the shared work of the department"}.
+            As {roleName.toLowerCase()} within {departmentName}, {character.name} helps
+            shape the work described by the department: {departmentDescription?.toLowerCase() ?? "the shared work of the department"}.
           </p>
           <p>
             This profile is the public-facing place for a character’s role,

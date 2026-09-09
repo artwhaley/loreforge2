@@ -20,6 +20,7 @@ test('discovery generates deterministic keys and detects stale output', () => {
       manifestVersion: 1,
       designContractVersion: 1,
       key: 'probe',
+      sortOrder: 100,
       name: 'Probe',
       status: 'first-class',
       description: 'Probe',
@@ -39,6 +40,7 @@ test('discovery generates deterministic keys and detects stale output', () => {
       manifestVersion: 1,
       designContractVersion: 1,
       key: 'second',
+      sortOrder: 100,
       name: 'Second',
       status: 'compatibility',
       description: 'Second',
@@ -46,6 +48,7 @@ test('discovery generates deterministic keys and detects stale output', () => {
       preview: { thumbnail: 'assets/thumbnail.svg' },
     }))
     assert.throws(() => discoverDesigns({ designRoot, outputFile, publicRoot, check: true }), /stale/)
+    assert.deepEqual(discoverDesigns({ designRoot, outputFile, publicRoot }).keys, ['probe', 'second'])
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

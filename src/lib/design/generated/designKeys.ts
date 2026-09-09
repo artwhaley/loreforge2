@@ -5,6 +5,7 @@ export const DESIGN_KEYS = [
   'ledger',
   'poster',
   'obsidian',
+  'atelier',
 ] as const
 
 export type DesignKey = (typeof DESIGN_KEYS)[number]

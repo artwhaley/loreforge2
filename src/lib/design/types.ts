@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 
 import type { AboutPageModel } from '@/lib/page-models/info'
 import type { LorePageModel } from '@/lib/page-models/info'
+import type { CharacterProfilePageModel } from '@/lib/page-models/characterProfile'
 import type { DepartmentsPageModel, DepartmentPageModel } from '@/lib/page-models/departments'
 import type { DocumentPageModel } from '@/lib/page-models/document'
 import type { HomePageModel } from '@/lib/page-models/home'
@@ -132,6 +133,13 @@ export type DesignDefinition<TConfig extends object = object> = {
      */
     work: ComponentType<WorkDesignViewProps & DesignVariantProps & DesignConfigProps<TConfig>>
     members: ComponentType<MembersPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
+    /**
+     * OPTIONAL public character-profile surface (OBSIDIAN-T11). A Design that
+     * implements it owns `/characters/[id]`; a Design that omits it receives
+     * the route's Design-neutral fallback. Optional slots never affect
+     * requiredness: REQUIRED_DESIGN_SLOTS stays the 16 Class A surfaces.
+     */
+    characterProfile?: ComponentType<CharacterProfilePageModel & DesignVariantProps & DesignConfigProps<TConfig>>
     management: {
       departments: ComponentType<DepartmentsManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
       folders: ComponentType<FolderManagementPageModel & DesignVariantProps & DesignConfigProps<TConfig>>
