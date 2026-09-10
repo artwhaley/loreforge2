@@ -8,7 +8,7 @@
 --------------------------------------------------------------------------- */
 
 /* ---- Base frame ---- */
-.root { min-height: 100vh; position: relative; background-color: var(--tenant-page-bg); color: var(--tenant-primary); font-family: var(--tenant-body-font); isolation: isolate; }
+.root { min-height: 100vh; position: relative; background-color: var(--tenant-page-bg); color: var(--tenant-primary); font-family: var(--tenant-body-font); isolation: isolate; color-scheme: normal; }
 .root * { box-sizing: border-box; }
 .root a, .root button, .root input, .root select, .root summary { touch-action: manipulation; }
 .root :focus-visible { outline: 2px solid var(--tenant-primary); outline-offset: 4px; }
@@ -18,7 +18,7 @@
 
 .domainGrid { width: var(--civic-width, min(1200px, calc(100% - 3rem))); max-width: 100%; margin: auto; display: grid; grid-template-columns: minmax(0, 1fr); min-height: calc(100vh - 65px); grid-template-rows: auto 1fr auto; }
 .header { min-width: 0; border-bottom: 3px solid var(--tenant-primary); }
-.headerInner { padding: 2rem 2.5rem 0; background: var(--tenant-primary); color: var(--tenant-text-on-primary); }
+.headerInner { padding: 2.8rem 2.5rem 0; background: var(--civic-masthead, var(--tenant-primary)); color: var(--civic-on-masthead, var(--tenant-text-on-primary)); position: relative; overflow: hidden; border-top: 4px solid var(--tenant-accent); }
 .identity { display: flex; gap: 1rem; align-items: center; color: inherit; text-decoration: none; min-width: 0; }
 .identityText { min-width: 0; }
 .domainName { display: block; font: 500 1.75rem/1.12 var(--tenant-heading-font); overflow-wrap: anywhere; }
@@ -62,3 +62,25 @@
   .footer { padding: 1.25rem; }
 }
 @media (prefers-reduced-motion: reduce) { .root *, .root *::before, .root *::after { scroll-behavior: auto !important; transition: none !important; } }
+
+.domainGrid { padding-top: 1.5rem; }
+.header { border-bottom: 0; box-shadow: 0 12px 30px color-mix(in srgb, var(--civic-masthead) 12%, transparent); }
+.headerInner::before { content: ''; position: absolute; width: 28rem; height: 28rem; border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 50%; right: -12rem; top: -18rem; box-shadow: 0 0 0 3rem color-mix(in srgb, currentColor 3%, transparent), 0 0 0 6rem color-mix(in srgb, currentColor 3%, transparent); pointer-events: none; }
+.domainName { font-size: 2.25rem; letter-spacing: -.035em; }
+.sealFallback { border-radius: 50%; border: 1px solid var(--tenant-accent); color: var(--tenant-accent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--tenant-accent) 12%, transparent); }
+.nav { gap: .3rem; margin-top: 2rem; }
+.navLink { position: relative; border-top: 0; padding: 1rem 1.35rem; font-weight: 600; }
+.navLink::after { content: ''; position: absolute; bottom: 0; left: 1.35rem; right: 1.35rem; height: 3px; background: var(--tenant-accent); transform: scaleX(0); transform-origin: left; transition: transform 180ms ease; }
+.navLink:hover::after, .navLink[aria-current='page']::after { transform: scaleX(1); }
+.navLink:hover { text-decoration: none; }
+.managementNav { padding-block: 1rem; gap: .7rem 1.5rem; }
+.main { padding-top: 4rem; }
+.footer { border-color: var(--tenant-surface-border); color: var(--tenant-muted-text); }
+.root a { text-underline-offset: .3em; transition: color 160ms ease, background-color 160ms ease, transform 160ms ease, box-shadow 160ms ease; }
+.root a:hover { text-decoration: underline; text-decoration-thickness: 2px; }
+.root button, .root summary, .root input, .root select { transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease; }
+.root button:not(:disabled):hover, .root summary:hover { transform: translateY(-2px); box-shadow: 0 4px 0 color-mix(in srgb, var(--tenant-accent) 40%, transparent); }
+.root button:not(:disabled):active { transform: translateY(0); }
+.root input:focus, .root select:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--tenant-accent) 25%, transparent); }
+@media (max-width: 700px) { .domainGrid { padding-top: 0; } .nav { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start !important; } .navLink { flex-shrink: 0; padding-inline: 1rem; } .main { padding-top: 2rem; } }
+@media (prefers-reduced-motion: reduce) { .root *, .root *::before, .root *::after { animation: none !important; transition: none !important; } .root button:hover, .root a:hover { transform: none !important; } }

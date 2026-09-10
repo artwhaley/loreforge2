@@ -56,12 +56,87 @@
           "kind": "generic-host-import"
         },
         {
-          "file": "src/designs/atelier/config.ts",
-          "specifier": "@/lib/theme/fonts",
+          "file": "src/designs/atelier/index.ts",
+          "specifier": "@/lib/design/types",
           "kind": "generic-host-import"
         },
         {
-          "file": "src/designs/atelier/index.ts",
+          "file": "src/designs/atelier/management.tsx",
+          "specifier": "@/components/functional/folders/useFolderManagementWorkspace",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "specifier": "@/components/functional/roles/useRoleManagementWorkspace",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "specifier": "@/components/functional/document-types/useDocumentTypesManagementWorkspace",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "specifier": "@/components/functional/people/usePeopleManagementWorkspace",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "specifier": "@/components/people/PersonAccessTrees",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "specifier": "@/components/roles/TypePermissionGrid",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "specifier": "@/components/documentTypes/TypeInspector",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "specifier": "@/lib/design/hostActionBridges",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "specifier": "@/lib/archive/folderManagement",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "specifier": "@/lib/page-models/management/departments",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "specifier": "@/lib/page-models/management/folders",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "specifier": "@/lib/page-models/management/roles",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "specifier": "@/lib/page-models/management/documentTypes",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "specifier": "@/lib/page-models/management/people",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "specifier": "@/lib/page-models/management/invitations",
+          "kind": "generic-host-import"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
           "specifier": "@/lib/design/types",
           "kind": "generic-host-import"
         },
@@ -107,41 +182,6 @@
         },
         {
           "file": "src/designs/atelier/workspaces.tsx",
-          "specifier": "@/lib/page-models/management/departments",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/atelier/workspaces.tsx",
-          "specifier": "@/lib/page-models/management/folders",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/atelier/workspaces.tsx",
-          "specifier": "@/lib/page-models/management/roles",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/atelier/workspaces.tsx",
-          "specifier": "@/lib/page-models/management/documentTypes",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/atelier/workspaces.tsx",
-          "specifier": "@/lib/page-models/management/people",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/atelier/workspaces.tsx",
-          "specifier": "@/lib/page-models/management/invitations",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/atelier/workspaces.tsx",
-          "specifier": "@/lib/design/types",
-          "kind": "generic-host-import"
-        },
-        {
-          "file": "src/designs/atelier/workspaces.tsx",
           "specifier": "@/lib/page-models/common",
           "kind": "generic-host-import"
         },
@@ -166,6 +206,18 @@
           "specifier": "next/link"
         },
         {
+          "file": "src/designs/atelier/AtelierStudio.tsx",
+          "specifier": "react"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "specifier": "react"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "specifier": "next/navigation"
+        },
+        {
           "file": "src/designs/atelier/primitives.tsx",
           "specifier": "react"
         },
@@ -177,8 +229,43 @@
       "crossDesignImports": [],
       "boundaryEscapes": [],
       "assetRefsOutsideSanctionedNamespaces": [],
-      "staticApiEndpoints": [],
-      "testFilesExcluded": [],
+      "staticApiEndpoints": [
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "endpoint": "/api/departments"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "endpoint": "/api/departments"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "endpoint": "/api/departments"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "endpoint": "/api/role-assignments"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "endpoint": "/api/domain-memberships"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "endpoint": "/api/invitations/revoke"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "endpoint": "/api/invitations/join-decision"
+        },
+        {
+          "file": "src/designs/atelier/management.tsx",
+          "endpoint": "/api/character-claims"
+        }
+      ],
+      "testFilesExcluded": [
+        "src/designs/atelier/management.design.test.tsx"
+      ],
       "errors": []
     },
     {
@@ -396,6 +483,10 @@
         {
           "file": "src/designs/civic/CivicShell.tsx",
           "specifier": "react"
+        },
+        {
+          "file": "src/designs/civic/CivicShell.tsx",
+          "specifier": "next/navigation"
         },
         {
           "file": "src/designs/civic/CivicShell.tsx",

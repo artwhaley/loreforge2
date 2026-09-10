@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { BlueprintArtwork } from '@/components/platform/BlueprintArtwork'
 import { DashboardCharacterPicker } from '@/components/platform/DashboardCharacterPicker'
 import { PlatformShell, platformStyles as styles } from '@/components/platform/PlatformShell'
 import { getActiveContext } from '@/lib/tenant/activeTenant'
@@ -24,9 +25,9 @@ export default async function HomePage({ searchParams }: Props) {
       <PlatformShell>
         <section className={styles.hero}>
           <div className={styles.heroContent}>
-            <h1 className={styles.heroTitle}>Write a world worth remembering.</h1>
-            <p className={styles.heroCopy}>One place for all your static and living lore.</p>
-            <div className={styles.actions}><Link href="/about" className={styles.secondary}>Explore Loreforge</Link><Link href={`/create-account${inviteQuery}`} className={styles.primary}>Create your account</Link></div>
+            <h1 className={styles.heroTitle}><span data-reveal>Write a world</span>{' '}<span data-reveal data-reveal-delay="75">worth</span>{' '}<span data-reveal data-reveal-delay="150"><em>remembering.</em></span></h1>
+            <p className={styles.heroCopy} data-reveal data-reveal-delay="200">One place for all your static and living lore.</p>
+            <div className={styles.actions} data-reveal data-reveal-delay="250"><Link href="/about" className={styles.secondary}>Explore Loreforge</Link><Link href={`/create-account${inviteQuery}`} className={styles.primary}>Create your account</Link></div>
           </div>
           <div className={styles.loginCard} id="login">
             <h2>Welcome back</h2>
@@ -41,10 +42,20 @@ export default async function HomePage({ searchParams }: Props) {
             <div className={styles.formLinks}><Link href="/forgot-password">Forgot password?</Link><Link href={`/create-account${inviteQuery}`}>Create account</Link></div>
           </div>
         </section>
+        <div className={styles.worldBand}>
+          <BlueprintArtwork compact />
+          <div className={styles.worldBandCopy} data-reveal><p>Your characters. Your history.<br />A place to keep it all.</p></div>
+        </div>
         <section className={styles.section}>
-          <p className={styles.eyebrow}>Made for Second Life</p><h2 className={styles.sectionTitle}>All your lore, records, and communication available in world and on the web.</h2>
-          <p className={styles.sectionLead}>Loreforge integrates seamlessly with SL Notecards. Whether you&apos;re happy with plain text or want to take advantage of our markdown features for rich formatting on the web.</p>
-          <div className={styles.cards}><article className={styles.card} data-index="01 / IDENTITY"><h3>Characters first</h3><p>Permissions are managed per character and per sim, but your records and work follow the character, not the account. Move to a different city with your personal history intact, or create a new character without old clutter in the way.</p></article><article className={styles.card} data-index="02 / MEMORY"><h3>Records that endure</h3><p>A rich persistent history with version control, history audits, and database backups so your world and work are safe.</p></article><article className={styles.card} data-index="03 / PLACE"><h3>A place that&apos;s yours</h3><p>Customize your community in both look and function. Whether you&apos;re running a kingdom, a city-state, or a modern Metropolis, the vibe is right because you set it.</p></article></div>
+          <p className={styles.eyebrow} data-reveal>Made for Second Life</p>
+          <div className={styles.sectionHeading}>
+            <h2 className={styles.sectionTitle} data-reveal>All your lore.<br />In world and on the web.</h2>
+          </div>
+          <div className={`${styles.cards} ${styles.compactCards}`}>
+            <article className={styles.card} data-reveal><h3>Characters first</h3><p>Permissions are managed per character and per sim, but your records and work follow the character, not the account. Move to a different city with your personal history intact, or create a new character without old clutter in the way.</p></article>
+            <article className={styles.card} data-reveal data-reveal-delay="80"><h3>Records that endure</h3><p>A rich persistent history with version control, history audits, and database backups so your world and work are safe.</p></article>
+            <article className={styles.card} data-reveal data-reveal-delay="160"><h3>A place that&apos;s yours</h3><p>Customize your community in both look and function. Whether you&apos;re running a kingdom, a city-state, or a modern Metropolis, the vibe is right because you set it.</p></article>
+          </div>
         </section>
       </PlatformShell>
     )
@@ -58,7 +69,7 @@ export default async function HomePage({ searchParams }: Props) {
 
   return (
     <PlatformShell>
-      <div className={styles.dashboardHeader}>
+      <div className={styles.dashboardHeader} data-reveal>
         <div><p className={styles.eyebrow}>Your Loreforge</p><h1 className={styles.sectionTitle}>Welcome back, {context.user.name ?? context.user.email}</h1><p className={styles.dashboardGreeting}>{activeCharacter ? `Acting as ${characterDisplayLabel(activeCharacter)}.` : 'Choose a Character to unlock your Domains.'}</p></div>
         <div className={styles.dashboardControls}>
           <div className={styles.actions}><Link href="/work" className={styles.secondary}>Work</Link><Link href="/account" className={styles.secondary}>Account</Link><form action="/api/logout" method="post"><button type="submit" className={styles.textButton}>Log out</button></form></div>
@@ -66,7 +77,7 @@ export default async function HomePage({ searchParams }: Props) {
       </div>
       <nav className={styles.subnav} aria-label="Account navigation"><Link href="/">Dashboard</Link><Link href="/account">Account</Link><Link href="/account/characters">Characters</Link></nav>
       <div className={styles.dashboardGrid}>
-        <section className={styles.panel}>
+        <section className={styles.panel} data-reveal>
           <h2>Your Domains</h2>
           {characters.length ? (
             <>
@@ -77,7 +88,7 @@ export default async function HomePage({ searchParams }: Props) {
             </>
           ) : <div className={styles.emptyCard}>No Characters are connected to this account yet. <Link href="/account/characters">Manage Characters</Link></div>}
         </section>
-        <section className={styles.panel}><h2>Continue working</h2><div className={styles.emptyCard}>{activeDomain ? <>You’re currently viewing <strong>{activeDomain.name}</strong>. Open its <Link href={`/domain/${activeDomain.slug}`}>Domain Home</Link> to continue.</> : 'Choose a Domain to pick up where you left off.'}</div><h2 style={{ marginTop: '1.5rem' }}>For you</h2><div className={styles.emptyCard}>Your notices and watched activity will appear here. Nothing new yet.</div></section>
+        <section className={styles.panel} data-reveal data-reveal-delay="80"><h2>Continue working</h2><div className={styles.emptyCard}>{activeDomain ? <>You’re currently viewing <strong>{activeDomain.name}</strong>. Open its <Link href={`/domain/${activeDomain.slug}`}>Domain Home</Link> to continue.</> : 'Choose a Domain to pick up where you left off.'}</div><h2 style={{ marginTop: '1.5rem' }}>For you</h2><div className={styles.emptyCard}>Your notices and watched activity will appear here. Nothing new yet.</div></section>
       </div>
     </PlatformShell>
   )

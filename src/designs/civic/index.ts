@@ -16,7 +16,7 @@ export const civic: DesignDefinition<CivicConfigV1> = {
   description: 'A classic institutional portal: composed masthead, clear directory, structured record grid.',
   preview: { thumbnail: '/design-assets/civic/thumbnail.svg' },
   config: {
-    version: 1,
+    version: 2,
     defaults: civicDefaults,
     validate: validateCivicConfig,
     migrate: migrateCivicConfig,

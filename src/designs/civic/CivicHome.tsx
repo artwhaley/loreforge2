@@ -15,8 +15,8 @@ export function CivicHome({ baseUrl, domain, welcome, destinations, recentRecord
         {welcome.editHref ? <a className={styles.edit} href={welcome.editHref}>Edit welcome</a> : null}
       </section>
       <nav className={styles.destinations} aria-label="Quick links">
-        {destinations.map((item, i) => <a key={item.segment} href={item.href} className={styles.destination}>
-          <span className={styles.ordinal} aria-hidden="true">0{i + 1}</span><span>{item.label}</span><span className={styles.arrow} aria-hidden="true">↗</span>
+        {destinations.map((item) => <a key={item.segment} href={item.href} className={styles.destination}>
+          <span>{item.label}</span>
         </a>)}
       </nav>
       <section className={styles.recent}>

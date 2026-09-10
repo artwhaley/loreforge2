@@ -2,6 +2,7 @@
 
 import type { DesignStudioEditorProps } from '@/lib/design/contracts'
 import type { CivicConfigV1 } from '../config'
+import { civicLooks } from '../config'
 import { ColorField, ImageField, SectionTitle, SelectField } from './fields'
 
 const WIDTHS = [
@@ -39,11 +40,16 @@ export function CivicStudioEditor({ value, onChange, uploadAsset }: DesignStudio
   const set = (next: CivicConfigV1) => onChange(next)
   return (
     <div data-civic-studio>
+      <SectionTitle>Color look</SectionTitle>
+      <SelectField label="Master palette" value={Object.entries(civicLooks).find(([, look]) => ['primary', 'secondary', 'accent', 'page', 'surface', 'masthead'].every(key => value.palette[key as keyof CivicConfigV1['palette']] === look[key as keyof typeof look]))?.[0] ?? ''} options={[{ value: '', label: 'Custom colors' }, ...Object.entries(civicLooks).map(([key, look]) => ({ value: key, label: look.name }))]} onChange={key => { if (key in civicLooks) { const { name: _name, ...palette } = civicLooks[key as keyof typeof civicLooks]; set({ ...value, palette, background: { treatment: 'plain', image: null } }) } }} />
+      <p style={{fontSize: '.78rem', lineHeight: 1.6}}>A complete scheme for the page, masthead, reading surfaces, text and accents.</p>
       <SectionTitle>Brand palette</SectionTitle>
       <ColorField label="Primary" value={value.palette.primary} onChange={(primary) => set({ ...value, palette: { ...value.palette, primary } })} />
       <ColorField label="Secondary" value={value.palette.secondary} onChange={(secondary) => set({ ...value, palette: { ...value.palette, secondary } })} />
       <ColorField label="Accent" value={value.palette.accent} onChange={(accent) => set({ ...value, palette: { ...value.palette, accent } })} />
       <ColorField label="Page" value={value.palette.page} onChange={(page) => set({ ...value, palette: { ...value.palette, page } })} />
+      <ColorField label="Reading surfaces" value={value.palette.surface ?? value.palette.page} onChange={surface => set({ ...value, palette: { ...value.palette, surface } })} />
+      <ColorField label="Masthead background" value={value.palette.masthead ?? value.palette.primary} onChange={masthead => set({ ...value, palette: { ...value.palette, masthead } })} />
 
       <SectionTitle>Typography</SectionTitle>
       <SelectField label="Heading font" value={value.typography.headingFontKey} options={FONT_OPTIONS} onChange={(headingFontKey) => set({ ...value, typography: { ...value.typography, headingFontKey: headingFontKey as CivicConfigV1['typography']['headingFontKey'] } })} />

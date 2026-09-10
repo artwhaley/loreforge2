@@ -13,6 +13,8 @@ export type CivicConfigV1 = {
     secondary: string
     accent: string
     page: string
+    surface?: string
+    masthead?: string
   }
   typography: {
     headingFontKey: FontKey
@@ -39,6 +41,14 @@ const HEADERS = ['centered', 'compact', 'banner'] as const
 const DOC_TREATMENTS = ['classic', 'modern'] as const
 const BACKGROUNDS = ['plain', 'washes', 'soft', 'vignette'] as const
 
+export const civicLooks = {
+  archive: { name: 'Archive', primary: '#243145', secondary: '#786448', accent: '#ad8141', page: '#f3efe6', surface: '#fffcf5', masthead: '#243145' },
+  maritime: { name: 'Maritime', primary: '#163b51', secondary: '#356578', accent: '#137486', page: '#e7f2f3', surface: '#f8ffff', masthead: '#103d50' },
+  conservatory: { name: 'Conservatory', primary: '#e7efdf', secondary: '#b6c9ad', accent: '#c5d98a', page: '#192d26', surface: '#263c32', masthead: '#101f19' },
+  terracotta: { name: 'Terracotta', primary: '#512c2c', secondary: '#814a3d', accent: '#a04435', page: '#f1dcd0', surface: '#fff0e5', masthead: '#773c32' },
+  nocturne: { name: 'Nocturne', primary: '#e5e6f4', secondary: '#b9b4d6', accent: '#b4a3eb', page: '#191a29', surface: '#282a3e', masthead: '#10111d' },
+} as const
+
 /** Legacy header vocabulary → Civic layout.header vocabulary. */
 const LEGACY_HEADER: Record<string, CivicConfigV1['layout']['header']> = {
   centered: 'centered',
@@ -47,7 +57,7 @@ const LEGACY_HEADER: Record<string, CivicConfigV1['layout']['header']> = {
 }
 
 export const civicDefaults: CivicConfigV1 = {
-  palette: { primary: '#243145', secondary: '#8A6A3C', accent: '#B9975B', page: '#F3EFE6' },
+  palette: { primary: '#243145', secondary: '#786448', accent: '#ad8141', page: '#f3efe6', surface: '#fffcf5', masthead: '#243145' },
   typography: { headingFontKey: 'georgia', bodyFontKey: 'verdana' },
   layout: { width: 'standard', header: 'centered' },
   document: { treatment: 'classic' },
@@ -65,6 +75,9 @@ export function validateCivicConfig(raw: unknown): ValidationResult<CivicConfigV
   else {
     for (const key of ['primary', 'secondary', 'accent', 'page'] as const) {
       if (!isHexColor(palette[key])) errors.push(`palette.${key} must be a #rrggbb color.`)
+    }
+    for (const key of ['surface', 'masthead'] as const) {
+      if (palette[key] !== undefined && !isHexColor(palette[key])) errors.push(`palette.${key} must be a #rrggbb color.`)
     }
   }
   const typography = value.typography as Record<string, unknown> | undefined
@@ -103,6 +116,8 @@ export function validateCivicConfig(raw: unknown): ValidationResult<CivicConfigV
       secondary: (palette as Record<string, string>).secondary,
       accent: (palette as Record<string, string>).accent,
       page: (palette as Record<string, string>).page,
+      surface: (palette as Record<string, string>).surface,
+      masthead: (palette as Record<string, string>).masthead,
     },
     typography: {
       headingFontKey: (typography as { headingFontKey: CivicConfigV1['typography']['headingFontKey'] }).headingFontKey,
@@ -123,7 +138,7 @@ export function validateCivicConfig(raw: unknown): ValidationResult<CivicConfigV
 
 export function migrateCivicConfig(fromVersion: number, raw: unknown): ValidationResult<CivicConfigV1> {
   // Only v1 exists today; unknown versions fail closed to defaults by the caller.
-  if (fromVersion !== 1) return fail([`Civic config version ${fromVersion} is not supported.`])
+  if (fromVersion !== 1 && fromVersion !== 2) return fail([`Civic config version ${fromVersion} is not supported.`])
   return validateCivicConfig(raw)
 }
 
@@ -137,6 +152,8 @@ export function civicFromLegacy(legacy: LegacyDomainAppearance): CivicConfigV1 {
       secondary: pick('secondaryColor', civicDefaults.palette.secondary),
       accent: pick('accentColor', civicDefaults.palette.accent),
       page: pick('backgroundColor', civicDefaults.palette.page),
+      surface: civicDefaults.palette.surface,
+      masthead: civicDefaults.palette.masthead,
     },
     typography: {
       headingFontKey: pickUnion(pick('headingFontKey', civicDefaults.typography.headingFontKey), ['georgia', 'palatino', 'newsreader', 'tahoma', 'trebuchet', 'verdana', 'lato'] as const, civicDefaults.typography.headingFontKey),
@@ -165,14 +182,18 @@ export function resolveCivicTheme(config: CivicConfigV1): { base: { primary: str
       secondary: config.palette.secondary,
       accent: config.palette.accent,
       pageBg,
-      surfaceBg: mixColors(pageBg, '#FFFFFF', 0.65),
-      surfaceBorder: config.palette.primary,
+      surfaceBg: config.palette.surface ?? mixColors(pageBg, config.palette.primary, 0.04),
+      surfaceBorder: mixColors(pageBg, config.palette.primary, 0.25),
       textOnPrimary: readableTextColor(config.palette.primary),
       headingFont: resolveFontStack(config.typography.headingFontKey),
       bodyFont: resolveFontStack(config.typography.bodyFontKey),
       mutedText: mixColors(config.palette.primary, pageBg, 0.55),
     },
     vars: {
+      '--tenant-background-overlay': config.background.treatment === 'soft' ? `color-mix(in srgb, ${pageBg} 85%, transparent)` : config.background.treatment === 'vignette' ? 'radial-gradient(ellipse, transparent 30%, #00000055)' : config.background.treatment === 'washes' ? `radial-gradient(ellipse at top right, ${config.palette.accent}22, transparent 65%)` : 'transparent',
+      '--civic-masthead': config.palette.masthead ?? config.palette.primary,
+      '--civic-on-masthead': readableTextColor(config.palette.masthead ?? config.palette.primary),
+      '--civic-on-accent': readableTextColor(config.palette.accent),
       '--civic-width': CONTENT_WIDTHS[config.layout.width].shell,
       '--civic-header': config.layout.header,
       '--civic-document': config.document.treatment,

@@ -42,7 +42,7 @@ export function SelectField({ label, value, options, onChange }: { label: string
   return (
     <label style={{ display: 'grid', gap: '.3rem', marginBottom: '.6rem' }}>
       <span style={{ fontSize: '.8rem', fontWeight: 600 }}>{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} style={{ width: '100%', padding: '.45rem .5rem', borderRadius: 4, border: '1px solid #cbd2d9', background: '#fff' }}>
+      <select value={value} onChange={(event) => onChange(event.target.value)} style={{ width: '100%', padding: '.45rem .5rem', borderRadius: 4, border: '1px solid #cbd2d9', background: '#fff', color: '#243145' }}>
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
     </label>

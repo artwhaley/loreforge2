@@ -18,3 +18,8 @@
 .crumb a { color: var(--tenant-primary); }
 .manage { font-size: .85rem; }
 @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+.grid { gap: 1rem; border-top: 0; }
+.card { border: 1px solid var(--tenant-surface-border); border-top: 3px solid var(--tenant-accent); transition: transform 180ms ease, box-shadow 180ms ease; }
+.card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px color-mix(in srgb, var(--tenant-primary) 10%, transparent); }
+.title { letter-spacing: -.04em; padding-bottom: 1rem; border-bottom: 1px solid var(--tenant-surface-border); }
+@media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } }

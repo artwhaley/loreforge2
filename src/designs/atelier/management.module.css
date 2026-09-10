@@ -1,0 +1,150 @@
+.page {
+  display: grid;
+  gap: var(--atelier-space, 24px);
+  min-width: 0;
+  --tenant-bg: var(--atelier-paper);
+  --tenant-text: var(--atelier-ink);
+  --tenant-border: var(--atelier-border);
+  --tenant-accent: var(--atelier-accent);
+}
+.split {
+  display: grid;
+  grid-template-columns: minmax(200px, 0.65fr) minmax(0, 2fr);
+  gap: 24px;
+  align-items: start;
+}
+.panel {
+  border: var(--atelier-rule, 1px) solid var(--atelier-border);
+  padding: clamp(16px, 2vw, 28px);
+  min-width: 0;
+  background: var(--atelier-paper);
+  color: var(--atelier-ink);
+}
+.page .panel h2,
+.page .panel h3 {
+  margin: 0 0 16px;
+  font-family: var(--atelier-heading);
+  line-height: 1.15;
+}
+.page .panel h2 {
+  font-size: clamp(24px, 2vw, 32px);
+}
+.page .panel h3 {
+  font-size: 22px;
+}
+.panel + .panel {
+  margin-top: 20px;
+}
+.form {
+  display: grid;
+  gap: 16px;
+}
+.form label {
+  display: grid;
+  gap: 8px;
+}
+.form input,
+.form select {
+  width: 100%;
+  min-width: 0;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-block: 16px;
+}
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+.item {
+  padding: 18px 0;
+  border-bottom: var(--atelier-rule, 1px) solid var(--atelier-border);
+  overflow-wrap: anywhere;
+}
+.item h3 {
+  margin: 0 0 8px;
+}
+.index {
+  display: grid;
+  gap: 8px;
+}
+.index button {
+  text-align: left;
+  width: 100%;
+}
+.index button[aria-pressed="true"] {
+  background: var(--atelier-ink);
+  color: var(--atelier-paper);
+}
+.scroll {
+  overflow-x: auto;
+  min-width: 0;
+}
+.page table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.page th,
+.page td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--atelier-border);
+}
+.page details {
+  border-top: 1px solid var(--atelier-border);
+  padding-block: 18px;
+}
+.page summary {
+  cursor: pointer;
+  font-weight: 600;
+  transition: color 160ms;
+}
+.page summary:hover {
+  color: var(--atelier-accent);
+}
+.page button {
+  transition:
+    background 160ms,
+    color 160ms,
+    transform 160ms;
+}
+.page button:active {
+  transform: translateY(1px);
+}
+.page button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.page :focus-visible {
+  outline: 2px solid var(--atelier-accent);
+  outline-offset: 4px;
+}
+.page input[type="checkbox"] {
+  width: auto;
+}
+.page [role="option"] {
+  cursor: pointer;
+  padding: 16px;
+  border: 1px solid var(--atelier-border);
+}
+.page [role="option"]:hover,
+.page [role="option"][aria-selected="true"] {
+  background: var(--atelier-ink);
+  color: var(--atelier-paper);
+}
+@media (max-width: 800px) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page * {
+    transition: none !important;
+  }
+}

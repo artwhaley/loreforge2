@@ -96,7 +96,8 @@ export function useRoleManagementWorkspace(model: RoleManagementPageModel) {
     if (parentRoleId != null) body.set('parentRoleId', String(parentRoleId))
     if (subdomainId != null) body.set('subdomainId', String(subdomainId))
     body.set('name', name.trim())
-    await fetch('/api/roles', { method: 'POST', body })
+    const response = await fetch('/api/roles', { method: 'POST', body })
+    if (!response.ok || (response.redirected && new URL(response.url).searchParams.has('error'))) throw new Error('The change could not be saved. Check your access and try again.')
     router.refresh()
   }
 
@@ -105,7 +106,8 @@ export function useRoleManagementWorkspace(model: RoleManagementPageModel) {
     body.set('domainSlug', domainSlug)
     body.set('roleId', String(roleId))
     body.set('action', 'delete')
-    await fetch('/api/roles', { method: 'POST', body })
+    const response = await fetch('/api/roles', { method: 'POST', body })
+    if (!response.ok || (response.redirected && new URL(response.url).searchParams.has('error'))) throw new Error('The change could not be saved. Check your access and try again.')
     router.refresh()
   }
 
@@ -115,7 +117,8 @@ export function useRoleManagementWorkspace(model: RoleManagementPageModel) {
     body.set('roleId', String(roleId))
     body.set('action', 'add')
     for (const characterId of characterIds) body.append('characterId', String(characterId))
-    await fetch('/api/role-assignments', { method: 'POST', body })
+    const response = await fetch('/api/role-assignments', { method: 'POST', body })
+    if (!response.ok || (response.redirected && new URL(response.url).searchParams.has('error'))) throw new Error('The change could not be saved. Check your access and try again.')
     // Preserve the original navigation behavior: land back on the role page
     // with the just-assigned role selected.
     router.push(`/domain/${domainSlug}/roles?roleId=${roleId}`)

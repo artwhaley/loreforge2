@@ -45,7 +45,7 @@ describe('P08D-T01 records presentation ownership', () => {
       expect(content, `${file} must not import from the route tree`).not.toContain('@/app/')
     }
     const explorer = read(path.join(SRC, 'designs/civic/ExplorerBody.tsx'))
-    expect(explorer, 'ExplorerBody owns its Design-local SCSS').toMatch(/\.\/.*\.module\.scss/)
+    expect(explorer, 'ExplorerBody owns its Design-local CSS module').toMatch(/\.\/.*\.module\.(?:css|scss)/)
   })
 
   it('the records route stays thin: model building and Design dispatch only', () => {

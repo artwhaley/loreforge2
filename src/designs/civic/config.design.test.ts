@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest'
 
 import { civic } from './index'
-import { civicDefaults, validateCivicConfig } from './config'
+import { civicDefaults, civicLooks, validateCivicConfig } from './config'
 
-describe('Civic config v1', () => {
+describe('Civic config v2', () => {
+  it.each(Object.entries(civicLooks))('resolves the complete %s look', (_key, look) => {
+    const { name: _name, ...palette } = look
+    const config = { ...civicDefaults, palette }
+    expect(validateCivicConfig(config).ok).toBe(true)
+    expect(civic.config.migrate(2, config).ok).toBe(true)
+    const theme = civic.config.resolveTheme(config)
+    expect(theme.base.pageBg).toBe(palette.page)
+    expect(theme.vars?.['--civic-masthead']).toBe(palette.masthead)
+  })
   it('validates its own bounded vocabulary', () => {
     expect(validateCivicConfig(civicDefaults).ok).toBe(true)
     expect(validateCivicConfig({ ...civicDefaults, layout: { ...civicDefaults.layout, header: 'rail' } }).ok).toBe(false)

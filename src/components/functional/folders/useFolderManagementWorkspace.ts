@@ -57,7 +57,8 @@ export function useFolderManagementWorkspace(model: FolderManagementPageModel) {
     const body = new FormData()
     body.set('domainSlug', domainSlug)
     for (const [key, value] of Object.entries(fields)) body.set(key, value)
-    await fetch('/api/folders', { method: 'POST', body })
+    const response = await fetch('/api/folders', { method: 'POST', body })
+    if (!response.ok || (response.redirected && new URL(response.url).searchParams.has('error'))) throw new Error('The change could not be saved. Check your access and try again.')
     router.refresh()
   }
 
